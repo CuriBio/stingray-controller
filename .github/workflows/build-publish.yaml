@@ -1,0 +1,240 @@
+# Based on https://github.com/prettier/prettier/blob/master/.github/workflows/dev-test.yml
+name: Release and Publish to s3
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_channel:
+        description: "Release channel"
+        required: true
+        default: "unstable"
+        type: choice
+        options:
+          - unstable
+          - alpha
+          - beta
+          - prod
+      api_endpoint:
+        description: "Cloud API endpoint"
+        required: true
+        default: "test"
+        type: choice
+        options:
+          - test
+          - prod
+  push:
+    branches:
+      - main
+jobs:
+  check_inputs:
+    strategy:
+      fail-fast: false
+
+    name: Check job inputs and package version
+    runs-on: "ubuntu-22.04"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Confirming tag not already present on remote
+        run: if [$(git ls-remote --tags origin | grep ${{ steps.extract_version.outputs.package-version }}) = '']; then echo Tag does not exist on remote; else echo Tag already exists on remote && exit 1; fi
+
+      - name: Extract branch name # Adapted from: https://stackoverflow.com/questions/58033366/how-to-get-current-branch-within-github-actions
+        run: |
+          git branch -av
+          echo "SHA_OF_MAIN_BRANCH=$(echo $(git branch -av | grep remotes/origin/main | grep -oP 'main\s+\K\w+'))" >> $GITHUB_ENV
+          echo "SHA_OF_CURRENT_BRANCH=$(echo $(git branch -av | grep '*' | grep -oP ' \s+\K\w+'))" >> $GITHUB_ENV
+
+      - name: Display extracted branch information
+        run: |
+          echo "SHA of current branch: ${{ env.SHA_OF_CURRENT_BRANCH }}"
+          echo "SHA of main branch: ${{ env.SHA_OF_MAIN_BRANCH }}"
+
+      - name: Fail if attempting to publish to prod release channel incorrectly
+        if: github.event.inputs.release_channel == 'prod'
+        run: |
+          if [ "${{github.event.inputs.api_endpoint}}" = "prod" ] ; then echo "Using prod API endpoint, can proceed to publish"; else exit 1; fi
+          if [ "${{ env.SHA_OF_CURRENT_BRANCH }}" = "${{ env.SHA_OF_MAIN_BRANCH }}" ] ; then echo "Running on main branch, can proceed to publish"; else exit 1; fi
+
+      - name: Fail if attempting to publish to unstable release channel incorrectly
+        if: github.event.inputs.release_channel == 'unstable'
+        run: |
+          if [ "${{github.event.inputs.api_endpoint}}" = "test" ] ; then echo "Using test API endpoint, can proceed to publish"; else exit 1; fi
+
+  publish:
+    needs: [check_inputs]
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - "windows-2022"
+        python-version:
+          - 3.8 # 3.9 # Eli (12/10/20): Cython package is giving issues with Python 3.9 currently
+        node-version:
+          - 16
+        include:
+          - os: "windows-2022"
+            python-version: "3.8"
+            node-version: "16"
+            IS_DEPLOYMENT_CONFIG: true
+
+    name: Python ${{ matrix.python-version }} with Node ${{ matrix.node-version }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Adjust Screen Resolution (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          Get-DisplayResolution
+          Set-DisplayResolution -Width 1920 -Height 1080 -Force
+          Get-DisplayResolution
+
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Convert Workflow Inputs to Env Vars
+        run: |
+          echo "RELEASE_CHANNEL=$(echo ${{github.event.inputs.release_channel || 'unstable'}})" >> $env:GITHUB_ENV
+          echo "API_ENDPOINT=$(echo ${{github.event.inputs.api_endpoint || 'test'}})" >> $env:GITHUB_ENV
+
+      - name: Add prerelease SemVer component (if unstable)
+        if: env.RELEASE_CHANNEL == 'unstable'
+        run: |
+          ((Get-Content -path package.json -Raw) -replace '\n  "version": "(\d+\.\d+\.\d+)"', $("`n" + '  "version": "$1-pre.' + $(Get-Date -Format 'yyyyMMddHHmm') + '"')) | Set-Content -Path package.json
+          ((Get-Content -path package-lock.json -Raw) -replace '\n  "version": "(\d+\.\d+\.\d+)"', $("`n" + '  "version": "$1-pre.' + $(Get-Date -Format 'yyyyMMddHHmm') + '"')) | Set-Content -Path package-lock.json
+
+      - name: Get Version
+        id: software-version
+        uses: notiz-dev/github-action-json-property@v0.2.0
+        with:
+          path: "package.json"
+          prop_path: "version"
+
+      - name: Get Product Name
+        id: product-name
+        uses: notiz-dev/github-action-json-property@v0.2.0
+        with:
+          path: "package.json"
+          prop_path: "name"
+
+      - name: Check release tag (If not unstable)
+        id: check-tag
+        if: env.RELEASE_CHANNEL != 'unstable'
+        run: |
+          git fetch --tags
+          echo "::set-output name=TAG::$(git tag -l ${{ steps.software-version.outputs.prop }})"
+
+      - name: Init git config
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email noreply@github.com
+
+      - name: Create release tag (If not unstable)
+        if: env.RELEASE_CHANNEL != 'unstable' && steps.check-tag.outputs.TAG == ''
+        run: |
+          git tag -a ${{steps.software-version.outputs.prop}} -m "release ${{ steps.software-version.outputs.prop }}"
+          git push origin ${{steps.software-version.outputs.prop}}
+
+      - name: Checkout tag (If not unstable)
+        if: env.RELEASE_CHANNEL != 'unstable'
+        run: |
+          git fetch --tags
+          git checkout tags/${{steps.software-version.outputs.prop}}
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Display Language Dependency Versions
+        run: |
+          python --version
+          pip --version
+          node --version
+          npm --version
+
+      - name: Cache node modules # https://docs.github.com/en/free-pro-team@latest/actions/guides/caching-dependencies-to-speed-up-workflows
+        uses: actions/cache@v3
+        env:
+          cache-name: cache-node-modules
+        with:
+          path: ./.npm_cache
+          key: ${{ matrix.os }}-${{ matrix.node-version }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ matrix.os }}-${{ matrix.node-version }}-build-${{ env.cache-name }}-
+
+      - name: Cache Python modules
+        uses: actions/cache@v3
+        env:
+          cache-name: cache-python-modules
+        with:
+          path: ./.pipenv_cache
+          key: ${{ matrix.os }}-${{ matrix.python-version }}-build-${{ env.cache-name }}-${{ hashFiles('**/Pipfile.lock') }}
+          restore-keys: |
+            ${{ matrix.os }}-${{ matrix.python-version }}-build-${{ env.cache-name }}-
+
+      - name: Display Chrome version (Windows)
+        if: runner.os == 'Windows'
+        run: (Get-Item (Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\chrome.exe').'(Default)').VersionInfo
+
+      - name: Display Extracted Software Version and Product Name
+        run: |
+          echo ${{steps.software-version.outputs.prop}}
+          echo ${{steps.product-name.outputs.prop}}
+
+      - name: Install pipenv # no known reason for this specific version of pipenv, just pinning it for good practice
+        run: pip install pipenv==2020.11.15
+
+      - name: Setup Pipenv
+        env:
+          PIPENV_VENV_IN_PROJECT: 1
+        # Eli (10/28/20): in the windows environments, just saying `pipenv --three` defaults to the highest installed version of Python on the image...not the actual one specified in the matrix. So need to specify
+        run: |
+          pipenv --python ${{ matrix.python-version }}
+          pipenv run pip freeze
+      - name: Install Python Dependencies
+        env:
+          PIPENV_CACHE_DIR: ./.pipenv_cache
+        # Eli (10/28/20): The --sequential flag was found to be necessary on windows due to issues where scipy wouldn't recognize that it had been installed. Also, when this was part of a set of multiple run commands using the pipe, when it errored it didn't cause the whole step to fail, so separating it out into its own step
+        run: pipenv install --dev --deploy --sequential
+
+      - name: Download zlib Library
+        run: pipenv run python .github/workflows/run_zlib_download.py
+
+      - name: Install Local Package in editable mode for testing
+        run: pipenv run pip install -e .
+
+      - name: Log full installed Python packages
+        run: pipenv run pip freeze
+
+      - name: Install NPM Dependencies
+        run: pipenv run npm ci --cache .npm_cache/
+
+      - name: Insert the Build Number and Software Version into the code (Windows)
+        if: runner.os == 'Windows'
+        env:
+          build_number: ${{ github.run_number }}
+        run: |
+          echo $env:build_number
+          ((Get-Content -path src\stingray_controller\constants.py -Raw) -replace 'REPLACETHISWITHTIMESTAMPDURINGBUILD',"$(Get-Date -Format 'yyMMddHHmmss')--$env:build_number") | Set-Content -Path src\stingray_controller\constants.py
+          ((Get-Content -path src\stingray_controller\constants.py -Raw) -replace 'REPLACETHISWITHVERSIONDURINGBUILD',"${{steps.software-version.outputs.prop}}") | Set-Content -Path src\stingray_controller\constants.py
+          ((Get-Content -path src\stingray_controller\constants.py -Raw) -replace 'REPLACETHISWITHENDPOINTDURINGBUILD',"${{env.API_ENDPOINT}}") | Set-Content -Path src\stingray_controller\constants.py
+          ((Get-Content -path src\main\index.js -Raw) -replace 'REPLACETHISWITHENDPOINTDURINGBUILD',"${{env.API_ENDPOINT}}") | Set-Content -Path src\main\index.js
+          ((Get-Content -path src\stingray_controller\constants.py -Raw) -replace 'REPLACETHISWITHRELEASECHANNELDURINGBUILD',"${{env.RELEASE_CHANNEL}}") | Set-Content -Path src\stingray_controller\constants.py
+
+      - name: Compile the Python Executable
+        run: pipenv run pyinstaller pyinstaller.spec --log-level=DEBUG --distpath=dist-python --workpath=build-python
+
+      - name: Build Full Electron App
+        run: pipenv run npm run build-${{env.RELEASE_CHANNEL}}
+
+      - name: S3 Publisher
+        if: matrix.IS_DEPLOYMENT_CONFIG == true
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.CI_IAM_GIT_PUBLISH_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.CI_IAM_GIT_PUBLISH_SECRET_KEY }}
+        run: pipenv run node s3_publish.js --file="${{steps.product-name.outputs.prop}}-Setup-${{env.RELEASE_CHANNEL}}-${{steps.software-version.outputs.prop}}.exe" --buildDir=./dist --channel=${{env.RELEASE_CHANNEL}}

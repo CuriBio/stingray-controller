@@ -1,0 +1,82 @@
+# dependencies
+node_modules
+
+# CI caches
+.*cache/
+
+# logs
+*.log
+
+# Nuxt build
+.nuxt
+
+# Electron buildr
+build/
+
+# Pyinstaller build
+build-python
+dist-python
+
+# Nuxt generate
+dist/
+
+# Mac OS
+.DS_Store
+
+# test coverage
+tests/__coverage__
+test/__coverage__
+test-report.html
+coverage-report-pytest
+.pytest_cache/
+.mypy_cache/
+.coverage
+.coverage.*
+coverage.xml
+
+# test profiling
+prof/
+
+# IDE
+.idea/
+.~c9*
+.vscode/
+
+# Python
+*.py[cod]
+__pycache__/
+
+# Cython
+*.cpp
+*.c
+*.so
+*.html
+
+# C/C++ libraries
+*.zip
+**/zlib/**
+
+# Venv
+venv*
+*.egg-info
+.env.*
+
+# auto generated folders
+logs/
+recordings/
+analysis/
+
+# Codebuild cache
+.windows_codebuild_cache/
+# config settings
+config/
+.python-version
+
+# Testcafe screenshots
+**/e2e/screenshots/**/*-actual.png
+**/e2e/screenshots/*-actual.png
+**/e2e/screenshots/**/*-actual-diff.png
+**/e2e/screenshots/*-actual-diff.png
+**/e2e/screenshots/**/thumbnails
+**/e2e/screenshots/thumbnails
+
