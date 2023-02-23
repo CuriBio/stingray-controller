@@ -3,136 +3,33 @@
     <div class="div__sidebar">
       <div class="div__sidebar-page-divider" />
       <div class="div__accordian-container" role="tablist">
-        <NuxtLink to="/">
-          <div
-            role="tab"
-            @click="handle_tab_visibility(0)"
-            @mouseenter="data_acquisition_hover = true"
-            @mouseleave="data_acquisition_hover = false"
-          >
-            <div
-              v-b-toggle.data-acquisition-card
-              class="div__accordian-tabs"
-              :class="data_acquisition_dynamic_class"
-            >
-              Data Acquisition
-              <div
-                class="div__arrow"
-                :class="{ expanded: data_acquisition_visibility }"
-                :style="data_acquisition_hover ? 'border-top: 6px solid #000' : null"
-              />
-            </div>
-          </div>
-        </NuxtLink>
-        <b-collapse
-          v-model="data_acquisition_visibility"
-          visible
-          accordion="controls-accordion"
-          role="tabpanel"
-        >
-          <div class="div__plate-barcode-container">
-            <BarcodeViewer />
-          </div>
-          <div class="div__plate-navigator-container">
-            <PlateNavigator />
-          </div>
-          <NuxtLink to="/platemapeditor">
-            <PlateMapEditorButton />
-          </NuxtLink>
-          <div class="div__status-bar-container">
-            <StatusBar
-              :da_check="da_check"
-              @close_da_check_modal="close_da_check_modal"
-              @send_confirmation="send_confirmation"
-            />
-          </div>
-          <div class="div__player-controls-container">
-            <DesktopPlayerControls @save_account_info="save_account_info" />
-          </div>
-          <div class="div__screen-view-options-text">Screen View Options</div>
-          <div class="div__screen-view-container">
-            <div class="div__waveform-screen-view">
-              <!-- Default view is waveform screen -->
-              <NuxtLink to="/">
-                <img
-                  v-b-popover.hover.bottom="'Click to view Live View'"
-                  :title="'Live View'"
-                  src="../assets/img/waveform-screen-view.png"
-                />
-              </NuxtLink>
-            </div>
-            <div class="div__heatmap-screen-view">
-              <NuxtLink to="/heatmap">
-                <img
-                  v-b-popover.hover.bottom="'Click to view Heat Map'"
-                  :title="'Heat Map'"
-                  src="../assets/img/heatmap-screen-view.png"
-                />
-              </NuxtLink>
-            </div>
-          </div>
-        </b-collapse>
-        <NuxtLink to="/stimulationstudio">
-          <div
-            v-if="beta_2_mode"
-            role="tab"
-            @click="handle_tab_visibility(1)"
-            @mouseenter="stim_studio_hover = true"
-            @mouseleave="stim_studio_hover = false"
-          >
-            <div v-b-toggle.stim-studio-card class="div__accordian-tabs" :class="stim_studio_dynamic_class">
-              Stimulation Studio
-              <div
-                class="div__arrow"
-                :class="{ expanded: stim_studio_visibility }"
-                :style="stim_studio_hover ? 'border-top: 6px solid #000' : null"
-              />
-            </div>
-          </div>
-        </NuxtLink>
-        <b-collapse v-model="stim_studio_visibility" accordion="controls-accordion" role="tabpanel">
-          <div class="div__stim-barcode-container">
-            <BarcodeViewer :barcode_type="'stim_barcode'" />
-          </div>
-          <div class="div__stim-status-container">
-            <StatusBar :stim_specific="true" @send_confirmation="send_confirmation" />
-          </div>
-          <div class="div__stimulation_controls-controls-icon-container">
-            <StimulationControls />
-          </div>
-        </b-collapse>
-        <div
-          v-if="beta_2_mode"
-          role="tab"
-          @click="da_check = true"
-          @mouseenter="data_analysis_hover = true"
-          @mouseleave="data_analysis_hover = false"
-        >
-          <div class="div__accordian-tabs" :class="data_analysis_dynamic_class">
-            Data Analysis
-            <div
-              class="div__arrow"
-              :class="{ expanded: data_analysis_visibility }"
-              :style="data_analysis_hover ? 'border-top: 6px solid #000' : null"
-            />
-          </div>
+        <div class="div__plate-barcode-container">
+          <BarcodeViewer />
         </div>
-        <b-collapse
-          id="data-analysis-card"
-          v-model="data_analysis_visibility"
-          accordion="controls-accordion"
-          role="tabpanel"
-        >
-          <DataAnalysisControl @send_confirmation="send_confirmation" />
-        </b-collapse>
+        <div class="div__status-bar-container">
+          <StatusBar
+            :da_check="da_check"
+            @close_da_check_modal="close_da_check_modal"
+            @send_confirmation="send_confirmation"
+          />
+        </div>
+        <div class="div__stim-barcode-container">
+          <BarcodeViewer :barcode_type="'stim_barcode'" />
+        </div>
+        <div class="div__stim-status-container">
+          <StatusBar :stim_specific="true" @send_confirmation="send_confirmation" />
+        </div>
+        <div class="div__stimulation_controls-controls-icon-container">
+          <StimulationControls />
+        </div>
+        <div class="div__simulation-mode-container">
+          <SimulationMode />
+        </div>
+        <span class="span__copyright"
+          >&copy;{{ current_year }} Curi Bio. All Rights Reserved. Version:
+          {{ package_version }}
+        </span>
       </div>
-      <div class="div__simulation-mode-container">
-        <SimulationMode />
-      </div>
-      <span class="span__copyright"
-        >&copy;{{ current_year }} Curi Bio. All Rights Reserved. Version:
-        {{ package_version }}
-      </span>
     </div>
     <div class="div__top-bar-above-waveforms">
       <div class="div__recording-top-bar-container">
@@ -147,9 +44,6 @@
 </template>
 <script>
 import Vue from "vue";
-
-import BootstrapVue from "bootstrap-vue";
-Vue.use(BootstrapVue);
 
 import {
   PlateNavigator,

@@ -5,9 +5,17 @@
  */
 const path = require("path");
 const node_modules_dir = path.join(__dirname, "..", "node_modules");
-const ui_node_modules_dir = path.join(node_modules_dir, "@curi-bio", "ui", "node_modules");
+const ui_node_modules_dir = path.join(
+  node_modules_dir,
+  "@curi-bio",
+  "ui",
+  "node_modules"
+);
 
 module.exports = {
+  alias: {
+    vue$: path.join(ui_node_modules_dir, "vue", "dist", "vue.common.js"),
+  },
   mode: "spa", // or 'universal'
   head: {
     title: "Stingray Controller",
