@@ -10,7 +10,7 @@ module.exports = {
   },
   modulePathIgnorePatterns: ["<rootDir>/dist"],
   // the files Jest should seach for
-  testRegex: "tests/unit-jest/.*.spec.js",
+  testRegex: "tests/.*.spec.js",
   // the file types we want jest to accept
   moduleFileExtensions: [
     "js",
@@ -27,7 +27,8 @@ module.exports = {
     // process js files with jest
     "^.+\\.js$": "babel-jest",
     // process assets with transform stub
-    ".+\\.(css|styl|less|sass|scss|svg|png|jpg|ttf|woff|woff2)$": "jest-transform-stub",
+    ".+\\.(css|styl|less|sass|scss|svg|png|jpg|ttf|woff|woff2)$":
+      "jest-transform-stub",
   },
   // we will use this to create snapshot tests
   snapshotSerializers: ["jest-serializer-vue"],

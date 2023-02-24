@@ -208,9 +208,9 @@ jobs:
           build_number: ${{ github.run_number }}
         run: |
           echo $env:build_number
-          ((Get-Content -path src\stingray_controller\constants.py -Raw) -replace 'REPLACETHISWITHTIMESTAMPDURINGBUILD',"$(Get-Date -Format 'yyMMddHHmmss')--$env:build_number") | Set-Content -Path src\stingray_controller\constants.py
-          ((Get-Content -path src\stingray_controller\constants.py -Raw) -replace 'REPLACETHISWITHVERSIONDURINGBUILD',"${{steps.software-version.outputs.prop}}") | Set-Content -Path src\stingray_controller\constants.py
-          ((Get-Content -path src\stingray_controller\constants.py -Raw) -replace 'REPLACETHISWITHENDPOINTDURINGBUILD',"${{github.event.inputs.api_endpoint}}") | Set-Content -Path src\stingray_controller\constants.py
+          ((Get-Content -path src\controllertroller\constants.py -Raw) -replace 'REPLACETHISWITHTIMESTAMPDURINGBUILD',"$(Get-Date -Format 'yyMMddHHmmss')--$env:build_number") | Set-Content -Path src\controllertroller\constants.py
+          ((Get-Content -path src\controllertroller\constants.py -Raw) -replace 'REPLACETHISWITHVERSIONDURINGBUILD',"${{steps.software-version.outputs.prop}}") | Set-Content -Path src\controllertroller\constants.py
+          ((Get-Content -path src\controllertroller\constants.py -Raw) -replace 'REPLACETHISWITHENDPOINTDURINGBUILD',"${{github.event.inputs.api_endpoint}}") | Set-Content -Path src\controllertroller\constants.py
           ((Get-Content -path src\main\index.js -Raw) -replace 'REPLACETHISWITHENDPOINTDURINGBUILD',"${{env.API_ENDPOINT}}") | Set-Content -Path src\main\index.js
 
       - name: Insert the Build Number and Software Version into the code (Linux)
@@ -219,9 +219,9 @@ jobs:
           build_number: ${{ github.run_number }}
         run: |
           echo $build_number
-          sed -i 's/REPLACETHISWITHTIMESTAMPDURINGBUILD/'"$(date +'%y%m%d%H%M%S')"'--$build_number/g' src/stingray_controller/constants.py
-          sed -i 's/REPLACETHISWITHVERSIONDURINGBUILD/'"${{steps.software-version.outputs.prop}}"'/g' src/stingray_controller/constants.py
-          sed -i 's/REPLACETHISWITHENDPOINTDURINGBUILD/'"${{github.event.inputs.api_endpoint}}"'/g' src/stingray_controller/constants.py
+          sed -i 's/REPLACETHISWITHTIMESTAMPDURINGBUILD/'"$(date +'%y%m%d%H%M%S')"'--$build_number/g' src/controllertroller/constants.py
+          sed -i 's/REPLACETHISWITHVERSIONDURINGBUILD/'"${{steps.software-version.outputs.prop}}"'/g' src/controllertroller/constants.py
+          sed -i 's/REPLACETHISWITHENDPOINTDURINGBUILD/'"${{github.event.inputs.api_endpoint}}"'/g' src/controllertroller/constants.py
           sed -i 's/REPLACETHISWITHENDPOINTDURINGBUILD/'"${{github.event.inputs.api_endpoint}}"'/g' src/main/index.js
 
       - name: Compile the Python Executable

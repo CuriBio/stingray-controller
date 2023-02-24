@@ -85,67 +85,6 @@ class StartManagedAcquisitionWithoutBarcodeError(Exception):
     pass
 
 
-# Beta 1 errors
-class UnrecognizedCommandFromMainToOkCommError(Exception):
-    pass
-
-
-class UnrecognizedDataFrameFormatNameError(Exception):
-    pass
-
-
-class AttemptToInitializeFIFOReadsError(Exception):
-    pass
-
-
-class AttemptToAddCyclesWhileSPIRunningError(Exception):
-    pass
-
-
-class FirstManagedReadLessThanOneRoundRobinError(Exception):
-    pass
-
-
-class InvalidDataFramePeriodError(Exception):
-    pass
-
-
-class MismatchedScriptTypeError(Exception):
-    pass
-
-
-class InvalidScriptCommandError(Exception):
-    pass
-
-
-class ScriptDoesNotContainEndCommandError(Exception):
-    pass
-
-
-class FirmwareFileNameDoesNotMatchWireOutVersionError(Exception):
-    pass
-
-
-class BarcodeNotClearedError(Exception):
-    pass
-
-
-class BarcodeScannerNotRespondingError(Exception):
-    pass
-
-
-class ServerManagerNotInitializedError(Exception):
-    pass
-
-
-class ServerManagerSingletonAlreadySetError(Exception):
-    """Helps ensure that test cases clean up after themselves."""
-
-
-class InstrumentCommIncorrectHeaderError(Exception):
-    """Incorrect Beta 1 header."""
-
-
 # Instrument related errors
 class InstrumentError(Exception):
     """Generic exception for errors with instrument interaction."""

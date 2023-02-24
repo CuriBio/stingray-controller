@@ -1,0 +1,45 @@
+[tool.poetry]
+name = "controller"
+version = "0.1.0"
+description = "Windows Desktop App for viewing and recording data from a Stingray Instrument."
+authors = ["Curi Bio <contact@curibio.com>"]
+license = "MIT"
+packages = [
+    { include = "controller", from = "src" }
+]
+build = "build.py"
+
+[tool.poetry.dependencies]
+python = "~3.10.8"
+
+immutabledict = "2.2.3"
+labware-domain-models = "0.3.1"
+Cython = "0.29.33"
+numpy = "1.24.2"
+# psutil = "5.9.4"
+# pulse3d = "0.30.0"
+# pyserial = "3.5"
+# semver = "2.13.0"
+stdlib-utils = "0.5.2"
+# streamz = "0.6.4"
+# wakepy = "0.5.0"
+websockets = "10.4"
+
+[tool.poetry.group.dev.dependencies]
+# boto3 = "1.26.78"
+# click = "8.0.3"  # Tanner (4/11/22): pinned for black
+freezegun = "1.2.2"
+# pefile = "2023.2.7" # Tanner (2/24/23): this must be explicitly specified so that it will be included in a Windows build environment
+pre-commit = "3.1.0"
+# pyinstaller = "5.8.0"
+pytest = "7.2.1"
+pytest-cov = "4.0.0"
+pytest-mock = "3.10.0"
+pytest-profiling = "1.7.0"
+pytest-randomly = "3.12.0"
+pytest-timeout = "2.1.0"
+# pywin32-ctypes = "0.2.0" # Tanner (2/24/23): this must be explicitly specified so that it will be included in a Windows build environment
+
+[build-system]
+requires = ["poetry-core", "setuptools", "Cython", "numpy"]
+build-backend = "poetry.core.masonry.api"
