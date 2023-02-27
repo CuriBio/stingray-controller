@@ -31,6 +31,7 @@ class SubprocessMonitor:
     async def _handle_comm_from_server(self) -> None:
         while True:
             communication = await self._queues["from"]["server"].get()
+            print("!!!")
 
             logger.info(f"Comm from Server: {communication}")
 
