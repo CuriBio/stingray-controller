@@ -14,15 +14,12 @@ import platform
 import socket
 import sys
 from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
 import uuid
 
 from stdlib_utils import configure_logging
 from stdlib_utils import is_port_in_use
 
-from .constants import COMPILED_EXE_BUILD_TIMESTAMP
+from .constants import COMPILED_EXE_BUILD_TIMESTAMP, NUM_WELLS
 from .constants import CURRENT_SOFTWARE_VERSION
 from .constants import DEFAULT_SERVER_PORT_NUMBER
 from .constants import SERVER_INITIALIZING_STATE
@@ -37,62 +34,46 @@ from .utils.generic import wait_tasks_clean
 logger = logging.getLogger(__name__)
 
 
-async def main(
-    command_line_args: List[str], object_access_for_testing: Optional[Dict[str, Any]] = None
-) -> None:
+async def main(command_line_args: list[str]) -> None:
     """Parse command line arguments and run."""
     # if object_access_for_testing is None:
     #     object_access_for_testing = dict()
 
     try:
         parsed_args = _parse_cmd_line_args(command_line_args)
-
-        startup_options = []
-        if parsed_args.startup_test_options:
-            startup_options = parsed_args.startup_test_options
-        # start_subprocesses = "no_subprocesses" not in startup_options
-        start_server = "no_server" not in startup_options
-
-        log_level = logging.DEBUG if parsed_args.log_level_debug else logging.INFO
-        path_to_log_folder = parsed_args.log_file_dir
+        log_level = logging.DEBUG if parsed_args["log_level_debug"] else logging.INFO
         configure_logging(
-            path_to_log_folder=path_to_log_folder, log_file_prefix="stingray_log", log_level=log_level
+            path_to_log_folder=parsed_args["log_file_dir"],
+            log_file_prefix="stingray_log",
+            log_level=log_level,
         )
 
         logger.info(f"Stingray Controller v{CURRENT_SOFTWARE_VERSION} started")
         logger.info(f"Build timestamp/version: {COMPILED_EXE_BUILD_TIMESTAMP}")
         logger.info(f"Release Channel: {SOFTWARE_RELEASE_CHANNEL}")
 
-        # Tanner (1/14/21): parsed_args_dict is only used to log the command line args at the moment, so initial_base64_settings can be deleted and log_file_dir can just be replaced here without affecting anything that actually needs the original value
-        parsed_args_dict = copy.deepcopy(vars(parsed_args))
+        log_file_id = uuid.uuid4()
+        logger.info(f"Log ID: {log_file_id}")
 
-        scrubbed_path_to_log_folder = redact_sensitive_info_from_path(path_to_log_folder)
-        parsed_args_dict["log_file_dir"] = scrubbed_path_to_log_folder
-        # Tanner (1/14/21): Unsure why the back slashes are duplicated when converting the dict to string. Using replace here to remove the duplication, not sure if there is a better way to solve or avoid this problem
-        logger.info(f"Command Line Args: {parsed_args_dict}".replace(r"\\", "\\"))
-        logger.info(f"Using directory for log files: {scrubbed_path_to_log_folder}")
+        _log_cmd_line_args(parsed_args)
+        _log_system_info()
 
-        # multiprocessing_start_method = multiprocessing.get_start_method(allow_none=True)
-        # if multiprocessing_start_method != "spawn":
-        #     raise MultiprocessingNotSetToSpawnError(multiprocessing_start_method)
+        # if parsed_args.test:
+        #     logger.info(f"Successfully opened and closed application v{CURRENT_SOFTWARE_VERSION}")
+        #     return
 
-        system_state = _initialize_system_state(parsed_args)
-
-        logger.info(f"Log File UUID: {system_state['log_file_id']}")
-        logger.info(f"SHA512 digest of Computer Name {system_state['computer_name_hash']}")
-
-        if parsed_args.debug_test_post_build:
-            print(f"Successfully opened and closed application v{CURRENT_SOFTWARE_VERSION}.")  # allow-print
-            return
-
-        system_state["system_status"] = SERVER_INITIALIZING_STATE
         logger.info(f"Using server port number: {DEFAULT_SERVER_PORT_NUMBER}")
 
-        if is_port_in_use(DEFAULT_SERVER_PORT_NUMBER):  # TODO make sure this still works
+        if is_port_in_use(DEFAULT_SERVER_PORT_NUMBER):
             raise LocalServerPortAlreadyInUseError(DEFAULT_SERVER_PORT_NUMBER)
 
-        _log_system_info()
-        logger.info("Spawning subprocesses")
+        # TODO
+        # multiprocessing_start_method = multiprocessing.get_start_method(allow_none=True)
+        # if mp_start_method != "spawn":
+        #     raise MultiprocessingNotSetToSpawnError(mp_start_method)
+
+        # TODO move this into SubprocessMonitor?
+        # logger.info("Spawning subprocesses")
 
         # process_manager = ProcessesManager(system_state=system_state, logging_level=log_level)
         # object_access_for_testing["process_manager"] = process_manager
@@ -105,34 +86,14 @@ async def main(
         #     for subprocess_name, pid in subprocess_id_dict.items():
         #         logger.info(f"{subprocess_name} PID: {pid}")
 
-        queues = {
-            "to": {
-                "server": asyncio.Queue()
-                # TODO
-                # "instrument_comm": MPQueueAsyncWrapper(process_manager.queue_container.from_instrument_comm),
-                # "file_writer": MPQueueAsyncWrapper(process_manager.queue_container.from_file_writer),
-                # "data_analyzer": MPQueueAsyncWrapper(process_manager.queue_container.from_data_analyzer),
-            },
-            "from": {
-                "server": asyncio.Queue()
-                # "instrument_comm": MPQueueAsyncWrapper(
-                #     self._process_manager.queue_container.to_instrument_comm(0)
-                # ),
-                # "file_writer": MPQueueAsyncWrapper(process_manager.queue_container.to_file_writer),
-                # "data_analyzer": MPQueueAsyncWrapper(self._process_manager.queue_container.to_data_analyzer),
-            }
-            # "outgoing_data_stream": MPQueueAsyncWrapper(
-            #     self._process_manager.queue_container.data_analyzer_boards[0][1]
-            # ),
-        }
+        system_state = _initialize_system_state(parsed_args, log_file_id)
+
+        queues = create_system_queues()
 
         subprocess_monitor = SubprocessMonitor(system_state, queues)
+        server = Server(system_state, queues["to"]["server"], queues["from"]["server"])
 
-        tasks = {asyncio.create_task(subprocess_monitor.run())}
-
-        if start_server:
-            server = Server(system_state, queues["to"]["server"], queues["from"]["server"])
-            tasks.add(asyncio.create_task(server.run()))
+        tasks = {asyncio.create_task(subprocess_monitor.run()), asyncio.create_task(server.run())}
 
         await wait_tasks_clean(tasks)
 
@@ -143,21 +104,33 @@ async def main(
         logger.error(f"ERROR IN MAIN: {repr(e)}")
 
     finally:
-        # TODO
-        # if process_monitor_thread:
-        #     process_monitor_thread.soft_stop()
-        #     process_monitor_thread.join()
-        #     logger.info("Process monitor shut down")
         logger.info("Program exiting")
 
 
-def _parse_cmd_line_args(command_line_args: List[str]) -> "TODO":
+# TODO consider moving this to a different file
+def create_system_queues() -> dict[str, Any]:
+    return {
+        "to": {
+            "server": asyncio.Queue()
+            # TODO
+            # "instrument_comm": MPQueueAsyncWrapper(process_manager.queue_container.from_instrument_comm),
+        },
+        "from": {
+            "server": asyncio.Queue()
+            # "instrument_comm": MPQueueAsyncWrapper(
+            #     self._process_manager.queue_container.to_instrument_comm(0)
+            # ),
+        },
+    }
+
+
+def _parse_cmd_line_args(command_line_args: list[str]) -> dict[str, Any]:
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--debug-test-post-build",
-        action="store_true",
-        help="simple test to run after building executable to confirm libraries are linked/imported correctly",
-    )
+    # parser.add_argument(
+    #     "--test",
+    #     action="store_true",
+    #     help="simple test to run after building executable to confirm libraries are linked/imported correctly",
+    # )
     parser.add_argument(
         "--log-level-debug",
         action="store_true",
@@ -169,66 +142,45 @@ def _parse_cmd_line_args(command_line_args: List[str]) -> "TODO":
         help="allow manual setting of the directory in which log files will be stored",
     )
     parser.add_argument(
-        "--initial-base64-settings",
-        type=str,
-        help="allow initial configuration of user settings",
-    )
-    parser.add_argument(
         "--expected-software-version",
         type=str,
-        help="used to make sure flask server and GUI are the same version",
+        help="used to make sure python exe and electron exe are the same version",
     )
     parser.add_argument(
         "--skip-software-version-verification",
         action="store_true",
         help="override any supplied expected software version and disable the check",
     )
-    parser.add_argument(
-        "--startup-test-options",
-        type=str,
-        nargs="+",
-        choices=["no_flask", "no_subprocesses"],
-        help="indicate how much of the main script should not be started",
-    )
-    return parser.parse_args(command_line_args)
+    return vars(parser.parse_args(command_line_args))
 
 
-def _initialize_system_state(parsed_args: "TODO") -> Dict[str, Any]:
-    system_state = dict()
-
-    # system_state["connected_to_fe"] = False
-
-    if parsed_args.initial_base64_settings:
-        # Eli (7/15/20): Moved this ahead of the exit for debug_test_post_build so that it could be easily unit tested. The equals signs are adding padding..apparently a quirk in python https://stackoverflow.com/questions/2941995/python-ignore-incorrect-padding-error-when-base64-decoding
-        decoded_settings: bytes = base64.urlsafe_b64decode(str(parsed_args.initial_base64_settings) + "===")
-        settings_dict = json.loads(decoded_settings)
-    else:  # pragma: no cover
-        settings_dict = {
-            "recording_directory": os.path.join(os.getcwd(), "recordings"),
-            "mag_analysis_output_dir": os.path.join(os.getcwd(), "analysis"),
-            "log_file_id": uuid.uuid4(),
-        }
-
-    system_state["config_settings"] = {
-        "recording_directory": settings_dict["recording_directory"],
-        "log_directory": parsed_args.log_file_dir,
-        "mag_analysis_output_dir": settings_dict["mag_analysis_output_dir"],
+def _log_cmd_line_args(parsed_args: dict[str, Any]) -> None:
+    # Tanner (2/27/23): make a copy so that the original dict is not modified. Sorting just to make testing easier
+    parsed_args_copy = {
+        arg_name: arg_value for arg_name, arg_value in sorted(parsed_args.items()) if arg_value
     }
 
-    if parsed_args.expected_software_version:
-        if not parsed_args.skip_software_version_verification:
-            system_state["expected_software_version"] = parsed_args.expected_software_version
+    if log_file_dir := parsed_args_copy.get("log_file_dir"):
+        parsed_args_copy["log_file_dir"] = redact_sensitive_info_from_path(log_file_dir)
+    # Tanner (1/14/21): Unsure why the back slashes are duplicated when converting the dict to string. Using replace here to remove the duplication, not sure if there is a better way to solve or avoid this problem
+    logger.info(f"Command Line Args: {parsed_args_copy}".replace(r"\\", "\\"))
 
-    system_state["log_file_id"] = settings_dict["log_file_id"]
 
-    computer_name_hash = hashlib.sha512(socket.gethostname().encode(encoding="UTF-8")).hexdigest()
-    system_state["computer_name_hash"] = computer_name_hash
+def _initialize_system_state(parsed_args: dict[str, Any], log_file_id: uuid.UUID) -> dict[str, Any]:
+    system_state = {
+        "system_status": SERVER_INITIALIZING_STATE,
+        "stimulation_running": [False] * NUM_WELLS,
+        "config_settings": {"log_directory": parsed_args["log_file_dir"]},
+        "stimulator_circuit_statuses": {},
+        "stimulation_info": None,
+        # "latest_software_version": None,  # TODO get this value here instead of in electron
+        "log_file_id": log_file_id,
+    }
 
-    num_wells = 24
-    system_state["stimulation_running"] = [False] * num_wells
-    system_state["latest_software_version"] = None
-    system_state["stimulation_info"] = None
-    system_state["stimulator_circuit_statuses"] = {}
+    if (expected_software_version := parsed_args["expected_software_version"]) and not parsed_args[
+        "skip_software_version_verification"
+    ]:
+        system_state["expected_software_version"] = expected_software_version
 
     return system_state
 
@@ -238,6 +190,9 @@ def _log_system_info() -> None:
     uname_sys = getattr(uname, "system")
     uname_release = getattr(uname, "release")
     uname_version = getattr(uname, "version")
+
+    # TODO make a function for this
+    computer_name_hash = hashlib.sha512(socket.gethostname().encode(encoding="UTF-8")).hexdigest()
 
     for msg in (
         f"System: {uname_sys}",
@@ -250,5 +205,6 @@ def _log_system_info() -> None:
         f"Architecture: {platform.architecture()}",
         f"Interpreter is 64-bits: {sys.maxsize > 2**32}",
         f"System Alias: {platform.system_alias(uname_sys, uname_release, uname_version)}",
+        f"SHA512 digest of Computer Name {computer_name_hash}",
     ):
         logger.info(msg)

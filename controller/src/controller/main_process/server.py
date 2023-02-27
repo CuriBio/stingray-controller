@@ -148,7 +148,7 @@ class Server:
         #     comm_str = str(comm_copy)
         # else:
         #     comm_str = str(communication)
-        logger.info(f"Comm from FE: {msg}")  # TODO
+        logger.info(f"Comm from UI: {msg}")  # TODO
 
     @mark_handler
     async def _test(self, msg) -> str:
