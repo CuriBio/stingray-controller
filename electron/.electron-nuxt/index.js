@@ -27,7 +27,7 @@ const launcher = new ElectronLauncher({
   electronOptions: process.argv.slice(2),
 });
 
-let builder_config_path = path.join(__dirname, "..", "electron-builder-config", `${channel}.yaml`);
+const builder_config_path = path.join(__dirname, "..", "electron-builder-config", `${channel}.yaml`);
 
 const builder = new ElectronBuilder({
   processArgv: ["--config", builder_config_path, "--publish", "never"],

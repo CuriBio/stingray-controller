@@ -532,7 +532,6 @@ export default {
       }
     },
     is_recording_snapshot_running(new_state) {
-      console.log("is_recording_snapshot_running", new_state);
       if (new_state) {
         this.$bvModal.show("analysis-in-progress-modal");
       } else {

@@ -19,6 +19,9 @@ module.exports = {
   settings: {
     "snakecasejs/filter": ["ClassDeclaration", "NewExpression", "ImportSpecifier"],
     "snakecasejs/whitelist": ["FontAwesomeIcon", "afterEach", "afterAll", "beforeEach", "beforeAll"],
+    jest: {
+      version: require("jest/package.json").version,
+    },
   },
   rules: {
     "no-console": 0,
@@ -84,14 +87,5 @@ module.exports = {
     "jest/require-top-level-describe": "error",
     "jest/valid-describe": "error",
     "jest/valid-expect": "error",
-    "jest/valid-title": [
-      "error",
-      {
-        mustMatch: {
-          test: "(^Given.+, When.+, Then.+)|(^When.+, Then.+)",
-          describe: "(^Given.+)|(^\\S+$)",
-        },
-      },
-    ],
   },
 };

@@ -69,9 +69,9 @@ const mergeConfig = (customConfig) => {
 
   if (customConfig.build !== undefined && customConfig.build.plugins !== undefined) {
     // webpack config plugins should not use deep merge
-    let { plugins, ...rest } = customConfig.build;
+    const { plugins, ...rest } = customConfig.build;
     customConfig.build = rest;
-    let result = deepmerge(baseConfig, customConfig);
+    const result = deepmerge(baseConfig, customConfig);
     result.build.plugins = plugins;
     return result;
   } else {

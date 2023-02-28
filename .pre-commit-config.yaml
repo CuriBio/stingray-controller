@@ -137,7 +137,13 @@ repos:
     hooks:
       - id: eslint
         name: eslint-electron
-        exclude: (ui/)|(electron_store.js)|(BrowserWinHandler.js)|(dist/)|(tests/)|(jest\..*)
+        exclude: ^(?!electron/)|(electron_store.js)|(BrowserWinHandler.js)|(dist/)|(tests/)|(\.electron-nuxt)
         files: \.(vue)|(js)$
         types: [file]
         args: [--fix, --config=electron/.eslintrc.js]
+      - id: eslint
+        name: eslint-ui
+        exclude: ^(?!ui/)|(dist/)|(tests/)
+        files: \.(vue)|(js)$
+        types: [file]
+        args: [--fix, --config=ui/.eslintrc.js]

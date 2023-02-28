@@ -5,12 +5,7 @@
  */
 const path = require("path");
 const node_modules_dir = path.join(__dirname, "..", "node_modules");
-const ui_node_modules_dir = path.join(
-  node_modules_dir,
-  "@curi-bio",
-  "ui",
-  "node_modules"
-);
+const ui_node_modules_dir = path.join(node_modules_dir, "@curi-bio", "ui", "node_modules");
 
 module.exports = {
   alias: {

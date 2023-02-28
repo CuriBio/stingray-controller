@@ -19,6 +19,9 @@ module.exports = {
   settings: {
     "snakecasejs/filter": ["ClassDeclaration", "NewExpression", "ImportSpecifier"],
     "snakecasejs/whitelist": ["FontAwesomeIcon", "afterEach", "afterAll", "beforeEach", "beforeAll"],
+    jest: {
+      version: require("jest/package.json").version,
+    },
   },
   rules: {
     "no-console": 0,
@@ -29,6 +32,7 @@ module.exports = {
     "no-invalid-this": 0,
     // "snakecasejs/snakecasejs": "warn",
     // VueJS rules
+    "vue/multi-word-component-names": "off",
     "vue/prop-name-casing": ["error", "snake_case"],
     "vue/component-definition-name-casing": ["error", "PascalCase"],
     "vue/one-component-per-file": "error",
@@ -83,14 +87,5 @@ module.exports = {
     "jest/require-top-level-describe": "error",
     "jest/valid-describe": "error",
     "jest/valid-expect": "error",
-    "jest/valid-title": [
-      "error",
-      {
-        mustMatch: {
-          test: "(^Given.+, When.+, Then.+)|(^When.+, Then.+)",
-          describe: "(^Given.+)|(^\\S+$)",
-        },
-      },
-    ],
   },
 };

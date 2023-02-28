@@ -54,7 +54,6 @@ export default {
     state.start_recording_from_stim = bool;
   },
   set_is_recording_snapshot_running(state, bool) {
-    console.log("set_is_recording_snapshot_running", bool);
     state.is_recording_snapshot_running = bool;
   },
 };

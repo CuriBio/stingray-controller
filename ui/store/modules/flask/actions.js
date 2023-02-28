@@ -10,7 +10,6 @@ import { STATUS } from "./enums";
  * @return {void}
  */
 export async function ping_system_status() {
-  return;
   const params = { current_vuex_status_uuid: this.state.status_uuid };
 
   if (this.state.status_uuid === STATUS.MESSAGE.LIVE_VIEW_ACTIVE) {

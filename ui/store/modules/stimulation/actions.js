@@ -142,7 +142,7 @@ export default {
     };
 
     reader.onerror = function () {
-      console.log(reader.onerror);
+      console.log(reader.onerror); // allow-log
     };
 
     reader.readAsText(file);

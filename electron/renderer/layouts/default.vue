@@ -46,23 +46,19 @@
 import Vue from "vue";
 
 import {
-  PlateNavigator,
   BarcodeViewer,
-  DesktopPlayerControls,
   StatusBar,
   SimulationMode,
   RecordingTime,
   StimulationControls,
   UploadFilesWidget,
-  DataAnalysisControl,
-  PlateMapEditorButton,
 } from "@curi-bio/ui";
 import { ipcRenderer } from "electron";
 import { mapState } from "vuex";
 const log = require("electron-log");
 import path from "path";
 
-import { VBPopover, VBToggle, BCollapse } from "bootstrap-vue";
+import { VBPopover, VBToggle } from "bootstrap-vue";
 
 // Note: Vue automatically prefixes the directive name with 'v-'
 Vue.directive("b-popover", VBPopover);
@@ -70,17 +66,12 @@ Vue.directive("b-toggle", VBToggle);
 
 export default {
   components: {
-    PlateNavigator,
     BarcodeViewer,
-    DesktopPlayerControls,
     StatusBar,
     SimulationMode,
     RecordingTime,
     StimulationControls,
     UploadFilesWidget,
-    DataAnalysisControl,
-    BCollapse,
-    PlateMapEditorButton,
   },
   data: function () {
     return {
