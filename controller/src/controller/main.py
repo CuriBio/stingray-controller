@@ -4,12 +4,8 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-import base64
-import copy
 import hashlib
-import json
 import logging
-import os
 import platform
 import socket
 import sys
@@ -19,9 +15,10 @@ import uuid
 from stdlib_utils import configure_logging
 from stdlib_utils import is_port_in_use
 
-from .constants import COMPILED_EXE_BUILD_TIMESTAMP, NUM_WELLS
+from .constants import COMPILED_EXE_BUILD_TIMESTAMP
 from .constants import CURRENT_SOFTWARE_VERSION
 from .constants import DEFAULT_SERVER_PORT_NUMBER
+from .constants import NUM_WELLS
 from .constants import SERVER_INITIALIZING_STATE
 from .constants import SOFTWARE_RELEASE_CHANNEL
 from .exceptions import LocalServerPortAlreadyInUseError

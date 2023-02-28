@@ -6,9 +6,13 @@ import asyncio
 import logging
 import re
 import traceback
+from typing import Any
 from typing import Optional
 
 logger = logging.getLogger(__name__)
+
+
+GenericTask = asyncio.Task[Any]
 
 
 def redact_sensitive_info_from_path(file_path: Optional[str]) -> Optional[str]:
@@ -28,16 +32,16 @@ def get_redacted_string(length: int) -> str:
     return "*" * length
 
 
-async def wait_tasks_clean(tasks, return_when=asyncio.FIRST_COMPLETED):
-    done = set()
-    pending = set()
+async def wait_tasks_clean(tasks: set[GenericTask], return_when: str = asyncio.FIRST_COMPLETED) -> None:
+    done: set[GenericTask] = set()
+    pending: set[GenericTask] = set()
     try:
         done, pending = await asyncio.wait(tasks, return_when=return_when)
     finally:
         await clean_up_tasks(done, pending)
 
 
-async def clean_up_tasks(done, pending):
+async def clean_up_tasks(done: set[GenericTask], pending: set[GenericTask]) -> None:
     for task in done:
         if not task.cancelled() and (exc := task.exception()):
             logger.error("".join(traceback.format_exception(exc)))

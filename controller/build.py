@@ -1,6 +1,8 @@
-from Cython.Build import cythonize
-import os, numpy
+# -*- coding: utf-8 -*-
+import os
 
+from Cython.Build import cythonize
+import numpy
 from setuptools import Extension
 
 

@@ -9,4 +9,3 @@ max-line-length = 110
 select = C,E,F,W,B
 ignore = E501,W503,E231,E203
 import-order-style = google
-application-import-names = pyqt_test_utils

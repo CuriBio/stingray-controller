@@ -2,31 +2,21 @@
 """Pytest configuration."""
 import multiprocessing
 import sys
-from typing import List
 
-from _pytest.config import Config
-from _pytest.config.argparsing import Parser
-from _pytest.python import Function
 import pytest
 
+# TODO figure out what this does
 sys.dont_write_bytecode = True
-multiprocessing.set_start_method(
-    "spawn"
-)  # Spawn is the only start method that works on Windows. This can only be set once during each run, so set it in conftest to make sure development environment matches production.
+# Spawn is the only start method that works on Windows. This can only be set once during each run, so set it in conftest to make sure development environment matches production.
+multiprocessing.set_start_method("spawn")
 
 
-def pytest_addoption(parser: Parser) -> None:
+def pytest_addoption(parser) -> None:
     parser.addoption(
-        "--full-ci",
-        action="store_true",
-        default=False,
-        help="include tests that are marked as only for CI",
+        "--full-ci", action="store_true", default=False, help="include tests that are marked as only for CI"
     )
     parser.addoption(
-        "--include-slow-tests",
-        action="store_true",
-        default=False,
-        help="include tests that are a bit slow",
+        "--include-slow-tests", action="store_true", default=False, help="include tests that are a bit slow"
     )
     parser.addoption(
         "--only-exe",
@@ -42,7 +32,7 @@ def pytest_addoption(parser: Parser) -> None:
     )
 
 
-def pytest_collection_modifyitems(config: Config, items: List[Function]) -> None:
+def pytest_collection_modifyitems(config, items) -> None:
     if config.getoption("--only-exe"):
         skip_non_exe = pytest.mark.skip(
             reason="these tests are skipped when only running tests that only target the compiled .exe file"

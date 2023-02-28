@@ -20,22 +20,23 @@ logger = logging.getLogger(__name__)
 class SubprocessMonitor:
     """TODO."""
 
-    def __init__(self, system_state: dict[str, Any], queues: dict[str, dict[str, asyncio.Queue]]) -> None:
+    def __init__(
+        self, system_state: dict[str, Any], queues: dict[str, dict[str, asyncio.Queue[dict[str, Any]]]]
+    ) -> None:
         self._system_state = system_state
         self._queues = queues
 
-    async def run(self):
+    async def run(self) -> None:
         tasks = {asyncio.create_task(self._handle_comm_from_server())}
         await wait_tasks_clean(tasks)
 
     async def _handle_comm_from_server(self) -> None:
         while True:
             communication = await self._queues["from"]["server"].get()
-            print("!!!")
 
             logger.info(f"Comm from Server: {communication}")
 
-            if communication == "err":
+            if communication == "err":  # type: ignore
                 raise Exception("raising from monitor")
 
             await self._queues["to"]["server"].put({"echoing from monitor": communication})

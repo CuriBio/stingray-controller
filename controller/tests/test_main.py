@@ -1,18 +1,18 @@
-import asyncio
+# -*- coding: utf-8 -*-
 import hashlib
-import logging, sys
+import logging
 import platform
 from random import choice
 import socket
+import sys
+
 from controller import main
-from controller.constants import (
-    COMPILED_EXE_BUILD_TIMESTAMP,
-    CURRENT_SOFTWARE_VERSION,
-    DEFAULT_SERVER_PORT_NUMBER,
-    NUM_WELLS,
-    SERVER_INITIALIZING_STATE,
-    SOFTWARE_RELEASE_CHANNEL,
-)
+from controller.constants import COMPILED_EXE_BUILD_TIMESTAMP
+from controller.constants import CURRENT_SOFTWARE_VERSION
+from controller.constants import DEFAULT_SERVER_PORT_NUMBER
+from controller.constants import NUM_WELLS
+from controller.constants import SERVER_INITIALIZING_STATE
+from controller.constants import SOFTWARE_RELEASE_CHANNEL
 from controller.exceptions import LocalServerPortAlreadyInUseError
 from controller.main_process.server import Server
 from controller.main_process.subprocess_monitor import SubprocessMonitor

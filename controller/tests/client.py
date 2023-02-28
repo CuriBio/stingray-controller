@@ -20,12 +20,12 @@ async def hello(uri):
             await websocket.send(json.dumps(formatted_msg))
 
             res = await websocket.recv()
-            print(f"response: {res}")
+            print(f"response: {res}")  # allow-print
 
             # if json.loads(res).get("command") == "shutdown":
             #     break
 
-        print("EXIT")
+        print("EXIT")  # allow-print
 
 
 asyncio.run(hello("ws://localhost:4567"))
