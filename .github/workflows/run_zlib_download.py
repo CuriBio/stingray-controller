@@ -4,8 +4,8 @@ import zipfile
 
 import requests
 
-
-controller_folder_path = os.path.join("controller", "src", "controller")
+# assuming this script is run from the /controller directory
+controller_folder_path = os.path.join("src", "controller")
 zlib_folder_path = os.path.join(controller_folder_path, "zlib")
 
 r = requests.get("https://www.zlib.net/zlib1213.zip", allow_redirects=True)
