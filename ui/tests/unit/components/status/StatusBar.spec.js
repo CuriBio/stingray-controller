@@ -7,9 +7,7 @@ import axios from "axios";
 const MockAxiosAdapter = require("axios-mock-adapter");
 import { createLocalVue } from "@vue/test-utils";
 import { STATUS } from "@/store/modules/flask/enums";
-import { ENUMS } from "@/store/modules/playback/enums";
 import { STIM_STATUS } from "@/store/modules/stimulation/enums";
-import { ERRORS } from "@/store/modules/settings/enums";
 
 let wrapper = null;
 
@@ -279,23 +277,7 @@ describe("StatusWidget.vue", () => {
       });
     });
 
-    test("When a user wants to exit the desktop app and a data analysis is active, Then the closure warning modal will not appear", async () => {
-      wrapper = mount(StatusWidget, {
-        store,
-        localVue,
-      });
 
-      await store.commit("playback/set_data_analysis_state", ENUMS.DATA_ANALYSIS_STATE.ACTIVE);
-      await store.commit("settings/set_confirmation_request", false);
-      Vue.nextTick(() => {
-        expect(wrapper.find("#ops-closure-warning").isVisible()).toBe(false);
-      });
-
-      await store.commit("settings/set_confirmation_request", true);
-      Vue.nextTick(() => {
-        expect(wrapper.find("#ops-closure-warning").isVisible()).toBe(false);
-      });
-    });
 
     test.each(["DOWNLOADING_UPDATES", "INSTALLING_UPDATES"])(
       "When a user wants to exit the desktop app, Then the fw closure warning modal should appear if a fw update is in progress",

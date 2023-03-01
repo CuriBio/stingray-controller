@@ -156,7 +156,6 @@ import Vue from "vue";
 import { mapGetters, mapState } from "vuex";
 import { STATUS } from "@/store/modules/flask/enums";
 import { STIM_STATUS } from "@/store/modules/stimulation/enums";
-import { ENUMS } from "@/store/modules/playback/enums";
 import BootstrapVue from "bootstrap-vue";
 import { BButton } from "bootstrap-vue";
 import { BModal } from "bootstrap-vue";
@@ -179,17 +178,17 @@ export default {
     ErrorCatchWidget,
     StatusWarningWidget,
     StatusSpinnerWidget,
-    StimQCSummary,
+    StimQCSummary
   },
   props: {
     stim_specific: {
       type: Boolean,
-      default: false,
+      default: false
     },
     da_check: {
       type: Boolean,
-      default: false,
-    },
+      default: false
+    }
   },
   data() {
     return {
@@ -199,60 +198,59 @@ export default {
         msg_one:
           "A firmware update for the Mantarray instrument is in progress. Closing the software now could damage the instrument.",
         msg_two: "Are you sure you want to exit?",
-        button_names: ["Cancel", "Yes"],
+        button_names: ["Cancel", "Yes"]
       },
       fw_updates_complete_labels: {
         header: "Important!",
         msg_one: "Firmware updates have been successfully installed.",
         msg_two:
           "Please close the Mantarray software, power the Mantarray instrument off and on, then restart the Mantarray software.",
-        button_names: ["Okay"],
+        button_names: ["Okay"]
       },
       sw_update_labels: {
         header: "Important!",
         msg_one: "A software update will be installed after exiting.",
         msg_two:
           "The installer may prompt you to take action while it is running. Please watch it after this software closes.",
-        button_names: ["Okay"],
+        button_names: ["Okay"]
       },
       short_circuit_labels: {
         header: "Error!",
         msg_one:
           "A short circuit has been found during the configuration check. Replace the stimulation lid.",
         msg_two: "If the issue persists, please contact:  ",
-        button_names: ["Okay"],
+        button_names: ["Okay"]
       },
       successful_qc_check_labels: {
         header: "Configuration Check Complete!",
         msg_one: "No open circuits were detected in a well assigned with a protocol.",
         msg_two: "You can now run this stimulation.",
-        button_names: ["Okay"],
+        button_names: ["Okay"]
       },
       active_processes_modal_labels: {
         header: "Warning!",
         msg_one: "Data analysis cannot be performed while other processes are running.",
         msg_two: "Active processes will be automatically stopped if you choose to continue.",
-        button_names: ["Cancel", "Continue"],
+        button_names: ["Cancel", "Continue"]
       },
       initializing_modal_labels: {
         header: "Warning!",
         msg_one: "Data analysis cannot be performed while the instrument is initializing or calibrating.",
         msg_two: "It will become available shortly.",
-        button_names: ["Close"],
+        button_names: ["Close"]
       },
       h5_warning_label: {
         header: "Error!",
         msg_one: "Corrupt h5 files found",
         msg_two: "",
-        button_names: ["Close"],
-      },
+        button_names: ["Close"]
+      }
     };
   },
   computed: {
     ...mapGetters({
-      status_uuid: "flask/status_id",
+      status_uuid: "flask/status_id"
     }),
-    ...mapState("playback", ["data_analysis_state", "is_recording_snapshot_running"]),
     ...mapState("stimulation", ["protocol_assignments", "stim_play_state", "stim_status"]),
     ...mapState("data", ["stimulator_circuit_statuses", "h5_warning"]),
     ...mapState("settings", [
@@ -264,60 +262,60 @@ export default {
       "software_update_available",
       "allow_sw_update_install",
       "firmware_update_dur_mins",
-      "confirmation_request",
+      "confirmation_request"
     ]),
-    fw_update_in_progress_labels: function () {
+    fw_update_in_progress_labels: function() {
       let duration = `${this.firmware_update_dur_mins} minute`;
       if (this.firmware_update_dur_mins !== 1) duration += "s";
       return {
         header: "Important!",
         msg_one: `The firmware update is in progress. It will take about ${duration} to complete.`,
-        msg_two: "Do not close the Mantarray software or power off the Mantarray instrument.",
+        msg_two: "Do not close the Mantarray software or power off the Mantarray instrument."
       };
     },
-    status_label: function () {
+    status_label: function() {
       return this.stim_specific ? "Stim status" : "System status";
     },
-    assigned_open_circuits: function () {
+    assigned_open_circuits: function() {
       // filter for matching indices
-      return this.stimulator_circuit_statuses.filter((well) =>
+      return this.stimulator_circuit_statuses.filter(well =>
         Object.keys(this.protocol_assignments).includes(well.toString())
       );
     },
-    is_playback_active: function () {
+    is_playback_active: function() {
       return [STATUS.MESSAGE.LIVE_VIEW_ACTIVE, STATUS.MESSAGE.RECORDING, STATUS.MESSAGE.BUFFERING].includes(
         this.status_uuid
       );
     },
-    is_initializing: function () {
+    is_initializing: function() {
       return [
         STATUS.MESSAGE.SERVER_BOOTING_UP,
         STATUS.MESSAGE.SERVER_STILL_INITIALIZING,
         STATUS.MESSAGE.SERVER_READY,
         STATUS.MESSAGE.INITIALIZING_INSTRUMENT,
-        STATUS.MESSAGE.CALIBRATING, // this is added to be included in specific modal
+        STATUS.MESSAGE.CALIBRATING // this is added to be included in specific modal
       ].includes(this.status_uuid);
     },
-    is_updating: function () {
+    is_updating: function() {
       return [
         STATUS.MESSAGE.CHECKING_FOR_UPDATES,
         STATUS.MESSAGE.INSTALLING_UPDATES,
-        STATUS.MESSAGE.DOWNLOADING_UPDATES,
+        STATUS.MESSAGE.DOWNLOADING_UPDATES
       ].includes(this.status_uuid);
     },
-    is_data_analysis_enabled: function () {
+    is_data_analysis_enabled: function() {
       return !this.stim_play_state && !this.is_playback_active && !this.is_initializing && !this.is_updating;
-    },
+    }
   },
   watch: {
-    status_uuid: function (new_status) {
+    status_uuid: function(new_status) {
       // set message for stimulation status and system status if error occurs
       if (!this.stim_specific && !this.shutdown_error_status) this.set_system_specific_status(new_status);
     },
-    stim_status: function (new_status) {
+    stim_status: function(new_status) {
       if (this.stim_specific) this.set_stim_specific_status(new_status);
     },
-    confirmation_request: function () {
+    confirmation_request: function() {
       const sensitive_ops_in_progress =
         this.is_playback_active ||
         this.status_uuid === STATUS.MESSAGE.CALIBRATING ||
@@ -326,13 +324,11 @@ export default {
         this.total_uploaded_files.length < this.total_file_count ||
         this.is_recording_snapshot_running;
 
-      const data_analysis_in_progress = this.data_analysis_state === ENUMS.DATA_ANALYSIS_STATE.ACTIVE;
-
       const fw_update_in_progress =
         this.status_uuid === STATUS.MESSAGE.DOWNLOADING_UPDATES ||
         this.status_uuid === STATUS.MESSAGE.INSTALLING_UPDATES;
 
-      if (this.confirmation_request && !this.stim_specific && !data_analysis_in_progress) {
+      if (this.confirmation_request && !this.stim_specific) {
         if (fw_update_in_progress) {
           this.$bvModal.show("fw-closure-warning");
         } else if (sensitive_ops_in_progress) {
@@ -342,36 +338,17 @@ export default {
         }
       }
     },
-    da_check: function (new_val, _) {
-      if (new_val) {
-        if (!this.is_data_analysis_enabled) {
-          this.is_initializing || this.is_updating
-            ? this.$bvModal.show("initializing-warning")
-            : this.$bvModal.show("active-processes-warning");
-        } else {
-          this.$emit("close_da_check_modal", 1);
-        }
-      }
-    },
-    shutdown_error_status: function (new_val, _) {
+    shutdown_error_status: function(new_val, _) {
       if (new_val) {
         this.close_modals_by_id([
           "fw-updates-in-progress-message",
           "fw-closure-warning",
-          "ops-closure-warning",
+          "ops-closure-warning"
         ]);
         this.alert_txt = "Error Occurred";
         this.$bvModal.show("error-catch");
       }
-    },
-    h5_warning: function (new_val, _) {
-      this.$bvModal.show("h5_warning");
-    },
-    is_recording_snapshot_running: function (new_bool) {
-      if (!new_bool) {
-        this.close_modals_by_id(["ops-closure-warning"]);
-      }
-    },
+    }
   },
   created() {
     this.stim_specific
@@ -379,7 +356,7 @@ export default {
       : this.set_system_specific_status(this.status_uuid);
   },
   methods: {
-    set_stim_specific_status: function (status) {
+    set_stim_specific_status: function(status) {
       this.alert_txt = status;
 
       if (status === STIM_STATUS.CONFIG_CHECK_COMPLETE)
@@ -388,7 +365,7 @@ export default {
           : this.$bvModal.show("success-qc-check");
       else if (status === STIM_STATUS.SHORT_CIRCUIT_ERROR) this.$bvModal.show("short-circuit-err");
     },
-    set_system_specific_status: function (status) {
+    set_system_specific_status: function(status) {
       switch (status) {
         case STATUS.MESSAGE.SERVER_BOOTING_UP:
           this.alert_txt = "Booting Up...";
@@ -449,7 +426,7 @@ export default {
           this.close_modals_by_id([
             "fw-updates-in-progress-message",
             "fw-closure-warning",
-            "ops-closure-warning",
+            "ops-closure-warning"
           ]);
 
           this.alert_txt = "Error Occurred";
@@ -461,7 +438,7 @@ export default {
       }
     },
 
-    handle_confirmation: function (idx) {
+    handle_confirmation: function(idx) {
       // Tanner (1/19/22): skipping automatic closure cancellation since this method gaurantees
       // send_confirmation will be emitted, either immediately or after closing sw-update-message
       this.close_modals_by_id(["ops-closure-warning", "fw-closure-warning"], false);
@@ -473,7 +450,7 @@ export default {
         this.$emit("send_confirmation", idx);
       }
     },
-    close_modals_by_id: function (ids, auto_cancel_closure = true) {
+    close_modals_by_id: function(ids, auto_cancel_closure = true) {
       for (const id of ids) {
         this.$bvModal.hide(id);
       }
@@ -493,11 +470,11 @@ export default {
         this.shutdown_request();
       }
     },
-    close_sw_update_modal: function () {
+    close_sw_update_modal: function() {
       this.$bvModal.hide("sw-update-message");
       this.$emit("send_confirmation", 1);
     },
-    shutdown_request: async function () {
+    shutdown_request: async function() {
       const shutdown_url = "http://localhost:4567/shutdown";
       try {
         await Vue.axios.get(shutdown_url);
@@ -505,18 +482,17 @@ export default {
         return;
       }
     },
-    close_da_check_modal: function (idx) {
+    close_da_check_modal: function(idx) {
       this.$bvModal.hide("active-processes-warning");
       this.$bvModal.hide("initializing-warning");
 
       if (idx === 1) {
         if (this.stim_play_state) this.$store.dispatch("stimulation/stop_stimulation");
-        if (this.is_playback_active) this.$store.dispatch("playback/stop_active_processes");
       }
 
       this.$emit("close_da_check_modal", idx);
-    },
-  },
+    }
+  }
 };
 </script>
 <style>

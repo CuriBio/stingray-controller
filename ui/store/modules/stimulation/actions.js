@@ -1,6 +1,6 @@
 import { WellTitle as LabwareDefinition } from "@/js_utils/labware_calculations.js";
 const twenty_four_well_plate_definition = new LabwareDefinition(4, 6);
-import { call_axios_post_from_vuex } from "../../../js_utils/axios_helpers";
+// import { call_axios_post_from_vuex } from "../../../js_utils/axios_helpers";
 import { STIM_STATUS, TIME_CONVERSION_TO_MILLIS } from "./enums";
 
 export default {
@@ -287,16 +287,16 @@ export default {
 
     const message_url = `/set_protocols`;
     const body = { data: JSON.stringify(message) };
-    await call_axios_post_from_vuex(message_url, body);
+    // await call_axios_post_from_vuex(message_url, body);
 
     const status_url = `/set_stim_status?running=${status}`;
-    await call_axios_post_from_vuex(status_url);
+    // await call_axios_post_from_vuex(status_url);
     commit("set_stim_status", STIM_STATUS.STIM_ACTIVE);
   },
 
   async stop_stimulation({ commit }) {
     const status_url = `/set_stim_status?running=${false}`;
-    await call_axios_post_from_vuex(status_url);
+    // await call_axios_post_from_vuex(status_url);
     commit("set_stim_status", STIM_STATUS.READY);
   },
 
@@ -355,13 +355,13 @@ export default {
   async start_stim_configuration({ commit, state }) {
     const url = `/start_stim_checks`;
     const well_indices = Object.keys(state.protocol_assignments);
-    const res = await call_axios_post_from_vuex(url, { well_indices });
+    // const res = await call_axios_post_from_vuex(url, { well_indices });
 
-    if (res && res.status !== 200) {
-      commit("set_stim_status", STIM_STATUS.ERROR);
-    } else {
-      commit("set_stim_status", STIM_STATUS.CONFIG_CHECK_IN_PROGRESS);
-    }
+    // if (res && res.status !== 200) {
+    //   commit("set_stim_status", STIM_STATUS.ERROR);
+    // } else {
+    //   commit("set_stim_status", STIM_STATUS.CONFIG_CHECK_IN_PROGRESS);
+    // }
   },
   async on_pulse_mouseenter({ state }, idx) {
     const hovered_pulse = state.repeat_colors[idx];

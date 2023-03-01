@@ -37,7 +37,6 @@ import StimulationStudioDragAndDropPanel from "@/components/stimulation/Stimulat
 import StimulationStudioBlockViewEditor from "@/components/stimulation/StimulationStudioBlockViewEditor.vue";
 import StimulationStudioProtocolViewer from "@/components/stimulation/StimulationStudioProtocolViewer.vue";
 import { mapState } from "vuex";
-import playback_module from "@/store/modules/playback";
 import { STIM_STATUS } from "@/store/modules/stimulation/enums";
 
 /**
@@ -55,34 +54,35 @@ export default {
     StimulationStudioCreateAndEdit,
     StimulationStudioDragAndDropPanel,
     StimulationStudioBlockViewEditor,
-    StimulationStudioProtocolViewer,
+    StimulationStudioProtocolViewer
   },
   data() {
     return {
       btn_labels: ["Save Changes", "Clear/Reset All", "Discard Changes"],
       stimulation_type: "Current",
       selected_protocol: { label: "Create New", color: "", letter: "" },
-      rest_dur_is_valid: true,
+      rest_dur_is_valid: true
     };
   },
   computed: {
-    ...mapState("playback", ["playback_state"]),
+    // ...mapState("playback", ["playback_state"]),
     ...mapState("stimulation", ["stim_status"]),
-    disable_edits: function () {
-      return (
-        this.playback_state === playback_module.ENUMS.PLAYBACK_STATES.RECORDING ||
-        this.stim_status === STIM_STATUS.STIM_ACTIVE
-      );
+    disable_edits: function() {
+      return false;
+      // return (
+      //   this.playback_state === playback_module.ENUMS.PLAYBACK_STATES.RECORDING ||
+      //   this.stim_status === STIM_STATUS.STIM_ACTIVE
+      // );
     },
-    btn_hover: function () {
+    btn_hover: function() {
       return {
         content: "Cannot make changes to stim settings while actively stimulating or recording",
-        disabled: !this.disable_edits,
+        disabled: !this.disable_edits
       };
-    },
+    }
   },
-  created: async function () {
-    this.unsubscribe = this.$store.subscribe(async (mutation) => {
+  created: async function() {
+    this.unsubscribe = this.$store.subscribe(async mutation => {
       if (mutation.type === "stimulation/set_stimulation_type") {
         this.stimulation_type = this.$store.getters["stimulation/get_stimulation_type"];
       }
@@ -131,8 +131,8 @@ export default {
     },
     get_btn_label_class(idx) {
       return this.disable_edits || (idx === 0 && !this.rest_dur_is_valid) ? "btn-label-disable" : "btn-label";
-    },
-  },
+    }
+  }
 };
 </script>
 

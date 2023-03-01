@@ -11,7 +11,7 @@
       class="input__plate-barcode-entry"
       :style="dynamic_entry_style"
       :class="[
-        barcode_info.valid ? `input__plate-barcode-entry-valid` : `input__plate-barcode-entry-invalid`,
+        barcode_info.valid ? `input__plate-barcode-entry-valid` : `input__plate-barcode-entry-invalid`
       ]"
       :value="barcode_info.value"
       @input="set_barcode_manually"
@@ -50,7 +50,6 @@
 </template>
 <script>
 import { mapState } from "vuex";
-import playback_module from "@/store/modules/playback";
 import { library } from "@fortawesome/fontawesome-svg-core";
 import { faPencilAlt } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
@@ -69,62 +68,58 @@ export default {
   name: "BarcodeViewer",
   components: {
     FontAwesomeIcon,
-    StatusWarningWidget,
+    StatusWarningWidget
   },
   props: {
-    barcode_type: { type: String, default: "plate_barcode" },
+    barcode_type: { type: String, default: "plate_barcode" }
   },
   data() {
     return {
-      playback_state_enums: playback_module.ENUMS.PLAYBACK_STATES,
+      // playback_state_enums: playback_module.ENUMS.PLAYBACK_STATES,
       barcode_manual_labels: {
         header: "Warning!",
         msg_one: "Do you want to enable manual barcode editing?",
         msg_two:
           "Once enabled, all barcodes must be entered manually. This should only be done if the barcode scanner is malfunctioning. Scanning cannot be re-enabled until software is restarted.",
-        button_names: ["Cancel", "Yes"],
+        button_names: ["Cancel", "Yes"]
       },
       barcode_warning_labels: {
         header: "Warning!",
         msg_one: "A new barcode has been detected while a process was active.",
         msg_two: "All processes have been stopped.",
-        button_names: ["Okay"],
-      },
+        button_names: ["Okay"]
+      }
     };
   },
   computed: {
     ...mapState("playback", ["playback_state", "barcodes", "barcode_warning"]),
     ...mapState("flask", ["barcode_manual_mode"]),
-    barcode_info: function () {
+    barcode_info: function() {
       return this.barcodes[this.barcode_type];
     },
-    barcode_label: function () {
+    barcode_label: function() {
       return this.barcode_type == "plate_barcode" ? "Plate Barcode" : "Stim Lid Barcode";
     },
-    dynamic_label_style: function () {
+    dynamic_label_style: function() {
       return this.barcode_type == "plate_barcode" ? "left: 17px;" : "left: 0px;";
     },
-    dynamic_entry_style: function () {
+    dynamic_entry_style: function() {
       return this.barcode_type == "plate_barcode" ? "width: 110px;" : "width: 105px;";
     },
-    tooltip_text: function () {
+    tooltip_text: function() {
       return this.active_processes ? "Cannot edit barcodes while live view is active." : "Click to edit";
     },
-    active_processes: function () {
-      return (
-        this.playback_state === this.playback_state_enums.RECORDING ||
-        this.playback_state === this.playback_state_enums.BUFFERING ||
-        this.playback_state === this.playback_state_enums.LIVE_VIEW_ACTIVE
-      );
+    active_processes: function() {
+      return false;
     },
-    is_disabled: function () {
+    is_disabled: function() {
       return this.active_processes || !this.barcode_manual_mode;
-    },
+    }
   },
   watch: {
-    barcode_warning: function () {
+    barcode_warning: function() {
       if (this.barcode_warning) this.$bvModal.show("barcode-warning");
-    },
+    }
   },
   methods: {
     handle_manual_mode_choice(choice) {
@@ -135,17 +130,17 @@ export default {
         console.log("Barcode Set Manually"); // allow-log
       }
     },
-    set_barcode_manually: function (event) {
+    set_barcode_manually: function(event) {
       this.$store.dispatch("playback/validate_barcode", {
         type: this.barcode_type,
-        new_value: event.target.value,
+        new_value: event.target.value
       });
     },
     close_warning_modal() {
       this.$bvModal.hide("barcode-warning");
       this.$store.commit("playback/set_barcode_warning", false);
-    },
-  },
+    }
+  }
 };
 </script>
 <style>

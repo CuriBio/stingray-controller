@@ -1,32 +1,27 @@
 <template>
   <div>
-    <StimulationStudio :style="'left: 10px; top: 10px;'" />
+    <StimulationStudio :style="'top: 45px;'" />
     <button class="update-button" @click="update_protocol_list">Update protocol list</button>
     <button class="update-button" :style="'top: 300px;'" @click="create_message">Create message</button>
     <button class="update-button" :style="'top: 500px;'" @click="enable_controls">Enable buttons</button>
     <button class="update-button" :style="'top: 700px;'" @click="mock_config_check">Mock config check</button>
-    <div class="controls-container">
-      <StimulationControls />
-    </div>
   </div>
 </template>
 <script>
 import StimulationStudio from "@/components/stimulation/StimulationStudio.vue";
-import StimulationControls from "@/components/playback/controls/StimulationControls.vue";
 import { mapMutations, mapActions } from "vuex";
 import { STIM_STATUS } from "@/store/modules/stimulation/enums";
 // import { StimulationStudio, StimulationControls } from "@/dist/mantarray.common";
-import playback_module from "@/store/modules/playback";
 
 export default {
   components: {
     StimulationStudio,
-    StimulationControls,
+    
   },
+  layout: "default",
   methods: {
     ...mapMutations("stimulation", ["set_new_protocol", "reset_state", "set_stim_status"]),
     ...mapActions("stimulation", ["create_protocol_message"]),
-    ...mapMutations("playback", ["set_enable_stim_controls"]),
     async update_protocol_list() {
       const test_protocol = {
         label: "mock_protocol",
@@ -47,12 +42,12 @@ export default {
               phase_two_duration: 3,
               phase_two_charge: -40,
               postphase_interval: 1,
-              num_cycles: 5,
+              num_cycles: 5
             },
             {
               type: "Delay",
               duration: 50,
-              unit: "milliseconds",
+              unit: "milliseconds"
             },
             {
               type: "Biphasic",
@@ -62,8 +57,8 @@ export default {
               phase_two_duration: 4,
               phase_two_charge: -10,
               postphase_interval: 1,
-              num_cycles: 5,
-            },
+              num_cycles: 5
+            }
           ],
           detailed_subprotocols: [
             {
@@ -80,8 +75,8 @@ export default {
                 postphase_interval: 1,
                 total_active_duration: { duration: 50, unit: "milliseconds" },
                 num_cycles: 1,
-                frequency: 1,
-              },
+                frequency: 1
+              }
             },
             {
               type: "Delay",
@@ -90,8 +85,8 @@ export default {
               color: "70f30",
               pulse_settings: {
                 duration: 50,
-                unit: "milliseconds",
-              },
+                unit: "milliseconds"
+              }
             },
             {
               type: "Biphasic",
@@ -107,11 +102,11 @@ export default {
                 postphase_interval: 1,
                 total_active_duration: { duration: 50, unit: "milliseconds" },
                 num_cycles: 1,
-                frequency: 1,
-              },
-            },
-          ],
-        },
+                frequency: 1
+              }
+            }
+          ]
+        }
       };
       const test_protocol_2 = {
         label: "mock_protocol_2",
@@ -132,13 +127,13 @@ export default {
               phase_two_duration: 5,
               phase_two_charge: -200,
               postphase_interval: 0,
-              num_cycles: 1,
+              num_cycles: 1
             },
             {
               type: "Delay",
               duration: 1,
-              unit: "seconds",
-            },
+              unit: "seconds"
+            }
           ],
           detailed_subprotocols: [
             {
@@ -155,11 +150,11 @@ export default {
                 postphase_interval: 0,
                 total_active_duration: { duration: 1, unit: "seconds" },
                 num_cycles: 1,
-                frequency: 2,
-              },
-            },
-          ],
-        },
+                frequency: 2
+              }
+            }
+          ]
+        }
       };
       this.set_new_protocol(test_protocol);
       this.set_new_protocol(test_protocol_2);
@@ -170,18 +165,17 @@ export default {
       this.create_protocol_message();
     },
     enable_controls() {
-      this.$store.state.playback.enable_stim_controls = true;
       this.$store.dispatch("playback/validate_barcode", {
         type: "stim_barcode",
-        new_value: "MS2022001000",
+        new_value: "MS2022001000"
       });
-      this.$store.commit("playback/set_playback_state", playback_module.ENUMS.PLAYBACK_STATES.CALIBRATED);
+      // this.$store.commit("playback/set_playback_state", playback_module.ENUMS.PLAYBACK_STATES.CALIBRATED);
     },
     mock_config_check() {
       //   this.set_stim_status(STIM_STATUS.CONFIG_CHECK_IN_PROGRESS);
       this.set_stim_status(STIM_STATUS.SHORT_CIRCUIT_ERROR);
-    },
-  },
+    }
+  }
 };
 </script>
 <style scoped>
@@ -200,10 +194,5 @@ export default {
   cursor: pointer;
   background-color: #4ca0af;
   z-index: 999;
-}
-.controls-container {
-  left: 5%;
-  top: 75%;
-  position: absolute;
 }
 </style>

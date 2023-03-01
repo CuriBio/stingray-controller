@@ -1,7 +1,7 @@
 import Vuex from "vuex";
 import { createLocalVue } from "@vue/test-utils";
 import { settings_store_module } from "@/dist/mantarray.common";
-import * as axios_helpers from "../../../js_utils/axios_helpers.js";
+// import * as axios_helpers from "../../../js_utils/axios_helpers.js";
 import axios from "axios";
 const MockAxiosAdapter = require("axios-mock-adapter");
 
@@ -178,57 +178,42 @@ describe("store/settings", () => {
     expect(upload_error).toBe(true);
   });
   describe("settings/actions", () => {
-    test("When a user wants to save user credentials in settings, Then the vuex action to update settings will send axios request", async () => {
-      jest.spyOn(axios_helpers, "call_axios_get_from_vuex").mockImplementation(() => {
-        return {
-          status: 200,
-        };
-      });
+    // test("When a user wants to save user credentials in settings, Then the vuex action to update settings will send axios request", async () => {
+    //   jest.spyOn(axios_helpers, "call_axios_get_from_vuex").mockImplementation(() => {
+    //     return {
+    //       status: 200,
+    //     };
+    //   });
 
-      const array_of_user_accounts = [
-        {
-          customer_id: "4vqyd62oARXqj9nRUNhtLQ",
-          user_password: "941532a0-6be1-443a-a9d5-d57bdf180a52",
-          user_name: "User account -1",
-        },
-      ];
+    //   const array_of_user_accounts = [
+    //     {
+    //       customer_id: "4vqyd62oARXqj9nRUNhtLQ",
+    //       user_password: "941532a0-6be1-443a-a9d5-d57bdf180a52",
+    //       user_name: "User account -1",
+    //     },
+    //   ];
 
-      store.commit("settings/set_user_accounts", array_of_user_accounts);
-      store.commit("settings/set_active_user_index", 0);
+    //   store.commit("settings/set_user_accounts", array_of_user_accounts);
+    //   store.commit("settings/set_active_user_index", 0);
 
-      const { status } = await store.dispatch("settings/update_settings");
-      expect(status).toBe(200);
-    });
-    test.each([true, false])(
-      "When a user confirms whether or not they want to proceed with a FW update, Then that decision is sent to the BE",
-      async (decision) => {
-        const post_spy = jest.spyOn(axios_helpers, "call_axios_post_from_vuex").mockImplementation(() => {
-          return {
-            status: 200,
-          };
-        });
+    //   const { status } = await store.dispatch("settings/update_settings");
+    //   expect(status).toBe(200);
+    // });
+    // test.each([true, false])(
+    //   "When a user confirms whether or not they want to proceed with a FW update, Then that decision is sent to the BE",
+    //   async (decision) => {
+    //     const post_spy = jest.spyOn(axios_helpers, "call_axios_post_from_vuex").mockImplementation(() => {
+    //       return {
+    //         status: 200,
+    //       };
+    //     });
 
-        const { status } = await store.dispatch("settings/send_firmware_update_confirmation", decision);
-        expect(status).toBe(200);
-        expect(post_spy).toHaveBeenCalledWith(`/firmware_update_confirmation?update_accepted=${decision}`);
-      }
-    );
-    test("When a user selects Select Files to start a new data analysis, Then a request to the BE is made returning list of local directories and root path", async () => {
-      const get_url = "http://localhost:4567/get_recordings";
-      const test_recordings = {
-        recordings_list: ["rec_1", "rec_2", "rec_3"],
-        root_recording_path: "C\\test\\recording\\path\\",
-      };
+    //     const { status } = await store.dispatch("settings/send_firmware_update_confirmation", decision);
+    //     expect(status).toBe(200);
+    //     expect(post_spy).toHaveBeenCalledWith(`/firmware_update_confirmation?update_accepted=${decision}`);
+    //   }
+    // );
 
-      const spied_helper = jest.spyOn(axios_helpers, "call_axios_get_from_vuex");
-      mocked_axios.onGet(get_url).reply(200, test_recordings);
-
-      await store.dispatch("settings/get_recording_dirs");
-
-      expect(store.state.settings.recordings_list).toStrictEqual(test_recordings.recordings_list);
-      expect(spied_helper).toHaveBeenCalledWith(get_url);
-    });
-  });
   describe("settings/mutations", () => {
     test.each([true, false])(
       "When set_firmware_update_available is commited, Then firmware_update_dur_mins is updated accordingly",

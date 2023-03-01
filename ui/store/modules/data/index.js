@@ -10,13 +10,15 @@ const maximum_number_of_wells_in_any_plate = 96;
 const default_state = {
   // plate_waveforms: 24 element array. each element corresponds to a well in the plate  (all x/y data points for the whole recording)
   plate_waveforms: [],
-  heatmap_values: {
-    "Twitch Frequency": { data: [] },
-    "Twitch Force": { data: [] },
-    // "Twitch Period": { data: [] },
-    // "Twitch Width 80": { data: [] },
-    // "Contraction Velocity": { data: [] },
-    // "Relaxation Velocity": { data: [] },
+  barcodes: {
+    plate_barcode: {
+      value: null,
+      valid: false
+    },
+    stim_barcode: {
+      value: null,
+      valid: false
+    }
   },
 
   // Tanner (10/29/21): the data stored here aren't actually waveforms yet, but will be in the future
@@ -26,7 +28,7 @@ const default_state = {
   last_protocol_flag: [],
   stimulator_circuit_statuses: [],
   recording_snapshot_data: [],
-  h5_warning: false,
+  h5_warning: false
 };
 
 for (let i = 0; i < maximum_number_of_wells_in_any_plate; i++) {
@@ -44,5 +46,5 @@ export default {
   state,
   actions,
   mutations,
-  getters,
+  getters
 };

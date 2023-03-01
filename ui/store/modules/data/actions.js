@@ -7,34 +7,6 @@ import {
 import { STIM_STATUS } from "@/store/modules/stimulation/enums";
 
 export default {
-  async append_plate_waveforms({ dispatch, commit, state }, new_value) {
-    const appended_waveforms = append_well_data(state.plate_waveforms, new_value);
-    commit("set_plate_waveforms", appended_waveforms);
-
-    appended_waveforms.map((x, idx) => {
-      const { x_data_points } = x;
-      // support for long subprotocols. this pulls the marker out to the last tissue data point.
-      const well_assignments = state.stim_fill_assignments[idx];
-      if (well_assignments.length > 0)
-        well_assignments[well_assignments.length - 1][1][1][0] = x_data_points[x_data_points.length - 1];
-    });
-
-    dispatch("remove_old_waveform_data");
-  },
-  remove_old_waveform_data({ rootState }) {
-    const { waveform, playback, data } = rootState;
-    const max_x_min_value = playback.x_time_index - waveform.x_zoom_levels[0].x_scale;
-    // remove time points indices that are older than the x min at max zoom out
-    data.plate_waveforms.map((well) => {
-      const idx_to_splice = find_closest_array_idx(well.x_data_points, max_x_min_value);
-      well.x_data_points.splice(0, idx_to_splice - 2);
-      well.y_data_points.splice(0, idx_to_splice - 2);
-    });
-  },
-  async get_data_action_context(context) {
-    // useful for testing actions
-    return context;
-  },
   async append_stim_waveforms({ state, dispatch }, new_values) {
     for (const well_idx in new_values) {
       if (new_values[well_idx] !== undefined && state.plate_waveforms[well_idx] !== undefined) {
@@ -67,8 +39,8 @@ export default {
               protocol_flags[idx],
               [
                 [x, 101000],
-                [next_x, 101000],
-              ],
+                [next_x, 101000]
+              ]
             ]);
 
             const well_assignments = state.stim_fill_assignments[well_idx];
@@ -117,17 +89,11 @@ export default {
         .map(([idx, status]) => {
           return status == "open" ? +idx : undefined;
         })
-        .filter((i) => i === 0 || i);
+        .filter(i => i === 0 || i);
 
       commit("set_stimulator_circuit_statuses", filtered_statuses);
       this.commit("stimulation/set_stim_status", STIM_STATUS.CONFIG_CHECK_COMPLETE);
     }
   },
-  format_recording_snapshot_data({ commit }, { time, force }) {
-    const formatted_data = force.map((y_values) => {
-      return convert_x_y_arrays_to_d3_array(time, y_values);
-    });
 
-    commit("set_recording_snapshot_data", formatted_data);
-  },
 };
