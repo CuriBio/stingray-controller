@@ -107,7 +107,7 @@ const start_python_subprocess = () => {
       mode: "text",
       pythonPath: process.platform === "win32" ? "python" : "python3",
       // pythonOptions: ['-u'], // get print results in real-time
-      scriptPath: path.join("..", "controller"),
+      scriptPath: path.join("..", "controller", "src"),
       args: python_cmd_line_args,
     };
     const py_file_name = "entrypoint.py";

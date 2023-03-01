@@ -22,9 +22,6 @@ async def hello(uri):
             res = await websocket.recv()
             print(f"response: {res}")  # allow-print
 
-            # if json.loads(res).get("command") == "shutdown":
-            #     break
-
         print("EXIT")  # allow-print
 
 

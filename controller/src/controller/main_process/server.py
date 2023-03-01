@@ -24,7 +24,6 @@ logger = logging.getLogger(__name__)
 #    - handle server initiated shutdown gracefully
 #    - handle pm initiated shutdown gracefully
 #    - more ?
-# try out https://stackoverflow.com/questions/43418779/how-do-you-mark-a-group-of-python-methods-for-later-use-can-these-decorators to set up message handlers
 
 
 def mark_handler(fn: Callable[..., Any]) -> Callable[..., Any]:
@@ -68,7 +67,7 @@ class Server:
     # monitor_test,err
 
     async def run(self) -> None:
-        logger.info("Starting WS Server")
+        logger.info("Starting Server")
 
         # self._exit_code = asyncio.Future()  # set this future to exit the server
 
@@ -77,11 +76,12 @@ class Server:
         try:
             await self._serve_task
         except asyncio.CancelledError:
+            logger.info("Server cancelled")
             ws_server.close()
             await ws_server.wait_closed()
             raise
         finally:
-            logger.info("WS server shut down")
+            logger.info("Server shut down")
 
     async def _run(self, websocket: WebSocketServerProtocol) -> None:
         if not self._serve_task:
@@ -111,11 +111,6 @@ class Server:
     async def _producer(self, websocket: WebSocketServerProtocol) -> None:
         while True:
             msg = await self._from_monitor_queue.get()
-
-            # TODO
-            # if msg["communication_type"] == "shutdown":
-            #     break
-
             await websocket.send(json.dumps(msg))
 
     async def _consumer(self, websocket: WebSocketServerProtocol) -> None:
@@ -129,12 +124,10 @@ class Server:
 
             command = msg.pop("command")
 
+            # TODO handle KeyError here or make default method to handle unrecognized comm
             handler_res = await self._handlers[command](self, **msg)
 
-            res = {
-                "communication_type": "command_response",
-                "command": command,
-            }
+            res = {"communication_type": "command_response", "command": command}
 
             if handler_res:
                 res.update(handler_res)

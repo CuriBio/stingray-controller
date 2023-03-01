@@ -8,13 +8,13 @@ from typing import Any
 
 from ..utils.generic import wait_tasks_clean
 
-# TODO change these names
+# TODO change these names ?
 
 # from ..utils.generic import _compare_semver
 
 logger = logging.getLogger(__name__)
 
-# TODO fix all msgs going to the WS: remove "data_type" and "data_json"
+# TODO fix all msgs going to the Server: remove "data_type" and "data_json"
 
 
 class SubprocessMonitor:
@@ -27,8 +27,17 @@ class SubprocessMonitor:
         self._queues = queues
 
     async def run(self) -> None:
+        logger.info("Starting SubprocessMonitor")
+
         tasks = {asyncio.create_task(self._handle_comm_from_server())}
-        await wait_tasks_clean(tasks)
+        try:
+            await wait_tasks_clean(tasks)
+        except asyncio.CancelledError:
+            logger.info("SubprocessMonitor cancelled")
+            # TODO
+            raise
+        finally:
+            logger.info("SubprocessMonitor shut down")
 
     async def _handle_comm_from_server(self) -> None:
         while True:
