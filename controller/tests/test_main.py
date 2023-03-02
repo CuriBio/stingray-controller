@@ -14,8 +14,8 @@ from controller.constants import NUM_WELLS
 from controller.constants import SERVER_INITIALIZING_STATE
 from controller.constants import SOFTWARE_RELEASE_CHANNEL
 from controller.exceptions import LocalServerPortAlreadyInUseError
-from controller.main_process.server import Server
-from controller.main_process.system_monitor import SystemMonitor
+from controller.main_systems.server import Server
+from controller.main_systems.system_monitor import SystemMonitor
 from controller.utils.generic import redact_sensitive_info_from_path
 import pytest
 

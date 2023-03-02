@@ -22,8 +22,8 @@ from .constants import NUM_WELLS
 from .constants import SERVER_INITIALIZING_STATE
 from .constants import SOFTWARE_RELEASE_CHANNEL
 from .exceptions import LocalServerPortAlreadyInUseError
-from .main_process.server import Server
-from .main_process.system_monitor import SystemMonitor
+from .main_systems.server import Server
+from .main_systems.system_monitor import SystemMonitor
 from .utils.generic import redact_sensitive_info_from_path
 from .utils.generic import wait_tasks_clean
 
