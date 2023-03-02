@@ -86,6 +86,10 @@ class StartManagedAcquisitionWithoutBarcodeError(Exception):
 
 
 # Instrument related errors
+class NoInstrumentDetectedError(Exception):
+    pass
+
+
 class InstrumentError(Exception):
     """Generic exception for errors with instrument interaction."""
 
