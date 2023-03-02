@@ -492,6 +492,7 @@ class Command:
         await self._timer
 
 
+# TODO move this to utils
 class CommandTracker:
     def __init__(self) -> None:
         self._command_mapping: dict[int, deque[Command]] = defaultdict(deque)
@@ -525,3 +526,6 @@ class CommandTracker:
 
     # def __bool__(self) -> bool:
     #     return bool(self._command_mapping)
+
+
+# TODO check git diff for issues with renaming

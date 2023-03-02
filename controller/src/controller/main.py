@@ -23,7 +23,7 @@ from .constants import SERVER_INITIALIZING_STATE
 from .constants import SOFTWARE_RELEASE_CHANNEL
 from .exceptions import LocalServerPortAlreadyInUseError
 from .main_process.server import Server
-from .main_process.subprocess_monitor import SubprocessMonitor
+from .main_process.system_monitor import SystemMonitor
 from .utils.generic import redact_sensitive_info_from_path
 from .utils.generic import wait_tasks_clean
 
@@ -69,8 +69,8 @@ async def main(command_line_args: list[str]) -> None:
         # if mp_start_method != "spawn":
         #     raise MultiprocessingNotSetToSpawnError(mp_start_method)
 
-        # TODO move this into SubprocessMonitor?
-        # logger.info("Spawning subprocesses")
+        # TODO move this into SystemMonitor?
+        # logger.info("Spawning subsystems")
 
         # process_manager = ProcessesManager(system_state=system_state, logging_level=log_level)
         # object_access_for_testing["process_manager"] = process_manager
@@ -87,10 +87,10 @@ async def main(command_line_args: list[str]) -> None:
 
         queues = create_system_queues()
 
-        subprocess_monitor = SubprocessMonitor(system_state, queues)
+        system_monitor = SystemMonitor(system_state, queues)
         server = Server(system_state, queues["to"]["server"], queues["from"]["server"])
 
-        tasks = {asyncio.create_task(subprocess_monitor.run()), asyncio.create_task(server.run())}
+        tasks = {asyncio.create_task(system_monitor.run()), asyncio.create_task(server.run())}
 
         await wait_tasks_clean(tasks)
 

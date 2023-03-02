@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Handling communication between subprocesses and main process."""
+"""Handling communication between subsystems and server."""
 from __future__ import annotations
 
 import asyncio
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 # TODO fix all msgs going to the Server: remove "data_type" and "data_json"
 
 
-class SubprocessMonitor:
+class SystemMonitor:
     """TODO."""
 
     def __init__(
@@ -27,17 +27,17 @@ class SubprocessMonitor:
         self._queues = queues
 
     async def run(self) -> None:
-        logger.info("Starting SubprocessMonitor")
+        logger.info("Starting SystemMonitor")
 
         tasks = {asyncio.create_task(self._handle_comm_from_server())}
         try:
             await wait_tasks_clean(tasks)
         except asyncio.CancelledError:
-            logger.info("SubprocessMonitor cancelled")
+            logger.info("SystemMonitor cancelled")
             # TODO
             raise
         finally:
-            logger.info("SubprocessMonitor shut down")
+            logger.info("SystemMonitor shut down")
 
     async def _handle_comm_from_server(self) -> None:
         while True:
