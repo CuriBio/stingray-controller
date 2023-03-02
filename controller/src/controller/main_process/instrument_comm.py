@@ -1,17 +1,10 @@
 # -*- coding: utf-8 -*-
 import asyncio
-from collections import defaultdict
-from collections import deque
 import datetime
 import logging
 from typing import Any
 
 from aioserial import AioSerial
-from controller.utils.serial_comm import convert_status_code_bytes_to_dict
-from controller.utils.serial_comm import convert_stimulator_check_bytes_to_dict
-from controller.utils.serial_comm import create_data_packet
-from controller.utils.serial_comm import get_serial_comm_timestamp
-from controller.utils.serial_comm import parse_metadata_bytes
 import serial
 import serial.tools.list_ports as list_ports
 
@@ -32,7 +25,6 @@ from ..constants import SERIAL_COMM_MAX_FULL_PACKET_LENGTH_BYTES
 from ..constants import SERIAL_COMM_PACKET_METADATA_LENGTH_BYTES
 from ..constants import SERIAL_COMM_REBOOT_PACKET_TYPE
 from ..constants import SERIAL_COMM_REGISTRATION_TIMEOUT_SECONDS
-from ..constants import SERIAL_COMM_RESPONSE_TIMEOUT_SECONDS
 from ..constants import SERIAL_COMM_SET_NICKNAME_PACKET_TYPE
 from ..constants import SERIAL_COMM_SET_SAMPLING_PERIOD_PACKET_TYPE
 from ..constants import SERIAL_COMM_SET_STIM_PROTOCOL_PACKET_TYPE
@@ -66,8 +58,14 @@ from ..exceptions import SerialCommUntrackedCommandResponseError
 from ..exceptions import StimulationProtocolUpdateFailedError
 from ..exceptions import StimulationStatusUpdateFailedError
 from ..exceptions import UnrecognizedSerialCommPacketTypeError
+from ..utils.command_tracking import CommandTracker
 from ..utils.data_parsing_cy import parse_stim_data
 from ..utils.data_parsing_cy import sort_serial_packets
+from ..utils.serial_comm import convert_status_code_bytes_to_dict
+from ..utils.serial_comm import convert_stimulator_check_bytes_to_dict
+from ..utils.serial_comm import create_data_packet
+from ..utils.serial_comm import get_serial_comm_timestamp
+from ..utils.serial_comm import parse_metadata_bytes
 
 
 logger = logging.getLogger(__name__)
@@ -232,7 +230,7 @@ class InstrumentComm:
             self._status_beacon_received.clear()
 
     async def _handle_command_tracking(self) -> None:
-        expired_command = await self._command_tracker.wait_for_command_timeout()
+        expired_command = await self._command_tracker.wait_for_expired_command()
         raise SerialCommCommandResponseTimeoutError(expired_command["command"])
 
     async def _handle_data_stream(self) -> None:
@@ -469,63 +467,3 @@ class InstrumentComm:
             await self._send_data_packet(SERIAL_COMM_ERROR_ACK_PACKET_TYPE)
             raise InstrumentFirmwareError(status_codes_msg)
         logger.debug(status_codes_msg)
-
-
-class Command:
-    def __init__(self, info: dict[str, Any], timeout_info: asyncio.Future[dict[str, Any]]) -> None:
-        self.info = info
-
-        self._timeout_info = timeout_info
-        self._timer = asyncio.create_task(self._start_timer())
-
-    async def _start_timer(self) -> None:
-        try:
-            await asyncio.sleep(SERIAL_COMM_RESPONSE_TIMEOUT_SECONDS)
-        except asyncio.CancelledError:
-            return
-        else:
-            if not self._timeout_info.done() and not self._timeout_info.cancelled():
-                self._timeout_info.set_result(self.info)
-
-    async def complete(self) -> None:
-        self._timer.cancel()
-        await self._timer
-
-
-# TODO move this to utils
-class CommandTracker:
-    def __init__(self) -> None:
-        self._command_mapping: dict[int, deque[Command]] = defaultdict(deque)
-
-        self._timeout_info: asyncio.Future[dict[str, Any]] = asyncio.Future()
-
-    async def wait_for_command_timeout(self) -> dict[str, Any]:
-        try:
-            return await self._timeout_info
-        except asyncio.CancelledError:
-            # TODO complete all commands
-            raise
-
-    def add(self, packet_type: int, command_info: dict[str, Any]) -> None:
-        self._command_mapping[packet_type].append(Command(command_info, self._timeout_info))
-
-    async def pop(self, packet_type: int) -> dict[str, Any]:
-        try:
-            commands_for_packet_type = self._command_mapping[packet_type]
-        except KeyError as e:
-            raise ValueError(f"No commands of packet type: {packet_type}") from e
-
-        command = commands_for_packet_type.popleft()
-        await command.complete()
-
-        # remove this packet type from the dict if the deque is now empty
-        if not self._command_mapping[packet_type]:
-            self._command_mapping.pop(packet_type)
-
-        return command.info
-
-    # def __bool__(self) -> bool:
-    #     return bool(self._command_mapping)
-
-
-# TODO check git diff for issues with renaming
