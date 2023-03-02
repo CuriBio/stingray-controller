@@ -42,6 +42,9 @@ def register_handlers(cls: Any) -> Any:
 
 @register_handlers
 class Server:
+    # set by class decorator
+    _handlers: dict[str, Callable[[Any], Awaitable[dict[str, Any] | None]]]
+
     def __init__(
         self,
         system_state: dict[str, Any],
@@ -58,13 +61,8 @@ class Server:
 
         self.fe_initiated_shutdown = False
 
-        # set by class decorator
-        self._handlers: dict[str, Callable[[Any], Awaitable[dict[str, Any] | None]]]
-
     def get_system_state_copy(self) -> dict[str, Any]:
         return copy.deepcopy(self._system_state)
-
-    # monitor_test,err
 
     async def run(self) -> None:
         logger.info("Starting Server")
