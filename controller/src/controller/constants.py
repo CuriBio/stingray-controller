@@ -160,6 +160,8 @@ class SerialCommPacketTypes(IntEnum):
     MF_UPDATE_COMPLETE = 74
     # Barcode
     BARCODE_FOUND = 90
+    # Misc?
+    TRIGGER_ERROR = 103
     # Errors
     ERROR_ACK = 254
     CHECKSUM_FAILURE = 255
