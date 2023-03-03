@@ -9,7 +9,7 @@
       <b-modal id="change-color-modal-two" size="sm" hide-footer hide-header hide-header-close :static="true">
         <StimulationStudioColorModal
           :current_color="selected_color"
-          @change_pulse_color="change_pulse_color"
+          @change-pulse-color="change_pulse_color"
         />
       </b-modal>
     </span>
@@ -28,11 +28,11 @@
       </span>
       <span>
         <SmallDropDown
-          :options_text="time_units"
-          :options_idx="time_unit_idx"
-          :input_height="25"
-          :input_width="100"
-          :dom_id_suffix="'delay_block'"
+          :optionsText="timeUnits"
+          :optionsIdx="timeUnit_idx"
+          :inputHeight="25"
+          :inputWidth="100"
+          :domIdSuffix="'delay_block'"
           @selection-changed="handle_unit_change"
         />
       </span>
@@ -80,8 +80,8 @@ Vue.use(BootstrapVue);
  * @vue-computed {Array} button_labels - Button labels for modal
  * @vue-data {Array} is_enabled_array - Array of which buttons should be disabled at base of modal
  * @vue-computed {Array} button_hover_colors - Array of what color the text in the button will be when hovered over
- * @vue-data {Array} time_units - Array of possible options in the unit dropdown menu
- * @vue-data {Int} time_unit_idx - Index of currently selected time unit from dropdown
+ * @vue-data {Array} timeUnits - Array of possible options in the unit dropdown menu
+ * @vue-data {Int} timeUnit_idx - Index of currently selected time unit from dropdown
  * @vue-data {Object} invalid_err_msg - Object containing all error messages for validation checks of inputs
  * @vue-watch {Boolean} is_valid - True if input passes the validation check and allows Save button to become enabled
  * @vue-data {String} modal_title - Title
@@ -131,8 +131,8 @@ export default {
         max_duration: "Duration must be <= 24hrs",
         non_integer: "Must be a whole number of ms",
       },
-      time_units: ["milliseconds", "seconds", "minutes", "hours"],
-      time_unit_idx: 0,
+      timeUnits: ["milliseconds", "seconds", "minutes", "hours"],
+      timeUnit_idx: 0,
       is_enabled_array: [false, true],
       is_valid: false,
       modal_title: "Delay",
@@ -162,7 +162,7 @@ export default {
   created() {
     this.input_value = this.current_value;
 
-    this.time_unit_idx = this.time_units.indexOf(this.current_delay_unit);
+    this.timeUnit_idx = this.timeUnits.indexOf(this.current_delay_unit);
     this.is_enabled_array = this.modal_open_for_edit ? [true, true, true, true] : [false, true];
     if (this.current_value !== null) this.check_validity(this.input_value);
   },
@@ -170,7 +170,7 @@ export default {
     close(idx) {
       const button_label = this.button_labels[idx];
 
-      const selected_unit = this.time_units[this.time_unit_idx];
+      const selected_unit = this.timeUnits[this.timeUnit_idx];
       const converted_input = Number(this.input_value);
       const delay_settings = {
         duration: converted_input,
@@ -184,7 +184,7 @@ export default {
 
       const value = +value_str;
 
-      const selected_unit = this.time_units[this.time_unit_idx];
+      const selected_unit = this.timeUnits[this.timeUnit_idx];
       const value_in_millis = value * TIME_CONVERSION_TO_MILLIS[selected_unit];
 
       if (value_str === "") {
@@ -208,7 +208,7 @@ export default {
       this.is_valid = this.invalid_text === this.invalid_err_msg.valid;
     },
     handle_unit_change(idx) {
-      this.time_unit_idx = idx;
+      this.timeUnit_idx = idx;
       this.check_validity(this.current_value);
     },
     change_pulse_color(color) {

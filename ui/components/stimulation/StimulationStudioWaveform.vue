@@ -10,11 +10,11 @@
       <span :style="'grid-column: 1/2; align-self: center;'">{{ x_axis_label }}</span>
       <SmallDropDown
         :style="'grid-column: 2/3;'"
-        :input_height="9"
-        :input_width="110"
-        :options_text="time_units"
-        :options_idx="active_duration_idx"
-        :dom_id_suffix="'time_units'"
+        :inputHeight="9"
+        :inputWidth="110"
+        :optionsText="timeUnits"
+        :optionsIdx="active_duration_idx"
+        :domIdSuffix="'timeUnits'"
         @selection-changed="handle_total_duration_unit_change"
       />
       <StimulationStudioZoomControls :style="'grid-column: 3; align-self: center;'" :axis="'x-axis'" />
@@ -44,10 +44,10 @@ import { mapState } from "vuex";
  * @vue-data {Object} x_axis_node         - An Object which is used to create X Axis node
  * @vue-data {Object} x_axis_scale        - An Object which is used to process the X Axis scale
  * @vue-data {Object} y_axis_node         - An Object which is used to create Y Axis node
- * @vue-data {Object} y_axis_scale        - An Object which is used to process the Y Axis scale
+ * @vue-data {Object} yAxisScale        - An Object which is used to process the Y Axis scale
  * @vue-data {Object} waveform_line_node  - An Object which is used to plot the line graph
  * @vue-data {Object} highlight_line_node - An Object which is used to plot the line graph to fill when hovered over
- * @vue-computed {Object} hovered_pulse       - State Object used to fill background of hovered over pulse in stim studio
+ * @vue-computed {Object}hoveredPulse       - State Object used to fill background of hovered over pulse in stim studio
  * @vue-computed {Object} div__waveform_graph__dynamic_style - An CSS property to hold the dynamic value
  * @vue-event {Event} x_axis_min           - A Function  is invoked when x_axis_min prop is modified
  * @vue-event {Event} x_axis_sample_length - A Function  is invoked when x_axis_sample_length prop is modified
@@ -88,13 +88,13 @@ export default {
       type: Number,
       default: 1200,
     },
-    repeat_colors: {
+    repeatColors: {
       type: Array,
       default: function () {
         return [];
       },
     },
-    delay_blocks: {
+    delayBlocks: {
       type: Array,
       default: function () {
         return [];
@@ -107,16 +107,16 @@ export default {
       x_axis_node: null,
       x_axis_scale: null,
       y_axis_node: null,
-      y_axis_scale: null,
+      yAxisScale: null,
       waveform_line_node: null,
       highlight_line_node: null,
       frequency_of_y_ticks: 5,
-      time_units: ["milliseconds", "seconds"],
+      timeUnits: ["milliseconds", "seconds"],
       active_duration_idx: 0,
     };
   },
   computed: {
-    ...mapState("stimulation", ["hovered_pulse"]),
+    ...mapState("stimulation", ["hoveredPulse"]),
     div__waveform_graph__dynamic_style: function () {
       return { width: this.plot_area_pixel_width + this.margin.left + this.margin.right + "px" };
     },
@@ -145,10 +145,10 @@ export default {
 
       this.render_plot();
     },
-    hovered_pulse: function (new_pulse) {
+    hoveredPulse: function (new_pulse) {
       this.highlight_line_node.selectAll("*").remove();
       const x_axis_scale = this.x_axis_scale;
-      const y_axis_scale = this.y_axis_scale;
+      const yAxisScale = this.y_axis_scale;
 
       if (new_pulse.idx != null) {
         const starting_x = this.data_points[new_pulse.indices[0]][0];
@@ -171,7 +171,7 @@ export default {
                 return x_axis_scale(d[0]);
               })
               .y(function (d) {
-                return y_axis_scale(d[1]);
+                return yAxisScale(d[1]);
               })
           );
       }
@@ -253,8 +253,8 @@ export default {
   methods: {
     handle_total_duration_unit_change(idx) {
       this.active_duration_idx = idx;
-      const unit_name = this.time_units[idx];
-      this.$store.dispatch("stimulation/handle_x_axis_unit", { idx, unit_name });
+      const unit_name = this.timeUnits[idx];
+      this.$store.dispatch("stimulation/handleXAxisUnit", { idx, unit_name });
     },
     render_plot: function () {
       this.create_x_axis_scale();
@@ -283,10 +283,10 @@ export default {
     plot_data: function () {
       const data_to_plot = this.data_points;
       const x_axis_scale = this.x_axis_scale;
-      const y_axis_scale = this.y_axis_scale;
+      const yAxisScale = this.y_axis_scale;
 
       this.waveform_line_node.selectAll("*").remove();
-      for (const assignment of this.repeat_colors) {
+      for (const assignment of this.repeatColors) {
         // repetitive, but eslint errors without a conditional inside the loop
         const starting_idx = assignment[1][0];
         const ending_idx = assignment[1][1];
@@ -305,13 +305,13 @@ export default {
                 return x_axis_scale(d[0]);
               })
               .y(function (d) {
-                return y_axis_scale(d[1]);
+                return yAxisScale(d[1]);
               })
           );
       }
-      for (const block of this.delay_blocks) {
+      for (const block of this.delayBlocks) {
         // repetitive, but eslint errors without a conditional inside the loop
-        if (this.delay_blocks.length !== 0 && !isNaN(block[1])) {
+        if (this.delayBlocks.length !== 0 && !isNaN(block[1])) {
           const starting_idx = block[0];
           const start_line = [
             [starting_idx, this.y_min],
@@ -336,7 +336,7 @@ export default {
                   return x_axis_scale(d[0]);
                 })
                 .y(function (d) {
-                  return y_axis_scale(d[1]);
+                  return yAxisScale(d[1]);
                 })
             );
           this.waveform_line_node
@@ -352,7 +352,7 @@ export default {
                   return x_axis_scale(d[0]);
                 })
                 .y(function (d) {
-                  return y_axis_scale(d[1]);
+                  return yAxisScale(d[1]);
                 })
             );
         }

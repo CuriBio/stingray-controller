@@ -9,7 +9,7 @@ localVue.use(Vuex);
 let NuxtStore;
 let store;
 
-const test_protocol_list = [
+const test_protocolList = [
   { letter: "", color: "", label: "Create New" },
   {
     letter: "A",
@@ -17,40 +17,40 @@ const test_protocol_list = [
     label: "Tester",
     protocol: {
       name: "Tester",
-      stimulation_type: "V",
-      rest_duration: 20,
-      time_unit: "milliseconds",
+      stimulationType: "V",
+      restDuration: 20,
+      timeUnit: "milliseconds",
       subprotocols: [
         {
-          phase_one_duration: 15,
-          phase_one_charge: 0,
-          interphase_interval: 0,
-          phase_two_duration: 0,
-          phase_two_charge: 0,
+          phaseOneDuration: 15,
+          phaseOneCharge: 0,
+          interphaseInterval: 0,
+          phaseTwoDuration: 0,
+          phaseTwoCharge: 0,
         },
         {
-          phase_one_duration: 20,
-          phase_one_charge: 0,
-          interphase_interval: 0,
-          phase_two_duration: 0,
-          phase_two_charge: 0,
+          phaseOneDuration: 20,
+          phaseOneCharge: 0,
+          interphaseInterval: 0,
+          phaseTwoDuration: 0,
+          phaseTwoCharge: 0,
         },
       ],
-      detailed_subprotocols: [
+      detailedSubprotocols: [
         {
           type: "Delay",
           src: "/delay-tile.png",
           nested_protocols: [],
           repeat: { color: "d822f9", number_of_repeats: 1 },
           settings: {
-            phase_one_duration: 15000,
-            phase_one_charge: 0,
-            interphase_interval: 0,
-            phase_two_duration: 0,
-            phase_two_charge: 0,
+            phaseOneDuration: 15000,
+            phaseOneCharge: 0,
+            interphaseInterval: 0,
+            phaseTwoDuration: 0,
+            phaseTwoCharge: 0,
           },
           stim_settings: {
-            postphase_interval: 0,
+            postphaseInterval: 0,
             total_active_duration: {
               unit: "milliseconds",
               duration: 15000,
@@ -70,7 +70,7 @@ describe("StimulationStudioCreateAndEdit.vue", () => {
 
   beforeEach(async () => {
     store = await NuxtStore.createStore();
-    store.state.stimulation.protocol_list = JSON.parse(JSON.stringify(test_protocol_list));
+    store.state.stimulation.protocolList = JSON.parse(JSON.stringify(test_protocolList));
   });
 
   afterEach(() => {
@@ -82,7 +82,7 @@ describe("StimulationStudioCreateAndEdit.vue", () => {
       store,
       localVue,
     });
-    const labeled_protocols = store.state.stimulation.protocol_list.length - 1;
+    const labeled_protocols = store.state.stimulation.protocolList.length - 1;
     const target_span = wrapper.findAll("li");
     expect(target_span).toHaveLength(labeled_protocols);
   });
@@ -92,13 +92,13 @@ describe("StimulationStudioCreateAndEdit.vue", () => {
       store,
       localVue,
     });
-    await store.dispatch("stimulation/handle_selected_wells", [false, true, false, true]);
+    await store.dispatch("stimulation/handleSelectedWells", [false, true, false, true]);
     const options = wrapper.findAll("li");
     await options.at(0).trigger("click");
     await wrapper.vm.handle_click(0);
-    const expected_value = store.state.stimulation.protocol_list[wrapper.vm.selected_protocol_idx];
-    store.state.stimulation.selected_wells.map((well) => {
-      expect(store.state.stimulation.protocol_assignments[well]).toBe(expected_value);
+    const expected_value = store.state.stimulation.protocolList[wrapper.vm.selected_protocol_idx];
+    store.state.stimulation.selectedWells.map((well) => {
+      expect(store.state.stimulation.protocolAssignments[well]).toBe(expected_value);
     });
   });
 
@@ -107,13 +107,13 @@ describe("StimulationStudioCreateAndEdit.vue", () => {
       store,
       localVue,
     });
-    await store.dispatch("stimulation/handle_selected_wells", [false, true, false, true]);
+    await store.dispatch("stimulation/handleSelectedWells", [false, true, false, true]);
     const options = wrapper.findAll("li");
     await options.at(0).trigger("click");
     await wrapper.vm.handle_click(0);
-    expect(store.state.stimulation.protocol_assignments[1]).toBeTruthy();
+    expect(store.state.stimulation.protocolAssignments[1]).toBeTruthy();
     await wrapper.vm.handle_click(1);
-    expect(store.state.stimulation.protocol_assignments[1]).toBeFalsy();
+    expect(store.state.stimulation.protocolAssignments[1]).toBeFalsy();
   });
 
   test("When the dropdown is rendered to the page in the StimulationStudioCreateAndEdit component, Then there should be no title", () => {
@@ -141,14 +141,14 @@ describe("StimulationStudioCreateAndEdit.vue", () => {
       store,
       localVue,
     });
-    const test_protocol = store.state.stimulation.protocol_list[1];
-    await store.commit("stimulation/set_new_protocol", test_protocol);
+    const test_protocol = store.state.stimulation.protocolList[1];
+    await store.commit("stimulation/setNewProtocol", test_protocol);
     expect(updateSpy).toHaveBeenCalledWith();
   });
 
   test("When a user selects Create New in the protocol dropdown, Then the protocol editor will reset to be empty", async () => {
-    const reset_spy = jest.spyOn(StimulationStudioCreateAndEdit.methods, "reset_protocol_editor");
-    const edit_spy = jest.spyOn(StimulationStudioCreateAndEdit.methods, "edit_selected_protocol");
+    const reset_spy = jest.spyOn(StimulationStudioCreateAndEdit.methods, "resetProtocolEditor");
+    const edit_spy = jest.spyOn(StimulationStudioCreateAndEdit.methods, "editSelectedProtocol");
 
     const wrapper = mount(StimulationStudioCreateAndEdit, {
       store,
@@ -218,7 +218,7 @@ describe("StimulationStudioCreateAndEdit.vue", () => {
       store,
       localVue,
     });
-    await store.commit("stimulation/reset_state");
+    await store.commit("stimulation/resetState");
     expect(wrapper.vm.selected_protocol_idx).toBe(0);
   });
 
@@ -227,8 +227,8 @@ describe("StimulationStudioCreateAndEdit.vue", () => {
     const mock_protocol = {
       label: "test",
       protocol: {
-        stimulation_type: "C",
-        detailed_subprotocols: [],
+        stimulationType: "C",
+        detailedSubprotocols: [],
         subprotocols: [],
       },
     };
@@ -237,7 +237,7 @@ describe("StimulationStudioCreateAndEdit.vue", () => {
       localVue,
     });
 
-    await store.commit("stimulation/set_imported_protocol", mock_protocol);
+    await store.commit("stimulation/setImportedProtocol", mock_protocol);
     expect(wrapper.vm.selected_protocol_idx).toBe(imported_option_idx);
   });
 });

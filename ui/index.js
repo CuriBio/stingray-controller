@@ -14,14 +14,12 @@ export { WellTitle } from "./js_utils/labware_calculations";
 export { TextValidation } from "./js_utils/text_validation";
 
 // Store
-export { default as data_store_module } from "./store/modules/data";
 export { default as settings_store_module } from "./store/modules/settings";
 export { default as flask_store_module } from "./store/modules/flask";
 export { system_status_regexp, all_mantarray_commands_regexp } from "./store/modules/flask/url_regex";
 export { default as stimulation_store_module } from "./store/modules/stimulation";
-export { TWITCH as DATA_ENUMS } from "./store/modules/data/enums";
 export {
-  STIM_STATUS,
+  stimStatus,
   MAX_SUBPROTOCOL_DURATION_MS,
   MIN_SUBPROTOCOL_DURATION_MS,
 } from "./store/modules/stimulation/enums";

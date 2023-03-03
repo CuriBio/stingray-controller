@@ -5,17 +5,17 @@ import getters from "./getters";
 import mutations from "./mutations";
 import { STATUS } from "./enums";
 
-const default_state = {
+const defaultState = {
   port: 4567, // http://localhost:4567/
-  status_ping_interval_id: null,
-  status_uuid: STATUS.MESSAGE.SERVER_BOOTING_UP,
+  statusPingIntervald: null,
+  statusUuid: STATUS.MESSAGE.SERVER_BOOTING_UP,
   simulation_mode: false,
-  barcode_manual_mode: false,
-  ignore_next_system_status_if_matching_this_status: null,
+  barcodeManualMode: false,
+  ignoreNextSystemStatusIfMatchingThisStatus: null,
 };
 
 // adapted from https://itnext.io/eating-my-advice-efficiently-improving-on-understanding-and-using-nuxt-vuex-6d00769014a2
-const state = () => JSON.parse(JSON.stringify(default_state));
+const state = () => JSON.parse(JSON.stringify(defaultState));
 
 export default {
   namespaced: true,

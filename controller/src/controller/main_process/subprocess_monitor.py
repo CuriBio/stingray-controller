@@ -92,26 +92,26 @@ class SubprocessMonitor:
         #     self._system_state["latest_software_version"] = communication["version"]
         #     # send message to FE if an update is available
         #     try:
-        #         software_update_available = _compare_semver(
+        #         softwareUpdateAvailable = _compare_semver(
         #             communication["version"], CURRENT_SOFTWARE_VERSION
         #         )
         #     except ValueError:
-        #         software_update_available = False
+        #         softwareUpdateAvailable = False
         #     self._queue_websocket_message(
         #         {
         #             "data_type": "sw_update",
-        #             "data_json": json.dumps({"software_update_available": software_update_available}),
+        #             "data_json": json.dumps({"softwareUpdateAvailable": softwareUpdateAvailable}),
         #         }
         #     )
         # elif communication_type == "firmware_update_confirmation":
         #     self._system_state["firmware_update_accepted"] = communication["update_accepted"]
         # elif communication_type == "stimulation":
         #     command = communication["command"]
-        #     if command == "set_stim_status":
+        #     if command == "setStimStatus":
         #         self._queues["to"]["instrument_comm"].put_nowait(
         #             {
         #                 "communication_type": communication_type,
-        #                 "command": "start_stimulation" if communication["status"] else "stop_stimulation",
+        #                 "command": "start_stimulation" if communication["status"] else "stopStimulation",
         #             }
         #         )
         #     elif command == "set_protocols":
@@ -119,7 +119,7 @@ class SubprocessMonitor:
         #         self._queues["to"]["instrument_comm"].put_nowait(communication)
         #         self._queues["to"]["file_writer"].put_nowait(communication)
         #     elif command == "start_stim_checks":
-        #         self._system_state["stimulator_circuit_statuses"] = {
+        #         self._system_state["stimulatorCircuitStatuses"] = {
         #             well_idx: StimulatorCircuitStatuses.CALCULATING.name.lower()
         #             for well_idx in communication["well_indices"]
         #         }
@@ -298,7 +298,7 @@ class SubprocessMonitor:
     #         comm_str = str(comm_copy)
     #     elif communication_type == "stimulation" and command == "start_stim_checks":
     #         comm_copy = copy.deepcopy(communication)
-    #         for sub_dict_name in ("stimulator_circuit_statuses", "adc_readings"):
+    #         for sub_dict_name in ("stimulatorCircuitStatuses", "adc_readings"):
     #             sub_dict = comm_copy[sub_dict_name]
     #             for well_idx in sorted(sub_dict):
     #                 well_name = GENERIC_24_WELL_DEFINITION.get_well_name_from_well_index(well_idx)
@@ -329,25 +329,25 @@ class SubprocessMonitor:
     #     elif communication_type == "stimulation":
     #         if command == "start_stimulation":
     #             stim_running_list = [False] * 24
-    #             protocol_assignments = self._system_state["stimulation_info"]["protocol_assignments"]
-    #             for well_name, assignment in protocol_assignments.items():
+    #             protocolAssignments = self._system_state["stimulation_info"]["protocolAssignments"]
+    #             for well_name, assignment in protocolAssignments.items():
     #                 if not assignment:
     #                     continue
     #                 well_idx = GENERIC_24_WELL_DEFINITION.get_well_index_from_well_name(well_name)
     #                 stim_running_list[well_idx] = True
     #             self._system_state["stimulation_running"] = stim_running_list
-    #         elif command == "stop_stimulation":
+    #         elif command == "stopStimulation":
     #             self._system_state["stimulation_running"] = [False] * 24
     #         elif command == "status_update":
     #             # ignore stim status updates if stim was already stopped manually
     #             for well_idx in communication["wells_done_stimulating"]:
     #                 self._system_state["stimulation_running"][well_idx] = False
     #         elif command == "start_stim_checks":
-    #             key = "stimulator_circuit_statuses"
-    #             stimulator_circuit_statuses = communication[key]
-    #             self._system_state[key] = stimulator_circuit_statuses
+    #             key = "stimulatorCircuitStatuses"
+    #             stimulatorCircuitStatuses = communication[key]
+    #             self._system_state[key] = stimulatorCircuitStatuses
     #             self._queue_websocket_message(
-    #                 {"data_type": key, "data_json": json.dumps(stimulator_circuit_statuses)}
+    #                 {"data_type": key, "data_json": json.dumps(stimulatorCircuitStatuses)}
     #             )
     #     elif communication_type == "board_connection_status_change":
     #         board_idx = communication["board_index"]
@@ -409,7 +409,7 @@ class SubprocessMonitor:
     #                             "data_type": "fw_update",
     #                             "data_json": json.dumps(
     #                                 {
-    #                                     "firmware_update_available": True,
+    #                                     "firmwareUpdateAvailable": True,
     #                                     "channel_fw_update": channel_fw_update_needed,
     #                                 }
     #                             ),

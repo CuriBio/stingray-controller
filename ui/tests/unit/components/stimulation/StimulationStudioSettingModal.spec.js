@@ -12,12 +12,12 @@ let NuxtStore;
 let store;
 
 const test_biphasic_pulse_settings = {
-  phase_one_duration: "",
-  phase_one_charge: "",
-  interphase_interval: "",
-  phase_two_duration: "",
-  phase_two_charge: "",
-  postphase_interval: "",
+  phaseOneDuration: "",
+  phaseOneCharge: "",
+  interphaseInterval: "",
+  phaseTwoDuration: "",
+  phaseTwoCharge: "",
+  postphaseInterval: "",
   total_active_duration: {
     duration: "",
     unit: "milliseconds",
@@ -27,9 +27,9 @@ const test_biphasic_pulse_settings = {
 };
 
 const test_monophasic_pulse_settings = {
-  phase_one_duration: "",
-  phase_one_charge: "",
-  postphase_interval: "",
+  phaseOneDuration: "",
+  phaseOneCharge: "",
+  postphaseInterval: "",
   total_active_duration: {
     duration: "",
     unit: "milliseconds",
@@ -50,11 +50,11 @@ describe("StimulationStudioWaveformSettingModal.vue", () => {
 
   test("When mounting StimulationStudioWaveformSettingModal from the build dist file, Then the title text `Biphasic Pulse Details` loads correctly and initial error messages for each input", () => {
     const expected_err_msgs = {
-      phase_one_duration: "Required",
-      phase_one_charge: "Required",
-      interphase_interval: "Required",
-      phase_two_duration: "Required",
-      phase_two_charge: "Required",
+      phaseOneDuration: "Required",
+      phaseOneCharge: "Required",
+      interphaseInterval: "Required",
+      phaseTwoDuration: "Required",
+      phaseTwoCharge: "Required",
       pulse_frequency: "Required",
       total_active_duration: "Required",
       num_cycles: "Must be a whole number > 0",
@@ -105,7 +105,7 @@ describe("StimulationStudioWaveformSettingModal.vue", () => {
       store,
       localVue,
       propsData: {
-        stimulation_type: "Voltage",
+        stimulationType: "Voltage",
         pulse_type: "Biphasic",
         selected_pulse_settings: test_biphasic_pulse_settings,
         frequency: 0,
@@ -123,7 +123,7 @@ describe("StimulationStudioWaveformSettingModal.vue", () => {
       store,
       localVue,
       propsData: {
-        stimulation_type: "Current",
+        stimulationType: "Current",
         pulse_type: "Monophasic",
         selected_pulse_settings: test_monophasic_pulse_settings,
         current_color: "hsla(100, 100%, 50%, 1)",
@@ -132,8 +132,8 @@ describe("StimulationStudioWaveformSettingModal.vue", () => {
 
     const expected_enabled_array = [true, true];
     const expected_settings = {
-      phase_one_duration: 10,
-      phase_one_charge: 50,
+      phaseOneDuration: 10,
+      phaseOneCharge: 50,
     };
     await wrapper.find("#input-widget-field-duration").setValue("10");
     await wrapper.find("#input-widget-field-charge").setValue("50");
@@ -145,8 +145,8 @@ describe("StimulationStudioWaveformSettingModal.vue", () => {
     expect(wrapper.vm.all_valid).toBe(true);
     expect(wrapper.vm.is_enabled_array).toStrictEqual(expected_enabled_array);
     expect(wrapper.vm.active_duration_idx).toBe(0);
-    expect(wrapper.vm.pulse_settings.phase_one_duration).toBe(expected_settings.phase_one_duration);
-    expect(wrapper.vm.pulse_settings.phase_one_charge).toBe(expected_settings.phase_one_charge);
+    expect(wrapper.vm.pulse_settings.phaseOneDuration).toBe(expected_settings.phaseOneDuration);
+    expect(wrapper.vm.pulse_settings.phaseOneCharge).toBe(expected_settings.phaseOneCharge);
 
     await wrapper.find("#input-widget-field-charge").setValue("-101");
     expect(wrapper.vm.all_valid).toBe(false);
@@ -157,7 +157,7 @@ describe("StimulationStudioWaveformSettingModal.vue", () => {
       store,
       localVue,
       propsData: {
-        stimulation_type: "Voltage",
+        stimulationType: "Voltage",
         pulse_type: "Monophasic",
         selected_pulse_settings: test_monophasic_pulse_settings,
         current_color: "hsla(100, 100%, 50%, 1)",
@@ -166,13 +166,13 @@ describe("StimulationStudioWaveformSettingModal.vue", () => {
     const target_input_field = wrapper.find("#input-widget-field-duration");
 
     await target_input_field.setValue("test");
-    expect(wrapper.vm.err_msgs.phase_one_duration).toBe("Must be a positive number");
+    expect(wrapper.vm.err_msgs.phaseOneDuration).toBe("Must be a positive number");
 
     await target_input_field.setValue("1500");
-    expect(wrapper.vm.err_msgs.phase_one_duration).toBe("Duration must be <= 50ms");
+    expect(wrapper.vm.err_msgs.phaseOneDuration).toBe("Duration must be <= 50ms");
 
     await target_input_field.setValue("");
-    expect(wrapper.vm.err_msgs.phase_one_duration).toBe("Required");
+    expect(wrapper.vm.err_msgs.phaseOneDuration).toBe("Required");
   });
 
   test("Given that a high frequency is selected, When a user adds a value to an input field, Then the correct error message will be presented upon validity checks to input", async () => {
@@ -180,7 +180,7 @@ describe("StimulationStudioWaveformSettingModal.vue", () => {
       store,
       localVue,
       propsData: {
-        stimulation_type: "Voltage",
+        stimulationType: "Voltage",
         pulse_type: "Monophasic",
         selected_pulse_settings: test_monophasic_pulse_settings,
         current_color: "hsla(100, 100%, 50%, 1)",
@@ -191,7 +191,7 @@ describe("StimulationStudioWaveformSettingModal.vue", () => {
 
     const target_input_field = wrapper.find("#input-widget-field-duration");
     await target_input_field.setValue("11");
-    expect(wrapper.vm.err_msgs.phase_one_duration).toBe("Duration must be <= 8ms");
+    expect(wrapper.vm.err_msgs.phaseOneDuration).toBe("Duration must be <= 8ms");
   });
 
   test("When a user adds a value to the total active duration, Then the value must be a number greater than the min allowed subprotocol duration", async () => {
@@ -199,15 +199,15 @@ describe("StimulationStudioWaveformSettingModal.vue", () => {
       store,
       localVue,
       propsData: {
-        stimulation_type: "Voltage",
+        stimulationType: "Voltage",
         pulse_type: "Biphasic",
         selected_pulse_settings: {
-          phase_one_duration: 10,
-          phase_one_charge: 100,
-          interphase_interval: 10,
-          phase_two_duration: 10,
-          phase_two_charge: -100,
-          postphase_interval: 20,
+          phaseOneDuration: 10,
+          phaseOneCharge: 100,
+          interphaseInterval: 10,
+          phaseTwoDuration: 10,
+          phaseTwoCharge: -100,
+          postphaseInterval: 20,
           total_active_duration: {
             duration: 30,
             unit: "milliseconds",
@@ -238,15 +238,15 @@ describe("StimulationStudioWaveformSettingModal.vue", () => {
       store,
       localVue,
       propsData: {
-        stimulation_type: "Voltage",
+        stimulationType: "Voltage",
         pulse_type: "Biphasic",
         selected_pulse_settings: {
-          phase_one_duration: 5,
-          phase_one_charge: 30,
-          interphase_interval: 5,
-          phase_two_duration: 5,
-          phase_two_charge: -10,
-          postphase_interval: 485,
+          phaseOneDuration: 5,
+          phaseOneCharge: 30,
+          interphaseInterval: 5,
+          phaseTwoDuration: 5,
+          phaseTwoCharge: -10,
+          postphaseInterval: 485,
           total_active_duration: {
             duration: 1,
             unit: "seconds",
@@ -274,7 +274,7 @@ describe("StimulationStudioWaveformSettingModal.vue", () => {
       store,
       localVue,
       propsData: {
-        stimulation_type: "Voltage",
+        stimulationType: "Voltage",
         pulse_type: "Monophasic",
         selected_pulse_settings: test_monophasic_pulse_settings,
         current_color: "hsla(100, 100%, 50%, 1)",
@@ -282,12 +282,12 @@ describe("StimulationStudioWaveformSettingModal.vue", () => {
     });
     wrapper.setData({
       pulse_settings: {
-        phase_one_duration: "5",
-        phase_one_charge: "300",
-        interphase_interval: "0",
-        phase_two_duration: "0",
-        phase_two_charge: "0",
-        postphase_interval: "",
+        phaseOneDuration: "5",
+        phaseOneCharge: "300",
+        interphaseInterval: "0",
+        phaseTwoDuration: "0",
+        phaseTwoCharge: "0",
+        postphaseInterval: "",
         total_active_duration: {
           duration: "1",
           unit: "seconds",
@@ -300,7 +300,7 @@ describe("StimulationStudioWaveformSettingModal.vue", () => {
       all_valid: true,
     });
     await wrapper.vm.close(0);
-    expect(wrapper.vm.pulse_settings.postphase_interval).toBe(95);
+    expect(wrapper.vm.pulse_settings.postphaseInterval).toBe(95);
   });
 
   test.each([
@@ -336,7 +336,7 @@ describe("StimulationStudioWaveformSettingModal.vue", () => {
       store,
       localVue,
       propsData: {
-        stimulation_type: "Voltage",
+        stimulationType: "Voltage",
         pulse_type: "Monophasic",
         selected_pulse_settings: test_monophasic_pulse_settings,
         current_color: "hsla(100, 100%, 50%, 1)",
@@ -355,15 +355,15 @@ describe("StimulationStudioWaveformSettingModal.vue", () => {
       store,
       localVue,
       propsData: {
-        stimulation_type: "Voltage",
+        stimulationType: "Voltage",
         pulse_type: "Biphasic",
         selected_pulse_settings: {
-          phase_one_duration: 5,
-          phase_one_charge: 30,
-          interphase_interval: 5,
-          phase_two_duration: 5,
-          phase_two_charge: -10,
-          postphase_interval: 485,
+          phaseOneDuration: 5,
+          phaseOneCharge: 30,
+          interphaseInterval: 5,
+          phaseTwoDuration: 5,
+          phaseTwoCharge: -10,
+          postphaseInterval: 485,
           total_active_duration: {
             duration: 1,
             unit: "seconds",

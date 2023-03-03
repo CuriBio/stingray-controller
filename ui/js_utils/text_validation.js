@@ -28,77 +28,24 @@ export class TextValidation {
    *
    * @param  {string}  text The text on which the validation rules are verified
    * @param  {string}  type The type of value being checked: ID, passkey, or user_name
-   * @param  {bool}    beta_2_mode True if in beta2 mode false if in beta 1 mode
+   * @param  {bool}    beta2Mode True if in beta2 mode false if in beta 1 mode
    * @return {string} The string is either empty on valid and <space> or <invalid meessage>
    */
-  validate(text, type, beta_2_mode) {
+  validate(text, type, beta2Mode) {
     let feedback = "";
-    const obj = {};
     try {
       switch (this.rule) {
-        case "plate_barcode":
-          feedback = this.validate_barcode(text, type, beta_2_mode);
-          break;
-        case "platemap_editor_input":
-          feedback = this.validate_platemap_editor_input(text);
+        case "plateBarcode":
+          feedback = this.validateBarcode(text, type, beta2Mode);
           break;
         case "uuidBase57encode":
           feedback = this.validate_uuidBase_fiftyseven_encode(text);
           break;
-        // case "alphanumeric":
-        //   feedback = this.validate_alphanumeric(text);
-        //   break;
-        case "user_account_input":
-          feedback = this.validate_user_account_input(text, type);
-          break;
-        default:
-          obj.err = "rule error";
-          throw obj;
       }
     } catch (exception) {
       exception.err = "Not Supported " + exception.err;
       throw exception;
     }
-    return feedback;
-  }
-  /**
-   * Returns the feedback text with either value of "" or text with reason for failure
-   *
-   * @param  {text}  text The text on which the validation rules are verified
-   * @param  {string}  type The type of value being checked: ID, passkey, or user_name
-
-   * @return {string} The string is either empty on valid and <space> or <invalid meessage>
-   */
-  validate_user_account_input(text, type) {
-    let feedback = "";
-    if (text != null) {
-      const val_length = text.length;
-      if (val_length >= 1 && val_length <= 36) {
-        feedback = this.input_errorfinder(true, text, type, val_length);
-      } else {
-        feedback = this.input_errorfinder(false, text, type, val_length);
-      }
-    } else {
-      feedback = this.input_errorfinder(false, text, type, 0);
-    }
-    return feedback;
-  }
-
-  /**
-   * Returns the feedback text with either value of "" or text with reason for failure
-   *
-   * @param  {text}  text The text on which the validation rules are verified
-
-   * @return {string} The string is either empty on valid and <space> or <invalid meessage>
-   */
-  validate_platemap_editor_input(text) {
-    let feedback = "";
-    const valid_regex = new RegExp("^[0-9A-Za-z _-]+$");
-    if (!text || text.length === 0) feedback = "Required";
-    else if (!valid_regex.test(text))
-      feedback =
-        "Invalid character present. Valid characters are alphanumeric, spaces, hyphens, and underscores";
-
     return feedback;
   }
 
@@ -190,32 +137,32 @@ export class TextValidation {
    * Returns the feedback text for the plate barcode validation
    *
    * @param  {string}  barcode The barcode string to validate
-   * @param {string} type The barcode type "stim_barcode" or "plate_barcode"
-   * @param {bool} beta_2_mode True if in bet 2 mode false if in beta 1 mode
+   * @param {string} type The barcode type "stimBarcode" or "plateBarcode"
+   * @param {bool} beta2Mode True if in bet 2 mode false if in beta 1 mode
    * @return {string} "" if barcode is valid, " " otherwise
    *
    */
-  validate_barcode(barcode, type, beta_2_mode) {
+  validateBarcode(barcode, type, beta2Mode) {
     if (barcode == null) {
       return " ";
     }
     // check that barcode is a valid length
-    const plate_barcode_len = barcode.length;
-    if (plate_barcode_len !== 12) {
+    const plateBarcode_len = barcode.length;
+    if (plateBarcode_len !== 12) {
       return " ";
     }
     // check barcode header
     const barcode_header = barcode.slice(0, 2);
     if (
-      (type === "plate_barcode" && barcode_header !== "ML") ||
-      (type === "stim_barcode" && barcode_header !== "MS") ||
+      (type === "plateBarcode" && barcode_header !== "ML") ||
+      (type === "stimBarcode" && barcode_header !== "MS") ||
       (barcode_header !== "ML" && barcode_header !== "MS")
     ) {
       return " ";
     }
 
     return barcode.includes("-")
-      ? this._check_new_barcode(barcode, beta_2_mode)
+      ? this._check_new_barcode(barcode, beta2Mode)
       : this._check_old_barcode(barcode);
   }
 
@@ -223,11 +170,11 @@ export class TextValidation {
    * Returns the feedback text for the new plate barcode validation
    *
    * @param  {string}  barcode The barcode string to validate
-   * @param  {bool}    beta_2_mode True if in bet 2 mode false if in beta 1 mode
+   * @param  {bool}    beta2Mode True if in bet 2 mode false if in beta 1 mode
    * @return {string} "" if barcode is valid, " " otherwise
    *
    */
-  _check_new_barcode(barcode, beta_2_mode) {
+  _check_new_barcode(barcode, beta2Mode) {
     // check that barcode is numeric exept for header and dash
     const numeric_barcode = barcode.slice(2, 10) + barcode[11];
     if (isNaN(numeric_barcode)) {
@@ -250,7 +197,7 @@ export class TextValidation {
       return " ";
     }
     // check if in beta one or two mode. if last digit invalid then mark the barcode as invalid
-    if ((beta_2_mode && barcode[11] !== "2") || (!beta_2_mode && barcode[11] !== "1")) {
+    if ((beta2Mode && barcode[11] !== "2") || (!beta2Mode && barcode[11] !== "1")) {
       return " ";
     }
     return "";
@@ -263,8 +210,8 @@ export class TextValidation {
    *
    */
   _check_old_barcode(barcode) {
-    const plate_barcode_len = barcode.length;
-    for (let i = 2; i < plate_barcode_len; i++) {
+    const plateBarcode_len = barcode.length;
+    for (let i = 2; i < plateBarcode_len; i++) {
       const scan_ascii = barcode.charCodeAt(i);
       // check that remaining characters are numeric
       if (scan_ascii < 47 || scan_ascii > 58) {

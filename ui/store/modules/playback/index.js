@@ -5,22 +5,22 @@ import getters from "./getters";
 import mutations from "./mutations";
 import { ENUMS } from "./enums";
 
-const default_state = {
-  x_time_index: 0, // milliseconds
+const defaultState = {
+  xTimeIndex: 0, // milliseconds
   barcodes: {
-    plate_barcode: {
+    plateBarcode: {
       value: null,
-      valid: false
+      valid: false,
     },
-    stim_barcode: {
+    stimBarcode: {
       value: null,
-      valid: false
-    }
-  }
+      valid: false,
+    },
+  },
 };
 
 // adapted from https://itnext.io/eating-my-advice-efficiently-improving-on-understanding-and-using-nuxt-vuex-6d00769014a2
-const state = () => JSON.parse(JSON.stringify(default_state));
+const state = () => JSON.parse(JSON.stringify(defaultState));
 
 export default {
   namespaced: true,
@@ -28,5 +28,5 @@ export default {
   actions,
   mutations,
   getters,
-  ENUMS
+  ENUMS,
 };

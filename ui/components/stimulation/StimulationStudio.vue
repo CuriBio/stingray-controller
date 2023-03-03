@@ -4,12 +4,12 @@
     <StimulationStudioWidget class="stimulationstudio_widget-container" />
     <StimulationStudioCreateAndEdit
       class="stimulationstudio_createandedit-container"
-      :disable_edits="disable_edits"
-      @handle_selection_change="handle_selection_change"
+      :disabl_edits="disable_edits"
+      @handle-selection-change="handle_selection_change"
     />
     <StimulationStudioDragAndDropPanel
       class="stimulationstudio_draganddroppanel-container"
-      :stimulation_type="stimulation_type"
+      :stimulationType="stimulationType"
       :disable_edits="disable_edits"
     />
     <StimulationStudioBlockViewEditor
@@ -18,7 +18,7 @@
     />
     <StimulationStudioProtocolViewer
       class="stimulationstudio_protocolviewer-container"
-      :stimulation_type="stimulation_type"
+      :stimulationType="stimulationType"
     />
     <div class="button-background">
       <div v-for="(value, idx) in btn_labels" :id="value" :key="value" @click.exact="handle_click(idx)">
@@ -41,7 +41,7 @@ import { STIM_STATUS } from "@/store/modules/stimulation/enums";
 
 /**
  * @vue-data {Array} btn_labels - button labels for base of stim studio component
- * @vue-data {String} stimulation_type - Current selected stimulation type in BlockViewEditor component
+ * @vue-data {String} stimulationType - Current selected stimulation type in BlockViewEditor component
  * @vue-data {Object} selected_protocol - Current selected protocol from drop down in CreateAndEdit component
  * @vue-event {Event} handle_click - Handles what gets executed when any of the base buttons are selected
  * @vue-event {Event} handle_selection_changed - Gets emitted when a user selected a protocol for edit so it can be used if new changes need to be discarded
@@ -54,43 +54,39 @@ export default {
     StimulationStudioCreateAndEdit,
     StimulationStudioDragAndDropPanel,
     StimulationStudioBlockViewEditor,
-    StimulationStudioProtocolViewer
+    StimulationStudioProtocolViewer,
   },
   data() {
     return {
       btn_labels: ["Save Changes", "Clear/Reset All", "Discard Changes"],
-      stimulation_type: "Current",
+      stimulationType: "Current",
       selected_protocol: { label: "Create New", color: "", letter: "" },
-      rest_dur_is_valid: true
+      rest_dur_is_valid: true,
     };
   },
   computed: {
-    // ...mapState("playback", ["playback_state"]),
-    ...mapState("stimulation", ["stim_status"]),
-    disable_edits: function() {
+    ...mapState("stimulation", ["stimStatus"]),
+    disable_edits: function () {
       return false;
       // return (
       //   this.playback_state === playback_module.ENUMS.PLAYBACK_STATES.RECORDING ||
-      //   this.stim_status === STIM_STATUS.STIM_ACTIVE
+      //   this.stimStatus===STIM_STATUS.STIM_ACTIVE
       // );
     },
-    btn_hover: function() {
+    btn_hover: function () {
       return {
         content: "Cannot make changes to stim settings while actively stimulating or recording",
-        disabled: !this.disable_edits
+        disabled: !this.disable_edits,
       };
-    }
+    },
   },
-  created: async function() {
-    this.unsubscribe = this.$store.subscribe(async mutation => {
-      if (mutation.type === "stimulation/set_stimulation_type") {
-        this.stimulation_type = this.$store.getters["stimulation/get_stimulation_type"];
+  created: async function () {
+    this.unsubscribe = this.$store.subscribe(async (mutation) => {
+      if (mutation.type === "stimulation/setStimulationType") {
+        this.stimulationType = this.$store.getters["stimulation/getStimulationType"];
       }
-      if (
-        mutation.type === "stimulation/reset_state" ||
-        mutation.type === "stimulation/reset_protocol_editor"
-      ) {
-        this.stimulation_type = "Current";
+      if (mutation.type === "stimulation/resetState" || mutation.type === "stimulation/resetProtocolEditor") {
+        this.stimulationType = "Current";
       }
     });
   },
@@ -104,16 +100,16 @@ export default {
       }
 
       if (idx === 0) {
-        await this.$store.dispatch("stimulation/add_saved_protocol");
-        this.$store.dispatch("stimulation/handle_protocol_editor_reset");
+        await this.$store.dispatch("stimulation/addSavedPotocol");
+        this.$store.dispatch("stimulation/handleProtocolEditorReset");
         this.selected_protocol = { label: "Create New", color: "", letter: "" };
       } else if (idx === 1) {
-        this.$store.commit("stimulation/reset_state");
+        this.$store.commit("stimulation/resetState");
       } else if (idx === 2) {
         if (this.selected_protocol.label === "Create New") {
-          this.$store.commit("stimulation/reset_protocol_editor");
+          this.$store.commit("stimulation/resetProtocolEditor");
         } else {
-          this.$store.dispatch("stimulation/edit_selected_protocol", this.selected_protocol);
+          this.$store.dispatch("stimulation/editSelectedProtocol", this.selected_protocol);
         }
       }
     },
@@ -131,8 +127,8 @@ export default {
     },
     get_btn_label_class(idx) {
       return this.disable_edits || (idx === 0 && !this.rest_dur_is_valid) ? "btn-label-disable" : "btn-label";
-    }
-  }
+    },
+  },
 };
 </script>
 

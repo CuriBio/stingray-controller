@@ -6,9 +6,10 @@
     <span class="span__stimulationstudio-layout-subheader-label">Select/Create Protocol</span>
     <div class="div__stimulationstudio-select-dropdown-container">
       <SelectDropDown
-        :options_text="protocol_list"
-        :input_width="input_width"
-        :input_height="input_height"
+        :optionsText="protocolList"
+        :optionsIdx="selected_protocol_idx"
+        :inputWidth="input_width"
+        :inputHeight="input_height"
         @selection-changed="selected_protocol_change"
       />
     </div>
@@ -39,7 +40,7 @@
 
 <script>
 import SelectDropDown from "@/components/basic_widgets/SelectDropDown.vue";
-import { mapActions, mapMutations } from "vuex";
+import { mapActions, mapMutations, mapState } from "vuex";
 
 /**
  * @vue-data {Object} btn_labels - Label and style of buttons
@@ -47,7 +48,7 @@ import { mapActions, mapMutations } from "vuex";
  * @vue-data {Int} selected_protocol_idx - Index of selected protocol from dropdown
  * @vue-data {Int} input_height - Height passed down to dropdown for styling
  * @vue-data {Int} input_width -  Width passed down to dropdown for styling
- * @vue-data {Array} protocol_list - Availble protocols to display in dropdown
+ * @vue-data {Array} protocolList - Availble protocols to display in dropdown
  * @vue-event {Event} update_protocols - Gets called when a change to the available protocol list occurs to update next available color/letter assignment and dropdown options
  * @vue-event {Event} selected_protocol_change - Changes when a new protocol is selected from dropdown
  * @vue-event {Event} handle_click - Performs functions based on which button is clicked regarding assigning and clearing protocols from plate editor
@@ -79,50 +80,40 @@ export default {
       selected_protocol_idx: 0,
       input_height: 45,
       input_width: 600,
-      protocol_list: [],
     };
   },
-  created() {
-    this.update_protocols();
-    this.unsubscribe = this.$store.subscribe(async (mutation) => {
-      if (
-        mutation.type === "stimulation/set_new_protocol" ||
-        mutation.type === "stimulation/set_edit_mode_off"
-      ) {
-        this.update_protocols();
-        this.selected_protocol_idx = 0;
-      }
-    });
+  computed: {
+    ...mapState("stimulation", ["protocolList", "editMode"]),
+    editModeStatus: function () {
+      return this.editMode.status;
+    },
   },
-  beforeDestroy() {
-    this.unsubscribe();
+  watch: {
+    protocolList: function (newList, oldList) {
+      if (newList.length !== oldList.length) this.selected_protocol_idx = 0;
+    },
+    editModeStatus: function () {
+      if (!this.editModeStatus) this.selected_protocol_idx = 0;
+    },
   },
   methods: {
-    ...mapActions("stimulation", [
-      "edit_selected_protocol",
-      "handle_import_protocol",
-      "handle_export_protocol",
-    ]),
+    ...mapActions("stimulation", ["editSelectedProtocol", "handleImportProtocol", "handleExportProtocol"]),
     ...mapMutations("stimulation", [
-      "set_edit_mode_off",
-      "reset_protocol_editor",
+      "setEditModeOff",
+      "resetProtocolEditor",
       "clear_selected_protocol",
-      "apply_selected_protocol",
-      "set_selected_protocol_for_edit",
+      "applySelectedProtocol",
     ]),
-    update_protocols() {
-      this.protocol_list = this.$store.getters["stimulation/get_protocols"];
-    },
     async selected_protocol_change(idx) {
       this.selected_protocol_idx = idx;
-      const selected_protocol = this.protocol_list[idx];
+      const selected_protocol = this.protocolList[idx];
 
       if (idx === 0) {
-        this.set_edit_mode_off();
-        this.reset_protocol_editor();
-      } else await this.edit_selected_protocol(selected_protocol);
+        this.setEditModeOff();
+        this.resetProtocolEditor();
+      } else await this.editSelectedProtocol(selected_protocol);
 
-      this.$emit("handle_selection_change", selected_protocol);
+      this.$emit("handle-selection-change", selected_protocol);
     },
     disable_selection_btn(idx) {
       return this.disable_edits || (this.selected_protocol_idx === 0 && idx === 0);
@@ -133,8 +124,8 @@ export default {
       }
 
       if (idx === 0) {
-        const selected_protocol = this.protocol_list[this.selected_protocol_idx];
-        this.apply_selected_protocol(selected_protocol);
+        const selected_protocol = this.protocolList[this.selected_protocol_idx];
+        this.applySelectedProtocol(selected_protocol);
       } else if (idx === 1) {
         this.clear_selected_protocol();
       }
@@ -157,10 +148,10 @@ export default {
       }
     },
     handle_import(file) {
-      this.handle_import_protocol(file[0]);
+      this.handleImportProtocol(file[0]);
     },
     handle_export() {
-      this.handle_export_protocol();
+      this.handleExportProtocol();
     },
   },
 };

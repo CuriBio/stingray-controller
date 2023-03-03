@@ -120,7 +120,7 @@ describe("StimulationStudioDelayModal.vue", () => {
     await wrapper.find(".div__small-dropdown-controls-content-widget").trigger("click");
     await wrapper.findAll("li").at(0).trigger("click");
 
-    expect(wrapper.vm.time_unit_idx).toBe(1);
+    expect(wrapper.vm.timeUnit_idx).toBe(1);
   });
 
   test("When a user clicks on a new color for delay block, Then the color will be set to state to be emitted to parent component", async () => {

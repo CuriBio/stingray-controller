@@ -49,10 +49,10 @@ describe("StimulationStudioWidget.vue", () => {
   });
 
   test("When mounted with an empty protocol code array, Then representative wells are all colored grey and without any displayed letter", async () => {
-    const protocol_list = [];
+    const protocolList = [];
 
     const propsData = {
-      protocol_codes: protocol_list,
+      protocol_codes: protocolList,
     };
     const wrapper = mount(StimulationStudioWidget, {
       propsData,
@@ -197,7 +197,7 @@ describe("StimulationStudioWidget.vue", () => {
       localVue,
     });
     await wrapper.vm.basic_select(3);
-    expect(store.state.stimulation.selected_wells).toStrictEqual([3]);
+    expect(store.state.stimulation.selectedWells).toStrictEqual([3]);
   });
 
   test("When an unselected well is hovered over and left, Then the events should emit functions to parent components", async () => {
@@ -245,16 +245,16 @@ describe("StimulationStudioWidget.vue", () => {
       store,
       localVue,
     });
-    await store.dispatch("stimulation/handle_selected_wells", [false, true, false, false]);
-    await store.commit("stimulation/apply_selected_protocol", 2);
-    expect(wrapper.vm.protocol_assignments).toBe(store.state.stimulation.protocol_assignments);
+    await store.dispatch("stimulation/handleSelectedWells", [false, true, false, false]);
+    await store.commit("stimulation/applySelectedProtocol", 2);
+    expect(wrapper.vm.protocolAssignments).toBe(store.state.stimulation.protocolAssignments);
   });
-  test("When stim's stim_status gets updated to SHORT_CIRCUIT_ERROR, Then StimulationStudioWidget will become disabled", async () => {
+  test("When stim'sstimStatus gets updated to SHORT_CIRCUIT_ERROR, Then StimulationStudioWidget will become disabled", async () => {
     const wrapper = mount(StimulationStudioWidget, {
       store,
       localVue,
     });
-    await store.commit("stimulation/set_stim_status", STIM_STATUS.SHORT_CIRCUIT_ERROR);
+    await store.commit("stimulation/setStimStatus", STIM_STATUS.SHORT_CIRCUIT_ERROR);
     expect(wrapper.find(".div__simulationstudio-disable-overlay").isVisible()).toBe(true);
   });
 

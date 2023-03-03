@@ -60,7 +60,7 @@
             href="#"
             :disabled="idx === 1 && !start_rec_and_stim_enabled"
             @click="
-              e => {
+              (e) => {
                 e.preventDefault();
                 handle_dropdown_select(idx);
               }
@@ -86,7 +86,7 @@
         x="0px"
         y="0px"
         viewBox="-10 -10 100 100"
-        @click="start_stim_configuration"
+        @click="startStimConfiguration"
       >
         <path
           :class="svg__stimulation_controls_config_check_button__dynamic_class"
@@ -136,7 +136,7 @@
       :static="true"
       :no-close-on-backdrop="true"
     >
-      <StatusWarningWidget :modal_labels="open_circuit_labels" @handle_confirmation="close_warning_modal" />
+      <StatusWarningWidget :modal_labels="open_circuit_labels" @handleConfirmation="close_warning_modal" />
     </b-modal>
     <b-modal
       id="stim-24hr-warning"
@@ -147,7 +147,7 @@
       :static="true"
       :no-close-on-backdrop="true"
     >
-      <StatusWarningWidget :modal_labels="timer_warning_labels" @handle_confirmation="close_timer_modal" />
+      <StatusWarningWidget :modal_labels="timer_warning_labels" @handleConfirmation="close_timer_modal" />
     </b-modal>
   </div>
 </template>
@@ -160,7 +160,7 @@ import StatusWarningWidget from "@/components/status/StatusWarningWidget.vue";
 import {
   faPlayCircle as fa_play_circle,
   faStopCircle as fa_stop_circle,
-  faSpinner as fa_spinner
+  faSpinner as fa_spinner,
 } from "@fortawesome/free-solid-svg-icons";
 import Vue from "vue";
 import BootstrapVue from "bootstrap-vue";
@@ -187,7 +187,7 @@ export default {
   name: "StimulationControls",
   components: {
     FontAwesomeIcon,
-    StatusWarningWidget
+    StatusWarningWidget,
   },
   data() {
     return {
@@ -202,23 +202,28 @@ export default {
         msg_one:
           "You are attempting to assign a protocol to a well that an open circuit was previously found in during the configuration check.",
         msg_two: "Please unassign all wells labeled with an open circuit.",
-        button_names: ["Okay"]
+        button_names: ["Okay"],
       },
       timer_warning_labels: {
         header: "Warning!",
         msg_one: "You have been running a stimulation for 24 hours.",
         msg_two:
           "We strongly recommend stopping the stimulation and running another configuration check to ensure the integrity of the stimulation.",
-        button_names: ["Continue Anyway", "Stop Stimulation"]
+        button_names: ["Continue Anyway", "Stop Stimulation"],
       },
       stim_24hr_timer: null,
-      open_start_dropdown: false
+      open_start_dropdown: false,
     };
   },
   computed: {
-    ...mapState("stimulation", ["protocol_assignments", "stim_play_state", "stim_status"]),
-    ...mapState("data", ["stimulator_circuit_statuses", "barcodes"]),
-    is_start_stop_button_enabled: function() {
+    ...mapState("stimulation", [
+      "protocolAssignments",
+      "stimPlayState",
+      "stimStatus",
+      "stimulatorCircuitStatuses",
+    ]),
+    ...mapState("playback", ["barcodes"]),
+    is_start_stop_button_enabled: function () {
       if (!this.play_state) {
         // if starting stim make sure initial magnetometer calibration has been completed and
         // no additional calibrations are running, stim checks have completed, there are no short or
@@ -231,29 +236,29 @@ export default {
             STIM_STATUS.CONFIG_CHECK_NEEDED,
             STIM_STATUS.CONFIG_CHECK_IN_PROGRESS,
             STIM_STATUS.SHORT_CIRCUIT_ERROR,
-            STIM_STATUS.CALIBRATION_NEEDED
-          ].includes(this.stim_status)
+            STIM_STATUS.CALIBRATION_NEEDED,
+          ].includes(this.stimStatus)
         );
       }
       // currently, stop button should always be enabled
       return true;
     },
-    assigned_open_circuits: function() {
+    assigned_open_circuits: function () {
       // filter for matching indices
-      return this.stimulator_circuit_statuses.filter(well =>
-        Object.keys(this.protocol_assignments).includes(well.toString())
+      return this.stimulatorCircuitStatuses.filter((well) =>
+        Object.keys(this.protocolAssignments).includes(well.toString())
       );
     },
-    start_stim_label: function() {
-      if (this.stim_status === STIM_STATUS.ERROR || this.stim_status === STIM_STATUS.SHORT_CIRCUIT_ERROR) {
+    start_stim_label: function () {
+      if (this.stimStatus === STIM_STATUS.ERROR || this.stimStatus === STIM_STATUS.SHORT_CIRCUIT_ERROR) {
         return "Cannot start a stimulation with error";
       } else if (
-        this.stim_status === STIM_STATUS.CONFIG_CHECK_NEEDED ||
-        this.stim_status === STIM_STATUS.CONFIG_CHECK_IN_PROGRESS
+        this.stimStatus === STIM_STATUS.CONFIG_CHECK_NEEDED ||
+        this.stimStatus === STIM_STATUS.CONFIG_CHECK_IN_PROGRESS
       ) {
         return "Configuration check needed";
-      } else if (!this.barcodes.stim_barcode.valid) return "Must have a valid Stimulation Lid Barcode";
-      else if (this.stim_status === STIM_STATUS.NO_PROTOCOLS_ASSIGNED) {
+      } else if (!this.barcodes.stimBarcode.valid) return "Must have a valid Stimulation Lid Barcode";
+      else if (this.stimStatus === STIM_STATUS.NO_PROTOCOLS_ASSIGNED) {
         return "No protocols have been assigned";
       } else if (this.assigned_open_circuits.length !== 0) {
         return "Cannot start stimulation with a protocol assigned to a well with an open circuit.";
@@ -261,11 +266,11 @@ export default {
         return "Start Stimulation";
       }
     },
-    stop_stim_label: function() {
+    stop_stim_label: function () {
       // Tanner (7/27/22): there used to be multiple values, so leaving this as a function in case more values get added in future
       return "Stop Stimulation";
     },
-    svg__stimulation_controls_play_stop_button__dynamic_class: function() {
+    svg__stimulation_controls_play_stop_button__dynamic_class: function () {
       // Tanner (2/1/22): This is only necessary so that the this button is shaded the same as the rest of
       // the stim controls buttons when the controls block is displayed. The button is
       // not actually active here. If the controls block is removed, this branch can likely be removed too.
@@ -273,53 +278,50 @@ export default {
         ? "span__stimulation-controls-play-stop-button--enabled"
         : "span__stimulation-controls-play-stop-button--disabled";
     },
-    is_config_check_button_enabled: function() {
+    is_config_check_button_enabled: function () {
       return (
         [STIM_STATUS.CONFIG_CHECK_NEEDED, STIM_STATUS.READY].includes(this.stim_status) &&
-        this.barcodes.stim_barcode.valid
+        this.barcodes.stimBarcode.valid
       );
     },
-    svg__stimulation_controls_config_check_button__dynamic_class: function() {
+    svg__stimulation_controls_config_check_button__dynamic_class: function () {
       return this.is_config_check_button_enabled
         ? "svg__stimulation-controls-config-check-button--enabled"
         : "svg__stimulation-controls-config-check-button--disabled";
     },
-    configuration_message: function() {
-      if (!this.barcodes.stim_barcode.valid) {
+    configuration_message: function () {
+      if (!this.barcodes.stimBarcode.valid) {
         return "Must have a valid Stimulation Lid Barcode";
-      } else if (
-        this.stim_status == STIM_STATUS.ERROR ||
-        this.stim_status == STIM_STATUS.SHORT_CIRCUIT_ERROR
-      ) {
+      } else if (this.stimStatus == STIM_STATUS.ERROR || this.stimStatus == STIM_STATUS.SHORT_CIRCUIT_ERROR) {
         return "Cannot run a configuration on this stim lid as a short has been detected on it";
-      } else if (this.stim_status === STIM_STATUS.NO_PROTOCOLS_ASSIGNED) {
+      } else if (this.stimStatus === STIM_STATUS.NO_PROTOCOLS_ASSIGNED) {
         return "Cannot run configuration check until protocols have been assigned.";
-      } else if (this.stim_status == STIM_STATUS.CONFIG_CHECK_NEEDED) {
+      } else if (this.stimStatus == STIM_STATUS.CONFIG_CHECK_NEEDED) {
         return "Start configuration check";
-      } else if (this.stim_status == STIM_STATUS.CONFIG_CHECK_IN_PROGRESS) {
+      } else if (this.stimStatus == STIM_STATUS.CONFIG_CHECK_IN_PROGRESS) {
         return "Configuration check in progress...";
-      } else if (this.stim_status == STIM_STATUS.STIM_ACTIVE) {
+      } else if (this.stimStatus == STIM_STATUS.STIM_ACTIVE) {
         return "Cannot run a configuration check while stimulation is active.";
       } else {
         return "Configuration check complete. Click to rerun.";
       }
     },
-    config_check_in_progress: function() {
-      return this.stim_status === STIM_STATUS.CONFIG_CHECK_IN_PROGRESS;
+    config_check_in_progress: function () {
+      return this.stimStatus === STIM_STATUS.CONFIG_CHECK_IN_PROGRESS;
     },
-    dropdown_display: function() {
+    dropdown_display: function () {
       return this.open_start_dropdown ? "flex" : "none";
-    }
+    },
   },
   watch: {
-    stim_play_state: function() {
-      this.current_gradient = this.stim_play_state ? this.active_gradient : this.inactive_gradient;
-      this.play_state = this.stim_play_state;
+    stimPlayState: function () {
+      this.current_gradient = this.stimPlayState ? this.active_gradient : this.inactive_gradient;
+      this.play_state = this.stimPlayState;
     },
-    assigned_open_circuits: function(new_val, old_val) {
-      if (this.stim_status !== STIM_STATUS.CONFIG_CHECK_COMPLETE && new_val.length > old_val.length)
+    assigned_open_circuits: function (new_val, old_val) {
+      if (this.stimStatus !== STIM_STATUS.CONFIG_CHECK_COMPLETE && new_val.length > old_val.length)
         this.$bvModal.show("open-circuit-warning");
-    }
+    },
   },
   mounted() {
     document.addEventListener("click", () => {
@@ -331,16 +333,16 @@ export default {
       e.preventDefault();
       if (this.is_start_stop_button_enabled) {
         if (this.play_state) {
-          this.$store.dispatch(`stimulation/stop_stimulation`);
+          this.$store.dispatch(`stimulation/stopStimulation`);
           clearTimeout(this.stim_24hr_timer); // clear 24 hour timer for next stimulation
         } else {
           this.open_start_dropdown = true;
         }
       }
     },
-    async start_stim_configuration() {
+    async startStimConfiguration() {
       if (this.is_config_check_button_enabled && !this.config_check_in_progress)
-        this.$store.dispatch(`stimulation/start_stim_configuration`);
+        this.$store.dispatch(`stimulation/startStimConfiguration`);
     },
     async close_warning_modal() {
       this.$bvModal.hide("open-circuit-warning");
@@ -348,7 +350,7 @@ export default {
     async close_timer_modal(idx) {
       this.$bvModal.hide("stim-24hr-warning");
       if (idx === 1) {
-        await this.$store.dispatch(`stimulation/stop_stimulation`);
+        await this.$store.dispatch(`stimulation/stopStimulation`);
         clearTimeout(this.start_24hr_timer);
       } else this.start_24hr_timer(); // start new timer
     },
@@ -359,10 +361,10 @@ export default {
     },
     async handle_dropdown_select(idx) {
       // always start stimulation
-      await this.$store.dispatch(`stimulation/create_protocol_message`);
+      await this.$store.dispatch(`stimulation/createProtocolMessage`);
       this.start_24hr_timer();
-    }
-  }
+    },
+  },
 };
 </script>
 <style>

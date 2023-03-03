@@ -1,31 +1,31 @@
 <template>
   <div
     class="div__small-dropdown-background"
-    :style="'width: ' + input_width_background + 'px;' + 'height: ' + input_height + 'px;'"
+    :style="'width: ' + inputWidthBackground + 'px;' + 'height: ' + inputHeight + 'px;'"
   >
     <div
-      :id="'small_dropdown_' + dom_id_suffix"
+      :id="'smallDropdown_' + domIdSuffix"
       class="div__small-dropdown-controls-content-widget"
       :style="
-        'width: ' + input_width + 'px;' + 'top:' + input_widget_top + 'px;' + 'height:' + input_height + 'px;'
+        'width: ' + inputWidth + 'px;' + 'top:' + inputWidgetTop + 'px;' + 'height:' + inputHeight + 'px;'
       "
-      @click="!disable_toggle ? toggle() : null"
+      @click="!disableToggle ? toggle() : null"
     >
       <div
         class="span__small-dropdown-controls-content-input-txt-widget"
-        :style="'width: ' + input_width + 'px;'"
+        :style="'width: ' + inputWidth + 'px;'"
       >
-        <span class="span__small-controls-content-input-txt-widget">{{ chosen_option.name }}</span>
+        <span class="span__small-controls-content-input-txt-widget">{{ chosenOption.name }}</span>
       </div>
       <div class="arrow" :class="{ expanded: visible }" />
       <div :class="{ hidden: !visible, visible }">
-        <ul :style="`bottom: ${bottom_pixels}px`">
+        <ul :style="`bottom: ${bottomPixels}px`">
           <li
-            v-for="item in options_list"
-            :id="dom_id_suffix + `_${item.id}`"
+            v-for="item in filteredOptions"
+            :id="domIdSuffix + `_${item.id}`"
             :key="item.id"
             :value="item"
-            @click="!disable_selection ? change_selection(item.id) : null"
+            @click="!disableSelection ? changeSelection(item.id) : null"
           >
             {{ item.name }}
           </li>
@@ -38,83 +38,51 @@
 export default {
   name: "SmallDropDown",
   props: {
-    options_text: { type: Array, required: true },
-    input_width: { type: Number, default: 210 },
-    input_height: { type: Number, default: 0 },
-    options_idx: { type: Number, default: 0 },
-    dom_id_suffix: { type: String, default: "" }, // for testing
-    title_label: { type: String, default: "" },
-    disable_toggle: { type: Boolean, default: false },
-    disable_selection: { type: Boolean, default: false },
+    optionsText: { type: Array, required: true },
+    inputWidth: { type: Number, default: 210 },
+    inputHeight: { type: Number, default: 0 },
+    optionsIdx: { type: Number, default: 0 },
+    domIdSuffix: { type: String, default: "" }, // for testing
+    titleLabel: { type: String, default: "" },
+    disableToggle: { type: Boolean, default: false },
+    disableSelection: { type: Boolean, default: false },
   },
   data() {
     return {
-      input_width_background: this.input_width + 4,
+      inputWidthBackground: this.inputWidth + 4,
       visible: false,
-      chosen_option: null,
-      options_list: [],
+      optionsList: [],
     };
   },
   computed: {
-    dropdown_options: function () {
-      const list = [];
-      for (let i = 0; i < this.options_text.length; i++) {
-        const name = {
+    dropdownOptions: function () {
+      return this.optionsText.map((option, i) => {
+        return {
           id: i,
-          name: this.options_text[i],
+          name: option,
         };
-        list.push(name);
-      }
-      return list;
+      });
     },
-    input_widget_top: function () {
-      return this.title_label !== "" ? 40 : 0;
+    filteredOptions: function () {
+      return this.dropdownOptions.filter((option) => option !== this.chosenOption);
     },
-    bottom_pixels: function () {
-      return (this.options_text.length - 2) * 25 + 12;
+    inputWidgetTop: function () {
+      return this.titleLabel !== "" ? 40 : 0;
+    },
+    bottomPixels: function () {
+      return (this.optionsText.length - 2) * 25 + 12;
+    },
+    chosenOption: function () {
+      return this.dropdownOptions[this.optionsIdx];
     },
   },
   watch: {
-    chosen_option: function () {
-      this.update_options_list();
+    disableToggle: function () {
+      if (this.disableToggle) this.visible = false;
     },
-    options_idx: function () {
-      this.get_preselected_option();
-    },
-    disable_toggle: function () {
-      if (this.disable_toggle) this.visible = false;
-    },
-    options_text: function () {
-      this.update_options_list();
-      this.get_preselected_option();
-    },
-  },
-  created() {
-    this.get_preselected_option();
-    this.options_list = this.dropdown_options;
-    this.unsubscribe = this.$store.subscribe(async (mutation) => {
-      if (
-        mutation.type === "stimulation/reset_state" ||
-        mutation.type === "stimulation/reset_protocol_editor"
-      ) {
-        this.chosen_option = this.dropdown_options[0];
-        this.change_selection(0);
-        this.visible = false;
-      }
-    });
-  },
-  beforeDestroy() {
-    this.unsubscribe();
   },
   methods: {
-    update_options_list() {
-      this.options_list = this.dropdown_options.filter((option) => option !== this.chosen_option);
-    },
-    get_preselected_option() {
-      this.chosen_option = this.dropdown_options[this.options_idx];
-    },
-    change_selection(idx) {
-      this.chosen_option = this.dropdown_options[idx];
+    changeSelection(idx) {
       this.$emit("selection-changed", idx);
     },
     toggle() {

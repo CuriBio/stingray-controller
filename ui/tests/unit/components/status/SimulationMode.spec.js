@@ -39,7 +39,7 @@ describe("SimulationMode.vue", () => {
     const propsData = {};
     wrapper = shallowMount(SimulationMode, { propsData, store, localVue });
 
-    store.commit("flask/set_simulation_status", true);
+    store.commit("flask/setSimulationStatus", true);
     await wrapper.vm.$nextTick(); // wait for update
     const target_button = wrapper.find(".div__simulationmode");
 
@@ -49,7 +49,7 @@ describe("SimulationMode.vue", () => {
     const propsData = {};
     wrapper = shallowMount(SimulationMode, { propsData, store, localVue });
 
-    store.commit("flask/set_simulation_status", false);
+    store.commit("flask/setSimulationStatus", false);
     await wrapper.vm.$nextTick(); // wait for update
     const target_button = wrapper.find(".div__simulationmode");
 

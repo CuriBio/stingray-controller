@@ -2,27 +2,27 @@
 import { STATUS } from "./enums";
 
 export default {
-  set_status_ping_interval_id(state, new_id) {
-    state.status_ping_interval_id = new_id;
+  setStatusPingIntervald(state, new_id) {
+    state.statusPingIntervald = new_id;
   },
-  stop_status_pinging(state) {
-    if (state.status_ping_interval_id !== null) {
-      clearInterval(state.status_ping_interval_id);
-      state.status_ping_interval_id = null;
+  stopStatusPinging(state) {
+    if (state.statusPingIntervald !== null) {
+      clearInterval(state.statusPingIntervald);
+      state.statusPingIntervald = null;
     }
   },
-  set_status_uuid(state, new_id) {
-    if (state.status_uuid !== STATUS.MESSAGE.ERROR) {
-      state.status_uuid = new_id;
+  setStatusUuid(state, new_id) {
+    if (state.statusUuid !== STATUS.MESSAGE.ERROR) {
+      state.statusUuid = new_id;
     }
   },
-  set_simulation_status(state, new_id) {
+  setSimulationStatus(state, new_id) {
     state.simulation_mode = new_id;
   },
-  set_barcode_manual_mode(state, new_value) {
-    state.barcode_manual_mode = new_value;
+  setBarcodeManualMode(state, new_value) {
+    state.barcodeManualMode = new_value;
   },
   ignore_next_system_status_if_matching_status(state, new_status) {
-    state.ignore_next_system_status_if_matching_this_status = new_status;
+    state.ignoreNextSystemStatusIfMatchingThisStatus = new_status;
   },
 };

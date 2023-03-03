@@ -1,29 +1,26 @@
 <template>
   <div class="div__plate-barcode">
-    <span class="span__plate-barcode-text" :style="dynamic_label_style"
-      >{{ barcode_label }}:<!-- original MockFlow ID: cmpDb2bac556f7cfa22b31a3731d355864c9 --></span
-    >
+    <span class="span__plate-barcode-text" :style="dynamic_label_style">{{ barcode_label }}</span>
     <input
       id="plateinfo"
       :disabled="is_disabled"
       type="text"
       spellcheck="false"
       class="input__plate-barcode-entry"
-      :style="dynamic_entry_style"
       :class="[
-        barcode_info.valid ? `input__plate-barcode-entry-valid` : `input__plate-barcode-entry-invalid`
+        barcode_info.valid ? `input__plate-barcode-entry-valid` : `input__plate-barcode-entry-invalid`,
       ]"
       :value="barcode_info.value"
-      @input="set_barcode_manually"
+      @input="setBarcode_manually"
     />
     <div
-      v-if="barcode_manual_mode && active_processes"
+      v-if="barcodeManualMode && active_processes"
       v-b-popover.hover.top="tooltip_text"
       :title="barcode_label"
       class="div__disabled-input-popover"
     />
     <div
-      v-show="!barcode_manual_mode"
+      v-show="!barcodeManualMode"
       v-b-popover.hover.top="tooltip_text"
       :title="barcode_label"
       class="input__plate-barcode-manual-entry-enable"
@@ -37,14 +34,11 @@
     <b-modal id="edit-plate-barcode-modal" size="sm" hide-footer hide-header hide-header-close>
       <StatusWarningWidget
         :modal_labels="barcode_manual_labels"
-        @handle_confirmation="handle_manual_mode_choice"
+        @handleConfirmation="handle_manual_mode_choice"
       />
     </b-modal>
     <b-modal id="barcode-warning" size="sm" hide-footer hide-header hide-header-close>
-      <StatusWarningWidget
-        :modal_labels="barcode_warning_labels"
-        @handle_confirmation="close_warning_modal"
-      />
+      <StatusWarningWidget :modal_labels="barcode_warning_labels" @handleConfirmation="close_warning_modal" />
     </b-modal>
   </div>
 </template>
@@ -62,16 +56,16 @@ library.add(faPencilAlt);
 /**
  * @vue-data {String} playback_state_enums - Current state of playback
  * @vue-computed {String} playback_state - Current value in Vuex store
- * @vue-event {String} set_barcode_manually - User entered String parser
+ * @vue-event {String} setBarcode_manually - User entered String parser
  */
 export default {
   name: "BarcodeViewer",
   components: {
     FontAwesomeIcon,
-    StatusWarningWidget
+    StatusWarningWidget,
   },
   props: {
-    barcode_type: { type: String, default: "plate_barcode" }
+    barcodeType: { type: String, default: "plateBarcode" },
   },
   data() {
     return {
@@ -81,66 +75,64 @@ export default {
         msg_one: "Do you want to enable manual barcode editing?",
         msg_two:
           "Once enabled, all barcodes must be entered manually. This should only be done if the barcode scanner is malfunctioning. Scanning cannot be re-enabled until software is restarted.",
-        button_names: ["Cancel", "Yes"]
+        button_names: ["Cancel", "Yes"],
       },
       barcode_warning_labels: {
         header: "Warning!",
         msg_one: "A new barcode has been detected while a process was active.",
         msg_two: "All processes have been stopped.",
-        button_names: ["Okay"]
-      }
+        button_names: ["Okay"],
+      },
     };
   },
   computed: {
     ...mapState("playback", ["playback_state", "barcodes", "barcode_warning"]),
-    ...mapState("flask", ["barcode_manual_mode"]),
-    barcode_info: function() {
-      return this.barcodes[this.barcode_type];
+    ...mapState("flask", ["barcodeManualMode"]),
+    barcode_info: function () {
+      return this.barcodes[this.barcodeType];
     },
-    barcode_label: function() {
-      return this.barcode_type == "plate_barcode" ? "Plate Barcode" : "Stim Lid Barcode";
+    barcode_label: function () {
+      return this.barcodeType == "plateBarcode" ? "Plate Barcode:" : "Stim Lid Barcode:";
     },
-    dynamic_label_style: function() {
-      return this.barcode_type == "plate_barcode" ? "left: 17px;" : "left: 0px;";
+    dynamic_label_style: function () {
+      return this.barcodeType == "plateBarcode" ? "left: 17px;" : "left: 0px;";
     },
-    dynamic_entry_style: function() {
-      return this.barcode_type == "plate_barcode" ? "width: 110px;" : "width: 105px;";
+
+    tooltip_text: function () {
+      return this.active_processes ? "Cannot edit barcodes while stimulating..." : "Click to edit";
     },
-    tooltip_text: function() {
-      return this.active_processes ? "Cannot edit barcodes while live view is active." : "Click to edit";
-    },
-    active_processes: function() {
+    active_processes: function () {
       return false;
     },
-    is_disabled: function() {
-      return this.active_processes || !this.barcode_manual_mode;
-    }
+    is_disabled: function () {
+      return this.active_processes || !this.barcodeManualMode;
+    },
   },
   watch: {
-    barcode_warning: function() {
+    barcode_warning: function () {
       if (this.barcode_warning) this.$bvModal.show("barcode-warning");
-    }
+    },
   },
   methods: {
     handle_manual_mode_choice(choice) {
       const bool_choice = Boolean(choice);
       this.$bvModal.hide("edit-plate-barcode-modal");
-      this.$store.commit("flask/set_barcode_manual_mode", bool_choice);
+      this.$store.commit("flask/setBarcodeManualMode", bool_choice);
       if (bool_choice) {
         console.log("Barcode Set Manually"); // allow-log
       }
     },
-    set_barcode_manually: function(event) {
-      this.$store.dispatch("playback/validate_barcode", {
-        type: this.barcode_type,
-        new_value: event.target.value
+    setBarcode_manually: function (event) {
+      this.$store.dispatch("playback/validateBarcode", {
+        type: this.barcodeType,
+        new_value: event.target.value,
       });
     },
     close_warning_modal() {
       this.$bvModal.hide("barcode-warning");
-      this.$store.commit("playback/set_barcode_warning", false);
-    }
-  }
+      this.$store.commit("playback/setBarcodeWarning", false);
+    },
+  },
 };
 </script>
 <style>
@@ -210,6 +202,7 @@ export default {
   height: 24px;
   top: 3px;
   right: 27px;
+  width: 105px;
 }
 
 .div__disabled-input-popover {

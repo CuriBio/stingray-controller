@@ -50,7 +50,7 @@ describe("RecordingTime.vue", () => {
     const mocked_axios_get = jest.spyOn(Vue.axios, "get");
     mocked_axios_get.mockReturnValue(Promise.resolve({ status: 200 }));
 
-    store.commit("playback/set_x_time_index", 1234500);
+    store.commit("playback/set_xTimeIndex", 1234500);
     await store.dispatch("playback/start_recording");
     await wrapper.vm.$nextTick(); // wait for update
 
@@ -68,7 +68,7 @@ describe("RecordingTime.vue", () => {
     const mocked_axios_get = jest.spyOn(Vue.axios, "get");
     mocked_axios_get.mockReturnValue(Promise.resolve({ status: 200 }));
 
-    store.commit("playback/set_x_time_index", 12345000);
+    store.commit("playback/set_xTimeIndex", 12345000);
     await store.dispatch("playback/start_recording");
     await wrapper.vm.$nextTick(); // wait for update
 
@@ -76,12 +76,12 @@ describe("RecordingTime.vue", () => {
     expect(wrapper.find(".span__time-text").text()).toStrictEqual("00:00:00.000");
     await wrapper.vm.$nextTick(); // wait for update
 
-    store.commit("playback/set_x_time_index", 67363000);
+    store.commit("playback/set_xTimeIndex", 67363000);
     await wrapper.vm.$nextTick(); // wait for update
 
     expect(wrapper.find(".span__time-text").text()).toStrictEqual("00:00:55.018");
   });
-  test("Given that get method is mocked with a http response 200, When Recording start is initiated at x_time_index is mutated to 6736300, Then the text updates 00:00:55.018 and stop_recording initiates resets text to null", async () => {
+  test("Given that get method is mocked with a http response 200, When Recording start is initiated at xTimeIndex is mutated to 6736300, Then the text updates 00:00:55.018 and stop_recording initiates resets text to null", async () => {
     const propsData = {};
     wrapper = shallowMount(RecordingTime, {
       propsData,
@@ -93,14 +93,14 @@ describe("RecordingTime.vue", () => {
     mocked_axios_get.mockReturnValue(Promise.resolve({ status: 200 }));
 
     expect(wrapper.find(".span__time-text").text()).toStrictEqual("");
-    store.commit("playback/set_x_time_index", 12345000);
+    store.commit("playback/set_xTimeIndex", 12345000);
     await store.dispatch("playback/start_recording");
     await wrapper.vm.$nextTick(); // wait for update
 
     expect(wrapper.find(".span__time-text").text()).toStrictEqual("00:00:00.000");
     await wrapper.vm.$nextTick(); // wait for update
 
-    store.commit("playback/set_x_time_index", 67363000);
+    store.commit("playback/set_xTimeIndex", 67363000);
     await wrapper.vm.$nextTick(); // wait for update
 
     expect(wrapper.find(".span__time-text").text()).toStrictEqual("00:00:55.018");

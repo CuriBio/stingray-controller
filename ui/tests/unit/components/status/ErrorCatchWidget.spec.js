@@ -42,7 +42,7 @@ describe("ErrorCatchWidget.vue", () => {
   test("Given that ErrorCatchWidget has a props having error file name and error message, When the lifecyle hook mounted is created, Then title, alert text, contact e-mail and error file name is rendered properly", async () => {
     const propsData = {
       log_filepath: "C:\test_file_log.txt",
-      shutdown_error_message: "Mantarray software is about to shut down.",
+      shutdownErrorMessage: "Mantarray software is about to shut down.",
     };
     wrapper = mount(ComponentToTest, {
       propsData,
@@ -81,7 +81,7 @@ describe("ErrorCatchWidget.vue", () => {
     expect(target_text_area.attributes("rows")).toBe("1");
     await wrapper.setProps({
       log_filepath:
-        "C:UsersEliCuriBioAppDataRoamingMantarrayControllerlogs_flaskmantarray-2020-10-21-185640.txt",
+        "C:UsersEliCuriBioAppDataRoamingStringrayControllerlogs_flaskmantarray-2020-10-21-185640.txt",
     });
     expect(target_text_area.attributes("rows")).toBe("3");
   });
@@ -102,7 +102,7 @@ describe("ErrorCatchWidget.vue", () => {
     expect(target_error_button.attributes().style).toBe("top: 262px; left: 0px; position: absolute;");
     /* A run time update of prop occured below then observe that height value and top is updated */
     await wrapper.setProps({
-      log_filepath: "C:UsersMantarrayAppDataRoamingMantarrayControllerlogs_flask",
+      log_filepath: "C:UsersMantarrayAppDataRoamingStringrayControllerlogs_flask",
     });
     expect(target_background_div.attributes().style).toBe("height: 274px;");
     expect(target_text_area.attributes().style).toBe("height: 49px; top: 145px;");

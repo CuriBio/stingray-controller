@@ -3,69 +3,69 @@
     <div class="div__Tabs-panel">
       <span
         :id="'Basic'"
-        :class="active_tab === 'Advanced' ? 'span__Inactive-Tab-labels' : 'span__Active-Tab-label'"
-        @click="toggle_tab($event.target.id)"
+        :class="activeTab === 'Advanced' ? 'span__Inactive-Tab-labels' : 'span__Active-Tab-label'"
+        @click="toggleTab($event.target.id)"
         >Basic</span
       >
       <span
         :id="'Advanced'"
-        :class="active_tab === 'Basic' ? 'span__Inactive-Tab-labels' : 'span__Active-Tab-label'"
-        @click="toggle_tab($event.target.id)"
+        :class="activeTab === 'Basic' ? 'span__Inactive-Tab-labels' : 'span__Active-Tab-label'"
+        @click="toggleTab($event.target.id)"
         >Advanced</span
       >
     </div>
     <div class="div__Editor-background">
       <div class="div__setting-panel-container">
-        <span :key="current_letter" class="span__protocol-letter" :style="'color:' + current_color">{{
-          current_letter
+        <span :key="currentLetter" class="span__protocol-letter" :style="'color:' + currentColor">{{
+          currentLetter
         }}</span>
         <input
-          v-model="protocol_name"
+          v-model="protocolName"
           class="protocol_name_input"
           placeholder="Protocol Name"
-          :style="name_validity"
-          @change="check_name_validity($event.target.value)"
+          :style="nameValidity"
+          @change="(e) => (protocolName = e.target.value)"
         />
-        <span class="error-message">{{ error_message }}</span>
+        <span class="error-message">{{ errorMessage }}</span>
         <div class="div__right-settings-panel">
           <SmallDropDown
-            :input_height="25"
-            :input_width="200"
-            :disable_selection="true"
-            :options_text="stimulation_types_array"
-            :options_idx="stimulation_type_idx"
-            :dom_id_suffix="'stimulation_type'"
-            @selection-changed="handle_stimulation_type"
+            :inputHeight="25"
+            :inputWidth="200"
+            :disableSelection="true"
+            :optionsText="stimulationTypesArray"
+            :optionsIdx="stimulationTypeIdx"
+            :domIdSuffix="'stimulationType'"
+            @selection-changed="handleStimulationType"
           />
           <SmallDropDown
             :style="'margin-left: 5%;'"
-            :input_height="25"
-            :input_width="176"
-            :options_text="stop_options_array"
-            :options_idx="stop_option_idx"
-            :dom_id_suffix="'stop_options'"
-            @selection-changed="handle_stop_setting"
+            :inputHeight="25"
+            :inputWidth="176"
+            :optionsText="stopOptionsArray"
+            :optionsIdx="stopOptionIdx"
+            :domIdSuffix="'stopOptions'"
+            @selection-changed="handleStopSetting"
           />
           <span class="span__settings-label">every</span>
-          <div v-b-popover.hover.bottom="rest_input_hover" class="number-input-container">
+          <div v-b-popover.hover.bottom="restInputHover" class="number-input-container">
             <InputWidget
               :style="'position: relative;'"
-              :initial_value="rest_duration"
+              :initial_value="restDuration"
               :placeholder="'0'"
               :dom_id_suffix="'protocol-rest'"
-              :invalid_text="invalid_rest_dur_text"
-              :disabled="disabled_time"
+              :invalid_text="invalidRestDurText"
+              :disabled="disabledTime"
               :input_width="100"
               :input_height="25"
               :top_adjust="-2"
-              @update:value="handle_rest_duration($event)"
+              @update:value="handleRestDuration($event)"
             />
           </div>
           <FontAwesomeIcon
-            id="trash_icon"
+            id="trashIcon"
             class="trash-icon"
             :icon="['fa', 'trash-alt']"
-            @click="open_del_modal"
+            @click="openDelModal"
           />
         </div>
       </div>
@@ -81,8 +81,8 @@
     >
       <StatusWarningWidget
         id="del-protocol"
-        :modal_labels="del_protocol_labels"
-        @handle_confirmation="close_del_protocol_modal"
+        :modal_labels="delProtocolLabels"
+        @handleConfirmation="closeDelProtocolModal"
       />
     </b-modal>
   </div>
@@ -104,27 +104,27 @@ Vue.component("BModal", BModal);
 library.add(faTrashAlt);
 
 /**
- * @vue-data {String} active_tab - Shows current selected tab
+ * @vue-data {String} activeTab - Shows current selected tab
  * @vue-data {Boolean} disabled - Disables the name and time input fields
- * @vue-data {String} current_letter - Next available letter in alphabet
- * @vue-data {String} current_color -  Next available color in alphabet
- * @vue-data {Array} stimulation_types_array - Availble options in dropdown
- * @vue-data {Array} stop_options_array - Available options in dropdown
- * @vue-data {String} protocol_name - Inputted new protocol name
- * @vue-data {String} stop_setting - Selected setting from dropdown
- * @vue-data {String} rest_duration - Inputted delay to be set at the end of the protocol between repeats
- * @vue-data {String} name_validity - Corresponding border style after name validity check
- * @vue-data {String} error_message - Error message that appears under name input field after validity check
- * @vue-data {Array} protocol_list - All available protocols from Vuex
- * @vue-data {Int} stimulation_type_idx - Used to change preselected index in the dropdown when user wants to edit existing protocols
- * @vue-event {Event} update_protocols - Gets called when a change to the available protocol list occurs to update next available color/letter assignment and dropdown options
- * @vue-event {Event} handle_trash_modal - Toggle view of delete popover on trash icon
- * @vue-event {Event} toggle_tab - Toggles which tab is active
- * @vue-event {Event} handle_delete - Confirms and commits the deletion of protocol to state
- * @vue-event {Event} handle_stimulation_type - Commits the new selected stimulation type to state
- * @vue-event {Event} handle_stop_setting - Currently just assigns the new stop setting to local state
- * @vue-event {Event} handle_rest_duration - Commits the new delay input to state
- * @vue-event {Event} check_name_validity - Checks if the inputted name has already been used
+ * @vue-data {String} currentLetter - Next available letter in alphabet
+ * @vue-data {String} currentColor -  Next available color in alphabet
+ * @vue-data {Array} stimulationTypesArray - Availble options in dropdown
+ * @vue-data {Array} stopOptionsArray - Available options in dropdown
+ * @vue-data {String} protocolName - Inputted new protocol name
+ * @vue-data {String} stopSetting - Selected setting from dropdown
+ * @vue-data {String} restDuration - Inputted delay to be set at the end of the protocol between repeats
+ * @vue-data {String} nameValidity - Corresponding border style after name validity check
+ * @vue-data {String} errorMessage - Error message that appears under name input field after validity check
+ * @vue-data {Array} localProtocolList - All available protocols from Vuex
+ * @vue-data {Int} stimulationTypeIdx - Used to change preselected index in the dropdown when user wants to edit existing protocols
+ * @vue-event {Event} updateProtocols - Gets called when a change to the available protocol list occurs to update next available color/letter assignment and dropdown options
+ * @vue-event {Event} handleTrashModal - Toggle view of delete popover on trash icon
+ * @vue-event {Event} toggleTab - Toggles which tab is active
+ * @vue-event {Event} handleDelete - Confirms and commits the deletion of protocol to state
+ * @vue-event {Event} handleStimulationType - Commits the new selected stimulation type to state
+ * @vue-event {Event} handleStopSetting - Currently just assigns the new stop setting to local state
+ * @vue-event {Event} handleRestDuration - Commits the new delay input to state
+ * @vue-event {Event} checkNameValidity - Checks if the inputted name has already been used
  */
 
 export default {
@@ -137,152 +137,149 @@ export default {
   },
   data() {
     return {
-      active_tab: "Basic",
-      disabled_time: false,
-      current_letter: "",
-      current_color: "",
-      stimulation_types_array: ["Current Controlled Stimulation", "(Not Yet Available)"],
-      stop_options_array: ["Stimulate Until Stopped", "Stimulate Until Complete"],
-      protocol_name: "",
-      stop_option_idx: 0,
-      stimulation_type_idx: 0,
-      rest_duration: "",
-      name_validity: "null",
-      error_message: "",
-      protocol_list: [],
-      del_protocol_labels: {
+      activeTab: "Basic",
+      disabledTime: false,
+      currentLetter: "",
+      currentColor: "",
+      stimulationTypesArray: ["Current Controlled Stimulation", "(Not Yet Available)"],
+      stopOptionsArray: ["Stimulate Until Stopped", "Stimulate Until Complete"],
+      protocolName: "",
+      stopOptionIdx: 0,
+      stimulationTypeIdx: 0,
+      restDuration: "",
+      nameValidity: "null",
+      errorMessage: "",
+      localProtocolList: [],
+      delProtocolLabels: {
         header: "Warning!",
-        msg_one: "You are about to permanently delete this protocol.",
-        msg_two: "Please confirm to continue.",
-        button_names: ["Delete", "Cancel"],
+        msgOne: "You are about to permanently delete this protocol.",
+        msgTwo: "Please confirm to continue.",
+        buttonNames: ["Delete", "Cancel"],
       },
-      invalid_rest_dur_text: "",
+      invalidRestDurText: "",
     };
   },
   computed: {
-    ...mapState("stimulation", {
-      stimulation_type: (state) => state.protocol_editor.stimulation_type,
-      run_until_stopped: (state) => state.protocol_editor.run_until_stopped,
-      rest_time_unit: (state) => state.protocol_editor.time_unit,
-    }),
-    ...mapGetters("stimulation", [
-      "get_protocol_name",
-      "get_rest_duration",
-      "get_protocols",
-      "get_next_protocol",
-    ]),
-    rest_input_hover: function () {
+    ...mapState("stimulation", ["protocolEditor", "editMode", "protocolList"]),
+    ...mapGetters("stimulation", ["getProtocols", "getNextProtocol"]),
+    restInputHover: function () {
       return {
         content: 'Cannot set this value if using "Stimulate Until Complete"',
-        disabled: !this.disabled_time,
+        disabled: !this.disabledTime,
       };
+    },
+    restTimeUnit: function () {
+      return this.protocolEditor.restTimeUnit;
+    },
+    editModeStatus: function () {
+      return this.editMode.status;
+    },
+    editModeLabel: function () {
+      return this.editMode.label;
     },
   },
   watch: {
-    rest_time_unit() {
-      if (!this.disabled_time) {
-        this.handle_rest_duration(this.rest_duration);
+    protocolEditor: function () {
+      this.setProtocolForEdit();
+    },
+    restTimeUnit() {
+      if (!this.disabledTime) {
+        this.handleRestDuration(this.restDuration);
       }
+    },
+    editModeStatus: function () {
+      this.setProtocolForEdit();
+    },
+    editModeLabel: function () {
+      this.setProtocolForEdit();
+    },
+    protocolName: function () {
+      this.checkNameValidity(this.protocolName);
     },
   },
   created() {
-    this.update_protocols();
-    this.unsubscribe = this.$store.subscribe(async (mutation) => {
-      if (
-        mutation.type === "stimulation/reset_state" ||
-        mutation.type === "stimulation/reset_protocol_editor"
-      ) {
-        this.update_protocols();
-        this.protocol_name = "";
-        this.rest_duration = "";
-        this.name_validity = "";
-      } else if (mutation.type === "stimulation/set_new_protocol") {
-        this.update_protocols();
-      } else if (mutation.type === "stimulation/set_edit_mode") {
-        this.update_protocols();
-        this.protocol_name = this.get_protocol_name;
-        this.rest_duration = JSON.stringify(this.get_rest_duration);
-        this.stimulation_type_idx = +(this.stimulation_type === "V");
-
-        this.stop_option_idx = +!this.run_until_stopped;
-        this.disabled_time = !this.run_until_stopped;
-      }
-    });
-  },
-  beforeDestroy() {
-    this.unsubscribe();
+    this.updateProtocols();
   },
   mounted() {
-    this.$store.commit("stimulation/set_edit_mode_off");
-    this.update_protocols();
+    this.$store.commit("stimulation/setEditModeOff");
+    this.updateProtocols();
   },
   methods: {
-    ...mapActions("stimulation", ["handle_protocol_editor_reset", "handle_new_rest_duration"]),
-    ...mapMutations("stimulation", ["set_stimulation_type", "set_protocol_name", "set_stop_setting"]),
-    update_protocols() {
-      this.protocol_list = this.get_protocols;
-      const { letter, color } = this.get_next_protocol;
-      this.current_letter = letter;
-      this.current_color = color;
+    ...mapActions("stimulation", ["handleProtocolEditorReset", "handleNewRestDuration"]),
+    ...mapMutations("stimulation", ["setStimulationType", "setProtocolName", "setStopSetting"]),
+    updateProtocols() {
+      this.localProtocolList = this.getProtocols;
+      const { letter, color } = this.getNextProtocol;
+      this.currentLetter = letter;
+      this.currentColor = color;
     },
-    toggle_tab(tab) {
-      tab === "Basic" ? (this.active_tab = "Basic") : (this.active_tab = "Advanced");
+    setProtocolForEdit() {
+      this.updateProtocols();
+      const { name, restDuration, runUntilStopped, stimulationType } = this.protocolEditor;
+
+      this.protocolName = name;
+      this.restDuration = JSON.stringify(restDuration);
+      this.stimulationTypeIdx = +(stimulationType === "V");
+      this.stopOptionIdx = +!runUntilStopped;
+      this.disabledTime = !runUntilStopped;
     },
-    open_del_modal() {
+    toggleTab(tab) {
+      this.activeTab = tab === "Basic" ? "Basic" : "Advanced";
+    },
+    openDelModal() {
       this.$bvModal.show("del-protocol-modal");
     },
-    close_del_protocol_modal(idx) {
+    closeDelProtocolModal(idx) {
       this.$bvModal.hide("del-protocol-modal");
-      if (idx === 0) this.handle_protocol_editor_reset();
+      if (idx === 0) this.handleProtocolEditorReset();
     },
-    handle_stimulation_type(idx) {
-      const type = this.stimulation_types_array[idx];
-      this.stimulation_type_idx = idx;
-      this.set_stimulation_type(type);
+    handleStimulationType(idx) {
+      const type = this.stimulationTypesArray[idx];
+      this.stimulationTypeIdx = idx;
+      this.setStimulationType(type);
     },
-    handle_stop_setting(idx) {
-      const setting = this.stop_options_array[idx];
-      this.stop_option_idx = idx;
+    handleStopSetting(idx) {
+      const setting = this.stopOptionsArray[idx];
+      this.stopOptionIdx = idx;
+      this.disabledTime = idx === 1;
 
-      this.disabled_time = idx === 1;
+      if (this.disabledTime) this.handleRestDuration("0");
 
-      if (this.disabled_time) this.handle_rest_duration("0");
-
-      this.set_stop_setting(setting.includes("Stopped"));
+      this.setStopSetting(setting.includes("Stopped"));
     },
-    handle_rest_duration(time) {
-      const time_int = +time;
-
-      this.rest_duration = time;
-      if (isNaN(time_int) || time_int < 0) {
-        this.invalid_rest_dur_text = "Must be a (+) number";
-      } else if (this.get_dur_in_ms(time_int) > MAX_SUBPROTOCOL_DURATION_MS) {
-        this.invalid_rest_dur_text = "Must be <= 24hrs";
+    handleRestDuration(time) {
+      const timeInt = +time;
+      this.restDuration = time;
+      if (isNaN(timeInt) || timeInt < 0) {
+        this.invalidRestDurText = "Must be a (+) number";
+      } else if (this.getDurInMs(timeInt) > MAX_SUBPROTOCOL_DURATION_MS) {
+        this.invalidRestDurText = "Must be <= 24hrs";
       } else {
-        this.invalid_rest_dur_text = "";
-        this.handle_new_rest_duration(this.rest_duration);
+        this.invalidRestDurText = "";
+        this.handleNewRestDuration(this.restDuration);
       }
 
-      const rest_dur_is_valid = this.invalid_rest_dur_text === "";
-      this.$emit("new-rest-dur", rest_dur_is_valid);
+      const restDurIsValid = this.invalidRestDurText === "";
+      this.$emit("new-rest-dur", restDurIsValid);
     },
-    get_dur_in_ms(value) {
-      return this.rest_time_unit === "milliseconds" ? value : value * 1000;
+    getDurInMs(value) {
+      return this.restTimeUnit === "milliseconds" ? value : value * 1000;
     },
-    check_name_validity(input) {
-      const matched_names = this.protocol_list.filter((protocol) => {
+    checkNameValidity(input) {
+      const matchedNames = this.localProtocolList.filter((protocol) => {
         return protocol.label === input;
       });
+
       if (input === "") {
-        this.name_validity = "";
-        this.error_message = "";
-      } else if (matched_names.length === 0) {
-        this.name_validity = "border: 1px solid #19ac8a";
-        this.error_message = "";
-        this.set_protocol_name(input);
+        this.nameValidity = "";
+        this.errorMessage = "";
+      } else if (matchedNames.length === 0 || this.editModeLabel === input) {
+        this.nameValidity = "border: 1px solid #19ac8a";
+        this.errorMessage = "";
+        this.setProtocolName(input);
       } else {
-        this.name_validity = "border: 1px solid #bd3532";
-        this.error_message = "*Protocol name already exists";
+        this.nameValidity = "border: 1px solid #bd3532";
+        this.errorMessage = "*Protocol name already exists";
       }
     },
   },

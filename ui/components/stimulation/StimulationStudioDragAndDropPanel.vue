@@ -25,14 +25,14 @@
         </div>
         <SmallDropDown
           class="dropdown-container"
-          :input_height="25"
+          :inputHeight="25"
           :disable="disable_dropdown"
-          :input_width="100"
-          :options_text="time_units_array"
-          :options_idx="time_units_idx"
-          :dom_id_suffix="'time_units'"
+          :inputWidth="100"
+          :optionsText="timeUnitsArray"
+          :optionsIdx="timeUnitsIdx"
+          :domIdSuffix="'timeUnits'"
           :style="disable_dropdown ? 'cursor: unset;' : null"
-          @selection-changed="handle_time_unit"
+          @selection-changed="handle_timeUnit"
         />
 
         <div class="div__scroll-container">
@@ -61,7 +61,7 @@
     </div>
     <div v-if="modal_type !== null" class="modal-container">
       <StimulationStudioWaveformSettingModal
-        :stimulation_type="stimulation_type"
+        :stimulationType="stimulationType"
         :pulse_type="modal_type"
         :modal_open_for_edit="modal_open_for_edit"
         :selected_pulse_settings="selected_pulse_settings"
@@ -89,10 +89,10 @@ import SmallDropDown from "@/components/basic_widgets/SmallDropDown.vue";
 import { generate_random_color } from "@/js_utils/waveform_data_formatter";
 
 /**
- * @vue-props {String} stimulation_type - Current selected stimulation type user selects from drowdown
+ * @vue-props {String} stimulationType - Current selected stimulation type user selects from drowdown
  * @vue-data {Array} icon_type - The source for the draggable pulse tiles
  * @vue-data {Array} is_dragging - Boolean to determine if user is currently dragging a tile in the scrollable window
- * @vue-data {Array} time_units_array - Available units of time for drop down in settings panel
+ * @vue-data {Array} timeUnitsArray - Available units of time for drop down in settings panel
  * @vue-data {Object} selected_pulse_settings - This is the saved setting for a pulse that changes when a user opens a modal to edit a pulse
  * @vue-data {Array} protocol_order -  This is the complete order of pulses/delays/repeats in the entire new protocol
  * @vue-data {String} modal_type - Tracks which modal should open based on pulse type
@@ -103,12 +103,12 @@ import { generate_random_color } from "@/js_utils/waveform_data_formatter";
  * @vue-data {Boolean} cloned - Determines if a placed tile in protocol order is new and needs a modal to open appear to set settings or just an order rearrangement of existing tiles
  * @vue-data {Int} new_cloned_idx - If tile placed in protocol order is new, this index allows settings to be saved to correct index in order
  * @vue-data {Boolean} modal_open_for_edit - Determines if existing modal inputs should appear in modal for a reedit or if it's a new delay block with blank settings
- * @vue-data {Int} time_units_idx - Index for selected unit in dropdown, used to reset dropdown when editor is reset
+ * @vue-data {Int} timeUnitsIdx - Index for selected unit in dropdown, used to reset dropdown when editor is reset
  * @vue-data {Boolean} disable_dropdown - Determines if the dropdown is disabled or not dependent on the stop stim setting selected
  * @vue-event {Event} check_type - Checks if tile placed is new or existing and opens corresponding modal for settings or commits change in protocol order to state
  * @vue-event {Event} on_modal_close - Handles settings when modal is closed dependent on which button the user selects and which modal type is open, commits change to state
  * @vue-event {Event} open_modal_for_edit - Assigns selected pulse settings to modal for reedit and saves current selected index
- * @vue-event {Event} handle_time_unit - Tracks which unit of time has been selected from dropdown in settings panel
+ * @vue-event {Event} handle_timeUnit - Tracks which unit of time has been selected from dropdown in settings panel
  * @vue-event {Event} clone - Creates blank properties for new pulse placed in protocol order so that each pulse has unique properties and is not affected by one another, a side effect from VueDraggable
  */
 
@@ -121,13 +121,13 @@ export default {
     SmallDropDown,
   },
   props: {
-    stimulation_type: { type: String, default: "Voltage" },
+    stimulationType: { type: String, default: "Voltage" },
     disable_edits: { type: Boolean, default: false },
   },
   data() {
     return {
       icon_types: ["Monophasic", "Biphasic", "Delay"],
-      time_units_array: ["milliseconds", "seconds", "minutes", "hours"],
+      timeUnitsArray: ["milliseconds", "seconds", "minutes", "hours"],
       selected_pulse_settings: {},
       protocol_order: [],
       modal_type: null,
@@ -139,7 +139,7 @@ export default {
       cloned: false,
       new_cloned_idx: null,
       modal_open_for_edit: false, // TODO Luci, clean up state management and constant names
-      time_units_idx: 0,
+      timeUnitsIdx: 0,
       disable_dropdown: false,
       is_dragging: false,
       selected_color: null,
@@ -147,38 +147,29 @@ export default {
   },
   computed: {
     ...mapState("stimulation", {
-      time_unit: (state) => state.protocol_editor.time_unit,
-      run_until_stopped: (state) => state.protocol_editor.run_until_stopped,
-      detailed_subprotocols: (state) => state.protocol_editor.detailed_subprotocols,
+      timeUnit: (state) => state.protocolEditor.timeUnit,
+      runUntilStopped: (state) => state.protocolEditor.runUntilStopped,
+      detailedSubprotocols: (state) => state.protocolEditor.detailedSubprotocols,
     }),
   },
   watch: {
     is_dragging: function () {
       // reset so old position/idx isn't highlighted once moved
-      this.on_pulse_mouseleave();
+      this.onPulseMouseleave();
+    },
+    detailedSubprotocols: function () {
+      this.protocol_order = JSON.parse(JSON.stringify(this.detailedSubprotocols));
+    },
+    timeUnit: function () {
+      this.timeUnitsIdx = this.timeUnitsArray.indexOf(this.timeUnit);
+    },
+    runUntilStopped: function () {
+      this.disable_dropdown = !this.runUntilStopped;
     },
   },
-  created() {
-    this.unsubscribe = this.$store.subscribe(async (mutation) => {
-      if (
-        mutation.type === "stimulation/reset_state" ||
-        mutation.type === "stimulation/reset_protocol_editor"
-      ) {
-        this.protocol_order = [];
-      } else if (mutation.type === "stimulation/set_edit_mode") {
-        this.protocol_order = JSON.parse(JSON.stringify(this.detailed_subprotocols));
-        this.time_units_idx = this.time_units_array.indexOf(this.time_unit);
-      } else if (mutation.type === "stimulation/set_stop_setting") {
-        this.disable_dropdown = !this.run_until_stopped;
-      }
-    });
-  },
-  beforeDestroy() {
-    this.unsubscribe();
-  },
   methods: {
-    ...mapActions("stimulation", ["handle_protocol_order", "on_pulse_mouseenter"]),
-    ...mapMutations("stimulation", ["set_time_unit", "on_pulse_mouseleave"]),
+    ...mapActions("stimulation", ["handleProtocolOrder", "onPulseMouseenter"]),
+    ...mapMutations("stimulation", ["setTimeUnit", "onPulseMouseleave"]),
 
     check_type(e) {
       if (e.added && this.cloned) {
@@ -191,7 +182,7 @@ export default {
         else if (element.type === "Delay") this.open_delay_modal = true;
       }
 
-      if ((e.added && !this.cloned) || e.moved || e.removed) this.handle_protocol_order(this.protocol_order);
+      if ((e.added && !this.cloned) || e.moved || e.removed) this.handleProtocolOrder(this.protocol_order);
       // reset
       this.cloned = false;
     },
@@ -248,7 +239,7 @@ export default {
       }
       this.new_cloned_idx = null;
       this.shift_click_img_idx = null;
-      this.handle_protocol_order(this.protocol_order);
+      this.handleProtocolOrder(this.protocol_order);
     },
     open_modal_for_edit(type, idx) {
       const pulse = this.protocol_order[idx];
@@ -270,16 +261,16 @@ export default {
     },
     on_pulse_enter(idx) {
       // if tile is being dragged, the pulse underneath the dragged tile will highlight even though the user is dragging a different tile
-      if (!this.is_dragging) this.on_pulse_mouseenter(idx);
+      if (!this.is_dragging) this.onPulseMouseenter(idx);
     },
     on_pulse_leave() {
-      this.on_pulse_mouseleave();
+      this.onPulseMouseleave();
     },
-    handle_time_unit(idx) {
-      const unit = this.time_units_array[idx];
-      this.time_units_idx = idx;
-      this.set_time_unit(unit);
-      this.handle_protocol_order(this.protocol_order);
+    handle_timeUnit(idx) {
+      const unit = this.timeUnitsArray[idx];
+      this.timeUnitsIdx = idx;
+      this.setTimeUnit(unit);
+      this.handleProtocolOrder(this.protocol_order);
     },
     get_pulse_hue(idx) {
       // duplicated pulses are not always in last index
@@ -298,34 +289,34 @@ export default {
 
       this.selected_color = random_color;
 
-      let type_specific_settings = {};
-      if (type === "Delay") type_specific_settings = { duration: "", unit: "milliseconds" };
+      let typeSpecificSettings = {};
+      if (type === "Delay") typeSpecificSettings = { duration: "", unit: "milliseconds" };
       // for both monophasic and biphasic
       else
-        type_specific_settings = {
+        typeSpecificSettings = {
           frequency: "",
           total_active_duration: {
             duration: "",
             unit: "milliseconds",
           },
           num_cycles: 0,
-          postphase_interval: "",
-          phase_one_duration: "",
-          phase_one_charge: "",
+          postphaseInterval: "",
+          phaseOneDuration: "",
+          phaseOneCharge: "",
         };
 
       if (type === "Biphasic")
-        type_specific_settings = {
-          ...type_specific_settings,
-          interphase_interval: "",
-          phase_two_charge: "",
-          phase_two_duration: "",
+        typeSpecificSettings = {
+          ...typeSpecificSettings,
+          interphaseInterval: "",
+          phaseTwoCharge: "",
+          phaseTwoDuration: "",
         };
 
       return {
         type,
         color: `${random_color}`,
-        pulse_settings: type_specific_settings,
+        pulse_settings: typeSpecificSettings,
       };
     },
   },

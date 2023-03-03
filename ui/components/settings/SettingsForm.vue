@@ -100,10 +100,10 @@
       />
     </div>
 
-    <span v-if="beta_2_mode" class="span__settingsform-show-recording-snapshot-text"
+    <span v-if="beta2Mode" class="span__settingsform-show-recording-snapshot-text"
       >Show&nbsp;<wbr />Snapshot&nbsp;<wbr />After&nbsp;<wbr />Recording</span
     >
-    <div v-if="beta_2_mode" class="div__settingsform-toggle-icon-3" width="62" height="34">
+    <div v-if="beta2Mode" class="div__settingsform-toggle-icon-3" width="62" height="34">
       <ToggleWidget
         id="recording_snapshot_switch"
         :checked_state="recording_snapshot_state"
@@ -213,7 +213,7 @@ export default {
   },
   computed: {
     ...mapState("settings", [
-      "beta_2_mode",
+      "beta2Mode",
       "user_accounts",
       "active_user_index",
       "stored_customer_id",

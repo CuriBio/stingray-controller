@@ -10,10 +10,10 @@ import { arry, new_arry } from "../js_utils/waveform_data_provider.js";
 import { ping_system_status } from "@/store/modules/flask/actions";
 import { ERRORS } from "../../../store/modules/settings/enums.js";
 
-const valid_plate_barcode_old = "ML2022001000";
-const valid_plate_barcode_beta_1 = "ML22001000-1";
-const valid_plate_barcode_beta_2 = "ML22001000-2";
-const valid_stim_barcode_old = "MS2022001000";
+const valid_plateBarcode_old = "ML2022001000";
+const valid_plateBarcode_beta_1 = "ML22001000-1";
+const valid_plateBarcode_beta_2 = "ML22001000-2";
+const valid_stimBarcode_old = "MS2022001000";
 
 const http = require("http");
 const io_server = require("socket.io");
@@ -393,31 +393,27 @@ describe("store/data", () => {
 
     test("When backend emits stimulator_circuit_status message with short circuit errors, Then ws client updates stim status to short circuit error", async () => {
       // confirm precondition
-      const initial_statuses = store.state.data.stimulator_circuit_statuses;
+      const initial_statuses = store.state.data.stimulatorCircuitStatuses;
       expect(initial_statuses).toHaveLength(0);
 
-      const stimulator_statuses = new Array(24)
+      const stimulatorStatuses = new Array(24)
         .fill("open", 0, 10)
         .fill("media", 10, 20)
         .fill("short", 20, 24);
 
-      const stimulator_statuses_obj = {};
-      stimulator_statuses.map((status, well_idx) => {
-        stimulator_statuses_obj[`${well_idx}`] = status;
+      const stimulatorStatusesObj = {};
+      stimulatorStatuses.map((status, well_idx) => {
+        stimulatorStatusesObj[`${well_idx}`] = status;
       });
 
       await new Promise((resolve) => {
-        socket_server_side.emit(
-          "stimulator_circuit_statuses",
-          JSON.stringify(stimulator_statuses_obj),
-          (ack) => {
-            resolve(ack);
-          }
-        );
+        socket_server_side.emit("stimulatorCircuitStatuses", JSON.stringify(stimulatorStatusesObj), (ack) => {
+          resolve(ack);
+        });
       });
 
-      const updated_statuses = store.state.data.stimulator_circuit_statuses;
-      const stim_status = store.state.stimulation.stim_status;
+      const updated_statuses = store.state.data.stimulatorCircuitStatuses;
+      const stimStatus = store.state.stimulation.stim_status;
 
       expect(updated_statuses).toStrictEqual(initial_statuses);
       expect(stim_status).toBe(STIM_STATUS.SHORT_CIRCUIT_ERROR);
@@ -425,22 +421,22 @@ describe("store/data", () => {
 
     test("When backend emits stimulator_circuit_status message with error status, Then ws client updates stim status to short circuit error", async () => {
       // confirm precondition
-      const initial_statuses = store.state.data.stimulator_circuit_statuses;
+      const initial_statuses = store.state.data.stimulatorCircuitStatuses;
       expect(initial_statuses).toHaveLength(0);
 
-      const stimulator_statuses = new Array(24)
+      const stimulatorStatuses = new Array(24)
         .fill("open", 0, 10)
         .fill("media", 10, 20)
         .fill("error", 20, 24);
 
       await new Promise((resolve) => {
-        socket_server_side.emit("stimulator_circuit_statuses", JSON.stringify(stimulator_statuses), (ack) => {
+        socket_server_side.emit("stimulatorCircuitStatuses", JSON.stringify(stimulatorStatuses), (ack) => {
           resolve(ack);
         });
       });
 
-      const updated_statuses = store.state.data.stimulator_circuit_statuses;
-      const stim_status = store.state.stimulation.stim_status;
+      const updated_statuses = store.state.data.stimulatorCircuitStatuses;
+      const stimStatus = store.state.stimulation.stim_status;
 
       expect(updated_statuses).toStrictEqual(initial_statuses);
       expect(stim_status).toBe(STIM_STATUS.SHORT_CIRCUIT_ERROR);
@@ -448,19 +444,19 @@ describe("store/data", () => {
 
     test("When backend emits stimulator_circuit_status message with no short  errors, Then ws client updates stim status to config check complete and set indices to data state", async () => {
       // confirm precondition
-      const initial_statuses = store.state.data.stimulator_circuit_statuses;
+      const initial_statuses = store.state.data.stimulatorCircuitStatuses;
       expect(initial_statuses).toHaveLength(0);
 
-      const stimulator_statuses = new Array(24).fill("open", 0, 10).fill("media", 10, 24);
+      const stimulatorStatuses = new Array(24).fill("open", 0, 10).fill("media", 10, 24);
 
       await new Promise((resolve) => {
-        socket_server_side.emit("stimulator_circuit_statuses", JSON.stringify(stimulator_statuses), (ack) => {
+        socket_server_side.emit("stimulatorCircuitStatuses", JSON.stringify(stimulatorStatuses), (ack) => {
           resolve(ack);
         });
       });
 
-      const updated_statuses = store.state.data.stimulator_circuit_statuses;
-      const stim_status = store.state.stimulation.stim_status;
+      const updated_statuses = store.state.data.stimulatorCircuitStatuses;
+      const stimStatus = store.state.stimulation.stim_status;
 
       expect(updated_statuses).toStrictEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
       expect(stim_status).toBe(STIM_STATUS.CONFIG_CHECK_COMPLETE);
@@ -507,64 +503,64 @@ describe("store/data", () => {
       };
 
       // confirm precondition
-      expect(store.state.settings.allow_sw_update_install).toBe(false);
+      expect(store.state.settings.allowSWUpdateInstall).toBe(false);
 
       await new Promise((resolve) => {
         socket_server_side.emit("sw_update", JSON.stringify(message), (ack) => {
           resolve(ack);
         });
       });
-      expect(store.state.settings.allow_sw_update_install).toBe(true);
+      expect(store.state.settings.allowSWUpdateInstall).toBe(true);
     });
-    test("When backend emits sw_update message with software_update_available value, Then ws client commits value to store", async () => {
+    test("When backend emits sw_update message with softwareUpdateAvailable value, Then ws client commits value to store", async () => {
       const message = {
-        software_update_available: true,
+        softwareUpdateAvailable: true,
       };
 
       // confirm precondition
-      expect(store.state.settings.software_update_available).toBe(false);
+      expect(store.state.settings.softwareUpdateAvailable).toBe(false);
 
       await new Promise((resolve) => {
         socket_server_side.emit("sw_update", JSON.stringify(message), (ack) => {
           resolve(ack);
         });
       });
-      expect(store.state.settings.software_update_available).toBe(true);
+      expect(store.state.settings.softwareUpdateAvailable).toBe(true);
     });
-    test("When backend emits fw_update message with firmware_update_available true, Then ws client commits value to store", async () => {
+    test("When backend emits fw_update message with firmwareUpdateAvailable true, Then ws client commits value to store", async () => {
       const message = {
-        firmware_update_available: true,
+        firmwareUpdateAvailable: true,
         channel_fw_update: true,
       };
 
       // confirm precondition
-      expect(store.state.settings.firmware_update_available).toBe(false);
-      expect(store.state.settings.firmware_update_dur_mins).toBeNull();
+      expect(store.state.settings.firmwareUpdateAvailable).toBe(false);
+      expect(store.state.settings.firmwareUpdateDurMins).toBeNull();
 
       await new Promise((resolve) => {
         socket_server_side.emit("fw_update", JSON.stringify(message), (ack) => {
           resolve(ack);
         });
       });
-      expect(store.state.settings.firmware_update_available).toBe(true);
-      expect(store.state.settings.firmware_update_dur_mins).toBe(5);
+      expect(store.state.settings.firmwareUpdateAvailable).toBe(true);
+      expect(store.state.settings.firmwareUpdateDurMins).toBe(5);
     });
-    test("When backend emits fw_update message with firmware_update_available false, Then ws client does not commit value to store", async () => {
+    test("When backend emits fw_update message with firmwareUpdateAvailable false, Then ws client does not commit value to store", async () => {
       const message = {
-        firmware_update_available: false,
+        firmwareUpdateAvailable: false,
       };
 
       // confirm precondition
-      expect(store.state.settings.firmware_update_available).toBe(false);
-      expect(store.state.settings.firmware_update_dur_mins).toBeNull();
+      expect(store.state.settings.firmwareUpdateAvailable).toBe(false);
+      expect(store.state.settings.firmwareUpdateDurMins).toBeNull();
 
       await new Promise((resolve) => {
         socket_server_side.emit("fw_update", JSON.stringify(message), (ack) => {
           resolve(ack);
         });
       });
-      expect(store.state.settings.firmware_update_available).toBe(false);
-      expect(store.state.settings.firmware_update_dur_mins).toBeNull();
+      expect(store.state.settings.firmwareUpdateAvailable).toBe(false);
+      expect(store.state.settings.firmwareUpdateDurMins).toBeNull();
     });
     test("When backend emits prompt_user_input message with customer_creds as input type, Then ws client sets correct flag in store", async () => {
       const message = {
@@ -583,26 +579,26 @@ describe("store/data", () => {
     });
 
     test.each([
-      ["plate_barcode", "ML2022002001", valid_plate_barcode_old, true],
-      ["plate_barcode", "ML2022002001", valid_plate_barcode_beta_2, true],
-      ["plate_barcode", "ML2022002001", valid_plate_barcode_beta_1, false],
-      ["stim_barcode", "MS2022002001", valid_stim_barcode_old, true],
+      ["plateBarcode", "ML2022002001", valid_plateBarcode_old, true],
+      ["plateBarcode", "ML2022002001", valid_plateBarcode_beta_2, true],
+      ["plateBarcode", "ML2022002001", valid_plateBarcode_beta_1, false],
+      ["stimBarcode", "MS2022002001", valid_stimBarcode_old, true],
     ])(
       "Given barcode is not in manual mode, When backend emits barcode message with valid %s, Then ws client updates correct barcode in store",
-      async (barcode_type, old_barcode, valid_barcode, beta_2_mode) => {
+      async (barcodeType, old_barcode, valid_barcode, beta2Mode) => {
         const message = {
-          [barcode_type]: valid_barcode,
+          [barcodeType]: valid_barcode,
         };
-        await store.commit("settings/set_beta_2_mode", beta_2_mode);
-        await store.commit("flask/set_barcode_manual_mode", false);
-        await store.commit("playback/set_barcode", {
-          type: barcode_type,
+        await store.commit("settings/setBeta2Mode", beta2Mode);
+        await store.commit("flask/setBarcodeManualMode", false);
+        await store.commit("playback/setBarcode", {
+          type: barcodeType,
           new_value: old_barcode,
           is_valid: true,
         });
 
         // confirm precondition
-        expect(store.state.playback.barcodes[barcode_type].value).toBe(old_barcode);
+        expect(store.state.playback.barcodes[barcodeType].value).toBe(old_barcode);
 
         await new Promise((resolve) => {
           socket_server_side.emit("barcode", JSON.stringify(message), (ack) => {
@@ -610,34 +606,34 @@ describe("store/data", () => {
           });
         });
 
-        const stim_config_state = store.state.stimulation.stim_status === STIM_STATUS.NO_PROTOCOLS_ASSIGNED;
+        const stim_config_state = store.state.stimulation.stimStatus === STIM_STATUS.NO_PROTOCOLS_ASSIGNED;
 
-        expect(store.state.playback.barcodes[barcode_type].value).toBe(valid_barcode);
-        expect(store.state.playback.barcodes[barcode_type].valid).toBe(true);
+        expect(store.state.playback.barcodes[barcodeType].value).toBe(valid_barcode);
+        expect(store.state.playback.barcodes[barcodeType].valid).toBe(true);
         expect(stim_config_state).toBe(true);
       }
     );
     test.each([
-      ["plate_barcode", valid_plate_barcode_old],
-      ["stim_barcode", valid_stim_barcode_old],
+      ["plateBarcode", valid_plateBarcode_old],
+      ["stimBarcode", valid_stimBarcode_old],
     ])(
       "Given barcode is in manual mode, When backend emits barcode message with valid %s, Then ws client does not set new barcode in store",
-      async (barcode_type, valid_barcode) => {
+      async (barcodeType, valid_barcode) => {
         const message = {
-          barcode_type: valid_barcode,
+          barcodeType: valid_barcode,
         };
 
-        store.commit("flask/set_barcode_manual_mode", true);
+        store.commit("flask/setBarcodeManualMode", true);
 
         // confirm precondition
-        expect(store.state.playback.barcodes[barcode_type].value).toBeNull();
+        expect(store.state.playback.barcodes[barcodeType].value).toBeNull();
 
         await new Promise((resolve) => {
           socket_server_side.emit("barcode", JSON.stringify(message), (ack) => {
             resolve(ack);
           });
         });
-        expect(store.state.playback.barcodes[barcode_type].value).toBeNull();
+        expect(store.state.playback.barcodes[barcodeType].value).toBeNull();
       }
     );
     test.each([
@@ -649,7 +645,7 @@ describe("store/data", () => {
     ])(
       "When backend emits error messages %s, Then it will update the shutdown error status in settings state",
       async (error_type) => {
-        expect(store.state.settings.shutdown_error_status).toBe("");
+        expect(store.state.settings.shutdownErrorStatus).toBe("");
 
         const latest_compatible_sw_version =
           error_type === "FirmwareAndSoftwareNotCompatibleError" ? "1.2.3" : null;
@@ -668,7 +664,7 @@ describe("store/data", () => {
           ? ". Please download the installer for the correct version here:"
           : ". Mantarray Controller is about to shutdown.";
 
-        expect(store.state.settings.shutdown_error_status).toBe(ERRORS[error_type] + additional_text);
+        expect(store.state.settings.shutdownErrorStatus).toBe(ERRORS[error_type] + additional_text);
       }
     );
   });
@@ -684,12 +680,12 @@ describe("store/data", () => {
       store.commit("data/set_plate_waveforms", ar);
       context = await store.dispatch("flask/get_flask_action_context");
 
-      store.commit("flask/set_status_uuid", STATUS.MESSAGE.LIVE_VIEW_ACTIVE);
+      store.commit("flask/setStatusUuid", STATUS.MESSAGE.LIVE_VIEW_ACTIVE);
     });
 
-    test("When x_time_index is set to a specific value in Vuex, Then the /system_status route is called with Axios with the x_time_index as a parameter", async () => {
+    test("When xTimeIndex is set to a specific value in Vuex, Then the /system_status route is called with Axios with the xTimeIndex as a parameter", async () => {
       const expected_idx = 9876;
-      store.commit("playback/set_x_time_index", expected_idx);
+      store.commit("playback/set_xTimeIndex", expected_idx);
       mocked_axios.onGet(system_status_regexp).reply(200, nr);
 
       const bound_ping_system_status = ping_system_status.bind(context);
@@ -713,13 +709,13 @@ describe("store/data", () => {
       await store.dispatch("playback/start_playback_progression");
 
       // confirm pre-conditions
-      expect(store.state.flask.status_ping_interval_id).not.toBeNull();
+      expect(store.state.flask.statusPingIntervald).not.toBeNull();
       expect(store.state.playback.playback_progression_interval_id).not.toBeNull();
 
       await store.dispatch("playback/start_recording");
 
-      expect(store.state.flask.status_uuid).toStrictEqual(STATUS.MESSAGE.ERROR);
-      expect(store.state.flask.status_ping_interval_id).toBeNull();
+      expect(store.state.flask.statusUuid).toStrictEqual(STATUS.MESSAGE.ERROR);
+      expect(store.state.flask.statusPingIntervald).toBeNull();
       expect(store.state.playback.playback_progression_interval_id).toBeNull();
     });
   });

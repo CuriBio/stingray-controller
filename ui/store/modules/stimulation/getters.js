@@ -1,45 +1,45 @@
 import { COLOR_PALETTE, ALPHABET } from "./enums";
 // eslint-disable-next-line require-jsdoc
-export function get_default_protocol_editor_state() {
+export function getDefaultProtocolEditorState() {
   return {
     name: "",
-    run_until_stopped: true,
-    stimulation_type: "C",
-    rest_duration: 0,
-    time_unit: "milliseconds",
+    runUntilStopped: true,
+    stimulationType: "C",
+    restDuration: 0,
+    timeUnit: "milliseconds",
     subprotocols: [],
-    detailed_subprotocols: [],
+    detailedSubprotocols: [],
   };
 }
 export default {
-  get_protocols({ protocol_list }) {
-    return protocol_list;
+  getProtocols({ protocolList }) {
+    return protocolList;
   },
-  get_next_protocol(state) {
-    const { protocol_list } = state;
+  getNextProtocol(state) {
+    const { protocolList } = state;
 
-    if (!state.edit_mode.status) {
-      const letter = get_protocol_editor_letter(protocol_list);
-      const color = COLOR_PALETTE[protocol_list.length % 26];
-      state.current_assignment = { letter, color };
+    if (!state.editMode.status) {
+      const letter = getProtocolEditorLetter(protocolList);
+      const color = COLOR_PALETTE[protocolList.length % 26];
+      state.currentAssignment = { letter, color };
       return { color, letter };
-    } else if (state.edit_mode.status) {
-      return state.current_assignment;
+    } else if (state.editMode.status) {
+      return state.currentAssignment;
     }
   },
-  get_stimulation_type({ protocol_editor }) {
-    return protocol_editor.stimulation_type === "C" ? "Current" : "Voltage";
+  getStimulationType({ protocolEditor }) {
+    return protocolEditor.stimulationType === "C" ? "Current" : "Voltage";
   },
 
-  get_protocol_name({ protocol_editor }) {
-    return protocol_editor.name;
+  getProtocolName({ protocolEditor }) {
+    return protocolEditor.name;
   },
-  get_rest_duration({ protocol_editor }) {
-    return protocol_editor.rest_duration;
+  getRestDuration({ protocolEditor }) {
+    return protocolEditor.restDuration;
   },
 };
 
-const get_protocol_editor_letter = (list) => {
+const getProtocolEditorLetter = (list) => {
   const protocol_idx = list.length - 1;
   const letter_assignment = ALPHABET[protocol_idx % 26];
   const num_letters = Math.floor(protocol_idx / 26) + 1;

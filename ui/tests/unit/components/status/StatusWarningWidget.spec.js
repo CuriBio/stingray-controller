@@ -33,7 +33,7 @@ describe("StatusWarningWidget.vue", () => {
 
     const cancel_yes_btn = wrapper.findAll(".span__button_label");
     await cancel_yes_btn.at(1).trigger("click");
-    const yes_btn_events = wrapper.emitted("handle_confirmation");
+    const yes_btn_events = wrapper.emitted("handleConfirmation");
     expect(yes_btn_events[0]).toStrictEqual([1]);
 
     await cancel_yes_btn.at(0).trigger("click");

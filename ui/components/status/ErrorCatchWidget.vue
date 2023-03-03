@@ -3,15 +3,15 @@
     <div class="div__status-error-catch-background" :style="error_background_cssprops"></div>
     <span class="div_status-error-catch-title-label">An&nbsp;<wbr />error&nbsp;<wbr />occurred. </span>
     <div class="div_status-error-catch-alert-txt" :style="error_catch_alert">
-      <p>{{ shutdown_error_message }}</p>
+      <p>{{ shutdownErrorMessage }}</p>
       <textarea
-        v-if="installer_link"
+        v-if="installerLink"
         class="textarea__installer-link"
         name="error_file"
         :rows="2"
         cols="75"
         spellcheck="false"
-        :value.prop="installer_link"
+        :value.prop="installerLink"
         :disabled="true"
       ></textarea>
     </div>
@@ -66,41 +66,41 @@ export default {
     log_filepath: { type: String, default: "" },
   },
   computed: {
-    ...mapState("settings", ["shutdown_error_message", "installer_link"]),
+    ...mapState("settings", ["shutdownErrorMessage", "installerLink"]),
     compute_number_of_rows: function () {
       return Math.ceil(((this.log_filepath.length * 1.0) / 30).toFixed(1));
     },
     error_background_cssprops: function () {
       let height = 250 + this.compute_number_of_rows * 12;
-      if (this.installer_link) {
+      if (this.installerLink) {
         height += 25;
       }
       return `height: ${height}px;`;
     },
     error_catch_alert: function () {
-      const height = this.installer_link ? 130 : 75;
+      const height = this.installerLink ? 130 : 75;
       return `height: ${height}px;`;
     },
     textarea__error_cssprops: function () {
-      const top = this.installer_link ? 195 : 145;
+      const top = this.installerLink ? 195 : 145;
       return `height: ${25 + this.compute_number_of_rows * 12}px; top: ${top}px;`;
     },
     next_step_cssprops: function () {
       let top = 180 + this.compute_number_of_rows * 12;
-      if (this.installer_link) {
+      if (this.installerLink) {
         top += 35;
       }
       return `top: ${top}px;`;
     },
     error_catch_button_cssprops: function () {
       let top = 250 + this.compute_number_of_rows * 12;
-      if (this.installer_link) {
+      if (this.installerLink) {
         top += 25;
       }
       return `top: ${top}px; left: 0px; position: absolute`;
     },
     email_text_cssprops: function () {
-      const top = this.installer_link ? 175 : 107;
+      const top = this.installerLink ? 175 : 107;
       return `top: ${top}px`;
     },
   },

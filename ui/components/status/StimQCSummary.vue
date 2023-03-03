@@ -50,7 +50,7 @@ export default {
   },
   methods: {
     handle_click: function (idx) {
-      this.$emit("handle_confirmation", idx);
+      this.$emit("handleConfirmation", idx);
     },
   },
 };

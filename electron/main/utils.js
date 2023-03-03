@@ -49,7 +49,7 @@ const create_store = function ({ file_path = undefined, file_name = "stingray_co
     defaults: {
       customer_id: null,
       usernames: [],
-      beta_2_mode: true,
+      beta2Mode: true,
     },
   });
   return store;
@@ -99,7 +99,7 @@ const generate_flask_command_line_args = function (electron_store) {
     args.push("--initial-base64-settings=" + settings_to_supply_encoded);
   }
 
-  if (electron_store.get("beta_2_mode")) args.push("--beta-2-mode");
+  if (electron_store.get("beta2Mode")) args.push("--beta-2-mode");
 
   return args;
 };

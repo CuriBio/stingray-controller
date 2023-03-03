@@ -182,7 +182,7 @@ STIM_OPEN_CIRCUIT_THRESHOLD_OHMS = 20000
 STIM_SHORT_CIRCUIT_THRESHOLD_OHMS = 10
 
 # Stim Subprotocols
-VALID_STIMULATION_TYPES = frozenset(["C", "V"])
+VALID_stimulationTypeS = frozenset(["C", "V"])
 VALID_SUBPROTOCOL_TYPES = frozenset(["delay", "monophasic", "biphasic"])
 
 

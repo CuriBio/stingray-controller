@@ -168,7 +168,7 @@ def _initialize_system_state(parsed_args: dict[str, Any], log_file_id: uuid.UUID
         "system_status": SERVER_INITIALIZING_STATE,
         "stimulation_running": [False] * NUM_WELLS,
         "config_settings": {"log_directory": parsed_args["log_file_dir"]},
-        "stimulator_circuit_statuses": {},
+        "stimulatorCircuitStatuses": {},
         "stimulation_info": None,
         # "latest_software_version": None,  # TODO get this value here instead of in electron
         "log_file_id": log_file_id,

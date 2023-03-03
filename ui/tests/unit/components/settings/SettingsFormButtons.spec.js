@@ -257,7 +257,7 @@ describe("SettingsForm.vue", () => {
         store,
         localVue,
       });
-      const default_state = {
+      const defaultState = {
         auto_delete: false,
         auto_upload: false,
       };
@@ -265,8 +265,8 @@ describe("SettingsForm.vue", () => {
         auto_delete: true,
         auto_upload: true,
       };
-      expect(wrapper.vm.auto_delete).toBe(default_state.auto_delete);
-      expect(wrapper.vm.auto_upload).toBe(default_state.auto_upload);
+      expect(wrapper.vm.auto_delete).toBe(defaultState.auto_delete);
+      expect(wrapper.vm.auto_upload).toBe(defaultState.auto_upload);
 
       await wrapper.find(ToggleWidget).vm.$emit("handle_toggle_state", true, "auto_upload");
       await wrapper.find(ToggleWidget).vm.$emit("handle_toggle_state", true, "auto_delete");

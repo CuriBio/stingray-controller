@@ -39,7 +39,7 @@ function find_closest_array_idx(arr, sample_idx_to_match) {
  * @param   {array} y_array the array
  * @return  {array}  output_array combined array
  */
-function convert_x_y_arrays_to_d3_array(x_array, y_array) {
+function convertXYArraysToD3Array(x_array, y_array) {
   const output_array = [];
   for (let i = 0; i < x_array.length; i++) {
     output_array.push([x_array[i], y_array[i]]);
@@ -77,7 +77,7 @@ function get_array_slice_to_display(
 
   const sliced_x_data_points = sample_indices.slice(starting_arr_idx, ending_arr_idx + 1);
   const sliced_y_data_points = measured_values.slice(starting_arr_idx, ending_arr_idx + 1);
-  return convert_x_y_arrays_to_d3_array(sliced_x_data_points, sliced_y_data_points);
+  return convertXYArraysToD3Array(sliced_x_data_points, sliced_y_data_points);
 }
 
 /**
@@ -239,6 +239,6 @@ exports.convert_from_json_of_well_indices_and_x_y_arrays = convert_from_json_of_
 exports.convert_from_json_of_well_indices_to_sparse_arrays = convert_from_json_of_well_indices_to_sparse_arrays;
 exports.find_closest_well_idx = find_closest_well_idx;
 exports.get_well_slice_to_display = get_well_slice_to_display;
-exports.convert_x_y_arrays_to_d3_array = convert_x_y_arrays_to_d3_array;
+exports.convertXYArraysToD3Array = convertXYArraysToD3Array;
 exports.append_well_data = append_well_data;
 exports.generate_random_color = generate_random_color;

@@ -2,7 +2,7 @@ import { mount, createLocalVue } from "@vue/test-utils";
 import StimulationStudioProtocolViewer from "@/components/stimulation/StimulationStudioProtocolViewer.vue";
 import StimulationStudioWaveform from "@/components/stimulation/StimulationStudioWaveform.vue";
 import Vuex from "vuex";
-import { convert_x_y_arrays_to_d3_array } from "@/js_utils/waveform_data_formatter.js";
+import { convertXYArraysToD3Array } from "@/js_utils/waveform_data_formatter.js";
 
 const localVue = createLocalVue();
 localVue.use(Vuex);
@@ -15,12 +15,12 @@ const test_protocol_order = [
     src: "placeholder",
     color: "#ffff1",
     pulse_settings: {
-      phase_one_duration: 30,
-      phase_one_charge: 20,
-      interphase_interval: 5,
-      phase_two_duration: 10,
-      phase_two_charge: -5,
-      postphase_interval: 10,
+      phaseOneDuration: 30,
+      phaseOneCharge: 20,
+      interphaseInterval: 5,
+      phaseTwoDuration: 10,
+      phaseTwoCharge: -5,
+      postphaseInterval: 10,
       total_active_duration: {
         duration: 2000,
         unit: "milliseconds",
@@ -33,9 +33,9 @@ const test_protocol_order = [
     src: "placeholder",
     color: "#ffff2",
     pulse_settings: {
-      phase_one_duration: 30,
-      phase_one_charge: 2,
-      postphase_interval: 20,
+      phaseOneDuration: 30,
+      phaseOneCharge: 2,
+      postphaseInterval: 20,
       total_active_duration: {
         duration: 1000,
         unit: "milliseconds",
@@ -57,9 +57,9 @@ const test_protocol_order = [
     src: "placeholder",
     color: "#ffff4",
     pulse_settings: {
-      phase_one_duration: 30,
-      phase_one_charge: 50,
-      postphase_interval: 10,
+      phaseOneDuration: 30,
+      phaseOneCharge: 50,
+      postphaseInterval: 10,
       total_active_duration: {
         duration: 2000,
         unit: "milliseconds",
@@ -95,7 +95,7 @@ describe("StimulationStudioProtocolViewer.vue", () => {
       localVue,
     });
     const expected_scale = 80;
-    await store.commit("stimulation/set_zoom_in", "y-axis");
+    await store.commit("stimulation/setZoomIn", "y-axis");
     expect(wrapper.vm.y_min_max).toBe(expected_scale);
 
     // should be unchanged
@@ -109,7 +109,7 @@ describe("StimulationStudioProtocolViewer.vue", () => {
       localVue,
     });
     const expected_scale = 180;
-    await store.commit("stimulation/set_zoom_out", "y-axis");
+    await store.commit("stimulation/setZoomOut", "y-axis");
     expect(wrapper.vm.y_min_max).toBe(expected_scale);
 
     // should be unchanged
@@ -125,13 +125,13 @@ describe("StimulationStudioProtocolViewer.vue", () => {
     expect(wrapper.vm.dynamic_plot_width).toBe(1200);
     expect(wrapper.vm.x_axis_sample_length).toBe(100);
 
-    await store.commit("stimulation/set_zoom_out", "x-axis");
+    await store.commit("stimulation/setZoomOut", "x-axis");
     expect(wrapper.vm.dynamic_plot_width).toBe(1200);
     expect(wrapper.vm.x_axis_sample_length).toBe(150);
 
     await wrapper.setData({ dynamic_plot_width: 1800 });
 
-    await store.commit("stimulation/set_zoom_out", "x-axis");
+    await store.commit("stimulation/setZoomOut", "x-axis");
     expect(wrapper.vm.dynamic_plot_width).toBe(1200);
   });
 
@@ -144,13 +144,13 @@ describe("StimulationStudioProtocolViewer.vue", () => {
     expect(wrapper.vm.dynamic_plot_width).toBe(1200);
     expect(wrapper.vm.x_axis_sample_length).toBe(100);
 
-    await store.commit("stimulation/set_zoom_in", "x-axis");
+    await store.commit("stimulation/setZoomIn", "x-axis");
     expect(wrapper.vm.dynamic_plot_width).toBe(1200);
     expect(wrapper.vm.x_axis_sample_length).toBe(66.66666666666667);
 
     await wrapper.setData({ last_x_value: 150, x_axis_sample_length: 200, datapoints: [[0, 0]] });
 
-    await store.commit("stimulation/set_zoom_in", "x-axis");
+    await store.commit("stimulation/setZoomIn", "x-axis");
     expect(wrapper.vm.dynamic_plot_width).toBe(1800);
     expect(wrapper.vm.x_axis_sample_length).toBe(200);
   });
@@ -170,7 +170,7 @@ describe("StimulationStudioProtocolViewer.vue", () => {
         [0, 300],
         [200, 300],
       ],
-      delay_blocks: [],
+      delayBlocks: [],
     });
     await wrapper.vm.get_dynamic_sample_length();
     expect(wrapper.vm.x_axis_sample_length).toBe(250);
@@ -178,7 +178,7 @@ describe("StimulationStudioProtocolViewer.vue", () => {
     await wrapper.setData({
       last_x_value: 0,
       datapoints: [[0, 0]],
-      delay_blocks: [[NaN, NaN]],
+      delayBlocks: [[NaN, NaN]],
     });
     await wrapper.vm.get_dynamic_sample_length();
     expect(wrapper.vm.x_axis_sample_length).toBe(100);
@@ -191,7 +191,7 @@ describe("StimulationStudioProtocolViewer.vue", () => {
     });
 
     wrapper.vm.datapoints = [1, 2, 3, 4];
-    await store.commit("stimulation/reset_state");
+    await store.commit("stimulation/resetState");
     expect(wrapper.vm.datapoints).toStrictEqual([]);
   });
 
@@ -201,8 +201,8 @@ describe("StimulationStudioProtocolViewer.vue", () => {
       localVue,
     });
 
-    await store.dispatch("stimulation/handle_protocol_order", test_protocol_order);
-    expect(wrapper.vm.repeat_colors).toBe(store.state.stimulation.repeat_colors);
+    await store.dispatch("stimulation/handleProtocolOrder", test_protocol_order);
+    expect(wrapper.vm.repeatColors).toBe(store.state.stimulation.repeatColors);
   });
 
   test("When a user adds a delay repeat to the end of the protocol, Then it will mutation to state and will automatically update in the waveform graph", async () => {
@@ -213,11 +213,11 @@ describe("StimulationStudioProtocolViewer.vue", () => {
 
     const test_value = 5;
 
-    await store.dispatch("stimulation/handle_protocol_order", test_protocol_order);
-    await store.dispatch("stimulation/handle_new_rest_duration", test_value);
+    await store.dispatch("stimulation/handleProtocolOrder", test_protocol_order);
+    await store.dispatch("stimulation/handleNewRestDuration", test_value);
 
-    expect(wrapper.vm.delay_blocks).toBe(store.state.stimulation.delay_blocks);
-    expect(wrapper.vm.delay_blocks).toStrictEqual([[1300240, 1300245]]);
+    expect(wrapper.vm.delayBlocks).toBe(store.state.stimulation.delayBlocks);
+    expect(wrapper.vm.delayBlocks).toStrictEqual([[1300240, 1300245]]);
   });
   describe("StimulationStudioWaveform.vue", () => {
     test("When a user the protocol, Then all datapoints should be deleted", async () => {
@@ -257,12 +257,12 @@ describe("StimulationStudioProtocolViewer.vue", () => {
         localVue,
       });
 
-      await store.dispatch("stimulation/handle_protocol_order", test_protocol_order);
-      const { x_axis_values, y_axis_values } = store.state.stimulation;
-      const d_points = await convert_x_y_arrays_to_d3_array(x_axis_values, y_axis_values);
+      await store.dispatch("stimulation/handleProtocolOrder", test_protocol_order);
+      const { xAxisValues, yAxisValues } = store.state.stimulation;
+      const d_points = await convertXYArraysToD3Array(xAxisValues, yAxisValues);
       await wrapper.setProps({ data_points: d_points });
 
-      await store.dispatch("stimulation/on_pulse_mouseenter", 1);
+      await store.dispatch("stimulation/onPulseMouseenter", 1);
 
       const highlight_line_node = wrapper.find("#highlight_line_node");
       const highlight_line_path = highlight_line_node.findAll("path");
@@ -278,12 +278,12 @@ describe("StimulationStudioProtocolViewer.vue", () => {
         localVue,
       });
 
-      await store.dispatch("stimulation/handle_protocol_order", test_protocol_order);
-      const { x_axis_values, y_axis_values } = store.state.stimulation;
-      const d_points = await convert_x_y_arrays_to_d3_array(x_axis_values, y_axis_values);
+      await store.dispatch("stimulation/handleProtocolOrder", test_protocol_order);
+      const { xAxisValues, yAxisValues } = store.state.stimulation;
+      const d_points = await convertXYArraysToD3Array(xAxisValues, yAxisValues);
       await wrapper.setProps({ data_points: d_points });
 
-      await store.commit("stimulation/on_pulse_mouseleave");
+      await store.commit("stimulation/onPulseMouseleave");
 
       const highlight_line_node = wrapper.find("#highlight_line_node");
       const highlight_line_path = highlight_line_node.findAll("path");

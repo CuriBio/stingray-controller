@@ -1,37 +1,37 @@
 // import { ENUMS } from "../modules/playback/enums";
 
-const io = require("socket.io-client");
+// const io = require("socket.io-client");
 
-export const socket = io("ws://localhost:4567"); // TODO use constant here
+// export const socket = io("ws://localhost:4567"); // TODO use constant here
 
 /**
  * Create a socket.io plugin for a Vuex store
  * @param {Socket} socket the socket.io instance to connect to the Vuex store
  * @return {function} function the Vuex store will use to connect the plugin to itself
  */
-export default function create_web_socket_plugin(socket) {
-  return store => {
-    socket.on("stimulation_data", (stim_json, cb) => {
-      // Tanner (12/20/21): may want to put the same checks here as are in the waveform_data handler once stim waveforms are sent instead of subprotocol indices
-      store.dispatch("data/append_stim_waveforms", JSON.parse(stim_json));
+export default function createWebSocketPlugin(socket) {
+  return (store) => {
+    socket.on("stimulation_data", (stimJson, cb) => {
+      // Tanner (12/20/21): may want to put the same checks here as are in the waveformData handler once stim waveforms are sent instead of subprotocol indices
+      store.dispatch("stimulation/appendStimWaveforms", JSON.parse(stimJson));
       /* istanbul ignore else */
       if (cb) cb("action done"); // this callback is only used for testing. The backend will not send a callback
     });
 
-    socket.on("stimulator_circuit_statuses", (message_json, cb) => {
-      store.dispatch("data/check_stimulator_circuit_statuses", JSON.parse(message_json));
+    socket.on("stimulatorCircuitStatuses", (messageJson, cb) => {
+      store.dispatch("stimulation/checkStimulatorCircuitStatuses", JSON.parse(messageJson));
 
       /* istanbul ignore else */
       if (cb) cb("action done"); // this callback is only used for testing. The backend will not send a callback
     });
-    socket.on("barcode", (message_json, cb) => {
-      if (!store.state.flask.barcode_manual_mode) {
-        const message = JSON.parse(message_json);
-        for (const barcode_type in store.state.playback.barcodes)
-          if (message[barcode_type])
-            store.dispatch("playback/validate_barcode", {
-              type: barcode_type,
-              new_value: message[barcode_type]
+    socket.on("barcode", (messageJson, cb) => {
+      if (!store.state.flask.barcodeManualMode) {
+        const message = JSON.parse(messageJson);
+        for (const barcodeType in store.state.playback.barcodes)
+          if (message[barcodeType])
+            store.dispatch("playback/validateBarcode", {
+              type: barcodeType,
+              newValue: message[barcodeType],
             });
       }
 
@@ -39,34 +39,34 @@ export default function create_web_socket_plugin(socket) {
       if (cb) cb("action done"); // this callback is only used for testing. The backend will not send a callback
     });
 
-    socket.on("sw_update", (message_json, cb) => {
-      const message = JSON.parse(message_json);
+    socket.on("sw_update", (messageJson, cb) => {
+      const message = JSON.parse(messageJson);
       if (message.allow_software_update !== undefined) {
-        store.commit("settings/set_allow_sw_update_install", message.allow_software_update);
+        store.commit("settings/setAllowSwUpdateInstall", message.allow_software_update);
       }
-      if (message.software_update_available !== undefined) {
-        const status = message.software_update_available ? "found" : "not found";
+      if (message.softwareUpdateAvailable !== undefined) {
+        const status = message.softwareUpdateAvailable ? "found" : "not found";
         console.log("Software update " + status); // allow-log
-        store.commit("settings/set_software_update_available", message.software_update_available);
+        store.commit("settings/setSoftwareUpdateAvailable", message.softwareUpdateAvailable);
       }
 
       /* istanbul ignore else */
       if (cb) cb("commit done"); // this callback is only used for testing. The backend will not send a callback
     });
-    socket.on("fw_update", (message_json, cb) => {
-      const message = JSON.parse(message_json);
-      if (message.firmware_update_available === true) {
+    socket.on("fw_update", (messageJson, cb) => {
+      const message = JSON.parse(messageJson);
+      if (message.firmwareUpdateAvailable === true) {
         console.log("Firmware update found"); // allow-log
-        store.commit("settings/set_firmware_update_available", message);
+        store.commit("settings/setFirmwareUpdateAvailable", message);
       }
 
       /* istanbul ignore else */
       if (cb) cb("commit done"); // this callback is only used for testing. The backend will not send a callback
     });
 
-    socket.on("error", async (message_json, cb) => {
-      const message = JSON.parse(message_json);
-      await store.commit("settings/set_shutdown_error_status", message);
+    socket.on("error", async (messageJson, cb) => {
+      const message = JSON.parse(messageJson);
+      await store.commit("settings/setShutdownErrorStatus", message);
       /* istanbul ignore else */
       if (cb) cb("commit done"); // this callback is only used for testing. The backend will not send a callback
     });

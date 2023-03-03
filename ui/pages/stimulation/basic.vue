@@ -1,7 +1,7 @@
 <template>
   <div>
     <StimulationStudio :style="'top: 45px;'" />
-    <button class="update-button" @click="update_protocol_list">Update protocol list</button>
+    <button class="update-button" @click="update_protocolList">Update protocol list</button>
     <button class="update-button" :style="'top: 300px;'" @click="create_message">Create message</button>
     <button class="update-button" :style="'top: 500px;'" @click="enable_controls">Enable buttons</button>
     <button class="update-button" :style="'top: 700px;'" @click="mock_config_check">Mock config check</button>
@@ -16,67 +16,66 @@ import { STIM_STATUS } from "@/store/modules/stimulation/enums";
 export default {
   components: {
     StimulationStudio,
-    
   },
   layout: "default",
   methods: {
-    ...mapMutations("stimulation", ["set_new_protocol", "reset_state", "set_stim_status"]),
-    ...mapActions("stimulation", ["create_protocol_message"]),
-    async update_protocol_list() {
+    ...mapMutations("stimulation", ["setNewProtocol", "resetState", "setStimStatus"]),
+    ...mapActions("stimulation", ["createProtocolMessage"]),
+    async update_protocolList() {
       const test_protocol = {
         label: "mock_protocol",
         letter: "A",
         color: "#4ca0af",
         protocol: {
           name: "mock",
-          stimulation_type: "C",
-          run_until_stopped: false,
-          rest_duration: 0,
-          time_unit: "seconds",
+          stimulationType: "C",
+          runUntilStopped: false,
+          restDuration: 0,
+          timeUnit: "seconds",
           subprotocols: [
             {
               type: "Biphasic",
-              phase_one_duration: 3,
-              phase_one_charge: 40,
-              interphase_interval: 1,
-              phase_two_duration: 3,
-              phase_two_charge: -40,
-              postphase_interval: 1,
-              num_cycles: 5
+              phaseOneDuration: 3,
+              phaseOneCharge: 40,
+              interphaseInterval: 1,
+              phaseTwoDuration: 3,
+              phaseTwoCharge: -40,
+              postphaseInterval: 1,
+              num_cycles: 5,
             },
             {
               type: "Delay",
               duration: 50,
-              unit: "milliseconds"
+              unit: "milliseconds",
             },
             {
               type: "Biphasic",
-              phase_one_duration: 4,
-              phase_one_charge: 10,
-              interphase_interval: 1,
-              phase_two_duration: 4,
-              phase_two_charge: -10,
-              postphase_interval: 1,
-              num_cycles: 5
-            }
+              phaseOneDuration: 4,
+              phaseOneCharge: 10,
+              interphaseInterval: 1,
+              phaseTwoDuration: 4,
+              phaseTwoCharge: -10,
+              postphaseInterval: 1,
+              num_cycles: 5,
+            },
           ],
-          detailed_subprotocols: [
+          detailedSubprotocols: [
             {
               type: "Biphasic",
               src: "/Biphasic.png",
               nested_protocols: [],
               color: "bb9e69",
               pulse_settings: {
-                phase_one_duration: 3,
-                phase_one_charge: 40,
-                interphase_interval: 1,
-                phase_two_duration: 3,
-                phase_two_charge: -40,
-                postphase_interval: 1,
+                phaseOneDuration: 3,
+                phaseOneCharge: 40,
+                interphaseInterval: 1,
+                phaseTwoDuration: 3,
+                phaseTwoCharge: -40,
+                postphaseInterval: 1,
                 total_active_duration: { duration: 50, unit: "milliseconds" },
                 num_cycles: 1,
-                frequency: 1
-              }
+                frequency: 1,
+              },
             },
             {
               type: "Delay",
@@ -85,8 +84,8 @@ export default {
               color: "70f30",
               pulse_settings: {
                 duration: 50,
-                unit: "milliseconds"
-              }
+                unit: "milliseconds",
+              },
             },
             {
               type: "Biphasic",
@@ -94,19 +93,19 @@ export default {
               nested_protocols: [],
               color: "e9584b",
               pulse_settings: {
-                phase_one_duration: 4,
-                phase_one_charge: 10,
-                interphase_interval: 1,
-                phase_two_duration: 4,
-                phase_two_charge: -10,
-                postphase_interval: 1,
+                phaseOneDuration: 4,
+                phaseOneCharge: 10,
+                interphaseInterval: 1,
+                phaseTwoDuration: 4,
+                phaseTwoCharge: -10,
+                postphaseInterval: 1,
                 total_active_duration: { duration: 50, unit: "milliseconds" },
                 num_cycles: 1,
-                frequency: 1
-              }
-            }
-          ]
-        }
+                frequency: 1,
+              },
+            },
+          ],
+        },
       };
       const test_protocol_2 = {
         label: "mock_protocol_2",
@@ -114,68 +113,68 @@ export default {
         color: "#578844",
         protocol: {
           name: "mock_protocol_2",
-          stimulation_type: "V",
-          run_until_stopped: true,
-          rest_duration: 1,
-          time_unit: "seconds",
+          stimulationType: "V",
+          runUntilStopped: true,
+          restDuration: 1,
+          timeUnit: "seconds",
           subprotocols: [
             {
               type: "Biphasic",
-              phase_one_duration: 5,
-              phase_one_charge: 200,
-              interphase_interval: 0,
-              phase_two_duration: 5,
-              phase_two_charge: -200,
-              postphase_interval: 0,
-              num_cycles: 1
+              phaseOneDuration: 5,
+              phaseOneCharge: 200,
+              interphaseInterval: 0,
+              phaseTwoDuration: 5,
+              phaseTwoCharge: -200,
+              postphaseInterval: 0,
+              num_cycles: 1,
             },
             {
               type: "Delay",
               duration: 1,
-              unit: "seconds"
-            }
+              unit: "seconds",
+            },
           ],
-          detailed_subprotocols: [
+          detailedSubprotocols: [
             {
               type: "Biphasic",
               src: "/Biphasic.png",
               nested_protocols: [],
               color: "5391fa",
               pulse_settings: {
-                phase_one_duration: 5,
-                phase_one_charge: 200,
-                interphase_interval: 0,
-                phase_two_duration: 5,
-                phase_two_charge: -200,
-                postphase_interval: 0,
+                phaseOneDuration: 5,
+                phaseOneCharge: 200,
+                interphaseInterval: 0,
+                phaseTwoDuration: 5,
+                phaseTwoCharge: -200,
+                postphaseInterval: 0,
                 total_active_duration: { duration: 1, unit: "seconds" },
                 num_cycles: 1,
-                frequency: 2
-              }
-            }
-          ]
-        }
+                frequency: 2,
+              },
+            },
+          ],
+        },
       };
-      this.set_new_protocol(test_protocol);
-      this.set_new_protocol(test_protocol_2);
+      this.setNewProtocol(test_protocol);
+      this.setNewProtocol(test_protocol_2);
 
-      this.reset_state();
+      this.resetState();
     },
     create_message() {
-      this.create_protocol_message();
+      this.createProtocolMessage();
     },
     enable_controls() {
-      this.$store.dispatch("playback/validate_barcode", {
-        type: "stim_barcode",
-        new_value: "MS2022001000"
+      this.$store.dispatch("playback/validateBarcode", {
+        type: "stimBarcode",
+        new_value: "MS2022001000",
       });
       // this.$store.commit("playback/set_playback_state", playback_module.ENUMS.PLAYBACK_STATES.CALIBRATED);
     },
     mock_config_check() {
-      //   this.set_stim_status(STIM_STATUS.CONFIG_CHECK_IN_PROGRESS);
-      this.set_stim_status(STIM_STATUS.SHORT_CIRCUIT_ERROR);
-    }
-  }
+      //   this.setStimStatus(STIM_STATUS.CONFIG_CHECK_IN_PROGRESS);
+      this.setStimStatus(STIM_STATUS.SHORT_CIRCUIT_ERROR);
+    },
+  },
 };
 </script>
 <style scoped>

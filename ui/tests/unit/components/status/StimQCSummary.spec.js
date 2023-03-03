@@ -31,14 +31,14 @@ describe("StimQCSummary.vue", () => {
       "Please unassign these wells before proceeding."
     );
   });
-  test("Given that StimQCSummary is mounted, When the StimQCSummary is visible, Then click on 'Okay results in an event 'handle_confirmation' to be emitted", async () => {
+  test("Given that StimQCSummary is mounted, When the StimQCSummary is visible, Then click on 'Okay results in an event 'handleConfirmation' to be emitted", async () => {
     const wrapper = mount(StimQCSummary, {
       localVue,
       store,
     });
     const cancel_yes_btn = wrapper.findAll(".span__button_label");
     await cancel_yes_btn.at(0).trigger("click");
-    const yes_btn_events = wrapper.emitted("handle_confirmation");
+    const yes_btn_events = wrapper.emitted("handleConfirmation");
     expect(yes_btn_events[0]).toStrictEqual([0]);
   });
 });

@@ -50,7 +50,7 @@ export default {
   methods: {
     handle_color_selection({ target }) {
       const color_to_emit = !target ? this.current_color : target.id;
-      this.$emit("change_pulse_color", color_to_emit);
+      this.$emit("change-pulse-color", color_to_emit);
     },
   },
 };

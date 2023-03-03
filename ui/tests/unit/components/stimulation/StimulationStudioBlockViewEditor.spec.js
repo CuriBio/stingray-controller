@@ -7,7 +7,7 @@ localVue.use(Vuex);
 let NuxtStore;
 let store;
 
-const test_protocol_list = [
+const test_protocolList = [
   { letter: "", color: "", label: "Create New" },
   {
     letter: "A",
@@ -15,10 +15,10 @@ const test_protocol_list = [
     label: "Tester",
     protocol: {
       name: "Tester",
-      stimulation_type: "V",
-      rest_duration: 20,
-      time_unit: "milliseconds",
-      run_until_stopped: true,
+      stimulationType: "V",
+      restDuration: 20,
+      timeUnit: "milliseconds",
+      runUntilStopped: true,
       subprotocols: [
         {
           type: "Delay",
@@ -31,7 +31,7 @@ const test_protocol_list = [
           unit: "milliseconds",
         },
       ],
-      detailed_subprotocols: [
+      detailedSubprotocols: [
         {
           type: "Delay",
           src: "/delay-tile.png",
@@ -55,7 +55,7 @@ describe("StimulationStudioDragAndDropPanel.vue", () => {
 
   beforeEach(async () => {
     store = await NuxtStore.createStore();
-    store.state.stimulation.protocol_list = JSON.parse(JSON.stringify(test_protocol_list));
+    store.state.stimulation.protocolList = JSON.parse(JSON.stringify(test_protocolList));
   });
 
   test("When mounting StimulationStudioDragAndDropPanel from the component file, Then default tab displayed should be basic, but can toggle with clicking each tab", async () => {
@@ -75,7 +75,7 @@ describe("StimulationStudioDragAndDropPanel.vue", () => {
       store,
       localVue,
     });
-    const test_param_1 = store.state.stimulation.protocol_list[1];
+    const test_param_1 = store.state.stimulation.protocolList[1];
     const test_param_2 = {
       // for testing and building other fxns
       letter: "B",
@@ -83,26 +83,26 @@ describe("StimulationStudioDragAndDropPanel.vue", () => {
       label: "mock_tester",
       protocol: {
         name: "mock_tester",
-        stimulation_type: "C",
-        run_until_stopped: false,
-        rest_duration: 40,
-        time_unit: "milliseconds",
+        stimulationType: "C",
+        runUntilStopped: false,
+        restDuration: 40,
+        timeUnit: "milliseconds",
         subprotocols: [],
-        detailed_subprotocols: [],
+        detailedSubprotocols: [],
       },
     };
 
-    await store.dispatch("stimulation/edit_selected_protocol", test_param_1);
-    expect(wrapper.vm.stimulation_type_idx).toBe(1);
+    await store.dispatch("stimulation/editSelectedProtocol", test_param_1);
+    expect(wrapper.vm.stimulationType_idx).toBe(1);
     expect(wrapper.vm.current_letter).toBe(test_param_1.letter);
-    expect(wrapper.vm.rest_duration).toBe("20");
+    expect(wrapper.vm.restDuration).toBe("20");
     expect(wrapper.vm.stop_option_idx).toBe(0);
     expect(wrapper.vm.disabled_time).toBe(false);
 
-    await store.dispatch("stimulation/edit_selected_protocol", test_param_2);
-    expect(wrapper.vm.stimulation_type_idx).toBe(0);
+    await store.dispatch("stimulation/editSelectedProtocol", test_param_2);
+    expect(wrapper.vm.stimulationType_idx).toBe(0);
     expect(wrapper.vm.current_letter).toBe(test_param_2.letter);
-    expect(wrapper.vm.rest_duration).toBe("40");
+    expect(wrapper.vm.restDuration).toBe("40");
     expect(wrapper.vm.stop_option_idx).toBe(1);
     expect(wrapper.vm.disabled_time).toBe(true);
   });
@@ -114,7 +114,7 @@ describe("StimulationStudioDragAndDropPanel.vue", () => {
     });
 
     await wrapper.find("#input-widget-field-protocol-rest").setValue("5");
-    expect(wrapper.vm.rest_duration).toBe("5");
+    expect(wrapper.vm.restDuration).toBe("5");
   });
 
   test("When a user adds new protocol name, Then it will be checked if it is a unique name or if it already exists", async () => {
@@ -141,7 +141,7 @@ describe("StimulationStudioDragAndDropPanel.vue", () => {
       localVue,
     });
     await wrapper.findAll("li").at(1).trigger("click");
-    expect(store.state.stimulation.protocol_editor.stimulation_type).toBe("C");
+    expect(store.state.stimulation.protocolEditor.stimulationType).toBe("C");
   });
 
   test("When a user imports a new protocol, Then the the next available protocol letter/color assignment will get updated", async () => {
@@ -151,7 +151,7 @@ describe("StimulationStudioDragAndDropPanel.vue", () => {
       localVue,
     });
     const test_protocol = { label: "test", color: "#123456", letter: "B" };
-    await store.commit("stimulation/set_new_protocol", test_protocol);
+    await store.commit("stimulation/setNewProtocol", test_protocol);
     expect(updateSpy).toHaveBeenCalledWith();
   });
 
@@ -173,14 +173,14 @@ describe("StimulationStudioDragAndDropPanel.vue", () => {
 
     await wrapper.setData({
       protocol_name: "test_name",
-      rest_duration: "10",
+      restDuration: "10",
       name_validity: "border: 1px solid #19ac8a",
     });
 
-    await store.commit("stimulation/reset_state");
+    await store.commit("stimulation/resetState");
 
     expect(wrapper.vm.protocol_name).toBe("");
-    expect(wrapper.vm.rest_duration).toBe("");
+    expect(wrapper.vm.restDuration).toBe("");
     expect(wrapper.vm.name_validity).toBe("");
   });
 

@@ -121,15 +121,19 @@ export default {
     };
   },
   computed: {
-    ...mapState("stimulation", ["protocol_assignments", "stim_status"]),
-    ...mapState("data", ["stimulator_circuit_statuses"]),
+    ...mapState("stimulation", [
+      "protocolAssignments",
+      "stimStatus",
+      "selectedWells",
+      "stimulatorCircuitStatuses",
+    ]),
     short_circuit_error_found: function () {
-      return this.stim_status === STIM_STATUS.SHORT_CIRCUIT_ERROR;
+      return this.stimStatus === STIM_STATUS.SHORT_CIRCUIT_ERROR;
     },
     assigned_open_circuits: function () {
       // filter for matching indices
-      return this.stimulator_circuit_statuses.filter((well) =>
-        Object.keys(this.protocol_assignments).includes(well.toString())
+      return this.stimulatorCircuitStatuses.filter((well) =>
+        Object.keys(this.protocolAssignments).includes(well.toString())
       );
     },
     row_computed_offsets: function () {
@@ -141,7 +145,15 @@ export default {
   },
   watch: {
     all_select: function () {
-      this.$store.dispatch("stimulation/handle_selected_wells", this.all_select);
+      this.$store.dispatch("stimulation/handleSelectedWells", this.all_select);
+    },
+    selectedWells: function (new_wells, previous_wells) {
+      // second conditional prevents infinite looping of constantly reassigning to 0
+      if (new_wells.length === 0 && previous_wells.length !== 0) {
+        this.all_select = new Array(this.number_of_wells).fill(false);
+        this.stroke_width = new Array(this.number_of_wells).fill(no_stroke_width);
+        if (!this.all_select_or_cancel) this.all_select_or_cancel = true;
+      }
     },
   },
   created() {
@@ -149,28 +161,12 @@ export default {
     this.check_stroke_width();
     const allEqual = (arr) => arr.every((v) => v === true); // verify in the pre-select all via a const allEqual function.
     this.all_select_or_cancel = allEqual(this.all_select) ? false : true; // if pre-select has all wells is true, then toggle from (+) to (-) icon.
-    this.unsubscribe = this.$store.subscribe((mutation) => {
-      if (
-        mutation.type === "stimulation/apply_selected_protocol" ||
-        mutation.type === "stimulation/clear_selected_protocol" ||
-        mutation.type === "stimulation/reset_state" ||
-        mutation.type === "stimulation/reset_protocol_editor"
-      ) {
-        // this.protocol_assignments = this.stored_protocol_assignments;
-        this.all_select = new Array(this.number_of_wells).fill(false);
-        this.stroke_width = new Array(this.number_of_wells).fill(no_stroke_width);
-        if (!this.all_select_or_cancel) this.all_select_or_cancel = true;
-      }
-    });
-  },
-  beforeDestroy() {
-    this.unsubscribe();
   },
   methods: {
     on_select_cancel_all(state) {
       this.all_select_or_cancel = !state;
       this.all_select = new Array(this.number_of_wells).fill(state);
-      this.$store.dispatch("stimulation/handle_selected_wells", this.all_select);
+      this.$store.dispatch("stimulation/handleSelectedWells", this.all_select);
       this.stroke_width.splice(0, this.stroke_width.length);
       this.check_stroke_width();
     },
@@ -201,7 +197,7 @@ export default {
       this.stroke_width[value] = selected_stroke_width;
       if (allEqual(this.all_select)) this.all_select_or_cancel = false;
       else this.all_select_or_cancel = true;
-      this.$store.dispatch("stimulation/handle_selected_wells", this.all_select);
+      this.$store.dispatch("stimulation/handleSelectedWells", this.all_select);
       this.on_wellenter(value);
     },
 
@@ -263,11 +259,11 @@ export default {
       }
     },
     get_protocol_color(index) {
-      return this.protocol_assignments[index] ? this.protocol_assignments[index].color : "#B7B7B7";
+      return this.protocolAssignments[index] ? this.protocolAssignments[index].color : "#B7B7B7";
     },
 
     get_protocol_letter(index) {
-      return this.protocol_assignments[index] ? this.protocol_assignments[index].letter : "";
+      return this.protocolAssignments[index] ? this.protocolAssignments[index].letter : "";
     },
   },
 };

@@ -1,7 +1,7 @@
 import { TextValidation } from "@/js_utils/text_validation.js";
 import { TextValidation as DistTextValidation } from "@/dist/mantarray.common";
 
-const TextValidation_BarcodeViewer = new TextValidation("plate_barcode");
+const TextValidation_BarcodeViewer = new TextValidation("plateBarcode");
 const TextValidation_UUIDBase57 = new TextValidation("uuidBase57encode");
 const TextValidation_Alphanumeric = new TextValidation("alphanumeric");
 const TextValidation_user_account = new TextValidation("user_account_input");
@@ -14,9 +14,9 @@ describe("DistTextValidation", () => {
   });
 });
 describe("TextValidation", () => {
-  test("Given a text validation is for plate_barcode, When called toString(), Then return would match the text rule of 'plate_barcode' applied", () => {
+  test("Given a text validation is for plateBarcode, When called toString(), Then return would match the text rule of 'plateBarcode' applied", () => {
     const validation = TextValidation_BarcodeViewer;
-    expect(validation.toString()).toStrictEqual("TextValidation.plate_barcode");
+    expect(validation.toString()).toStrictEqual("TextValidation.plateBarcode");
   });
   test("Given a text validation is for uuidBase57encode, When called toString(), Then return would match the text rule of 'uuidBase57encode' applied", () => {
     const validation = TextValidation_UUIDBase57;
@@ -43,7 +43,7 @@ describe("TextValidation", () => {
   });
 });
 
-describe("TextValidation.validate_barcode with new barcodes", () => {
+describe("TextValidation.validateBarcode with new barcodes", () => {
   test.each([
     ["", "empty"],
     [null, "null"],
@@ -60,9 +60,9 @@ describe("TextValidation.validate_barcode with new barcodes", () => {
     ["ML2021367144", "invalid Julian date '367'"],
   ])(
     "When barcode %s with %s is passed to validate function, Then ' ' is returned",
-    (plate_barcode, error) => {
+    (plateBarcode, error) => {
       const TestBarcodeViewer = TextValidation_BarcodeViewer;
-      expect(TestBarcodeViewer.validate(plate_barcode)).toStrictEqual(" ");
+      expect(TestBarcodeViewer.validate(plateBarcode)).toStrictEqual(" ");
     }
   );
   test.each([
@@ -76,9 +76,9 @@ describe("TextValidation.validate_barcode with new barcodes", () => {
     ["ML2021366144", "julian date '366'"],
   ])(
     "When valid barcode %s with %s is passed to validate function, Then '' is returned",
-    (plate_barcode, diff) => {
+    (plateBarcode, diff) => {
       const TestBarcodeViewer = TextValidation_BarcodeViewer;
-      expect(TestBarcodeViewer.validate(plate_barcode)).toStrictEqual("");
+      expect(TestBarcodeViewer.validate(plateBarcode)).toStrictEqual("");
     }
   );
 });
@@ -158,9 +158,9 @@ describe("Test new scheme for barcode", () => {
     ["ML221230991-", "dash in wrong place"],
   ])(
     "When invalid barcode %s with %s is passed to validate function, Then ' ' is returned",
-    (plate_barcode, diff) => {
+    (plateBarcode, diff) => {
       const TestBarcodeViewer = TextValidation_BarcodeViewer;
-      expect(TestBarcodeViewer.validate(plate_barcode)).toStrictEqual(" ");
+      expect(TestBarcodeViewer.validate(plateBarcode)).toStrictEqual(" ");
     }
   );
   test("Test valid barcodes for beta 1 and beta 2 modes", async () => {

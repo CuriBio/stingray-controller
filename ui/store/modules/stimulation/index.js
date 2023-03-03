@@ -1,29 +1,30 @@
 import mutations from "./mutations";
-import { default as getters, get_default_protocol_editor_state } from "./getters";
+import { default as getters, getDefaultProtocolEditorState } from "./getters";
 import actions from "./actions";
 import { STIM_STATUS } from "./enums";
 
 const state = () => ({
-  selected_wells: [],
-  protocol_list: [{ letter: "", color: "", label: "Create New" }],
-  protocol_assignments: {},
-  protocol_editor: get_default_protocol_editor_state(),
-  current_assignment: { letter: "", color: "" },
-  x_axis_values: [],
-  y_axis_values: [],
-  repeat_colors: [],
-  y_axis_scale: 120,
-  delay_blocks: [],
-  stim_play_state: false,
-  x_axis_unit_name: "milliseconds",
-  x_axis_time_idx: 0,
-  edit_mode: { status: false, protocol: "", label: "", color: "" },
-  stim_status: STIM_STATUS.CALIBRATION_NEEDED,
-  hovered_pulse: {
+  selectedWells: [],
+  protocolList: [{ letter: "", color: "", label: "Create New" }],
+  protocolAssignments: {},
+  protocolEditor: getDefaultProtocolEditorState(),
+  currentAssignment: { letter: "", color: "" },
+  xAxisValues: [],
+  yAxisValues: [],
+  repeatColors: [],
+  yAxisScale: 120,
+  delayBlocks: [],
+  xAxisUnitName: "milliseconds",
+  stimPlayState: false,
+  xAxisTimeIdx: 0,
+  editMode: { status: false, protocol: "", label: "", color: "" },
+  stimStatus: STIM_STATUS.CALIBRATION_NEEDED,
+  hoveredPulse: {
     idx: null,
     indices: [],
     color: null,
   },
+  stimulatorCircuitStatuses: [],
 });
 
 export default {
