@@ -1,5 +1,5 @@
-export const system_status_regexp = new RegExp(`/system_status`);
+export const systemStatusRegexp = new RegExp(`/systemStatus`);
 
-export const all_mantarray_commands_regexp = new RegExp(
-  "(start_recording)|(stop_recording)|(start_managed_acquisition)|(stop_managed_acquisition)|(start_calibration)"
+export const allMantarrayCommandsRegexp = new RegExp(
+  "(startRecording)|(stopRecording)|(startManagedAcquisition)|(stopManagedAcquisition)|(startCalibration)"
 );

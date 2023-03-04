@@ -1,5 +1,5 @@
 import { mount } from "@vue/test-utils";
-import StimulationStudioWidget from "@/components/plate_based_widgets/stimulationstudio/StimulationStudioWidget.vue";
+import StimulationStudioWidget from "@/components/plate-based-widgets/stimulationstudio/StimulationStudioWidget.vue";
 import { StimulationStudioWidget as ComponentToTest } from "@/dist/mantarray.common";
 import { createLocalVue } from "@vue/test-utils";
 import { STIM_STATUS } from "@/store/modules/stimulation/enums";

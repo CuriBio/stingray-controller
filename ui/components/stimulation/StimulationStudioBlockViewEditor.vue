@@ -89,7 +89,7 @@
 </template>
 <script>
 import Vue from "vue";
-import SmallDropDown from "@/components/basic_widgets/SmallDropDown.vue";
+import SmallDropDown from "@/components/basic-widgets/SmallDropDown.vue";
 import { mapState, mapGetters, mapActions, mapMutations } from "vuex";
 import { library } from "@fortawesome/fontawesome-svg-core";
 import { faTrashAlt } from "@fortawesome/free-solid-svg-icons";
@@ -97,7 +97,7 @@ import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import StatusWarningWidget from "@/components/status/StatusWarningWidget.vue";
 import BootstrapVue from "bootstrap-vue";
 import { BModal } from "bootstrap-vue";
-import InputWidget from "@/components/basic_widgets/InputWidget.vue";
+import InputWidget from "@/components/basic-widgets/InputWidget.vue";
 import { MAX_SUBPROTOCOL_DURATION_MS } from "@/store/modules/stimulation/enums";
 Vue.use(BootstrapVue);
 Vue.component("BModal", BModal);

@@ -11,11 +11,11 @@ export default {
       state.protocolAssignments[well] = protocol;
     });
 
-    const previous_state = state.protocolAssignments;
+    const previousState = state.protocolAssignments;
     state.protocolAssignments = { ...state.protocolAssignments };
     state.selectedWells = [];
 
-    if (Object.keys(previous_state) !== Object.keys(state.protocolAssignments))
+    if (Object.keys(previousState) !== Object.keys(state.protocolAssignments))
       // checks if indices are different because this mutation gets called when existing assignments get edited
       state.stimStatus = STIM_STATUS.CONFIG_CHECK_NEEDED;
   },
@@ -80,15 +80,14 @@ export default {
   setDelayAxisValues(state, delay) {
     const { restDuration, subprotocols, timeUnit } = state.protocolEditor;
 
-    const converted_delay_duration = restDuration;
-    const delay_pulse_model = {
+    const convertedDelayDuration = restDuration;
+    const delayPulseModel = {
       type: "Delay",
       duration: restDuration,
       unit: timeUnit,
     };
     state.delayBlocks = [delay];
-    if (!isNaN(converted_delay_duration) && converted_delay_duration !== 0)
-      subprotocols.push(delay_pulse_model);
+    if (!isNaN(convertedDelayDuration) && convertedDelayDuration !== 0) subprotocols.push(delayPulseModel);
   },
   setSubprotocols({ protocolEditor }, { subprotocols, newSubprotocolOrder }) {
     protocolEditor.subprotocols = subprotocols;
@@ -108,7 +107,7 @@ export default {
     state.stimPlayState = bool;
 
     // this contradictory state occurs when 'Stimulate until complete' was selected for a stimulation.
-    // the system status pinging returns a is_stimulating key that constantly updates the stimPlayState
+    // the system status pinging returns a isStimulating key that constantly updates the stimPlayState
     // currently no other way set up for the FE to know on it's own that a stimulation has run to completion
     if (!state.stimPlayState && state.stimStatus === STIM_STATUS.STIM_ACTIVE)
       state.stimStatus = STIM_STATUS.READY;

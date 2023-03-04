@@ -8,7 +8,7 @@ import { createLocalVue } from "@vue/test-utils";
 import BootstrapVue from "bootstrap-vue";
 import "bootstrap/dist/css/bootstrap.min.css";
 import uuid from "@tofandel/uuid-base62";
-import { TextValidation } from "@/js_utils/text_validation.js";
+import { TextValidation } from "@/js-utils/TextValidation.js";
 let wrapper = null;
 
 const localVue = createLocalVue();
@@ -73,8 +73,8 @@ describe("AddUser", () => {
       ["Cat lab", "passkey", "passkey-id", "validate_user_account_input"],
     ])(
       "When the text %s (%s) is entered into the field found with the selector ID %s, Then the correct text validation function (%s) is called and the error message from the validation function is rendered below the input in the DOM",
-      async (entry, test_id, selector_id_suffix, text_validation_type) => {
-        const spied_text_validator = jest.spyOn(TextValidation.prototype, text_validation_type);
+      async (entry, test_id, selector_id_suffix, TextValidation_type) => {
+        const spied_text_validator = jest.spyOn(TextValidation.prototype, TextValidation_type);
         const target_input_field = wrapper.find("#input-widget-field-" + selector_id_suffix);
         const target_error_message = wrapper.find("#input-widget-feedback-" + selector_id_suffix);
 
@@ -91,8 +91,8 @@ describe("AddUser", () => {
       ["C", "user_name", "validate_user_account_input"],
     ])(
       "When the text %s (%s) is entered into the field found with the selector ID username, Then the correct text validation function (%s) is called and the error message from the validation function is rendered below the input in the DOM",
-      async (entry, test_id, text_validation_type) => {
-        const spied_text_validator = jest.spyOn(TextValidation.prototype, text_validation_type);
+      async (entry, test_id, TextValidation_type) => {
+        const spied_text_validator = jest.spyOn(TextValidation.prototype, TextValidation_type);
         const target_input_field = wrapper.find("#input-dropdown-widget-username");
         const target_error_message = wrapper.find("#input-dropdown-widget-feedback-username");
 

@@ -2,8 +2,8 @@
 import { STATUS } from "./enums";
 
 export default {
-  setStatusPingIntervald(state, new_id) {
-    state.statusPingIntervald = new_id;
+  setStatusPingIntervald(state, newId) {
+    state.statusPingIntervald = newId;
   },
   stopStatusPinging(state) {
     if (state.statusPingIntervald !== null) {
@@ -11,18 +11,18 @@ export default {
       state.statusPingIntervald = null;
     }
   },
-  setStatusUuid(state, new_id) {
+  setStatusUuid(state, newId) {
     if (state.statusUuid !== STATUS.MESSAGE.ERROR) {
-      state.statusUuid = new_id;
+      state.statusUuid = newId;
     }
   },
-  setSimulationStatus(state, new_id) {
-    state.simulation_mode = new_id;
+  setSimulationStatus(state, newId) {
+    state.simulationMode = newId;
   },
-  setBarcodeManualMode(state, new_value) {
-    state.barcodeManualMode = new_value;
+  setBarcodeManualMode(state, newValue) {
+    state.barcodeManualMode = newValue;
   },
-  ignore_next_system_status_if_matching_status(state, new_status) {
-    state.ignoreNextSystemStatusIfMatchingThisStatus = new_status;
+  ignoreNextSystemStatusIfMatchingStatus(state, newStatus) {
+    state.ignoreNextSystemStatusIfMatchingThisStatus = newStatus;
   },
 };

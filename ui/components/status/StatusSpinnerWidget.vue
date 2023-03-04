@@ -1,12 +1,12 @@
 <template>
   <div>
-    <div class="div__status-spinner-background" :style="modal_height">
-      <span class="span__status-spinner-label">{{ modal_labels.header }}</span>
-      <div class="span__status-spinner-message" :style="message_height">
-        <p>{{ modal_labels.msg_one }}</p>
-        <p>{{ modal_labels.msg_two }}</p>
+    <div class="div__status-spinner-background" :style="modalHeight">
+      <span class="span__status-spinner-label">{{ modalLabels.header }}</span>
+      <div class="span__status-spinner-message" :style="messageHeight">
+        <p>{{ modalLabels.msgOne }}</p>
+        <p>{{ modalLabels.msgTwo }}</p>
       </div>
-      <span class="span__status-spinner" :style="spinner_top">
+      <span class="span__status-spinner" :style="spinnerTop">
         <FontAwesomeIcon :icon="['fa', 'spinner']" pulse />
       </span>
     </div>
@@ -15,40 +15,40 @@
 <script>
 import { library } from "@fortawesome/fontawesome-svg-core";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
-import { faSpinner as fa_spinner } from "@fortawesome/free-solid-svg-icons";
+import { faSpinner } from "@fortawesome/free-solid-svg-icons";
 
-library.add(fa_spinner);
+library.add(faSpinner);
 
 export default {
   name: "StatusSpinnerWidget",
   components: { FontAwesomeIcon },
   props: {
-    modal_labels: {
+    modalLabels: {
       type: Object,
       default() {
         return {
           header: "Important!",
-          msg_one: "The firmware update is in progress. It will take about 7 minutes to complete.",
-          msg_two: "Do not close the Mantarray software or power off the Mantarray instrument.",
+          msgOne: "The firmware update is in progress. It will take about 7 minutes to complete.",
+          msgTwo: "Do not close the Mantarray software or power off the Mantarray instrument.",
         };
       },
     },
   },
   computed: {
-    compute_number_of_rows: function () {
+    computeNumberOfRows: function () {
       return (
-        Math.ceil(((this.modal_labels.msg_one.length * 1.0) / 40 + 1).toFixed(1)) +
-        Math.ceil(((this.modal_labels.msg_two.length * 1.0) / 40 + 1).toFixed(1))
+        Math.ceil(((this.modalLabels.msgOne.length * 1.0) / 40 + 1).toFixed(1)) +
+        Math.ceil(((this.modalLabels.msgTwo.length * 1.0) / 40 + 1).toFixed(1))
       );
     },
-    modal_height: function () {
-      return `height: ${200 + this.compute_number_of_rows * 12}px;`;
+    modalHeight: function () {
+      return `height: ${200 + this.computeNumberOfRows * 12}px;`;
     },
-    message_height: function () {
-      return `height: ${60 + this.compute_number_of_rows * 12}px;`;
+    messageHeight: function () {
+      return `height: ${60 + this.computeNumberOfRows * 12}px;`;
     },
-    spinner_top: function () {
-      return `top: ${110 + this.compute_number_of_rows * 12}px;`;
+    spinnerTop: function () {
+      return `top: ${110 + this.computeNumberOfRows * 12}px;`;
     },
   },
 };

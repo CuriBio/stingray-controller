@@ -3,7 +3,7 @@
     <div class="div__status-warning-background" :style="`height: ${dynamicModalHeight}px;`">
       <span class="span__status-warning-label">{{ modalLabels.header }}</span>
       <div ref="messageArea" class="span__status-warning-message">
-        <p id="p__status_warning_msg1">{{ modalLabels.msgOne }}</p>
+        <p id="p__statusWarningsg1">{{ modalLabels.msgOne }}</p>
         <p v-show="!includeFilepath">
           {{ modalLabels.msgTwo }}
           <a
@@ -27,13 +27,13 @@
       </div>
       <div class="div__status-warning-button" :style="`top: ${dynamicModalHeight}px;`">
         <ButtonWidget
-          :button_widget_width="420"
-          :button_widget_height="50"
-          :button_widget_top="0"
-          :button_widget_left="0"
-          :button_names="modalLabels.buttonNames"
-          :enabled_color="'#B7B7B7'"
-          :hover_color="['#bd4932', '#19ac8a']"
+          :buttonWidgetWidth="420"
+          :buttonWidgetHeight="50"
+          :buttonWidgetTop="0"
+          :buttonWidgetLeft="0"
+          :buttonNames="modalLabels.buttonNames"
+          :enabledColor="'#B7B7B7'"
+          :hoverColor="['#bd4932', '#19ac8a']"
           @btn-click="handleClick"
         />
       </div>
@@ -41,7 +41,7 @@
   </div>
 </template>
 <script>
-import ButtonWidget from "@/components/basic_widgets/ButtonWidget.vue";
+import ButtonWidget from "@/components/basic-widgets/ButtonWidget.vue";
 
 export default {
   name: "StatusWarningWidget",
@@ -182,7 +182,7 @@ export default {
   pointer-events: all;
 }
 
-#error_contact {
+#errorContact {
   color: rgb(183, 183, 183);
 }
 </style>

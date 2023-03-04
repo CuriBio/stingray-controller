@@ -10,17 +10,17 @@
           <BarcodeViewer :barcodeType="'stimBarcode'" />
         </div>
         <div class="div__stim-status-container">
-          <StatusBar :stim_specific="true" @send_confirmation="send_confirmation" />
+          <StatusBar :stimSpecific="true" @send-confirmation="sendConfirmation" />
         </div>
-        <div class="div__stimulation_controls-controls-icon-container">
+        <div class="div__stimulationControls-controls-icon-container">
           <StimulationControls />
         </div>
         <div class="div__simulation-mode-container">
           <SimulationMode />
         </div>
         <span class="span__copyright"
-          >&copy;{{ current_year }} Curi Bio. All Rights Reserved. Version:
-          {{ package_version }}
+          >&copy;{{ currentYear }} Curi Bio. All Rights Reserved. Version:
+          {{ packageVersion }}
         </span>
       </div>
     </div>
@@ -54,10 +54,10 @@ export default {
   },
   data: function () {
     return {
-      package_version: "",
-      current_year: "2023", // TODO look into better ways of handling this. Not sure if just using the system's current year is the best approach
+      packageVersion: "",
+      currentYear: "2023", // TODO look into better ways of handling this. Not sure if just using the system's current year is the best approach
       beta2Mode: process.env.SPECTRON || undefined,
-      pulse3d_versions: undefined,
+      pulse3dVersions: undefined,
     };
   },
   computed: {
@@ -67,10 +67,10 @@ export default {
   },
 
   created: async function () {
-    this.$store.dispatch("flask/start_status_pinging");
+    this.$store.dispatch("flask/startStatusPinging");
   },
   methods: {
-    send_confirmation: function (idx) {
+    sendConfirmation: function (idx) {
       this.$store.commit("settings/setConfirmationRequest", false);
     },
   },
@@ -140,7 +140,7 @@ body {
   margin-top: 10px;
 }
 
-.div__stimulation_controls-controls-icon-container {
+.div__stimulationControls-controls-icon-container {
   position: relative;
   margin-top: 3px;
   left: 0px;

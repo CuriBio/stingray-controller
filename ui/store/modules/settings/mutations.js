@@ -1,19 +1,19 @@
 import { ERRORS } from "./enums";
 
 export default {
-  setLogPath(state, new_value) {
-    state.logPath = new_value;
+  setLogPath(state, newValue) {
+    state.logPath = newValue;
 
-    const username = new_value.includes("\\") ? new_value.split("\\")[2] : new_value.split("/")[2];
+    const username = newValue.includes("\\") ? newValue.split("\\")[2] : newValue.split("/")[2];
     state.rootDownloadsPath = `C:\\Users\\${username}\\Downloads`;
   },
-  setShutdownErrorMessage(state, new_value) {
-    state.shutdownErrorMessage = new_value;
+  setShutdownErrorMessage(state, newValue) {
+    state.shutdownErrorMessage = newValue;
   },
-  setShutdownErrorStatus(state, { error_type, latest_compatible_sw_version }) {
-    let error = `${ERRORS[error_type]}.`;
-    if (latest_compatible_sw_version) {
-      state.installerLink = `https://downloads.curibio.com/software/StringrayController-Setup-prod-${latest_compatible_sw_version}.exe`;
+  setShutdownErrorStatus(state, { errorType, latestCompatibleSwVersion }) {
+    let error = `${ERRORS[errorType]}.`;
+    if (latestCompatibleSwVersion) {
+      state.installerLink = `https://downloads.curibio.com/software/StringrayController-Setup-prod-${latestCompatibleSwVersion}.exe`;
       error += " Please download the installer for the correct version here:";
     } else {
       state.installerLink = null;
@@ -22,20 +22,33 @@ export default {
     state.shutdownErrorStatus = error;
     state.shutdownErrorMessage = error;
   },
-  setBeta2Mode(state, bool) {
-    state.beta2Mode = bool;
-  },
   setSoftwareUpdateAvailable(state, bool) {
     state.softwareUpdateAvailable = bool;
   },
-  setFirmwareUpdateAvailable(state, update_info) {
-    state.firmwareUpdateAvailable = update_info.firmwareUpdateAvailable;
-    state.firmwareUpdateDurMins = update_info.channel_fw_update ? 5 : 1;
+  setFirmwareUpdateAvailable(state, updateInfo) {
+    state.firmwareUpdateAvailable = updateInfo.firmwareUpdateAvailable;
+    state.firmwareUpdateDurMins = updateInfo.channelFwUpdate ? 5 : 1;
   },
   setAllowSWUpdateInstall(state, bool) {
     state.allowSWUpdateInstall = bool;
   },
   setConfirmationRequest(state, bool) {
     state.confirmationRequest = bool;
+  },
+  setUserAccounts(state, newValue) {
+    state.userAccounts = newValue;
+  },
+  setStoredAccounts(state, { customerId, usernames }) {
+    state.storedCustomerId = customerId;
+    state.storedUsernames = usernames;
+  },
+  setActiveUserIndex(state, newValue) {
+    state.activeUserIndex = newValue;
+  },
+  resetToDefault(state) {
+    state.activeUserIndex = null;
+  },
+  setUserCredInputNeeded(state, bool) {
+    state.userCredInputNeeded = bool;
   },
 };

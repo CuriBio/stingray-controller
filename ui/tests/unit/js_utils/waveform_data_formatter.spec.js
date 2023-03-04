@@ -3,7 +3,7 @@ import {
   find_closest_array_idx,
   get_array_slice_to_display,
   append_well_data,
-} from "@/js_utils/waveform_data_formatter.js";
+} from "@/js-utils/WaveformDataFormatter.js";
 
 import data_store_module from "@/store/modules/data";
 
@@ -19,7 +19,7 @@ import { arry, new_arry } from "./waveform_data_provider.js";
 const ar = arry;
 const nr = new_arry;
 
-describe("waveform_data_formatter.js", () => {
+describe("WaveformDataFormatter.js", () => {
   test("When calling convert_from_json_of_sample_idx_and_value on JSON data, Then the output should be a 2D array of int/float", () => {
     expect(converted_array_x).toHaveLength(767);
     expect(converted_array_y).toHaveLength(767);

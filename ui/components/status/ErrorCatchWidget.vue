@@ -1,13 +1,13 @@
 <template>
   <div>
-    <div class="div__status-error-catch-background" :style="error_background_cssprops"></div>
+    <div class="div__status-error-catch-background" :style="errorBackgroundCssprops"></div>
     <span class="div_status-error-catch-title-label">An&nbsp;<wbr />error&nbsp;<wbr />occurred. </span>
-    <div class="div_status-error-catch-alert-txt" :style="error_catch_alert">
+    <div class="div_status-error-catch-alert-txt" :style="errorCatchAlert">
       <p>{{ shutdownErrorMessage }}</p>
       <textarea
         v-if="installerLink"
         class="textarea__installer-link"
-        name="error_file"
+        name="errorFile"
         :rows="2"
         cols="75"
         spellcheck="false"
@@ -15,47 +15,47 @@
         :disabled="true"
       ></textarea>
     </div>
-    <div class="div_status-email-txt" :style="email_text_cssprops">
+    <div class="div_status-email-txt" :style="emailTextCssprops">
       <p>
         Please send the folder shown below to
-        <a id="error_contact" href="mailto:support@curibio.com ? subject = Mantarray Error log"
+        <a id="errorContact" href="mailto:support@curibio.com ? subject = Mantarray Error log"
           >support@curibio.com</a
         >
       </p>
     </div>
     <textarea
       class="textarea__error-file-path"
-      name="error_file"
-      :rows="compute_number_of_rows"
+      name="errorFile"
+      :rows="computeNumberOfRows"
       cols="50"
       spellcheck="false"
-      :value.prop="log_filepath"
+      :value.prop="logFilepath"
       :disabled="true"
-      :style="textarea__error_cssprops"
+      :style="textarea__errorCssprops"
     ></textarea>
-    <div class="div_status-error-catch-next-step-txt" :style="next_step_cssprops">
+    <div class="div_status-error-catch-next-step-txt" :style="nextStepCssprops">
       <p>
         Please turn the instrument off, unplug from the PC,<br />
         and then wait 10 seconds before attempting to use again.
       </p>
     </div>
-    <div class="div__error-button" :style="error_catch_button_cssprops">
+    <div class="div__error-button" :style="errorCatchButtonCssprops">
       <ButtonWidget
-        :button_widget_width="450"
-        :button_widget_height="50"
-        :button_widget_top="0"
-        :button_widget_left="0"
-        :button_names="['Okay']"
-        :enabled_color="'#B7B7B7'"
-        :hover_color="['#FFFFFF']"
-        @btn-click="process_ok"
+        :buttonWidgetWidth="450"
+        :buttonWidgetHeight="50"
+        :buttonWidgetTop="0"
+        :buttonWidgetLeft="0"
+        :buttonNames="['Okay']"
+        :enabledColor="'#B7B7B7'"
+        :hoverColor="['#FFFFFF']"
+        @btn-click="processOk"
       >
       </ButtonWidget>
     </div>
   </div>
 </template>
 <script>
-import ButtonWidget from "@/components/basic_widgets/ButtonWidget.vue";
+import ButtonWidget from "@/components/basic-widgets/ButtonWidget.vue";
 import { mapState } from "vuex";
 export default {
   name: "ErrorCatchWidget",
@@ -63,49 +63,49 @@ export default {
     ButtonWidget,
   },
   props: {
-    log_filepath: { type: String, default: "" },
+    logFilepath: { type: String, default: "" },
   },
   computed: {
     ...mapState("settings", ["shutdownErrorMessage", "installerLink"]),
-    compute_number_of_rows: function () {
-      return Math.ceil(((this.log_filepath.length * 1.0) / 30).toFixed(1));
+    computeNumberOfRows: function () {
+      return Math.ceil(((this.logFilepath.length * 1.0) / 30).toFixed(1));
     },
-    error_background_cssprops: function () {
-      let height = 250 + this.compute_number_of_rows * 12;
+    errorBackgroundCssprops: function () {
+      let height = 250 + this.computeNumberOfRows * 12;
       if (this.installerLink) {
         height += 25;
       }
       return `height: ${height}px;`;
     },
-    error_catch_alert: function () {
+    errorCatchAlert: function () {
       const height = this.installerLink ? 130 : 75;
       return `height: ${height}px;`;
     },
-    textarea__error_cssprops: function () {
+    textarea__errorCssprops: function () {
       const top = this.installerLink ? 195 : 145;
-      return `height: ${25 + this.compute_number_of_rows * 12}px; top: ${top}px;`;
+      return `height: ${25 + this.computeNumberOfRows * 12}px; top: ${top}px;`;
     },
-    next_step_cssprops: function () {
-      let top = 180 + this.compute_number_of_rows * 12;
+    nextStepCssprops: function () {
+      let top = 180 + this.computeNumberOfRows * 12;
       if (this.installerLink) {
         top += 35;
       }
       return `top: ${top}px;`;
     },
-    error_catch_button_cssprops: function () {
-      let top = 250 + this.compute_number_of_rows * 12;
+    errorCatchButtonCssprops: function () {
+      let top = 250 + this.computeNumberOfRows * 12;
       if (this.installerLink) {
         top += 25;
       }
       return `top: ${top}px; left: 0px; position: absolute`;
     },
-    email_text_cssprops: function () {
+    emailTextCssprops: function () {
       const top = this.installerLink ? 175 : 107;
       return `top: ${top}px`;
     },
   },
   methods: {
-    process_ok: function () {
+    processOk: function () {
       this.$emit("ok-clicked");
     },
   },

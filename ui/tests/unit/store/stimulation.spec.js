@@ -1,7 +1,7 @@
 import Vuex from "vuex";
 import { createLocalVue } from "@vue/test-utils";
-// import * as axios_helpers from "@/js_utils/axios_helpers.js";
-import { WellTitle as LabwareDefinition } from "@/js_utils/labware_calculations.js";
+// import * as axios_helpers from "@/js-utils/axios_helpers.js";
+import { WellTitle as LabwareDefinition } from "@/js-utils/LabwareCalculations.js";
 const twentyFourWellPlateDefinition = new LabwareDefinition(4, 6);
 import { COLOR_PALETTE,stimStatus, ALPHABET } from "../../../store/modules/stimulation/enums";
 

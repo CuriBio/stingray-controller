@@ -1,44 +1,39 @@
 <template>
   <div class="div__plate-barcode">
-    <span class="span__plate-barcode-text" :style="dynamic_label_style">{{ barcode_label }}</span>
+    <span class="span__plate-barcode-text" :style="dynamicLabelStyle">{{ barcodeLabel }}</span>
     <input
       id="plateinfo"
-      :disabled="is_disabled"
+      :disabled="isDisabled"
       type="text"
       spellcheck="false"
       class="input__plate-barcode-entry"
-      :class="[
-        barcode_info.valid ? `input__plate-barcode-entry-valid` : `input__plate-barcode-entry-invalid`,
-      ]"
-      :value="barcode_info.value"
-      @input="setBarcode_manually"
+      :class="[barcodeInfo.valid ? `input__plate-barcode-entry-valid` : `input__plate-barcode-entry-invalid`]"
+      :value="barcodeInfo.value"
+      @input="setBarcodeManually"
     />
     <div
-      v-if="barcodeManualMode && active_processes"
-      v-b-popover.hover.top="tooltip_text"
-      :title="barcode_label"
+      v-if="barcodeManualMode && activeProcesses"
+      v-b-popover.hover.top="tooltipText"
+      :title="barcodeLabel"
       class="div__disabled-input-popover"
     />
     <div
       v-show="!barcodeManualMode"
-      v-b-popover.hover.top="tooltip_text"
-      :title="barcode_label"
+      v-b-popover.hover.top="tooltipText"
+      :title="barcodeLabel"
       class="input__plate-barcode-manual-entry-enable"
     >
       <span class="input__plate-barcode-manual-entry-enable-icon">
-        <div id="edit-plate-barcode" @click="active_processes || $bvModal.show('edit-plate-barcode-modal')">
+        <div id="edit-plate-barcode" @click="activeProcesses || $bvModal.show('edit-plate-barcode-modal')">
           <FontAwesomeIcon :icon="['fa', 'pencil-alt']" />
         </div>
       </span>
     </div>
     <b-modal id="edit-plate-barcode-modal" size="sm" hide-footer hide-header hide-header-close>
-      <StatusWarningWidget
-        :modal_labels="barcode_manual_labels"
-        @handleConfirmation="handle_manual_mode_choice"
-      />
+      <StatusWarningWidget :modalLabels="barcodeManualLabels" @handleConfirmation="handleManualModeChoice" />
     </b-modal>
     <b-modal id="barcode-warning" size="sm" hide-footer hide-header hide-header-close>
-      <StatusWarningWidget :modal_labels="barcode_warning_labels" @handleConfirmation="close_warning_modal" />
+      <StatusWarningWidget :modalLabels="barcodeWarningLabels" @handleConfirmation="closeWarningModal" />
     </b-modal>
   </div>
 </template>
@@ -54,9 +49,9 @@ Vue.directive("b-popover", VBPopover);
 
 library.add(faPencilAlt);
 /**
- * @vue-data {String} playback_state_enums - Current state of playback
- * @vue-computed {String} playback_state - Current value in Vuex store
- * @vue-event {String} setBarcode_manually - User entered String parser
+ * @vue-data {String} playbackStateEnums - Current state of playback
+ * @vue-computed {String} playbackState - Current value in Vuex store
+ * @vue-event {String} setBarcodeManually - User entered String parser
  */
 export default {
   name: "BarcodeViewer",
@@ -69,66 +64,65 @@ export default {
   },
   data() {
     return {
-      // playback_state_enums: playback_module.ENUMS.PLAYBACK_STATES,
-      barcode_manual_labels: {
+      barcodeManualLabels: {
         header: "Warning!",
-        msg_one: "Do you want to enable manual barcode editing?",
-        msg_two:
+        msgOne: "Do you want to enable manual barcode editing?",
+        msgTwo:
           "Once enabled, all barcodes must be entered manually. This should only be done if the barcode scanner is malfunctioning. Scanning cannot be re-enabled until software is restarted.",
-        button_names: ["Cancel", "Yes"],
+        buttonNames: ["Cancel", "Yes"],
       },
-      barcode_warning_labels: {
+      barcodeWarningLabels: {
         header: "Warning!",
-        msg_one: "A new barcode has been detected while a process was active.",
-        msg_two: "All processes have been stopped.",
-        button_names: ["Okay"],
+        msgOne: "A new barcode has been detected while a process was active.",
+        msgTwo: "All processes have been stopped.",
+        buttonNames: ["Okay"],
       },
     };
   },
   computed: {
-    ...mapState("playback", ["playback_state", "barcodes", "barcode_warning"]),
+    ...mapState("playback", ["barcodes", "barcodeWarning"]),
     ...mapState("flask", ["barcodeManualMode"]),
-    barcode_info: function () {
+    barcodeInfo: function () {
       return this.barcodes[this.barcodeType];
     },
-    barcode_label: function () {
+    barcodeLabel: function () {
       return this.barcodeType == "plateBarcode" ? "Plate Barcode:" : "Stim Lid Barcode:";
     },
-    dynamic_label_style: function () {
+    dynamicLabelStyle: function () {
       return this.barcodeType == "plateBarcode" ? "left: 17px;" : "left: 0px;";
     },
 
-    tooltip_text: function () {
-      return this.active_processes ? "Cannot edit barcodes while stimulating..." : "Click to edit";
+    tooltipText: function () {
+      return this.activeProcesses ? "Cannot edit barcodes while stimulating..." : "Click to edit";
     },
-    active_processes: function () {
+    activeProcesses: function () {
       return false;
     },
-    is_disabled: function () {
-      return this.active_processes || !this.barcodeManualMode;
+    isDisabled: function () {
+      return this.activeProcesses || !this.barcodeManualMode;
     },
   },
   watch: {
-    barcode_warning: function () {
-      if (this.barcode_warning) this.$bvModal.show("barcode-warning");
+    barcodeWarning: function () {
+      if (this.barcodeWarning) this.$bvModal.show("barcode-warning");
     },
   },
   methods: {
-    handle_manual_mode_choice(choice) {
-      const bool_choice = Boolean(choice);
+    handleManualModeChoice(choice) {
+      const boolChoice = Boolean(choice);
       this.$bvModal.hide("edit-plate-barcode-modal");
-      this.$store.commit("flask/setBarcodeManualMode", bool_choice);
-      if (bool_choice) {
+      this.$store.commit("flask/setBarcodeManualMode", boolChoice);
+      if (boolChoice) {
         console.log("Barcode Set Manually"); // allow-log
       }
     },
-    setBarcode_manually: function (event) {
+    setBarcodeManually: function (event) {
       this.$store.dispatch("playback/validateBarcode", {
         type: this.barcodeType,
-        new_value: event.target.value,
+        newValue: event.target.value,
       });
     },
-    close_warning_modal() {
+    closeWarningModal() {
       this.$bvModal.hide("barcode-warning");
       this.$store.commit("playback/setBarcodeWarning", false);
     },

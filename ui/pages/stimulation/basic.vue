@@ -1,10 +1,10 @@
 <template>
   <div>
     <StimulationStudio :style="'top: 45px;'" />
-    <button class="update-button" @click="update_protocolList">Update protocol list</button>
-    <button class="update-button" :style="'top: 300px;'" @click="create_message">Create message</button>
-    <button class="update-button" :style="'top: 500px;'" @click="enable_controls">Enable buttons</button>
-    <button class="update-button" :style="'top: 700px;'" @click="mock_config_check">Mock config check</button>
+    <button class="update-button" @click="updateProtocolList">Update protocol list</button>
+    <button class="update-button" :style="'top: 300px;'" @click="createMessage">Create message</button>
+    <button class="update-button" :style="'top: 500px;'" @click="enableControls">Enable buttons</button>
+    <button class="update-button" :style="'top: 700px;'" @click="mockConfigCheck">Mock config check</button>
   </div>
 </template>
 <script>
@@ -21,9 +21,9 @@ export default {
   methods: {
     ...mapMutations("stimulation", ["setNewProtocol", "resetState", "setStimStatus"]),
     ...mapActions("stimulation", ["createProtocolMessage"]),
-    async update_protocolList() {
-      const test_protocol = {
-        label: "mock_protocol",
+    async updateProtocolList() {
+      const testProtocol = {
+        label: "mockProtocol",
         letter: "A",
         color: "#4ca0af",
         protocol: {
@@ -41,7 +41,7 @@ export default {
               phaseTwoDuration: 3,
               phaseTwoCharge: -40,
               postphaseInterval: 1,
-              num_cycles: 5,
+              numCycles: 5,
             },
             {
               type: "Delay",
@@ -56,33 +56,33 @@ export default {
               phaseTwoDuration: 4,
               phaseTwoCharge: -10,
               postphaseInterval: 1,
-              num_cycles: 5,
+              numCycles: 5,
             },
           ],
           detailedSubprotocols: [
             {
               type: "Biphasic",
               src: "/Biphasic.png",
-              nested_protocols: [],
+              nestedProtocols: [],
               color: "bb9e69",
-              pulse_settings: {
+              pulseSettings: {
                 phaseOneDuration: 3,
                 phaseOneCharge: 40,
                 interphaseInterval: 1,
                 phaseTwoDuration: 3,
                 phaseTwoCharge: -40,
                 postphaseInterval: 1,
-                total_active_duration: { duration: 50, unit: "milliseconds" },
-                num_cycles: 1,
+                totalActiveDuration: { duration: 50, unit: "milliseconds" },
+                numCycles: 1,
                 frequency: 1,
               },
             },
             {
               type: "Delay",
               src: "/Delay.png",
-              nested_protocols: [],
+              nestedProtocols: [],
               color: "70f30",
-              pulse_settings: {
+              pulseSettings: {
                 duration: 50,
                 unit: "milliseconds",
               },
@@ -90,29 +90,29 @@ export default {
             {
               type: "Biphasic",
               src: "/Biphasic.png",
-              nested_protocols: [],
+              nestedProtocols: [],
               color: "e9584b",
-              pulse_settings: {
+              pulseSettings: {
                 phaseOneDuration: 4,
                 phaseOneCharge: 10,
                 interphaseInterval: 1,
                 phaseTwoDuration: 4,
                 phaseTwoCharge: -10,
                 postphaseInterval: 1,
-                total_active_duration: { duration: 50, unit: "milliseconds" },
-                num_cycles: 1,
+                totalActiveDuration: { duration: 50, unit: "milliseconds" },
+                numCycles: 1,
                 frequency: 1,
               },
             },
           ],
         },
       };
-      const test_protocol_2 = {
-        label: "mock_protocol_2",
+      const testProtocol_2 = {
+        label: "mockProtocol_2",
         letter: "B",
         color: "#578844",
         protocol: {
-          name: "mock_protocol_2",
+          name: "mockProtocol_2",
           stimulationType: "V",
           runUntilStopped: true,
           restDuration: 1,
@@ -126,7 +126,7 @@ export default {
               phaseTwoDuration: 5,
               phaseTwoCharge: -200,
               postphaseInterval: 0,
-              num_cycles: 1,
+              numCycles: 1,
             },
             {
               type: "Delay",
@@ -138,39 +138,39 @@ export default {
             {
               type: "Biphasic",
               src: "/Biphasic.png",
-              nested_protocols: [],
+              nestedProtocols: [],
               color: "5391fa",
-              pulse_settings: {
+              pulseSettings: {
                 phaseOneDuration: 5,
                 phaseOneCharge: 200,
                 interphaseInterval: 0,
                 phaseTwoDuration: 5,
                 phaseTwoCharge: -200,
                 postphaseInterval: 0,
-                total_active_duration: { duration: 1, unit: "seconds" },
-                num_cycles: 1,
+                totalActiveDuration: { duration: 1, unit: "seconds" },
+                numCycles: 1,
                 frequency: 2,
               },
             },
           ],
         },
       };
-      this.setNewProtocol(test_protocol);
-      this.setNewProtocol(test_protocol_2);
+      this.setNewProtocol(testProtocol);
+      this.setNewProtocol(testProtocol_2);
 
       this.resetState();
     },
-    create_message() {
+    createMessage() {
       this.createProtocolMessage();
     },
-    enable_controls() {
+    enableControls() {
       this.$store.dispatch("playback/validateBarcode", {
         type: "stimBarcode",
-        new_value: "MS2022001000",
+        newValue: "MS2022001000",
       });
-      // this.$store.commit("playback/set_playback_state", playback_module.ENUMS.PLAYBACK_STATES.CALIBRATED);
+      // this.$store.commit("playback/setPlaybackState", playbackModule.ENUMS.PLAYBACK_STATES.CALIBRATED);
     },
-    mock_config_check() {
+    mockConfigCheck() {
       //   this.setStimStatus(STIM_STATUS.CONFIG_CHECK_IN_PROGRESS);
       this.setStimStatus(STIM_STATUS.SHORT_CIRCUIT_ERROR);
     },

@@ -1,4 +1,4 @@
-import ToggleWidget from "@/components/basic_widgets/ToggleWidget.vue";
+import ToggleWidget from "@/components/basic-widgets/ToggleWidget.vue";
 import { ToggleWidget as DistComponentToTest } from "@/dist/mantarray.common";
 import { shallowMount, mount } from "@vue/test-utils";
 

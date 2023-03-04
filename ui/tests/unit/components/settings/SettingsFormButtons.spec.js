@@ -1,6 +1,6 @@
 import { mount } from "@vue/test-utils";
 import ComponentToTest from "@/components/settings/SettingsForm.vue";
-import ToggleWidget from "@/components/basic_widgets/ToggleWidget.vue";
+import ToggleWidget from "@/components/basic-widgets/ToggleWidget.vue";
 import Vuex from "vuex";
 import { createLocalVue } from "@vue/test-utils";
 import BootstrapVue from "bootstrap-vue";
@@ -268,8 +268,8 @@ describe("SettingsForm.vue", () => {
       expect(wrapper.vm.auto_delete).toBe(defaultState.auto_delete);
       expect(wrapper.vm.auto_upload).toBe(defaultState.auto_upload);
 
-      await wrapper.find(ToggleWidget).vm.$emit("handle_toggle_state", true, "auto_upload");
-      await wrapper.find(ToggleWidget).vm.$emit("handle_toggle_state", true, "auto_delete");
+      await wrapper.find(ToggleWidget).vm.$emit("handle-toggle-state", true, "auto_upload");
+      await wrapper.find(ToggleWidget).vm.$emit("handle-toggle-state", true, "auto_delete");
 
       expect(toggle_spy).toHaveBeenCalledTimes(2);
 

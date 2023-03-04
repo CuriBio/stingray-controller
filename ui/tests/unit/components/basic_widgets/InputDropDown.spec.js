@@ -1,9 +1,9 @@
 import { mount } from "@vue/test-utils";
-import ComponentToTest from "@/components/basic_widgets/InputDropDown.vue";
+import ComponentToTest from "@/components/basic-widgets/InputDropDown.vue";
 import { InputDropDown as DistComponentToTest } from "@/dist/mantarray.common";
 import { shallowMount } from "@vue/test-utils";
-import SmallDropDown from "@/components/basic_widgets/SmallDropDown.vue";
-import SelectDropDown from "@/components/basic_widgets/SelectDropDown.vue";
+import SmallDropDown from "@/components/basic-widgets/SmallDropDown.vue";
+import SelectDropDown from "@/components/basic-widgets/SelectDropDown.vue";
 
 import Vuex from "vuex";
 import { createLocalVue } from "@vue/test-utils";

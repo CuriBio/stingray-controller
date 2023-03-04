@@ -1,7 +1,7 @@
 import Vuex from "vuex";
 import { createLocalVue } from "@vue/test-utils";
 import { settings_store_module } from "@/dist/mantarray.common";
-// import * as axios_helpers from "../../../js_utils/axios_helpers.js";
+// import * as axios_helpers from "../../../js-utils/axios_helpers.js";
 import axios from "axios";
 const MockAxiosAdapter = require("axios-mock-adapter");
 

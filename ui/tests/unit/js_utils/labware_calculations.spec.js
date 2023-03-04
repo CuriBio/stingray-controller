@@ -1,5 +1,5 @@
-import { WellTitle } from "@/js_utils/labware_calculations.js";
-import { WellTitle as LabwareDefinition } from "@/js_utils/labware_calculations.js"; // creating alias now for eventual transition to calling it LabwareDefinition (to match Python)
+import { WellTitle } from "@/js-utils/LabwareCalculations.js";
+import { WellTitle as LabwareDefinition } from "@/js-utils/LabwareCalculations.js"; // creating alias now for eventual transition to calling it LabwareDefinition (to match Python)
 import { WellTitle as DistWellTitle } from "@/dist/mantarray.common";
 
 const well_title_three_cross_four = new WellTitle(3, 4);

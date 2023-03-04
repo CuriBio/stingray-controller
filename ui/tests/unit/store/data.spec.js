@@ -6,7 +6,7 @@ import { system_status_regexp } from "@/store/modules/flask/url_regex";
 import { STATUS } from "@/store/modules/flask/enums";
 import { STIM_STATUS } from "@/store/modules/stimulation/enums";
 import { socket as socket_client_side } from "@/store/plugins/websocket";
-import { arry, new_arry } from "../js_utils/waveform_data_provider.js";
+import { arry, new_arry } from "../js-utils/waveform_data_provider.js";
 import { ping_system_status } from "@/store/modules/flask/actions";
 import { ERRORS } from "../../../store/modules/settings/enums.js";
 

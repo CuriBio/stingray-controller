@@ -1,6 +1,6 @@
 import { mount, createLocalVue } from "@vue/test-utils";
 import StimulationStudioCreateAndEdit from "@/components/stimulation/StimulationStudioCreateAndEdit.vue";
-import SelectDropDown from "@/components/basic_widgets/SelectDropDown.vue";
+import SelectDropDown from "@/components/basic-widgets/SelectDropDown.vue";
 
 import Vuex from "vuex";
 

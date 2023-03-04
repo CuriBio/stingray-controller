@@ -1,4 +1,4 @@
-import { TextValidation } from "@/js_utils/text_validation.js";
+import { TextValidation } from "@/js-utils/TextValidation.js";
 import { TextValidation as DistTextValidation } from "@/dist/mantarray.common";
 
 const TextValidation_BarcodeViewer = new TextValidation("plateBarcode");

@@ -1,69 +1,69 @@
-import { WellTitle as LabwareDefinition } from "@/js_utils/labware_calculations.js";
+import { WellTitle as LabwareDefinition } from "@/js-utils/LabwareCalculations.js";
 const twentyFourWellPlateDefinition = new LabwareDefinition(4, 6);
-// import { call_axios_post_from_vuex } from "../../../js_utils/axios_helpers";
+// import { callAxiosPostFromVuex } from "../../../js-utils/axiosHelpers";
 import { STIM_STATUS, TIME_CONVERSION_TO_MILLIS } from "./enums";
 
 export default {
   handleSelectedWells({ commit }, wells) {
-    const well_values = [];
+    const wellValues = [];
 
     wells.filter((well, idx) => {
-      if (well) well_values.push(idx);
+      if (well) wellValues.push(idx);
     });
 
-    commit("setSelectedWells", well_values);
+    commit("setSelectedWells", wellValues);
   },
 
   async handleProtocolOrder({ commit, dispatch, state }, newSubprotocolOrder) {
     const xValues = [0];
     const yValues = [0];
-    const color_assignments = [];
+    const colorAssignments = [];
     const subprotocols = [];
-    const get_last = (array) => array[array.length - 1];
+    const getLast = (array) => array[array.length - 1];
     const helper = (setting, type) => {
-      let components_to_add = [];
+      let componentsToAdd = [];
       if (type === "Delay") {
-        components_to_add = {
+        componentsToAdd = {
           x: [setting.duration * TIME_CONVERSION_TO_MILLIS[setting.unit]],
           y: [0],
         };
       } else {
         // Add values for phase 1
-        components_to_add = {
+        componentsToAdd = {
           x: [setting.phaseOneDuration],
           y: [setting.phaseOneCharge],
         };
         // If biphasic, handle remaining pulse components
         if (setting.phaseTwoDuration != null) {
           // Add values for interphase interval
-          components_to_add.x.push(setting.interphaseInterval);
-          components_to_add.y.push(0);
+          componentsToAdd.x.push(setting.interphaseInterval);
+          componentsToAdd.y.push(0);
           // Add values for phase 2
-          components_to_add.x.push(setting.phaseTwoDuration);
-          components_to_add.y.push(setting.phaseTwoCharge);
+          componentsToAdd.x.push(setting.phaseTwoDuration);
+          componentsToAdd.y.push(setting.phaseTwoCharge);
         }
         // Add values for delay
-        components_to_add.x.push(setting.postphaseInterval);
-        components_to_add.y.push(0);
+        componentsToAdd.x.push(setting.postphaseInterval);
+        componentsToAdd.y.push(0);
       }
-      const num_components_to_add = components_to_add.x.length;
+      const numComponentsToAdd = componentsToAdd.x.length;
       // add components until all are added or the total active duration is reached
-      for (let i = 0; i < num_components_to_add; i++) {
-        const component_duration = components_to_add.x[i];
+      for (let i = 0; i < numComponentsToAdd; i++) {
+        const componentDuration = componentsToAdd.x[i];
 
-        xValues.push(get_last(xValues), component_duration + get_last(xValues));
-        yValues.push(components_to_add.y[i], components_to_add.y[i]);
+        xValues.push(getLast(xValues), componentDuration + getLast(xValues));
+        yValues.push(componentsToAdd.y[i], componentsToAdd.y[i]);
       }
       // set final value to zero in case the pulse was cut off in the middle of either phase
-      xValues.push(get_last(xValues));
+      xValues.push(getLast(xValues));
       yValues.push(0);
     };
 
     await newSubprotocolOrder.map(async (pulse) => {
       const { color } = pulse;
-      let settings = pulse.pulse_settings;
+      let settings = pulse.pulseSettings;
 
-      const starting_repeat_idx = xValues.length - 1;
+      const startingRepeatIdx = xValues.length - 1;
 
       settings = {
         type: pulse.type,
@@ -72,16 +72,16 @@ export default {
 
       subprotocols.push(settings);
 
-      // num_cycles defaults to 0 and delay will never update unless run through once
-      let remaining_pulse_cycles = pulse.type === "Delay" ? 1 : settings.num_cycles;
+      // numCycles defaults to 0 and delay will never update unless run through once
+      let remainingPulseCycles = pulse.type === "Delay" ? 1 : settings.numCycles;
 
-      while (remaining_pulse_cycles > 0) {
+      while (remainingPulseCycles > 0) {
         helper(settings, pulse.type);
-        remaining_pulse_cycles--;
+        remainingPulseCycles--;
       }
 
-      const ending_repeat_idx = xValues.length;
-      color_assignments.push([color, [starting_repeat_idx, ending_repeat_idx]]);
+      const endingRepeatIdx = xValues.length;
+      colorAssignments.push([color, [startingRepeatIdx, endingRepeatIdx]]);
     });
 
     // convert xValues to correct unit
@@ -89,7 +89,7 @@ export default {
       xValues[idx] = val / TIME_CONVERSION_TO_MILLIS[state.xAxisUnitName];
     });
 
-    commit("setRepeatColorAssignments", color_assignments);
+    commit("setRepeatColorAssignments", colorAssignments);
     commit("setSubprotocols", { subprotocols, newSubprotocolOrder });
     dispatch("handleRestDuration", {
       xValues,
@@ -100,24 +100,24 @@ export default {
   handleRestDuration({ commit, state }, { xValues, yValues }) {
     const { restDuration, timeUnit } = state.protocolEditor;
     const { xAxisTimeIdx } = state;
-    const x_axis_unit = xAxisTimeIdx === 0 ? "milliseconds" : "seconds";
-    let delay_block;
+    const xAxisUnit = xAxisTimeIdx === 0 ? "milliseconds" : "seconds";
+    let delayBlock;
 
     if (restDuration !== 0) {
       // find the time unit by taking rest duration unit and dividing by the graph x axis unit
-      const converted_delay =
-        restDuration * (TIME_CONVERSION_TO_MILLIS[timeUnit] / TIME_CONVERSION_TO_MILLIS[x_axis_unit]);
+      const convertedDelay =
+        restDuration * (TIME_CONVERSION_TO_MILLIS[timeUnit] / TIME_CONVERSION_TO_MILLIS[xAxisUnit]);
 
-      const last_x_value = xValues[xValues.length - 1];
-      const next_x_value = last_x_value + converted_delay;
-      delay_block = [last_x_value, next_x_value];
+      const lastXValue = xValues[xValues.length - 1];
+      const nextXValue = lastXValue + convertedDelay;
+      delayBlock = [lastXValue, nextXValue];
     }
 
     if (restDuration == 0) {
-      delay_block = [NaN, NaN];
+      delayBlock = [NaN, NaN];
     }
 
-    commit("setDelayAxisValues", delay_block);
+    commit("setDelayAxisValues", delayBlock);
     commit("setAxisValues", { xValues, yValues });
   },
 
@@ -150,47 +150,47 @@ export default {
 
   async handleExportProtocol({ state }) {
     const { protocolAssignments, protocolList } = state;
-    const protocol_copy = JSON.parse(JSON.stringify(protocolList));
-    const message = { protocols: protocol_copy.slice(1), protocolAssignments: {} };
+    const protocolCopy = JSON.parse(JSON.stringify(protocolList));
+    const message = { protocols: protocolCopy.slice(1), protocolAssignments: {} };
 
-    for (const well_idx of Array(24).keys()) {
-      const letter = protocolAssignments[well_idx] ? protocolAssignments[well_idx].letter : null;
+    for (const wellIdx of Array(24).keys()) {
+      const letter = protocolAssignments[wellIdx] ? protocolAssignments[wellIdx].letter : null;
 
       // asign letter to well number
-      const well_number = twentyFourWellPlateDefinition.get_well_name_from_well_index(well_idx, false);
-      message.protocolAssignments[well_number] = letter;
+      const wellNumber = twentyFourWellPlateDefinition.getWellNameFromWellIndex(wellIdx, false);
+      message.protocolAssignments[wellNumber] = letter;
     }
 
-    const text_to_write = JSON.stringify(message);
-    const text_file_blob = new Blob([text_to_write], { type: "application/json" });
+    const textToWrite = JSON.stringify(message);
+    const textFileBlob = new Blob([textToWrite], { type: "application/json" });
     // get new file name of datetime
-    const current_date = new Date();
+    const currentDate = new Date();
     const datetime =
-      current_date.getFullYear() +
+      currentDate.getFullYear() +
       "_" +
-      (current_date.getMonth() + 1) +
+      (currentDate.getMonth() + 1) +
       "_" +
-      current_date.getDate() +
+      currentDate.getDate() +
       "__" +
-      current_date.getHours() +
-      current_date.getMinutes() +
-      current_date.getSeconds();
+      currentDate.getHours() +
+      currentDate.getMinutes() +
+      currentDate.getSeconds();
 
-    const file_name_to_save = "stim_settings__" + datetime;
-    const download_link = document.createElement("a");
-    download_link.download = file_name_to_save;
-    download_link.innerHTML = "Download File";
+    const fileNameToSave = "stimSettings__" + datetime;
+    const downloadLink = document.createElement("a");
+    downloadLink.download = fileNameToSave;
+    downloadLink.innerHTML = "Download File";
 
     if (window.webkitURL != null) {
-      download_link.href = window.webkitURL.createObjectURL(text_file_blob);
+      downloadLink.href = window.webkitURL.createObjectURL(textFileBlob);
     } else {
-      download_link.href = window.URL.createObjectURL(text_file_blob);
-      download_link.style.display = "none";
-      document.body.appendChild(download_link);
+      downloadLink.href = window.URL.createObjectURL(textFileBlob);
+      downloadLink.style.display = "none";
+      document.body.appendChild(downloadLink);
     }
 
-    download_link.click();
-    download_link.remove();
+    downloadLink.click();
+    downloadLink.remove();
   },
 
   async addImportedProtocol({ commit, getters }, { protocols }) {
@@ -198,17 +198,17 @@ export default {
       // needs to be set to off every iteration because an action elsewhere triggers it on
       await commit("setEditModeOff");
       const { color, letter } = await getters["getNextProtocol"];
-      const imported_protocol = { color, letter, label: protocol.name, protocol };
-      await commit("setImportedProtocol", imported_protocol);
+      const importedProtocol = { color, letter, label: protocol.name, protocol };
+      await commit("setImportedProtocol", importedProtocol);
     }
   },
   async addSavedPotocol({ commit, state, dispatch }) {
     const { protocolEditor, editMode, protocolList } = state;
     const { letter, color } = state.currentAssignment;
-    const updated_protocol = { color, letter, label: protocolEditor.name, protocol: protocolEditor };
+    const updatedProtocol = { color, letter, label: protocolEditor.name, protocol: protocolEditor };
 
     if (!editMode.status) {
-      commit("setNewProtocol", updated_protocol);
+      commit("setNewProtocol", updatedProtocol);
     } else if (editMode.status) {
       protocolList.map((protocol, idx) => {
         if (protocol.letter === editMode.letter)
@@ -220,16 +220,16 @@ export default {
       });
 
       await commit("setEditModeOff");
-      await dispatch("updateProtocolAssignments", updated_protocol);
+      await dispatch("updateProtocolAssignments", updatedProtocol);
     }
   },
 
-  updateProtocolAssignments({ state }, updated_protocol) {
+  updateProtocolAssignments({ state }, updatedProtocol) {
     const { protocolAssignments } = state;
 
     for (const assignment in protocolAssignments) {
-      if (protocolAssignments[assignment].letter === updated_protocol.letter) {
-        protocolAssignments[assignment] = updated_protocol;
+      if (protocolAssignments[assignment].letter === updatedProtocol.letter) {
+        protocolAssignments[assignment] = updatedProtocol;
       }
     }
   },
@@ -241,12 +241,12 @@ export default {
     const { protocolAssignments } = state;
     const { stimulatorCircuitStatuses } = this.state.data;
 
-    for (let well_idx = 0; well_idx < 24; well_idx++) {
-      const well_name = twentyFourWellPlateDefinition.get_well_name_from_well_index(well_idx, false);
-      message.protocolAssignments[well_name] = null;
+    for (let wellIdx = 0; wellIdx < 24; wellIdx++) {
+      const wellName = twentyFourWellPlateDefinition.getWellNameFromWellIndex(wellIdx, false);
+      message.protocolAssignments[wellName] = null;
     }
 
-    const unique_protocol_ids = new Set();
+    const uniqueProtocolIds = new Set();
     for (const well in protocolAssignments) {
       // remove open circuit wells
       if (!stimulatorCircuitStatuses.includes(Number(well))) {
@@ -255,22 +255,22 @@ export default {
         const { letter } = protocolAssignments[well];
 
         // add protocol to list of unique protocols if it has not been entered yet
-        if (!unique_protocol_ids.has(letter)) {
-          unique_protocol_ids.add(letter);
+        if (!uniqueProtocolIds.has(letter)) {
+          uniqueProtocolIds.add(letter);
           // this needs to be converted before sent because stim type changes independently of pulse settings
-          const convertedSubprotocols = await _getConvertedSettings(subprotocols, stimulationType);
-          const protocol_model = {
-            protocol_id: letter,
+          const convertedSubprotocols = await GetConvertedSettings(subprotocols, stimulationType);
+          const protocolModel = {
+            protocolId: letter,
             stimulationType,
             runUntilStopped,
             subprotocols: convertedSubprotocols,
           };
 
-          message.protocols.push(protocol_model);
+          message.protocols.push(protocolModel);
         }
         // assign letter to well number
-        const well_number = twentyFourWellPlateDefinition.get_well_name_from_well_index(well, false);
-        message.protocolAssignments[well_number] = letter;
+        const wellNumber = twentyFourWellPlateDefinition.getWellNameFromWellIndex(well, false);
+        message.protocolAssignments[wellNumber] = letter;
       }
     }
 
@@ -318,8 +318,8 @@ export default {
     }
     commit("resetProtocolEditor");
   },
-  handleXAxisUnit({ commit, dispatch, state }, { idx, unit_name }) {
-    state.xAxisUnitName = unit_name;
+  handleXAxisUnit({ commit, dispatch, state }, { idx, unitName }) {
+    state.xAxisUnitName = unitName;
     const { xAxisValues, yAxisValues, xAxisTimeIdx } = state;
 
     if (idx !== xAxisTimeIdx) {
@@ -333,8 +333,8 @@ export default {
     }
   },
   async startStimConfiguration({ commit, state }) {
-    const url = `/start_stim_checks`;
-    const well_indices = Object.keys(state.protocolAssignments);
+    const url = `/startStimChecks`;
+    const wellIndices = Object.keys(state.protocolAssignments);
 
     // TODO
   },
@@ -358,22 +358,22 @@ export default {
       commit("setStimStatus", STIM_STATUS.SHORT_CIRCUIT_ERROR);
     } else {
       // set the stim status that other components watch, only saves indices
-      const filtered_statuses = Object.entries(stimulatorStatusesObj)
+      const filteredStatuses = Object.entries(stimulatorStatusesObj)
         .map(([idx, status]) => {
           return status == "open" ? +idx : undefined;
         })
         .filter((i) => i === 0 || i);
 
-      commit("setStimulatorCircuitStatuses", filtered_statuses);
+      commit("setStimulatorCircuitStatuses", filteredStatuses);
       commit("setStimStatus", STIM_STATUS.CONFIG_CHECK_COMPLETE);
     }
   },
 };
 
-const _getConvertedSettings = async (subprotocols, stim_type) => {
+const GetConvertedSettings = async (subprotocols, stimType) => {
   const milliToMicro = 1e3;
-  const charge_conversion = { C: 1000, V: 1 };
-  const conversion = charge_conversion[stim_type];
+  const chargeConversion = { C: 1000, V: 1 };
+  const conversion = chargeConversion[stimType];
 
   return subprotocols.map((pulse) => {
     let typeSpecificSettings = {};
@@ -381,7 +381,7 @@ const _getConvertedSettings = async (subprotocols, stim_type) => {
       typeSpecificSettings.duration = pulse.duration * TIME_CONVERSION_TO_MILLIS[pulse.unit] * milliToMicro;
     else
       typeSpecificSettings = {
-        num_cycles: pulse.num_cycles,
+        numCycles: pulse.numCycles,
         postphaseInterval: Math.round(pulse.postphaseInterval * milliToMicro), // sent in µs, also needs to be an integer value
         phaseOneDuration: pulse.phaseOneDuration * milliToMicro, // sent in µs
         phaseOneCharge: pulse.phaseOneCharge * conversion, // sent in mV

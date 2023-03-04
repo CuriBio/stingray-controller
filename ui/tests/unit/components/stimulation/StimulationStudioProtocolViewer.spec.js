@@ -2,7 +2,7 @@ import { mount, createLocalVue } from "@vue/test-utils";
 import StimulationStudioProtocolViewer from "@/components/stimulation/StimulationStudioProtocolViewer.vue";
 import StimulationStudioWaveform from "@/components/stimulation/StimulationStudioWaveform.vue";
 import Vuex from "vuex";
-import { convertXYArraysToD3Array } from "@/js_utils/waveform_data_formatter.js";
+import { convertXYArraysToD3Array } from "@/js-utils/WaveformDataFormatter.js";
 
 const localVue = createLocalVue();
 localVue.use(Vuex);

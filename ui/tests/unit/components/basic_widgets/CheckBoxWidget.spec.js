@@ -1,5 +1,5 @@
 import { mount } from "@vue/test-utils";
-import ComponentToTest from "@/components/basic_widgets/CheckBoxWidget.vue";
+import ComponentToTest from "@/components/basic-widgets/CheckBoxWidget.vue";
 import { CheckBoxWidget as DistComponentToTest } from "@/dist/mantarray.common";
 
 import { createLocalVue } from "@vue/test-utils";

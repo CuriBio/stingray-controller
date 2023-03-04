@@ -1,14 +1,14 @@
 <template>
   <div class="protocol-viewer-background">
     <StimulationStudioWaveform
-      :x_axis_sample_length="x_axis_sample_length"
-      :y_min="-yAxisScale"
-      :y_max="yAxisScale"
-      :plot_area_pixel_height="160"
-      :plot_area_pixel_width="dynamic_plot_width"
-      :data_points="datapoints"
-      :y_axis_label="stimulationType"
-      :x_axis_label="x_axis_label"
+      :xAxisSampleLength="xAxisSampleLength"
+      :yMin="-yAxisScale"
+      :yMax="yAxisScale"
+      :plotAreaPixelHeight="160"
+      :plotAreaPixelWidth="dynamicPlotWidth"
+      :dataPoints="datapoints"
+      :yAxisLabel="stimulationType"
+      :xAxisLabel="xAxisLabel"
       :repeatColors="repeatColors"
       :delayBlocks="delayBlocks"
     />
@@ -16,18 +16,18 @@
 </template>
 <script>
 import StimulationStudioWaveform from "@/components/stimulation/StimulationStudioWaveform.vue";
-import { convertXYArraysToD3Array } from "@/js_utils/waveform_data_formatter.js";
+import { convertXYArraysToD3Array } from "@/js-utils/WaveformDataFormatter.js";
 import { mapState } from "vuex";
 
 /**
  * @vue-props {Sting} stimulationType - Current selected stimulationType assigned to y axis label/scale
- * @vue-data {Int} y_min_max - The y axis min and max values
+ * @vue-data {Int} yMinMax - The y axis min and max values
  * @vue-data {Array} datapoints - The d3 formatted x and y axis points
  * @vue-data {Array} repeatColors - Corresponding color assignments from repeat blocks in pulse order to be assigned to color of line in graph
- * @vue-data {Int} x_axis_sample_length - x-axis max value
+ * @vue-data {Int} xAxisSampleLength - x-axis max value
  * @vue-data {Array} delayBlocks - Delay block to appear at end of graph to show in between repeats
- * @vue-data {String} x_axis_label - X axis label passed down to graph
- * @vue-method {Event} get_dynamic_sample_length - Calculates last point of line in graph for zoom feature
+ * @vue-data {String} xAxisLabel - X axis label passed down to graph
+ * @vue-method {Event} getDynamicSampleLength - Calculates last point of line in graph for zoom feature
 
  */
 
@@ -41,9 +41,9 @@ export default {
   },
   data() {
     return {
-      x_axis_sample_length: 100,
-      dynamic_plot_width: 1200,
-      x_axis_label: "Time",
+      xAxisSampleLength: 100,
+      dynamicPlotWidth: 1200,
+      xAxisLabel: "Time",
     };
   },
   computed: {
@@ -58,7 +58,7 @@ export default {
     datapoints() {
       return convertXYArraysToD3Array(this.xAxisValues, this.yAxisValues);
     },
-    last_x_value() {
+    lastXValue() {
       if (this.delayBlocks.length > 0) {
         return isNaN(this.delayBlocks[0][1])
           ? this.datapoints[this.datapoints.length - 1][0]
@@ -68,27 +68,26 @@ export default {
   },
   watch: {
     datapoints: function () {
-      if (this.last_x_value === 0) this.x_axis_sample_length = 100;
-      else this.x_axis_sample_length = this.last_x_value + 50;
+      if (this.lastXValue === 0) this.xAxisSampleLength = 100;
+      else this.xAxisSampleLength = this.lastXValue + 50;
 
-      if (this.x_axis_sample_length > 10000 && this.dynamic_plot_width === 1200)
-        this.dynamic_plot_width *= 25;
+      if (this.xAxisSampleLength > 10000 && this.dynamicPlotWidth === 1200) this.dynamicPlotWidth *= 25;
     },
     protocolEditor: function () {
-      this.x_axis_sample_length = 100;
-      this.dynamic_plot_width = 1200;
+      this.xAxisSampleLength = 100;
+      this.dynamicPlotWidth = 1200;
     },
   },
   created: function () {
     this.unsubscribe = this.$store.subscribe(async (mutation) => {
       if (mutation.type === "stimulation/setZoomOut") {
-        if (this.dynamic_plot_width === 1200) this.x_axis_sample_length *= 1.5;
-        else if (this.dynamic_plot_width > 1200) this.dynamic_plot_width /= 1.5;
+        if (this.dynamicPlotWidth === 1200) this.xAxisSampleLength *= 1.5;
+        else if (this.dynamicPlotWidth > 1200) this.dynamicPlotWidth /= 1.5;
       }
       if (mutation.type === "stimulation/setZoomIn") {
-        if (this.x_axis_sample_length > this.last_x_value + 50 || this.datapoints.length === 0)
-          this.x_axis_sample_length /= 1.5;
-        else this.dynamic_plot_width *= 1.5;
+        if (this.xAxisSampleLength > this.lastXValue + 50 || this.datapoints.length === 0)
+          this.xAxisSampleLength /= 1.5;
+        else this.dynamicPlotWidth *= 1.5;
       }
     });
   },

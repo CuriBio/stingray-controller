@@ -40,9 +40,9 @@ export default {
 };
 
 const getProtocolEditorLetter = (list) => {
-  const protocol_idx = list.length - 1;
-  const letter_assignment = ALPHABET[protocol_idx % 26];
-  const num_letters = Math.floor(protocol_idx / 26) + 1;
+  const protocolIdx = list.length - 1;
+  const letterAssignment = ALPHABET[protocolIdx % 26];
+  const numLetters = Math.floor(protocolIdx / 26) + 1;
 
-  return letter_assignment.repeat(num_letters);
+  return letterAssignment.repeat(numLetters);
 };

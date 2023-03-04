@@ -1,11 +1,24 @@
-// import { call_axios_get_from_vuex, call_axios_post_from_vuex } from "@/js_utils/axios_helpers.js";
+// import { callAxiosGetFromVuex, callAxiosPostFromVuex } from "@/js-utils/axiosHelpers.js";
 
 export default {
-  async sendFirmwareUpdateConfirmation(_, update_accepted) {
-    const status = update_accepted ? "accepted" : "declined";
+  async sendFirmwareUpdateConfirmation(_, updateAccepted) {
+    const status = updateAccepted ? "accepted" : "declined";
     console.log(`User ${status} firmware update`); // allow-log
 
-    // const url = `/firmware_update_confirmation?update_accepted=${update_accepted}`;
-    // return await call_axios_post_from_vuex(url);
+    // const url = `/firmwareUpdateConfirmation?updateAccepted=${updateAccepted}`;
+    // return await callAxiosPostFromVuex(url);
+  },
+  async update_settings() {
+    const { activeUserIndex, userAccounts } = this.state.settings;
+
+    const { customerId, userPassword, userName } = userAccounts[activeUserIndex];
+
+    const params = {
+      customerId,
+      userName,
+      userPassword,
+    };
+
+    // TODO
   },
 };

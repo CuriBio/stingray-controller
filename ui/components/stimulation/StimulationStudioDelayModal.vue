@@ -1,61 +1,58 @@
 <template>
   <div class="div__stimulationstudio-current-settings-background">
     <span class="span__stimulationstudio-current-settings-title"
-      >{{ modal_title }}
-      <div class="div__color-block" :style="color_to_display" />
+      >{{ modalTitle }}
+      <div class="div__color-block" :style="colorToDisplay" />
       <div class="div__color-label" @click="$bvModal.show('change-color-modal-two')">Change color</div></span
     >
     <span>
       <b-modal id="change-color-modal-two" size="sm" hide-footer hide-header hide-header-close :static="true">
-        <StimulationStudioColorModal
-          :current_color="selected_color"
-          @change-pulse-color="change_pulse_color"
-        />
+        <StimulationStudioColorModal :currentColor="selectedColor" @change-pulse-color="changePulseColor" />
       </b-modal>
     </span>
     <canvas class="canvas__stimulationstudio-horizontal-line-separator"> </canvas>
     <div class="div__stimulationstudio-body-container">
-      <span>{{ input_description }}</span>
+      <span>{{ inputDescription }}</span>
       <span class="input_container">
         <InputWidget
           :placeholder="'0'"
-          :dom_id_suffix="'delay'"
-          :invalid_text="invalid_text"
-          :input_width="100"
-          :initial_value="current_value !== null ? current_value : ''"
-          @update:value="check_validity($event)"
+          :domIdSuffix="'delay'"
+          :invalidText="invalidText"
+          :inputWidth="100"
+          :initialValue="currentValue !== null ? currentValue : ''"
+          @update:value="checkValidity($event)"
         />
       </span>
       <span>
         <SmallDropDown
           :optionsText="timeUnits"
-          :optionsIdx="timeUnit_idx"
+          :optionsIdx="timeUnitIdx"
           :inputHeight="25"
           :inputWidth="100"
-          :domIdSuffix="'delay_block'"
-          @selection-changed="handle_unit_change"
+          :domIdSuffix="'delayBlock'"
+          @selection-changed="handleUnitChange"
         />
       </span>
     </div>
     <div :class="'button-container'">
       <ButtonWidget
         :id="'button-widget-id'"
-        :button_widget_width="520"
-        :button_widget_height="50"
-        :button_widget_top="0"
-        :button_widget_left="-1"
-        :button_names="button_labels"
-        :hover_color="button_hover_colors"
-        :is_enabled="is_enabled_array"
+        :buttonWidgetWidth="520"
+        :buttonWidgetHeight="50"
+        :buttonWidgetTop="0"
+        :buttonWidgetLeft="-1"
+        :buttonNames="buttonLabels"
+        :hoverColor="buttonHoverColors"
+        :isEnabled="isEnabledArray"
         @btn-click="close"
       />
     </div>
   </div>
 </template>
 <script>
-import InputWidget from "@/components/basic_widgets/InputWidget.vue";
-import ButtonWidget from "@/components/basic_widgets/ButtonWidget.vue";
-import SmallDropDown from "@/components/basic_widgets/SmallDropDown.vue";
+import InputWidget from "@/components/basic-widgets/InputWidget.vue";
+import ButtonWidget from "@/components/basic-widgets/ButtonWidget.vue";
+import SmallDropDown from "@/components/basic-widgets/SmallDropDown.vue";
 import StimulationStudioColorModal from "@/components/stimulation/StimulationStudioColorModal.vue";
 import {
   MAX_SUBPROTOCOL_DURATION_MS,
@@ -71,25 +68,25 @@ Vue.directive("b-popover", VBPopover);
 Vue.component("BModal", BModal);
 Vue.use(BootstrapVue);
 /**
- * @vue-props {String} current_value - Current input if modal is open for editing
- * @vue-props {String} current_delay_unit - The current unit selected when a delay block is opened to edit
- * @vue-props {String} modal_type - Determines if delay or repeat styling is assigned to modal
- * @vue-props {Boolean} modal_open_for_edit - States if delay modal is open for editing
- * @vue-data {String} input_value - Value input into modal
- * @vue-data {String} invalid_text - Validity check for input
- * @vue-computed {Array} button_labels - Button labels for modal
- * @vue-data {Array} is_enabled_array - Array of which buttons should be disabled at base of modal
- * @vue-computed {Array} button_hover_colors - Array of what color the text in the button will be when hovered over
+ * @vue-props {String} currentValue - Current input if modal is open for editing
+ * @vue-props {String} currentDelayUnit - The current unit selected when a delay block is opened to edit
+ * @vue-props {String} modalType - Determines if delay or repeat styling is assigned to modal
+ * @vue-props {Boolean} modalOpenForEdit - States if delay modal is open for editing
+ * @vue-data {String} inputValue - Value input into modal
+ * @vue-data {String} invalidText - Validity check for input
+ * @vue-computed {Array} buttonLabels - Button labels for modal
+ * @vue-data {Array} isEnabledArray - Array of which buttons should be disabled at base of modal
+ * @vue-computed {Array} buttonHoverColors - Array of what color the text in the button will be when hovered over
  * @vue-data {Array} timeUnits - Array of possible options in the unit dropdown menu
- * @vue-data {Int} timeUnit_idx - Index of currently selected time unit from dropdown
- * @vue-data {Object} invalid_err_msg - Object containing all error messages for validation checks of inputs
- * @vue-watch {Boolean} is_valid - True if input passes the validation check and allows Save button to become enabled
- * @vue-data {String} modal_title - Title
- * @vue-data {String} input_description - Subtitle
- * @vue-computed {Array} button_labels - Button array dependent on if its a reedit or not
+ * @vue-data {Int} timeUnitIdx - Index of currently selected time unit from dropdown
+ * @vue-data {Object} invalidErrMsg - Object containing all error messages for validation checks of inputs
+ * @vue-watch {Boolean} isValid - True if input passes the validation check and allows Save button to become enabled
+ * @vue-data {String} modalTitle - Title
+ * @vue-data {String} inputDescription - Subtitle
+ * @vue-computed {Array} buttonLabels - Button array dependent on if its a reedit or not
  * @vue-method {event} close - emits close of modal and data to parent component
- * @vue-method {event} check_validity - checks if inputs are valid numbers only and not empty
- * @vue-method {event} handle_unit_change - Saves current selected index in time unit dropdown
+ * @vue-method {event} checkValidity - checks if inputs are valid numbers only and not empty
+ * @vue-method {event} handleUnitChange - Saves current selected index in time unit dropdown
  */
 
 export default {
@@ -101,119 +98,119 @@ export default {
     StimulationStudioColorModal,
   },
   props: {
-    current_delay_input: {
+    currentDelayInput: {
       type: String,
       default: null,
     },
-    current_delay_unit: {
+    currentDelayUnit: {
       type: String,
       default: "milliseconds",
     },
-    modal_open_for_edit: {
+    modalOpenForEdit: {
       type: Boolean,
       default: false,
     },
-    current_color: {
+    currentColor: {
       type: String,
       default: null,
     },
   },
   data() {
     return {
-      current_value: this.current_delay_input,
-      input_value: null,
-      invalid_text: "Required",
-      invalid_err_msg: {
-        num_err: "Must be a (+) number",
+      currentValue: this.currentDelayInput,
+      inputValue: null,
+      invalidText: "Required",
+      invalidErrMsg: {
+        numErr: "Must be a (+) number",
         required: "Required",
         valid: "",
-        min_duration: `Duration must be >=${MIN_SUBPROTOCOL_DURATION_MS}ms`,
-        max_duration: "Duration must be <= 24hrs",
-        non_integer: "Must be a whole number of ms",
+        minDuration: `Duration must be >=${MIN_SUBPROTOCOL_DURATION_MS}ms`,
+        maxDuration: "Duration must be <= 24hrs",
+        nonInteger: "Must be a whole number of ms",
       },
       timeUnits: ["milliseconds", "seconds", "minutes", "hours"],
-      timeUnit_idx: 0,
-      is_enabled_array: [false, true],
-      is_valid: false,
-      modal_title: "Delay",
-      input_description: "Duration:",
-      selected_color: this.current_color,
+      timeUnitIdx: 0,
+      isEnabledArray: [false, true],
+      isValid: false,
+      modalTitle: "Delay",
+      inputDescription: "Duration:",
+      selectedColor: this.currentColor,
     };
   },
   computed: {
-    button_labels() {
-      return this.modal_open_for_edit ? ["Save", "Duplicate", "Delete", "Cancel"] : ["Save", "Cancel"];
+    buttonLabels() {
+      return this.modalOpenForEdit ? ["Save", "Duplicate", "Delete", "Cancel"] : ["Save", "Cancel"];
     },
-    button_hover_colors: function () {
-      return this.modal_open_for_edit ? ["#19ac8a", "#19ac8a", "#bd4932", "#bd4932"] : ["#19ac8a", "#bd4932"];
+    buttonHoverColors: function () {
+      return this.modalOpenForEdit ? ["#19ac8a", "#19ac8a", "#bd4932", "#bd4932"] : ["#19ac8a", "#bd4932"];
     },
-    color_to_display: function () {
-      return "background-color: " + this.selected_color;
+    colorToDisplay: function () {
+      return "background-color: " + this.selectedColor;
     },
   },
   watch: {
-    is_valid() {
+    isValid() {
       // disabled duplicate and save button if not valid inputs
-      this.is_enabled_array = this.modal_open_for_edit
-        ? [this.is_valid, this.is_valid, true, true]
-        : [this.is_valid, true];
+      this.isEnabledArray = this.modalOpenForEdit
+        ? [this.isValid, this.isValid, true, true]
+        : [this.isValid, true];
     },
   },
   created() {
-    this.input_value = this.current_value;
+    this.inputValue = this.currentValue;
 
-    this.timeUnit_idx = this.timeUnits.indexOf(this.current_delay_unit);
-    this.is_enabled_array = this.modal_open_for_edit ? [true, true, true, true] : [false, true];
-    if (this.current_value !== null) this.check_validity(this.input_value);
+    this.timeUnitIdx = this.timeUnits.indexOf(this.currentDelayUnit);
+    this.isEnabledArray = this.modalOpenForEdit ? [true, true, true, true] : [false, true];
+    if (this.currentValue !== null) this.checkValidity(this.inputValue);
   },
   methods: {
     close(idx) {
-      const button_label = this.button_labels[idx];
+      const buttonLabel = this.buttonLabels[idx];
 
-      const selected_unit = this.timeUnits[this.timeUnit_idx];
-      const converted_input = Number(this.input_value);
-      const delay_settings = {
-        duration: converted_input,
-        unit: selected_unit,
+      const selectedUnit = this.timeUnits[this.timeUnitIdx];
+      const convertedInput = Number(this.inputValue);
+      const delaySettings = {
+        duration: convertedInput,
+        unit: selectedUnit,
       };
 
-      this.$emit("delay_close", button_label, delay_settings, this.selected_color);
+      this.$emit("delayClose", buttonLabel, delaySettings, this.selectedColor);
     },
-    check_validity(value_str) {
-      this.current_value = value_str;
+    checkValidity(valueStr) {
+      this.currentValue = valueStr;
 
-      const value = +value_str;
+      const value = +valueStr;
 
-      const selected_unit = this.timeUnits[this.timeUnit_idx];
-      const value_in_millis = value * TIME_CONVERSION_TO_MILLIS[selected_unit];
+      const selectedUnit = this.timeUnits[this.timeUnitIdx];
+      const valueInMillis = value * TIME_CONVERSION_TO_MILLIS[selectedUnit];
 
-      if (value_str === "") {
-        this.invalid_text = this.invalid_err_msg.required;
+      if (valueStr === "") {
+        this.invalidText = this.invalidErrMsg.required;
       } else if (isNaN(value)) {
-        this.invalid_text = this.invalid_err_msg.num_err;
-      } else if (value_in_millis < MIN_SUBPROTOCOL_DURATION_MS) {
-        this.invalid_text = this.invalid_err_msg.min_duration;
-      } else if (value_in_millis > MAX_SUBPROTOCOL_DURATION_MS) {
-        this.invalid_text = this.invalid_err_msg.max_duration;
-      } else if (!Number.isInteger(value_in_millis)) {
-        this.invalid_text = this.invalid_err_msg.non_integer;
+        this.invalidText = this.invalidErrMsg.numErr;
+      } else if (valueInMillis < MIN_SUBPROTOCOL_DURATION_MS) {
+        this.invalidText = this.invalidErrMsg.minDuration;
+      } else if (valueInMillis > MAX_SUBPROTOCOL_DURATION_MS) {
+        this.invalidText = this.invalidErrMsg.maxDuration;
+      } else if (!Number.isInteger(valueInMillis)) {
+        this.invalidText = this.invalidErrMsg.nonInteger;
       } else {
-        this.invalid_text = this.invalid_err_msg.valid;
-        // Only want to update input_value here so it is only ever set to a valid value.
+        this.invalidText = this.invalidErrMsg.valid;
+        // Only want to update inputValue here so it is only ever set to a valid value.
         // This means that if a user enters an invalid value and then presses cancel, the most recent
         // valid value will be committed to the store instead of the invalid value
-        this.input_value = value;
+        this.inputValue = value;
       }
 
-      this.is_valid = this.invalid_text === this.invalid_err_msg.valid;
+      this.isValid = this.invalidText === this.invalidErrMsg.valid;
     },
-    handle_unit_change(idx) {
-      this.timeUnit_idx = idx;
-      this.check_validity(this.current_value);
+    handleUnitChange(idx) {
+      this.timeUnitIdx = idx;
+      this.checkValidity(this.currentValue);
     },
-    change_pulse_color(color) {
+    changePulseColor(color) {
       this.$bvModal.hide("change-color-modal-two");
-      this.selected_color = color;
+      this.selectedColor = color;
     },
   },
 };

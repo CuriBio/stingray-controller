@@ -1,24 +1,20 @@
 <template>
   <div>
-    <div :class="modal_type !== null || open_delay_modal ? 'modal_overlay' : null">
+    <div :class="modalType !== null || openDelayModal ? 'modal_overlay' : null">
       <div>
         <div class="div__DragAndDdrop-panel">
           <span class="span__stimulationstudio-drag-drop-header-label">Drag/Drop Waveforms</span>
           <canvas class="canvas__stimulationstudio-header-separator" />
-          <div
-            v-if="disable_edits"
-            v-b-popover.hover.bottom="sidebar_block_label"
-            class="div__sidebar-block"
-          />
+          <div v-if="disableEdits" v-b-popover.hover.bottom="sidebarBlockLabel" class="div__sidebar-block" />
           <draggable
-            v-model="icon_types"
+            v-model="iconTypes"
             tag="div"
             class="draggable_tile_container"
-            :disabled="disable_edits"
+            :disabled="disableEdits"
             :group="{ name: 'order', pull: 'clone', put: false }"
             :clone="clone"
           >
-            <div v-for="(type, idx) in icon_types" :id="type" :key="idx">
+            <div v-for="(type, idx) in iconTypes" :id="type" :key="idx">
               <img :src="require(`@/assets/img/${type}.png`)" />
             </div>
           </draggable>
@@ -26,56 +22,56 @@
         <SmallDropDown
           class="dropdown-container"
           :inputHeight="25"
-          :disable="disable_dropdown"
+          :disable="disableDropdown"
           :inputWidth="100"
           :optionsText="timeUnitsArray"
           :optionsIdx="timeUnitsIdx"
           :domIdSuffix="'timeUnits'"
-          :style="disable_dropdown ? 'cursor: unset;' : null"
-          @selection-changed="handle_timeUnit"
+          :style="disableDropdown ? 'cursor: unset;' : null"
+          @selection-changed="handleTimeUnit"
         />
 
         <div class="div__scroll-container">
           <draggable
-            v-model="protocol_order"
+            v-model="protocolOrder"
             class="dragArea"
-            :disabled="disable_edits"
+            :disabled="disableEdits"
             :group="{ name: 'order' }"
             :ghost-class="'ghost'"
-            @change="check_type($event)"
-            @start="is_dragging = true"
-            @end="is_dragging = false"
+            @change="checkType($event)"
+            @start="isDragging = true"
+            @end="isDragging = false"
           >
-            <div v-for="(types, idx) in protocol_order" :key="idx" class="div__tile-container">
+            <div v-for="(types, idx) in protocolOrder" :key="idx" class="div__tile-container">
               <img
                 id="img__waveform-tile"
                 :src="require(`@/assets/img/${types.type}.png`)"
-                @dblclick="open_modal_for_edit(types.type, idx)"
-                @mouseenter="on_pulse_enter(idx)"
-                @mouseleave="on_pulse_leave"
+                @dblclick="openModalForEdit(types.type, idx)"
+                @mouseenter="onPulseEnter(idx)"
+                @mouseleave="onPulseLeave"
               />
             </div>
           </draggable>
         </div>
       </div>
     </div>
-    <div v-if="modal_type !== null" class="modal-container">
+    <div v-if="modalType !== null" class="modal-container">
       <StimulationStudioWaveformSettingModal
         :stimulationType="stimulationType"
-        :pulse_type="modal_type"
-        :modal_open_for_edit="modal_open_for_edit"
-        :selected_pulse_settings="selected_pulse_settings"
-        :current_color="selected_color"
-        @close="on_modal_close"
+        :pulseType="modalType"
+        :modalOpenForEdit="modalOpenForEdit"
+        :selectedPulseSettings="selectedPulseSettings"
+        :currentColor="selectedColor"
+        @close="onModalClose"
       />
     </div>
-    <div v-if="open_delay_modal" class="modal-container delay-container">
+    <div v-if="openDelayModal" class="modal-container delay-container">
       <StimulationStudioDelayModal
-        :modal_open_for_edit="modal_open_for_edit"
-        :current_delay_unit="current_delay_unit"
-        :current_delay_input="current_delay_input"
-        :current_color="selected_color"
-        @delay_close="on_modal_close"
+        :modalOpenForEdit="modalOpenForEdit"
+        :currentDelayUnit="currentDelayUnit"
+        :currentDelayInput="currentDelayInput"
+        :currentColor="selectedColor"
+        @delayClose="onModalClose"
       />
     </div>
   </div>
@@ -85,30 +81,30 @@ import draggable from "vuedraggable";
 import { mapState, mapActions, mapMutations } from "vuex";
 import StimulationStudioWaveformSettingModal from "@/components/stimulation/StimulationStudioWaveformSettingModal.vue";
 import StimulationStudioDelayModal from "@/components/stimulation/StimulationStudioDelayModal.vue";
-import SmallDropDown from "@/components/basic_widgets/SmallDropDown.vue";
-import { generate_random_color } from "@/js_utils/waveform_data_formatter";
+import SmallDropDown from "@/components/basic-widgets/SmallDropDown.vue";
+import { generateRandomColor } from "@/js-utils/WaveformDataFormatter";
 
 /**
  * @vue-props {String} stimulationType - Current selected stimulation type user selects from drowdown
- * @vue-data {Array} icon_type - The source for the draggable pulse tiles
- * @vue-data {Array} is_dragging - Boolean to determine if user is currently dragging a tile in the scrollable window
+ * @vue-data {Array} iconType - The source for the draggable pulse tiles
+ * @vue-data {Array} isDragging - Boolean to determine if user is currently dragging a tile in the scrollable window
  * @vue-data {Array} timeUnitsArray - Available units of time for drop down in settings panel
- * @vue-data {Object} selected_pulse_settings - This is the saved setting for a pulse that changes when a user opens a modal to edit a pulse
- * @vue-data {Array} protocol_order -  This is the complete order of pulses/delays/repeats in the entire new protocol
- * @vue-data {String} modal_type - Tracks which modal should open based on pulse type
- * @vue-data {String} setting_type - This is the stimulation type that user selects from drop down in settings panel
- * @vue-data {Int} shift_click_img_idx - Index of selected pulse to edit in order to save new settings to correct pulse
- * @vue-data {String} open_delay_modal - Tracks which modal should open based on if it is a repeat or delay
- * @vue-data {String} current_delay_input - Saved input for a delay block that changes depending on which delay block is opened for edit
+ * @vue-data {Object} selectedPulseSettings - This is the saved setting for a pulse that changes when a user opens a modal to edit a pulse
+ * @vue-data {Array} protocolOrder -  This is the complete order of pulses/delays/repeats in the entire new protocol
+ * @vue-data {String} modalType - Tracks which modal should open based on pulse type
+ * @vue-data {String} settingType - This is the stimulation type that user selects from drop down in settings panel
+ * @vue-data {Int} shiftClickImgIdx - Index of selected pulse to edit in order to save new settings to correct pulse
+ * @vue-data {String} openDelayModal - Tracks which modal should open based on if it is a repeat or delay
+ * @vue-data {String} currentDelayInput - Saved input for a delay block that changes depending on which delay block is opened for edit
  * @vue-data {Boolean} cloned - Determines if a placed tile in protocol order is new and needs a modal to open appear to set settings or just an order rearrangement of existing tiles
- * @vue-data {Int} new_cloned_idx - If tile placed in protocol order is new, this index allows settings to be saved to correct index in order
- * @vue-data {Boolean} modal_open_for_edit - Determines if existing modal inputs should appear in modal for a reedit or if it's a new delay block with blank settings
+ * @vue-data {Int} newClonedIdx - If tile placed in protocol order is new, this index allows settings to be saved to correct index in order
+ * @vue-data {Boolean} modalOpenForEdit - Determines if existing modal inputs should appear in modal for a reedit or if it's a new delay block with blank settings
  * @vue-data {Int} timeUnitsIdx - Index for selected unit in dropdown, used to reset dropdown when editor is reset
- * @vue-data {Boolean} disable_dropdown - Determines if the dropdown is disabled or not dependent on the stop stim setting selected
- * @vue-event {Event} check_type - Checks if tile placed is new or existing and opens corresponding modal for settings or commits change in protocol order to state
- * @vue-event {Event} on_modal_close - Handles settings when modal is closed dependent on which button the user selects and which modal type is open, commits change to state
- * @vue-event {Event} open_modal_for_edit - Assigns selected pulse settings to modal for reedit and saves current selected index
- * @vue-event {Event} handle_timeUnit - Tracks which unit of time has been selected from dropdown in settings panel
+ * @vue-data {Boolean} disableDropdown - Determines if the dropdown is disabled or not dependent on the stop stim setting selected
+ * @vue-event {Event} checkType - Checks if tile placed is new or existing and opens corresponding modal for settings or commits change in protocol order to state
+ * @vue-event {Event} onModalClose - Handles settings when modal is closed dependent on which button the user selects and which modal type is open, commits change to state
+ * @vue-event {Event} openModalForEdit - Assigns selected pulse settings to modal for reedit and saves current selected index
+ * @vue-event {Event} handleTimeUnit - Tracks which unit of time has been selected from dropdown in settings panel
  * @vue-event {Event} clone - Creates blank properties for new pulse placed in protocol order so that each pulse has unique properties and is not affected by one another, a side effect from VueDraggable
  */
 
@@ -122,27 +118,27 @@ export default {
   },
   props: {
     stimulationType: { type: String, default: "Voltage" },
-    disable_edits: { type: Boolean, default: false },
+    disableEdits: { type: Boolean, default: false },
   },
   data() {
     return {
-      icon_types: ["Monophasic", "Biphasic", "Delay"],
+      iconTypes: ["Monophasic", "Biphasic", "Delay"],
       timeUnitsArray: ["milliseconds", "seconds", "minutes", "hours"],
-      selected_pulse_settings: {},
-      protocol_order: [],
-      modal_type: null,
-      setting_type: "Current",
-      shift_click_img_idx: null,
-      open_delay_modal: false,
-      current_delay_input: null,
-      current_delay_unit: "milliseconds",
+      selectedPulseSettings: {},
+      protocolOrder: [],
+      modalType: null,
+      settingType: "Current",
+      shiftClickImgIdx: null,
+      openDelayModal: false,
+      currentDelayInput: null,
+      currentDelayUnit: "milliseconds",
       cloned: false,
-      new_cloned_idx: null,
-      modal_open_for_edit: false, // TODO Luci, clean up state management and constant names
+      newClonedIdx: null,
+      modalOpenForEdit: false, // TODO Luci, clean up state management and constant names
       timeUnitsIdx: 0,
-      disable_dropdown: false,
-      is_dragging: false,
-      selected_color: null,
+      disableDropdown: false,
+      isDragging: false,
+      selectedColor: null,
     };
   },
   computed: {
@@ -153,141 +149,141 @@ export default {
     }),
   },
   watch: {
-    is_dragging: function () {
+    isDragging: function () {
       // reset so old position/idx isn't highlighted once moved
       this.onPulseMouseleave();
     },
     detailedSubprotocols: function () {
-      this.protocol_order = JSON.parse(JSON.stringify(this.detailedSubprotocols));
+      this.protocolOrder = JSON.parse(JSON.stringify(this.detailedSubprotocols));
     },
     timeUnit: function () {
       this.timeUnitsIdx = this.timeUnitsArray.indexOf(this.timeUnit);
     },
     runUntilStopped: function () {
-      this.disable_dropdown = !this.runUntilStopped;
+      this.disableDropdown = !this.runUntilStopped;
     },
   },
   methods: {
     ...mapActions("stimulation", ["handleProtocolOrder", "onPulseMouseenter"]),
     ...mapMutations("stimulation", ["setTimeUnit", "onPulseMouseleave"]),
 
-    check_type(e) {
+    checkType(e) {
       if (e.added && this.cloned) {
         const { element, newIndex } = e.added;
-        this.new_cloned_idx = newIndex;
-        this.selected_pulse_settings = element.pulse_settings;
+        this.newClonedIdx = newIndex;
+        this.selectedPulseSettings = element.pulseSettings;
 
-        if (element.type === "Monophasic") this.modal_type = "Monophasic";
-        else if (element.type === "Biphasic") this.modal_type = "Biphasic";
-        else if (element.type === "Delay") this.open_delay_modal = true;
+        if (element.type === "Monophasic") this.modalType = "Monophasic";
+        else if (element.type === "Biphasic") this.modalType = "Biphasic";
+        else if (element.type === "Delay") this.openDelayModal = true;
       }
 
-      if ((e.added && !this.cloned) || e.moved || e.removed) this.handleProtocolOrder(this.protocol_order);
+      if ((e.added && !this.cloned) || e.moved || e.removed) this.handleProtocolOrder(this.protocolOrder);
       // reset
       this.cloned = false;
     },
-    on_modal_close(button, pulse_settings, selected_color) {
-      this.modal_type = null;
-      this.open_delay_modal = false;
-      this.modal_open_for_edit = false;
-      this.current_delay_input = null;
-      this.current_delay_unit = "milliseconds";
-      this.selected_color = null;
+    onModalClose(button, pulseSettings, selectedColor) {
+      this.modalType = null;
+      this.openDelayModal = false;
+      this.modalOpenForEdit = false;
+      this.currentDelayInput = null;
+      this.currentDelayUnit = "milliseconds";
+      this.selectedColor = null;
 
       switch (button) {
         case "Save":
-          if (this.new_cloned_idx !== null) {
-            const new_pulse = this.protocol_order[this.new_cloned_idx];
-            new_pulse.pulse_settings = pulse_settings;
-            new_pulse.color = selected_color;
-            Object.assign(this.protocol_order[this.new_cloned_idx], new_pulse);
+          if (this.newClonedIdx !== null) {
+            const newPulse = this.protocolOrder[this.newClonedIdx];
+            newPulse.pulseSettings = pulseSettings;
+            newPulse.color = selectedColor;
+            Object.assign(this.protocolOrder[this.newClonedIdx], newPulse);
           }
-          if (this.shift_click_img_idx !== null) {
-            const edited_pulse = this.protocol_order[this.shift_click_img_idx];
+          if (this.shiftClickImgIdx !== null) {
+            const editedPulse = this.protocolOrder[this.shiftClickImgIdx];
 
-            Object.assign(edited_pulse.pulse_settings, pulse_settings);
-            Object.assign(this.protocol_order[this.shift_click_img_idx], edited_pulse);
-            edited_pulse.color = selected_color;
+            Object.assign(editedPulse.pulseSettings, pulseSettings);
+            Object.assign(this.protocolOrder[this.shiftClickImgIdx], editedPulse);
+            editedPulse.color = selectedColor;
           }
           break;
         case "Duplicate":
           // eslint-disable-next-line no-case-declarations
-          const duplicate_pulse = // needs to not edit original pulse, edited_pulse does
-            this.shift_click_img_idx !== null
-              ? JSON.parse(JSON.stringify(this.protocol_order[this.shift_click_img_idx]))
+          const duplicatePulse = // needs to not edit original pulse, editedPulse does
+            this.shiftClickImgIdx !== null
+              ? JSON.parse(JSON.stringify(this.protocolOrder[this.shiftClickImgIdx]))
               : null;
 
           // change color and insert after original pulse
           // eslint-disable-next-line no-case-declarations
-          const previous_hue = this.get_pulse_hue(this.shift_click_img_idx);
+          const previousHue = this.getPulseHue(this.shiftClickImgIdx);
           // eslint-disable-next-line no-case-declarations
-          const next_hue =
-            this.shift_click_img_idx < this.protocol_order.length - 1
-              ? this.get_pulse_hue(this.shift_click_img_idx + 1)
+          const nextHue =
+            this.shiftClickImgIdx < this.protocolOrder.length - 1
+              ? this.getPulseHue(this.shiftClickImgIdx + 1)
               : undefined;
 
-          duplicate_pulse.color = generate_random_color(true, previous_hue, next_hue);
-          this.protocol_order.splice(this.shift_click_img_idx + 1, 0, duplicate_pulse);
+          duplicatePulse.color = generateRandomColor(true, previousHue, nextHue);
+          this.protocolOrder.splice(this.shiftClickImgIdx + 1, 0, duplicatePulse);
           break;
         case "Delete":
-          this.protocol_order.splice(this.shift_click_img_idx, 1);
+          this.protocolOrder.splice(this.shiftClickImgIdx, 1);
           break;
         case "Cancel":
-          if (this.new_cloned_idx !== null) {
-            this.protocol_order.splice(this.new_cloned_idx, 1);
+          if (this.newClonedIdx !== null) {
+            this.protocolOrder.splice(this.newClonedIdx, 1);
           }
       }
-      this.new_cloned_idx = null;
-      this.shift_click_img_idx = null;
-      this.handleProtocolOrder(this.protocol_order);
+      this.newClonedIdx = null;
+      this.shiftClickImgIdx = null;
+      this.handleProtocolOrder(this.protocolOrder);
     },
-    open_modal_for_edit(type, idx) {
-      const pulse = this.protocol_order[idx];
-      this.shift_click_img_idx = idx;
-      this.modal_open_for_edit = true;
-      this.selected_pulse_settings = pulse.pulse_settings;
-      this.selected_color = pulse.color;
+    openModalForEdit(type, idx) {
+      const pulse = this.protocolOrder[idx];
+      this.shiftClickImgIdx = idx;
+      this.modalOpenForEdit = true;
+      this.selectedPulseSettings = pulse.pulseSettings;
+      this.selectedColor = pulse.color;
 
       if (type === "Monophasic") {
-        this.modal_type = "Monophasic";
+        this.modalType = "Monophasic";
       } else if (type === "Biphasic") {
-        this.modal_type = "Biphasic";
+        this.modalType = "Biphasic";
       } else if (type === "Delay") {
-        const { duration, unit } = this.selected_pulse_settings;
-        this.current_delay_input = duration.toString();
-        this.current_delay_unit = unit.toString();
-        this.open_delay_modal = true;
+        const { duration, unit } = this.selectedPulseSettings;
+        this.currentDelayInput = duration.toString();
+        this.currentDelayUnit = unit.toString();
+        this.openDelayModal = true;
       }
     },
-    on_pulse_enter(idx) {
+    onPulseEnter(idx) {
       // if tile is being dragged, the pulse underneath the dragged tile will highlight even though the user is dragging a different tile
-      if (!this.is_dragging) this.onPulseMouseenter(idx);
+      if (!this.isDragging) this.onPulseMouseenter(idx);
     },
-    on_pulse_leave() {
+    onPulseLeave() {
       this.onPulseMouseleave();
     },
-    handle_timeUnit(idx) {
+    handleTimeUnit(idx) {
       const unit = this.timeUnitsArray[idx];
       this.timeUnitsIdx = idx;
       this.setTimeUnit(unit);
-      this.handleProtocolOrder(this.protocol_order);
+      this.handleProtocolOrder(this.protocolOrder);
     },
-    get_pulse_hue(idx) {
+    getPulseHue(idx) {
       // duplicated pulses are not always in last index
-      const pulse_idx = idx ? idx : this.protocol_order.length - 1;
+      const pulseIdx = idx ? idx : this.protocolOrder.length - 1;
 
-      const last_pulse_hsla = this.protocol_order[pulse_idx].color;
-      return last_pulse_hsla.split("(")[1].split(",")[0];
+      const lastPulseHsla = this.protocolOrder[pulseIdx].color;
+      return lastPulseHsla.split("(")[1].split(",")[0];
     },
     clone(type) {
       this.cloned = true;
 
-      const random_color =
-        this.protocol_order.length > 0
-          ? generate_random_color(true, this.get_pulse_hue())
-          : generate_random_color(true);
+      const randomColor =
+        this.protocolOrder.length > 0
+          ? generateRandomColor(true, this.getPulseHue())
+          : generateRandomColor(true);
 
-      this.selected_color = random_color;
+      this.selectedColor = randomColor;
 
       let typeSpecificSettings = {};
       if (type === "Delay") typeSpecificSettings = { duration: "", unit: "milliseconds" };
@@ -295,11 +291,11 @@ export default {
       else
         typeSpecificSettings = {
           frequency: "",
-          total_active_duration: {
+          totalActiveDuration: {
             duration: "",
             unit: "milliseconds",
           },
-          num_cycles: 0,
+          numCycles: 0,
           postphaseInterval: "",
           phaseOneDuration: "",
           phaseOneCharge: "",
@@ -315,8 +311,8 @@ export default {
 
       return {
         type,
-        color: `${random_color}`,
-        pulse_settings: typeSpecificSettings,
+        color: `${randomColor}`,
+        pulseSettings: typeSpecificSettings,
       };
     },
   },

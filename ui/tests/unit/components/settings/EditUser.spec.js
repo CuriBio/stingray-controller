@@ -9,7 +9,7 @@ import { createLocalVue } from "@vue/test-utils";
 import BootstrapVue from "bootstrap-vue";
 import "bootstrap/dist/css/bootstrap.min.css";
 import uuid from "@tofandel/uuid-base62";
-import { TextValidation } from "@/js_utils/text_validation.js";
+import { TextValidation } from "@/js-utils/TextValidation.js";
 let wrapper = null;
 
 const localVue = createLocalVue();
@@ -131,7 +131,7 @@ describe("EditUser", () => {
       ["", "user_name", "username", "validate_user_account_input"],
     ])(
       "When the text %s (%s) is entered into the field found with the selector ID %s, Then the correct text validation function (%s) is called and the error message from the validation function is rendered below the input in the DOM",
-      async (entry, text_id, selector_id_suffix, text_validation_type) => {
+      async (entry, text_id, selector_id_suffix, TextValidation_type) => {
         if (selector_id_suffix === "customer-id") {
           editcustomer.customer_id = entry;
         }
@@ -151,7 +151,7 @@ describe("EditUser", () => {
           localVue,
         });
 
-        const spied_text_validator = jest.spyOn(TextValidation.prototype, text_validation_type);
+        const spied_text_validator = jest.spyOn(TextValidation.prototype, TextValidation_type);
 
         const target_input_field = wrapper.find("#input-widget-field-" + selector_id_suffix);
 

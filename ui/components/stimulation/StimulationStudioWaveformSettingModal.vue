@@ -2,19 +2,16 @@
   <div
     id="cmpD2f15f130a7c848b6dfa50e77a7bd35ad"
     class="div__stimulationstudio-current-settings-background"
-    :style="pulse_type === 'Monophasic' ? 'height: 550px; margin-top: 100px;' : 'height: 840px;'"
+    :style="pulseType === 'Monophasic' ? 'height: 550px; margin-top: 100px;' : 'height: 840px;'"
   >
     <span id="cmpD5b2290fff52de686574ddc4481707a03" class="span__stimulationstudio-current-settings-title"
-      >{{ pulse_type }}&nbsp;<wbr />Pulse&nbsp;<wbr />Details
+      >{{ pulseType }}&nbsp;<wbr />Pulse&nbsp;<wbr />Details
     </span>
-    <div class="div__color-block" :style="color_to_display" />
+    <div class="div__color-block" :style="colorToDisplay" />
     <div class="div__color-label" @click="$bvModal.show('change-color-modal')">Change color</div>
     <span>
       <b-modal id="change-color-modal" size="sm" hide-footer hide-header hide-header-close :static="true">
-        <StimulationStudioColorModal
-          :current_color="selected_color"
-          @change_pulse_color="change_pulse_color"
-        />
+        <StimulationStudioColorModal :currentColor="selectedColor" @change-pulse-color="changePulseColor" />
       </b-modal>
     </span>
     <canvas id="cmpD1bd9abe7f57064ecc21010fe87aa8e0a" :style="'top: 59px; width: 900px'" />
@@ -32,14 +29,14 @@
       class="div__stimulationstudio-input-container"
       :style="'top: 96px;'"
     >
-      <span id="cmpD830cdea88a8752e1fdd278dd0215b99d_txt" class="span__stimulationstudio-input">
+      <span id="cmpD830cdea88a8752e1fdd278dd0215b99dTxt" class="span__stimulationstudio-input">
         <InputWidget
           :placeholder="'10'"
-          :dom_id_suffix="'duration'"
-          :invalid_text="err_msgs.phaseOneDuration"
-          :input_width="142"
-          :initial_value="selected_pulse_settings.phaseOneDuration.toString()"
-          @update:value="check_validity($event, 'phaseOneDuration')"
+          :domIdSuffix="'duration'"
+          :invalidText="errMsgs.phaseOneDuration"
+          :inputWidth="142"
+          :initialValue="selectedPulseSettings.phaseOneDuration.toString()"
+          @update:value="checkValidity($event, 'phaseOneDuration')"
         />
         >
       </span>
@@ -61,14 +58,14 @@
       class="div__stimulationstudio-input-container"
       :style="'top: 166px;'"
     >
-      <span id="cmpDf6ba8560cb2fbd91276a29c46743e99a_txt" class="span__stimulationstudio-input">
+      <span id="cmpDf6ba8560cb2fbd91276a29c46743e99aTxt" class="span__stimulationstudio-input">
         <InputWidget
           :placeholder="'100'"
-          :dom_id_suffix="'charge'"
-          :invalid_text="err_msgs.phaseOneCharge"
-          :input_width="142"
-          :initial_value="selected_pulse_settings.phaseOneCharge.toString()"
-          @update:value="check_validity($event, 'phaseOneCharge')"
+          :domIdSuffix="'charge'"
+          :invalidText="errMsgs.phaseOneCharge"
+          :inputWidth="142"
+          :initialValue="selectedPulseSettings.phaseOneCharge.toString()"
+          @update:value="checkValidity($event, 'phaseOneCharge')"
         />
       </span>
     </div>
@@ -76,9 +73,9 @@
       id="cmpD7695902a49c6eaeb81d267812f0a90cd"
       class="span__stimulationstudio-current-settings-label-right"
       :style="'top: 179.5px;'"
-      >{{ stim_unit }}</span
+      >{{ stimUnit }}</span
     >
-    <div v-if="pulse_type === 'Biphasic'">
+    <div v-if="pulseType === 'Biphasic'">
       <canvas id="cmpDefb479b0caa166978ebed24ab8c44baf" :style="'top: 246px;'" />
       <span
         id="cmpD1258ad074a6b3eb7b8a869173413256d"
@@ -91,14 +88,14 @@
         class="div__stimulationstudio-input-container"
         :style="'top: 266px;'"
       >
-        <span id="cmpD948f417edcd29d68f5801d54232d9431_txt" class="span__stimulationstudio-input">
+        <span id="cmpD948f417edcd29d68f5801d54232d9431Txt" class="span__stimulationstudio-input">
           <InputWidget
             :placeholder="'10'"
-            :dom_id_suffix="'interphase'"
-            :invalid_text="err_msgs.interphaseInterval"
-            :input_width="142"
-            :initial_value="selected_pulse_settings.interphaseInterval.toString()"
-            @update:value="check_validity($event, 'interphaseInterval')"
+            :domIdSuffix="'interphase'"
+            :invalidText="errMsgs.interphaseInterval"
+            :inputWidth="142"
+            :initialValue="selectedPulseSettings.interphaseInterval.toString()"
+            @update:value="checkValidity($event, 'interphaseInterval')"
           />
         </span>
       </div>
@@ -124,14 +121,14 @@
         class="div__stimulationstudio-input-container"
         :style="'top: 383px;'"
       >
-        <span id="cmpD818347e832e1274793ffe2c57a5d0a9c_txt" class="span__stimulationstudio-input">
+        <span id="cmpD818347e832e1274793ffe2c57a5d0a9cTxt" class="span__stimulationstudio-input">
           <InputWidget
             :placeholder="'10'"
-            :dom_id_suffix="'durationtwo'"
-            :invalid_text="err_msgs.phaseTwoDuration"
-            :input_width="142"
-            :initial_value="selected_pulse_settings.phaseTwoDuration.toString()"
-            @update:value="check_validity($event, 'phaseTwoDuration')"
+            :domIdSuffix="'durationtwo'"
+            :invalidText="errMsgs.phaseTwoDuration"
+            :inputWidth="142"
+            :initialValue="selectedPulseSettings.phaseTwoDuration.toString()"
+            @update:value="checkValidity($event, 'phaseTwoDuration')"
           />
         </span>
       </div>
@@ -152,14 +149,14 @@
         class="div__stimulationstudio-input-container"
         :style="'top: 453px;'"
       >
-        <span id="cmpD8ecdf9c4a418509adff741b988ad0676_txt" class="span__stimulationstudio-input">
+        <span id="cmpD8ecdf9c4a418509adff741b988ad0676Txt" class="span__stimulationstudio-input">
           <InputWidget
             :placeholder="'-100'"
-            :dom_id_suffix="'chargetwo'"
-            :invalid_text="err_msgs.phaseTwoCharge"
-            :input_width="142"
-            :initial_value="selected_pulse_settings.phaseTwoCharge.toString()"
-            @update:value="check_validity($event, 'phaseTwoCharge')"
+            :domIdSuffix="'chargetwo'"
+            :invalidText="errMsgs.phaseTwoCharge"
+            :inputWidth="142"
+            :initialValue="selectedPulseSettings.phaseTwoCharge.toString()"
+            @update:value="checkValidity($event, 'phaseTwoCharge')"
           />
         </span>
       </div>
@@ -167,105 +164,105 @@
         id="cmpDbc629158eb67226e3134f41509394ec9"
         class="span__stimulationstudio-current-settings-label-right"
         :style="'top: 466.5px;'"
-        >{{ stim_unit }}</span
+        >{{ stimUnit }}</span
       >
     </div>
-    <canvas :style="pulse_type === 'Monophasic' ? 'top: 240px;' : 'top: 533px;'" />
+    <canvas :style="pulseType === 'Monophasic' ? 'top: 240px;' : 'top: 533px;'" />
     <span
       class="span__stimulationstudio-current-settings-label-left"
-      :style="pulse_type === 'Monophasic' ? 'top: 267.5px;' : 'top: 553.5px;'"
+      :style="pulseType === 'Monophasic' ? 'top: 267.5px;' : 'top: 553.5px;'"
       >Pulse Frequency</span
     >
     <div
       class="div__stimulationstudio-input-container"
-      :style="pulse_type === 'Monophasic' ? 'top: 253px;' : 'top: 540px;'"
+      :style="pulseType === 'Monophasic' ? 'top: 253px;' : 'top: 540px;'"
     >
       <span class="span__stimulationstudio-input">
         <InputWidget
           :placeholder="'5'"
-          :dom_id_suffix="'pulse-frequency'"
-          :invalid_text="err_msgs.pulse_frequency"
-          :input_width="142"
-          :initial_value="input_pulse_frequency.toString()"
-          @update:value="update_freq($event)"
+          :domIdSuffix="'pulse-frequency'"
+          :invalidText="errMsgs.pulseFrequency"
+          :inputWidth="142"
+          :initialValue="inputPulseFrequency.toString()"
+          @update:value="updateFreq($event)"
         />
       </span>
     </div>
     <span
       class="span__stimulationstudio-current-settings-label-right"
-      :style="pulse_type === 'Monophasic' ? 'top: 267.5px;' : 'top: 553.5px;'"
+      :style="pulseType === 'Monophasic' ? 'top: 267.5px;' : 'top: 553.5px;'"
       >Hz</span
     >
     <span
       class="span__stimulationstudio-current-settings-label-left"
-      :style="pulse_type === 'Monophasic' ? 'top: 337.5px;' : 'top: 623.5px;'"
+      :style="pulseType === 'Monophasic' ? 'top: 337.5px;' : 'top: 623.5px;'"
       >Active Duration</span
     >
     <div
       class="div__stimulationstudio-input-container"
-      :style="pulse_type === 'Monophasic' ? 'top: 323px;' : 'top: 610px;'"
+      :style="pulseType === 'Monophasic' ? 'top: 323px;' : 'top: 610px;'"
     >
       <span class="span__stimulationstudio-input">
         <InputWidget
-          :placeholder="use_num_cycles ? '-' : '1000'"
-          :dom_id_suffix="'total-active-duration'"
-          :disabled="use_num_cycles"
-          :invalid_text="err_msgs.total_active_duration"
-          :input_width="142"
-          :initial_value="calculated_active_dur.toString()"
-          @update:value="update_active_duration($event)"
+          :placeholder="useNumCycles ? '-' : '1000'"
+          :domIdSuffix="'total-active-duration'"
+          :disabled="useNumCycles"
+          :invalidText="errMsgs.totalActiveDuration"
+          :inputWidth="142"
+          :initialValue="calculatedActiveDur.toString()"
+          @update:value="updateActiveDuration($event)"
         />
       </span>
     </div>
     <span
       class="span__stimulationstudio-current-settings-label-right"
-      :style="pulse_type === 'Monophasic' ? 'top: 337.5px;' : 'top:  623.5px'"
+      :style="pulseType === 'Monophasic' ? 'top: 337.5px;' : 'top:  623.5px'"
     >
       <SmallDropDown
         :inputHeight="25"
         :inputWidth="100"
         :optionsText="timeUnits"
-        :optionsIdx="active_duration_idx"
+        :optionsIdx="activeDurationIdx"
         :domIdSuffix="'timeUnits'"
-        @selection-changed="handle_total_duration_unit_change"
+        @selection-changed="handleTotalDurationUnitChange"
       />
     </span>
     <div
       class="div__stimulationstudio-checkbox-container"
-      :style="pulse_type === 'Monophasic' ? 'top: 400px;' : 'top:  684px'"
+      :style="pulseType === 'Monophasic' ? 'top: 400px;' : 'top:  684px'"
     >
       <CheckBoxWidget
-        :checkbox_options="checkbox_options"
-        :reset="checkbox_reset"
-        :initial_selected="checkbox_state"
-        @checkbox-selected="set_use_num_cycles"
+        :checkboxOptions="checkboxOptions"
+        :reset="checkboxReset"
+        :initialSelected="checkboxState"
+        @checkbox-selected="setUseNumCycles"
       />
       <span>Use Num Cycles instead of Active Duration</span>
     </div>
     <span
       class="span__stimulationstudio-current-settings-label-left"
-      :style="pulse_type === 'Monophasic' ? 'top: 446px;' : 'top: 730px;'"
+      :style="pulseType === 'Monophasic' ? 'top: 446px;' : 'top: 730px;'"
       >Num Cycles</span
     >
     <div
       class="div__stimulationstudio-input-container"
-      :style="pulse_type === 'Monophasic' ? 'top: 430px;' : 'top: 714px;'"
+      :style="pulseType === 'Monophasic' ? 'top: 430px;' : 'top: 714px;'"
     >
       <span class="span__stimulationstudio-input">
         <InputWidget
-          :placeholder="use_num_cycles ? '100' : '-'"
-          :dom_id_suffix="'num-cycles'"
-          :disabled="!use_num_cycles"
-          :invalid_text="err_msgs.num_cycles"
-          :input_width="142"
-          :initial_value="calculated_num_cycles.toString()"
-          @update:value="update_num_cycles($event)"
+          :placeholder="useNumCycles ? '100' : '-'"
+          :domIdSuffix="'num-cycles'"
+          :disabled="!useNumCycles"
+          :invalidText="errMsgs.numCycles"
+          :inputWidth="142"
+          :initialValue="calculatedNumCycles.toString()"
+          @update:value="updateNumCycles($event)"
         />
       </span>
     </div>
     <canvas
       :class="
-        pulse_type === 'Monophasic'
+        pulseType === 'Monophasic'
           ? 'canvas__monophasic-vertical-divider'
           : 'canvas__biphasic-vertical-divider'
       "
@@ -273,29 +270,29 @@
     <div class="div__waveform-preview-title">Waveform Preview</div>
     <div class="div__pulse-diagram-container">
       <img
-        :src="require(`@/assets/img/${pulse_type}-diagram-${stimulationType}.png`)"
-        :class="pulse_type === 'Monophasic' ? 'img__mononphasic-diagram' : 'None'"
+        :src="require(`@/assets/img/${pulseType}-diagram-${stimulationType}.png`)"
+        :class="pulseType === 'Monophasic' ? 'img__mononphasic-diagram' : 'None'"
       />
     </div>
     <div
       class="div__waveform-diagram-descriptors"
-      :class="pulse_type === 'Monophasic' ? 'div__mononphasic-diagram-descriptors' : 'None'"
+      :class="pulseType === 'Monophasic' ? 'div__mononphasic-diagram-descriptors' : 'None'"
     >
       <span :style="'font-size: 19px; padding-bottom:15px;'">Waveform Key</span>
-      <ol id="ul__waveform_list_items" :style="'list-style-type: none; padding: 0px;'">
-        <li v-for="key in diagram_keys[pulse_type]" :key="key">{{ key }}</li>
+      <ol id="ul__waveformListItems" :style="'list-style-type: none; padding: 0px;'">
+        <li v-for="key in diagramKeys[pulseType]" :key="key">{{ key }}</li>
       </ol>
     </div>
-    <div class="button-container" :style="pulse_type === 'Monophasic' ? 'top: 543px;' : 'top: 790px;'">
+    <div class="button-container" :style="pulseType === 'Monophasic' ? 'top: 543px;' : 'top: 790px;'">
       <ButtonWidget
         :id="'button-widget-id'"
-        :button_widget_width="950"
-        :button_widget_height="50"
-        :button_widget_top="0"
-        :button_widget_left="0"
-        :button_names="button_labels"
-        :hover_color="button_hover_colors"
-        :is_enabled="is_enabled_array"
+        :buttonWidgetWidth="950"
+        :buttonWidgetHeight="50"
+        :buttonWidgetTop="0"
+        :buttonWidgetLeft="0"
+        :buttonNames="buttonLabels"
+        :hoverColor="buttonHoverColors"
+        :isEnabled="isEnabledArray"
         @btn-click="close"
       />
     </div>
@@ -303,11 +300,11 @@
 </template>
 <script>
 import Vue from "vue";
-import SmallDropDown from "@/components/basic_widgets/SmallDropDown.vue";
-import InputWidget from "@/components/basic_widgets/InputWidget.vue";
-import CheckBoxWidget from "@/components/basic_widgets/CheckBoxWidget.vue";
+import SmallDropDown from "@/components/basic-widgets/SmallDropDown.vue";
+import InputWidget from "@/components/basic-widgets/InputWidget.vue";
+import CheckBoxWidget from "@/components/basic-widgets/CheckBoxWidget.vue";
 import StimulationStudioColorModal from "@/components/stimulation/StimulationStudioColorModal.vue";
-import ButtonWidget from "@/components/basic_widgets/ButtonWidget.vue";
+import ButtonWidget from "@/components/basic-widgets/ButtonWidget.vue";
 import { library } from "@fortawesome/fontawesome-svg-core";
 import { faBalanceScale, faQuestionCircle } from "@fortawesome/free-solid-svg-icons";
 import { VBPopover } from "bootstrap-vue";
@@ -323,32 +320,32 @@ library.add(faBalanceScale, faQuestionCircle);
 
 /**
  * @vue-props {String} stimulationType - Current type of stimulation
- * @vue-props {String} pulse_type - Type of pulse for modal
- * @vue-props {Object} selected_pulse_settings - Settings passed to modal if it's selected to edit
- * @vue-props {Object} selected_pulse_settings - Stim block settings passed to modal if it's selected to edit
- * @vue-props {Object} open_modal_for_edit - Boolean to determine if modal is open with existing settings
- * @vue-data {String} popover_message - Popover for disabled input field on hover of question mark
- * @vue-data {Object} pulse_settings - Model for new inputs to be assigned
- * @vue-data {Object} pulse_settings - Model for new inputs to be assigned
- * @vue-data {Array} is_enabled_array - Array of which buttons should be disabled at base of modal
- * @vue-data {Object} invalid_err_msg - Object containing all error messages for validation checks of inputs
- * @vue-data {Object} err_msgs - Object containing all initial error messages for inputs
- * @vue-data {Boolean} all_valid - True if all inputs pass the validation check and allows Save button to become enabled
+ * @vue-props {String} pulseType - Type of pulse for modal
+ * @vue-props {Object} selectedPulseSettings - Settings passed to modal if it's selected to edit
+ * @vue-props {Object} selectedPulseSettings - Stim block settings passed to modal if it's selected to edit
+ * @vue-props {Object} openModalForEdit - Boolean to determine if modal is open with existing settings
+ * @vue-data {String} popoverMessage - Popover for disabled input field on hover of question mark
+ * @vue-data {Object} pulseSettings - Model for new inputs to be assigned
+ * @vue-data {Object} pulseSettings - Model for new inputs to be assigned
+ * @vue-data {Array} isEnabledArray - Array of which buttons should be disabled at base of modal
+ * @vue-data {Object} invalidErrMsg - Object containing all error messages for validation checks of inputs
+ * @vue-data {Object} errMsgs - Object containing all initial error messages for inputs
+ * @vue-data {Boolean} allValid - True if all inputs pass the validation check and allows Save button to become enabled
  * @vue-data {Object} timeUnits - Contains option for dropdown components
- * @vue-data {Integer} delay_interval_idx - Used to input current delay interval setting to dropdown when open for edit
- * @vue-data {Integer} active_duration_idx - Used to input current active duration setting to dropdown when open for edit
- * @vue-computed {String} check_max_type - Computes last label for disabled input field
- * @vue-computed {Array} button_labels - Array of button labels for modal
- * @vue-computed {Array} hovered_button_colors - Array of colors that the text will be when a button is hovered over
+ * @vue-data {Integer} delayIntervalIdx - Used to input current delay interval setting to dropdown when open for edit
+ * @vue-data {Integer} activeDurationIdx - Used to input current active duration setting to dropdown when open for edit
+ * @vue-computed {String} checkMaxType - Computes last label for disabled input field
+ * @vue-computed {Array} buttonLabels - Array of button labels for modal
+ * @vue-computed {Array} hoveredButtonColors - Array of colors that the text will be when a button is hovered over
  * @vue-method {event} close - emits close of modal and data to parent component
- * @vue-method {event} check_validity - calls appropriate validation checks based on changes to inputs
- * @vue-method {event} handle_all_valid - checks if all inputs are valid numbers only and not empty
- * @vue-method {event} check_pulse_duration - checks if the pulse durations are all positive integers and less than 50ms
- * @vue-method {event} check_active_duration - checks if total duration is greater than entire pulse duration and a positive integer
- * @vue-method {event} check_delay_interval - checks if delay interval is a positive integer
- * @vue-method {event} check_charge_validity - checks if charge is greater than or less than set range for voltage(1200) and current(100)
- * @vue-method {event} handle_total_duration_unit_change - handles change to unit dropdown for total active duration input
- * @vue-method {event} handle_delay_unit_change - handles change to unit dropdown for delay interval input
+ * @vue-method {event} checkValidity - calls appropriate validation checks based on changes to inputs
+ * @vue-method {event} handleAllValid - checks if all inputs are valid numbers only and not empty
+ * @vue-method {event} checkPulseDuration - checks if the pulse durations are all positive integers and less than 50ms
+ * @vue-method {event} checkActiveDuration - checks if total duration is greater than entire pulse duration and a positive integer
+ * @vue-method {event} checkDelayInterval - checks if delay interval is a positive integer
+ * @vue-method {event} checkChargeValidity - checks if charge is greater than or less than set range for voltage(1200) and current(100)
+ * @vue-method {event} handleTotalDurationUnitChange - handles change to unit dropdown for total active duration input
+ * @vue-method {event} handleDelayUnitChange - handles change to unit dropdown for delay interval input
  */
 
 export default {
@@ -362,50 +359,50 @@ export default {
   },
   props: {
     stimulationType: { type: String, default: "Current" },
-    pulse_type: { type: String, default: "Biphasic" },
-    modal_open_for_edit: { type: Boolean, default: false },
-    selected_pulse_settings: {
+    pulseType: { type: String, default: "Biphasic" },
+    modalOpenForEdit: { type: Boolean, default: false },
+    selectedPulseSettings: {
       type: Object,
       required: true,
     },
-    current_color: {
+    currentColor: {
       type: String,
       default: null,
     },
   },
   data() {
     return {
-      popover_message: "Not Editable: This data is displayed for informational purposes only.",
-      pulse_settings: {},
-      invalid_err_msg: {
-        num_err: "Must be a number",
-        min_num_err: "Must be a positive number",
+      popoverMessage: "Not Editable: This data is displayed for informational purposes only.",
+      pulseSettings: {},
+      invalidErrMsg: {
+        numErr: "Must be a number",
+        minNumErr: "Must be a positive number",
         required: "Required",
-        max_pulse_duration: "Duration must be <= 50ms",
-        min_active_duration: "Duration must be >= 100ms",
+        maxPulseDuration: "Duration must be <= 50ms",
+        minActiveDuration: "Duration must be >= 100ms",
         valid: "",
-        max_current: "Must be within +/- 100",
-        max_voltage: "Must be within +/- 1200",
+        maxCurrent: "Must be within +/- 100",
+        maxVoltage: "Must be within +/- 1200",
         frequency: "Must be a non-zero value <= 100",
-        num_cycles: "Must be a whole number > 0",
+        numCycles: "Must be a whole number > 0",
       },
-      err_msgs: {
+      errMsgs: {
         phaseOneDuration: "",
         phaseOneCharge: "",
         interphaseInterval: "",
         phaseTwoDuration: "",
         phaseTwoCharge: "",
-        pulse_frequency: "",
-        total_active_duration: "",
-        num_cycles: "",
+        pulseFrequency: "",
+        totalActiveDuration: "",
+        numCycles: "",
       },
       timeUnits: ["milliseconds", "seconds", "minutes", "hours"],
-      all_valid: false,
-      is_enabled_array: [false, true],
-      active_duration_idx: 0,
-      input_pulse_frequency: "",
-      max_pulse_duration_for_freq: 50,
-      diagram_keys: {
+      allValid: false,
+      isEnabledArray: [false, true],
+      activeDurationIdx: 0,
+      inputPulseFrequency: "",
+      maxPulseDurationForFreq: 50,
+      diagramKeys: {
         Monophasic: ["A. Phase Duration", `B. Phase ${this.stimulationType}`, "C. Total Active Duration"],
         Biphasic: [
           "A. Phase 1 Duration",
@@ -416,301 +413,296 @@ export default {
           "F. Total Active Duration",
         ],
       },
-      calculated_active_dur: "",
-      calculated_num_cycles: "",
-      num_cycles: "",
-      use_num_cycles: false,
-      checkbox_options: [{ text: "", value: "use_num_cycles" }],
-      checkbox_reset: false,
-      checkbox_state: false,
-      selected_color: this.current_color,
+      calculatedActiveDur: "",
+      calculatedNumCycles: "",
+      numCycles: "",
+      useNumCycles: false,
+      checkboxOptions: [{ text: "", value: "useNumCycles" }],
+      checkboxReset: false,
+      checkboxState: false,
+      selectedColor: this.currentColor,
     };
   },
   computed: {
-    total_pulse_duration: function () {
-      return this.pulse_type === "Monophasic"
-        ? +this.pulse_settings.phaseOneDuration
-        : +this.pulse_settings.phaseOneDuration +
-            +this.pulse_settings.phaseTwoDuration +
-            +this.pulse_settings.interphaseInterval;
+    totalPulseDuration: function () {
+      return this.pulseType === "Monophasic"
+        ? +this.pulseSettings.phaseOneDuration
+        : +this.pulseSettings.phaseOneDuration +
+            +this.pulseSettings.phaseTwoDuration +
+            +this.pulseSettings.interphaseInterval;
     },
-    calculated_delay: function () {
-      const total_delay = 1000 - this.input_pulse_frequency * this.total_pulse_duration;
-      return total_delay / this.input_pulse_frequency;
+    calculatedDelay: function () {
+      const totalDelay = 1000 - this.inputPulseFrequency * this.totalPulseDuration;
+      return totalDelay / this.inputPulseFrequency;
     },
-    stim_unit: function () {
+    stimUnit: function () {
       return this.stimulationType.includes("C") ? "mA" : "V";
     },
-    button_hover_colors: function () {
-      return this.modal_open_for_edit ? ["#19ac8a", "#19ac8a", "#bd4932", "#bd4932"] : ["#19ac8a", "#bd4932"];
+    buttonHoverColors: function () {
+      return this.modalOpenForEdit ? ["#19ac8a", "#19ac8a", "#bd4932", "#bd4932"] : ["#19ac8a", "#bd4932"];
     },
-    button_labels: function () {
-      return this.modal_open_for_edit ? ["Save", "Duplicate", "Delete", "Cancel"] : ["Save", "Cancel"];
+    buttonLabels: function () {
+      return this.modalOpenForEdit ? ["Save", "Duplicate", "Delete", "Cancel"] : ["Save", "Cancel"];
     },
-    color_to_display: function () {
-      return "background-color: " + this.selected_color;
+    colorToDisplay: function () {
+      return "background-color: " + this.selectedColor;
     },
   },
   watch: {
-    all_valid() {
-      this.set_is_enabled_array();
+    allValid() {
+      this.setIsEnabledArray();
     },
   },
   created() {
     // Need to copy these values so that the original values won't be edited in case the user cancels an edit
-    this.pulse_settings = JSON.parse(JSON.stringify(this.selected_pulse_settings));
+    this.pulseSettings = JSON.parse(JSON.stringify(this.selectedPulseSettings));
 
-    if (this.pulse_settings.frequency !== 0) this.input_pulse_frequency = this.pulse_settings.frequency;
+    if (this.pulseSettings.frequency !== 0) this.inputPulseFrequency = this.pulseSettings.frequency;
 
-    const { unit, duration } = this.pulse_settings.total_active_duration;
-    this.active_duration_idx = this.timeUnits.indexOf(unit);
+    const { unit, duration } = this.pulseSettings.totalActiveDuration;
+    this.activeDurationIdx = this.timeUnits.indexOf(unit);
 
-    // Tanner (9/27/22): Currently this modal will always load with use_num_cycles set to false, so need to set these specific values
-    this.calculated_active_dur = duration;
-    this.update_calculated_num_cycles();
-    this.num_cycles = this.calculated_num_cycles;
+    // Tanner (9/27/22): Currently this modal will always load with useNumCycles set to false, so need to set these specific values
+    this.calculatedActiveDur = duration;
+    this.updateCalculatedNumCycles();
+    this.numCycles = this.calculatedNumCycles;
 
-    for (const input in this.pulse_settings) {
-      if (this.pulse_settings !== {}) {
-        const value = this.pulse_settings[input];
-        this.check_validity(value, input);
+    for (const input in this.pulseSettings) {
+      if (this.pulseSettings !== {}) {
+        const value = this.pulseSettings[input];
+        this.checkValidity(value, input);
       }
     }
 
-    this.check_validity(this.input_pulse_frequency, "pulse_frequency");
-    this.check_validity(duration, "total_active_duration");
-    this.check_validity(this.num_cycles, "num_cycles");
-    this.set_is_enabled_array();
+    this.checkValidity(this.inputPulseFrequency, "pulseFrequency");
+    this.checkValidity(duration, "totalActiveDuration");
+    this.checkValidity(this.numCycles, "numCycles");
+    this.setIsEnabledArray();
   },
   methods: {
-    set_is_enabled_array() {
+    setIsEnabledArray() {
       // disabled duplicate and save button if not valid inputs
-      this.is_enabled_array = this.modal_open_for_edit
-        ? [this.all_valid, this.all_valid, true, true]
-        : [this.all_valid, true];
+      this.isEnabledArray = this.modalOpenForEdit
+        ? [this.allValid, this.allValid, true, true]
+        : [this.allValid, true];
     },
     close(idx) {
-      const button_label = this.button_labels[idx];
-      this.pulse_settings.postphaseInterval = this.calculated_delay;
-      this.pulse_settings.num_cycles = +this.num_cycles;
-      this.pulse_settings.frequency = this.input_pulse_frequency;
-      this.$emit("close", button_label, this.pulse_settings, this.selected_color);
+      const buttonLabel = this.buttonLabels[idx];
+      this.pulseSettings.postphaseInterval = this.calculatedDelay;
+      this.pulseSettings.numCycles = +this.numCycles;
+      this.pulseSettings.frequency = this.inputPulseFrequency;
+      this.$emit("close", buttonLabel, this.pulseSettings, this.selectedColor);
     },
-    update_freq(new_value) {
-      this.check_validity(new_value, "pulse_frequency");
-      this.update_current_calculated_value();
+    updateFreq(newValue) {
+      this.checkValidity(newValue, "pulseFrequency");
+      this.updateCurrentCalculatedValue();
     },
-    update_active_duration(new_value) {
-      this.check_validity(new_value, "total_active_duration");
-      if (!this.use_num_cycles) {
-        this.update_calculated_num_cycles();
+    updateActiveDuration(newValue) {
+      this.checkValidity(newValue, "totalActiveDuration");
+      if (!this.useNumCycles) {
+        this.updateCalculatedNumCycles();
       }
     },
-    update_num_cycles(new_value) {
-      this.check_validity(new_value, "num_cycles");
-      if (this.use_num_cycles) {
-        this.update_calculated_activate_dur();
+    updateNumCycles(newValue) {
+      this.checkValidity(newValue, "numCycles");
+      if (this.useNumCycles) {
+        this.updateCalculatedActivateDur();
       }
     },
-    update_calculated_activate_dur() {
-      const default_value = "-";
+    updateCalculatedActivateDur() {
+      const defaultValue = "-";
 
-      const is_num_cycles_missing = this.num_cycles === "";
-      const is_freq_missing = this.input_pulse_frequency === "";
+      const isNumCyclesMissing = this.numCycles === "";
+      const isFreqMissing = this.inputPulseFrequency === "";
 
-      let updated_val;
-      if (is_num_cycles_missing && is_freq_missing) {
+      let updatedVal;
+      if (isNumCyclesMissing && isFreqMissing) {
         // if no values have been entered, return empty string so that the placeholder value is used
-        updated_val = "";
-      } else if (is_num_cycles_missing || is_freq_missing) {
+        updatedVal = "";
+      } else if (isNumCyclesMissing || isFreqMissing) {
         // TODO could try checking the error messages here instead
         // if only one of the values needed to calculate the active dur has been entered, return "-"
-        updated_val = default_value;
+        updatedVal = defaultValue;
       } else {
-        const selected_unit = this.timeUnits[this.active_duration_idx];
+        const selectedUnit = this.timeUnits[this.activeDurationIdx];
 
-        const duration_in_secs = this.num_cycles / this.input_pulse_frequency;
-        const dur_in_selected_units = (duration_in_secs * 1000) / TIME_CONVERSION_TO_MILLIS[selected_unit];
+        const durationInSecs = this.numCycles / this.inputPulseFrequency;
+        const durInSelectedUnits = (durationInSecs * 1000) / TIME_CONVERSION_TO_MILLIS[selectedUnit];
 
-        updated_val = isFinite(dur_in_selected_units) ? dur_in_selected_units : default_value;
+        updatedVal = isFinite(durInSelectedUnits) ? durInSelectedUnits : defaultValue;
       }
 
-      this.calculated_active_dur = updated_val;
+      this.calculatedActiveDur = updatedVal;
     },
-    update_calculated_num_cycles() {
-      const default_value = "-";
+    updateCalculatedNumCycles() {
+      const defaultValue = "-";
 
-      const is_active_dur_missing =
-        !this.pulse_settings.total_active_duration ||
-        this.pulse_settings.total_active_duration.duration === "";
-      const is_freq_missing = this.input_pulse_frequency === "";
+      const isActiveDurMissing =
+        !this.pulseSettings.totalActiveDuration || this.pulseSettings.totalActiveDuration.duration === "";
+      const isFreqMissing = this.inputPulseFrequency === "";
 
-      let updated_val;
-      if (is_active_dur_missing && is_freq_missing) {
+      let updatedVal;
+      if (isActiveDurMissing && isFreqMissing) {
         // if no values have been entered, return empty string so that the placeholder value is used
-        updated_val = this.calculated_num_cycles = "";
-      } else if (is_active_dur_missing || is_freq_missing) {
+        updatedVal = this.calculatedNumCycles = "";
+      } else if (isActiveDurMissing || isFreqMissing) {
         // TODO could try checking the error messages here instead
         // if only one of the values needed to calculate the number of cycles has been entered, return "-"
-        updated_val = this.calculated_num_cycles = default_value;
+        updatedVal = this.calculatedNumCycles = defaultValue;
       } else {
-        const selected_unit = this.timeUnits[this.active_duration_idx];
-        const duration_in_secs =
-          this.pulse_settings.total_active_duration.duration *
-          (TIME_CONVERSION_TO_MILLIS[selected_unit] / 1000);
+        const selectedUnit = this.timeUnits[this.activeDurationIdx];
+        const durationInSecs =
+          this.pulseSettings.totalActiveDuration.duration * (TIME_CONVERSION_TO_MILLIS[selectedUnit] / 1000);
 
-        const num_cycles = duration_in_secs * this.input_pulse_frequency;
-        updated_val = isFinite(num_cycles) ? num_cycles : default_value;
+        const numCycles = durationInSecs * this.inputPulseFrequency;
+        updatedVal = isFinite(numCycles) ? numCycles : defaultValue;
       }
 
-      this.calculated_num_cycles = updated_val;
+      this.calculatedNumCycles = updatedVal;
     },
-    update_current_calculated_value() {
-      if (this.use_num_cycles) {
-        this.update_calculated_activate_dur();
+    updateCurrentCalculatedValue() {
+      if (this.useNumCycles) {
+        this.updateCalculatedActivateDur();
       } else {
-        this.update_calculated_num_cycles();
+        this.updateCalculatedNumCycles();
       }
     },
-    check_validity(value, label) {
-      if (label === "num_cycles") {
-        this.num_cycles = value;
-        this.check_num_cycles();
+    checkValidity(value, label) {
+      if (label === "numCycles") {
+        this.numCycles = value;
+        this.checkNumCycles();
       } else {
         if (label.includes("phase")) {
-          this.pulse_settings[label] = value;
+          this.pulseSettings[label] = value;
         } else if (label.includes("active")) {
-          this.pulse_settings.total_active_duration.duration = value;
+          this.pulseSettings.totalActiveDuration.duration = value;
         }
 
         if (label.includes("duration") || label.includes("interval")) {
-          this.check_pulse_duration_validity();
-          this.check_active_duration();
+          this.checkPulseDurationValidity();
+          this.checkActiveDuration();
         } else if (label.includes("charge")) {
-          this.check_charge_validity(value, label);
+          this.checkChargeValidity(value, label);
         } else if (label.includes("frequency")) {
-          this.input_pulse_frequency = value;
-          this.check_pulse_frequency();
+          this.inputPulseFrequency = value;
+          this.checkPulseFrequency();
         }
       }
-      this.handle_all_valid();
+      this.handleAllValid();
     },
-    check_pulse_duration_validity() {
-      this.check_pulse_duration("phaseOneDuration");
-      if (this.pulse_type === "Biphasic") {
-        this.check_pulse_duration("phaseTwoDuration");
-        this.check_pulse_duration("interphaseInterval");
+    checkPulseDurationValidity() {
+      this.checkPulseDuration("phaseOneDuration");
+      if (this.pulseType === "Biphasic") {
+        this.checkPulseDuration("phaseTwoDuration");
+        this.checkPulseDuration("interphaseInterval");
       }
     },
-    handle_all_valid() {
-      for (const msg of Object.values(this.err_msgs)) {
+    handleAllValid() {
+      for (const msg of Object.values(this.errMsgs)) {
         if (msg !== "") {
-          this.all_valid = false;
+          this.allValid = false;
           return;
         }
       }
-      this.all_valid = true;
+      this.allValid = true;
     },
-    check_pulse_duration(label) {
-      const value_str = this.pulse_settings[label];
-      const value = +value_str;
-      if (value_str === "") {
-        this.err_msgs[label] = this.invalid_err_msg.required;
+    checkPulseDuration(label) {
+      const valueStr = this.pulseSettings[label];
+      const value = +valueStr;
+      if (valueStr === "") {
+        this.errMsgs[label] = this.invalidErrMsg.required;
       } else if (isNaN(value) || value < 0) {
-        this.err_msgs[label] = this.invalid_err_msg.min_num_err;
-      } else if (this.total_pulse_duration > this.max_pulse_duration_for_freq) {
-        this.err_msgs[label] = this.invalid_err_msg.max_pulse_duration;
+        this.errMsgs[label] = this.invalidErrMsg.minNumErr;
+      } else if (this.totalPulseDuration > this.maxPulseDurationForFreq) {
+        this.errMsgs[label] = this.invalidErrMsg.maxPulseDuration;
       } else {
-        this.err_msgs[label] = this.invalid_err_msg.valid;
-        this.pulse_settings[label] = value;
+        this.errMsgs[label] = this.invalidErrMsg.valid;
+        this.pulseSettings[label] = value;
       }
     },
-    check_active_duration() {
-      const value_str = this.pulse_settings.total_active_duration.duration;
-      const value = +value_str;
-      const selected_unit = this.timeUnits[this.active_duration_idx];
-      const value_in_millis = value * TIME_CONVERSION_TO_MILLIS[selected_unit];
-      // if user continues with letter in one of the duration input fields, total_pulse_duration will be NaN, so change it to 0
-      const min_dur_allowed = Math.max(MIN_SUBPROTOCOL_DURATION_MS, this.total_pulse_duration || 0);
+    checkActiveDuration() {
+      const valueStr = this.pulseSettings.totalActiveDuration.duration;
+      const value = +valueStr;
+      const selectedUnit = this.timeUnits[this.activeDurationIdx];
+      const valueInMillis = value * TIME_CONVERSION_TO_MILLIS[selectedUnit];
+      // if user continues with letter in one of the duration input fields, totalPulseDuration will be NaN, so change it to 0
+      const minDurAllowed = Math.max(MIN_SUBPROTOCOL_DURATION_MS, this.totalPulseDuration || 0);
 
-      const label = "total_active_duration";
+      const label = "totalActiveDuration";
 
-      if (value_str === "") {
-        this.err_msgs[label] = this.invalid_err_msg.required;
+      if (valueStr === "") {
+        this.errMsgs[label] = this.invalidErrMsg.required;
       } else if (isNaN(value)) {
-        this.err_msgs[label] = "Invalid number";
-      } else if (value_in_millis < min_dur_allowed) {
-        this.err_msgs[label] = `Must be >= ${min_dur_allowed}ms`;
-      } else if (value_in_millis > MAX_SUBPROTOCOL_DURATION_MS) {
-        const max_in_hrs = MAX_SUBPROTOCOL_DURATION_MS / TIME_CONVERSION_TO_MILLIS.hours;
-        this.err_msgs[label] = `Must be <= ${max_in_hrs}hrs`;
+        this.errMsgs[label] = "Invalid number";
+      } else if (valueInMillis < minDurAllowed) {
+        this.errMsgs[label] = `Must be >= ${minDurAllowed}ms`;
+      } else if (valueInMillis > MAX_SUBPROTOCOL_DURATION_MS) {
+        const maxInHrs = MAX_SUBPROTOCOL_DURATION_MS / TIME_CONVERSION_TO_MILLIS.hours;
+        this.errMsgs[label] = `Must be <= ${maxInHrs}hrs`;
       } else {
-        this.err_msgs[label] = this.invalid_err_msg.valid;
-        this.pulse_settings[label].duration = value;
-        this.pulse_settings[label].unit = this.timeUnits[this.active_duration_idx];
+        this.errMsgs[label] = this.invalidErrMsg.valid;
+        this.pulseSettings[label].duration = value;
+        this.pulseSettings[label].unit = this.timeUnits[this.activeDurationIdx];
       }
     },
-    check_pulse_frequency() {
-      const label = "pulse_frequency";
+    checkPulseFrequency() {
+      const label = "pulseFrequency";
 
-      const value_str = this.input_pulse_frequency;
-      const value = +value_str;
+      const valueStr = this.inputPulseFrequency;
+      const value = +valueStr;
 
-      if (value_str === "") {
-        this.err_msgs[label] = this.invalid_err_msg.required;
+      if (valueStr === "") {
+        this.errMsgs[label] = this.invalidErrMsg.required;
       } else if (isNaN(value) || value <= 0 || value > 100) {
-        this.err_msgs[label] = this.invalid_err_msg.frequency;
+        this.errMsgs[label] = this.invalidErrMsg.frequency;
       } else {
-        this.err_msgs[label] = this.invalid_err_msg.valid;
-        this.input_pulse_frequency = value;
-        this.max_pulse_duration_for_freq = Math.min(
-          50,
-          Math.trunc((1000 / this.input_pulse_frequency) * 0.8)
-        );
+        this.errMsgs[label] = this.invalidErrMsg.valid;
+        this.inputPulseFrequency = value;
+        this.maxPulseDurationForFreq = Math.min(50, Math.trunc((1000 / this.inputPulseFrequency) * 0.8));
 
-        this.invalid_err_msg.max_pulse_duration = `Duration must be <= ${this.max_pulse_duration_for_freq}ms`;
-        this.check_pulse_duration_validity(); // Need to recheck pulse dur after a new valid frequency is entered
+        this.invalidErrMsg.maxPulseDuration = `Duration must be <= ${this.maxPulseDurationForFreq}ms`;
+        this.checkPulseDurationValidity(); // Need to recheck pulse dur after a new valid frequency is entered
       }
     },
-    check_charge_validity(value_str, label) {
-      const value = +value_str;
-      if (value_str === "") {
-        this.err_msgs[label] = this.invalid_err_msg.required;
+    checkChargeValidity(valueStr, label) {
+      const value = +valueStr;
+      if (valueStr === "") {
+        this.errMsgs[label] = this.invalidErrMsg.required;
       } else if (isNaN(value)) {
-        this.err_msgs[label] = this.invalid_err_msg.num_err;
+        this.errMsgs[label] = this.invalidErrMsg.numErr;
       } else if (this.stimulationType.includes("C") && Math.abs(value) > 100) {
-        this.err_msgs[label] = this.invalid_err_msg.max_current;
+        this.errMsgs[label] = this.invalidErrMsg.maxCurrent;
       } else if (this.stimulationType.includes("V") && Math.abs(value) > 1200) {
-        this.err_msgs[label] = this.invalid_err_msg.max_voltage;
+        this.errMsgs[label] = this.invalidErrMsg.maxVoltage;
       } else {
-        this.err_msgs[label] = this.invalid_err_msg.valid;
-        this.pulse_settings[label] = value;
+        this.errMsgs[label] = this.invalidErrMsg.valid;
+        this.pulseSettings[label] = value;
       }
     },
-    check_num_cycles() {
-      const num_cycles_as_num = +this.num_cycles;
-      let error_msg_label;
-      if (this.num_cycles === "" || !Number.isInteger(num_cycles_as_num) || num_cycles_as_num <= 0) {
-        error_msg_label = "num_cycles";
+    checkNumCycles() {
+      const numCyclesAsNum = +this.numCycles;
+      let errorMsgLabel;
+      if (this.numCycles === "" || !Number.isInteger(numCyclesAsNum) || numCyclesAsNum <= 0) {
+        errorMsgLabel = "numCycles";
       } else {
-        error_msg_label = "valid";
-        this.num_cycles = num_cycles_as_num;
+        errorMsgLabel = "valid";
+        this.numCycles = numCyclesAsNum;
       }
-      this.err_msgs["num_cycles"] = this.invalid_err_msg[error_msg_label];
+      this.errMsgs["numCycles"] = this.invalidErrMsg[errorMsgLabel];
     },
-    handle_total_duration_unit_change(idx) {
-      this.active_duration_idx = idx;
-      this.update_current_calculated_value();
-      this.check_active_duration();
-      this.handle_all_valid();
+    handleTotalDurationUnitChange(idx) {
+      this.activeDurationIdx = idx;
+      this.updateCurrentCalculatedValue();
+      this.checkActiveDuration();
+      this.handleAllValid();
     },
-    set_use_num_cycles(new_value) {
-      this.use_num_cycles = new_value == "use_num_cycles";
-      this.update_current_calculated_value();
+    setUseNumCycles(newValue) {
+      this.useNumCycles = newValue == "useNumCycles";
+      this.updateCurrentCalculatedValue();
     },
-    change_pulse_color(color) {
+    changePulseColor(color) {
       this.$bvModal.hide("change-color-modal");
-      this.selected_color = color;
+      this.selectedColor = color;
     },
   },
 };

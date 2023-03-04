@@ -2,7 +2,7 @@ import {
   convert_from_json_of_well_indices_and_x_y_arrays,
   convert_from_json_of_well_indices_to_sparse_arrays,
   find_closest_well_idx,
-} from "@/js_utils/waveform_data_formatter.js";
+} from "@/js-utils/WaveformDataFormatter.js";
 
 const mantarray_six_well_simulated_json = require("@/tests/sample_waveform_data/mantarray/lambda_6_waveform.json");
 

@@ -7,8 +7,8 @@
       <svg class="svg__stimulation-active-button" height="20" width="20">
         <defs>
           <radialGradient id="greenGradient">
-            <stop offset="10%" :stop-color="current_gradient[0]" />
-            <stop offset="95%" :stop-color="current_gradient[1]" />
+            <stop offset="10%" :stop-color="currentGradient[0]" />
+            <stop offset="95%" :stop-color="currentGradient[1]" />
           </radialGradient>
         </defs>
         <circle cx="10" cy="10" r="10" fill="url('#greenGradient')" />
@@ -26,43 +26,43 @@
         variant="link"
         class="b-dropdown__container"
         no-caret
-        @show="handle_play_stop"
+        @show="handlePlayStop"
       >
         <template #button-content>
-          <span :class="svg__stimulation_controls_play_stop_button__dynamic_class">
+          <span :class="svg__stimulationControlsPlayStopButton__dynamicClass">
             <div
-              v-if="!play_state"
+              v-if="!playState"
               id="start-stim-button"
-              v-b-popover.hover.top="start_stim_label"
+              v-b-popover.hover.top="startStimLabel"
               title="Start Stimulation"
             >
               <!-- this is here for testing the popover message -->
-              <span id="start-popover-msg" style="display: none">{{ start_stim_label }}</span>
-              <FontAwesomeIcon class="fontawesome_icon_class" :icon="['fa', 'play-circle']" />
+              <span id="start-popover-msg" style="display: none">{{ startStimLabel }}</span>
+              <FontAwesomeIcon class="fontawesome-icon-class" :icon="['fa', 'play-circle']" />
             </div>
-            <div v-if="play_state" v-b-popover.hover.bottom="stop_stim_label" title="Stop Stimulation">
+            <div v-if="playState" v-b-popover.hover.bottom="stopStimLabel" title="Stop Stimulation">
               <!-- this is here for testing the popover message -->
-              <span id="stop-popover-msg" style="display: none">{{ stop_stim_label }}</span>
-              <FontAwesomeIcon class="fontawesome_icon_class" :icon="['fa', 'stop-circle']" />
+              <span id="stop-popover-msg" style="display: none">{{ stopStimLabel }}</span>
+              <FontAwesomeIcon class="fontawesome-icon-class" :icon="['fa', 'stop-circle']" />
             </div>
           </span>
         </template>
         <div
-          v-if="open_start_dropdown"
+          v-if="openStartDropdown"
           class="dropdown-menu"
           aria-labelledby="dropdownMenuButton"
-          :style="`display: ${dropdown_display}`"
+          :style="`display: ${dropdownDisplay}`"
         >
           <b-dropdown-item-button
-            v-for="(option, idx) in start_stim_options"
-            id="dropdown_option"
+            v-for="(option, idx) in startStimOptions"
+            id="dropdown-option"
             :key="option"
             href="#"
-            :disabled="idx === 1 && !start_rec_and_stim_enabled"
+            :disabled="idx === 1 && !startRecAndStimEnabled"
             @click="
               (e) => {
                 e.preventDefault();
-                handle_dropdown_select(idx);
+                handleDropdownSelect(idx);
               }
             "
             >{{ option }}</b-dropdown-item-button
@@ -77,7 +77,7 @@
       />
     </svg>
     <div
-      v-b-popover.hover.bottom="configuration_message"
+      v-b-popover.hover.bottom="configurationMessage"
       title="Configuration Check"
       class="div__config-check-container"
     >
@@ -89,7 +89,7 @@
         @click="startStimConfiguration"
       >
         <path
-          :class="svg__stimulation_controls_config_check_button__dynamic_class"
+          :class="svg__stimulationControlsConfigCheckButton__dynamicClass"
           d="M30.9,2.4c15.71,0,28.5,12.79,28.5,28.5c0,15.71-12.79,28.5-28.5,28.5S2.4,46.61,2.4,30.9
 	C2.4,15.18,15.18,2.4,30.9,2.4"
         />
@@ -123,7 +123,7 @@
         <line class="svg__inner-line" x1="34.8" y1="17.28" x2="21.16" y2="30.91" />
         <line class="svg__inner-line" x1="58.73" y1="30.87" x2="50.48" y2="30.87" />
       </svg>
-      <span v-show="config_check_in_progress" class="span__spinner">
+      <span v-show="configCheckInProgress" class="span__spinner">
         <FontAwesomeIcon :style="'fill: #ececed;'" :icon="['fa', 'spinner']" pulse />
       </span>
     </div>
@@ -136,7 +136,7 @@
       :static="true"
       :no-close-on-backdrop="true"
     >
-      <StatusWarningWidget :modal_labels="open_circuit_labels" @handleConfirmation="close_warning_modal" />
+      <StatusWarningWidget :modalLabels="openCircuitLabels" @handleConfirmation="closeWarningModal" />
     </b-modal>
     <b-modal
       id="stim-24hr-warning"
@@ -147,7 +147,7 @@
       :static="true"
       :no-close-on-backdrop="true"
     >
-      <StatusWarningWidget :modal_labels="timer_warning_labels" @handleConfirmation="close_timer_modal" />
+      <StatusWarningWidget :modalLabels="timerWarningLabels" @handleConfirmation="closeTimerModal" />
     </b-modal>
   </div>
 </template>
@@ -157,11 +157,7 @@ import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import { mapState } from "vuex";
 import { STIM_STATUS } from "@/store/modules/stimulation/enums";
 import StatusWarningWidget from "@/components/status/StatusWarningWidget.vue";
-import {
-  faPlayCircle as fa_play_circle,
-  faStopCircle as fa_stop_circle,
-  faSpinner as fa_spinner,
-} from "@fortawesome/free-solid-svg-icons";
+import { faPlayCircle, faStopCircle, faSpinner } from "@fortawesome/free-solid-svg-icons";
 import Vue from "vue";
 import BootstrapVue from "bootstrap-vue";
 import { VBPopover, BDropdown, BDropdownItemButton } from "bootstrap-vue";
@@ -171,16 +167,16 @@ Vue.directive("b-dropdown", BDropdown);
 Vue.directive("b-dropdown-item-button", BDropdownItemButton);
 
 Vue.use(BootstrapVue);
-library.add(fa_play_circle, fa_stop_circle, fa_spinner);
+library.add(faPlayCircle, faStopCircle, faSpinner);
 
 // TODO Luci, swap out PNG for SVG once folder becomes available
 
 /**
- * @vue-data {Boolean} play_state - Current play state of stimulation
- * @vue-data {Array} active_gradient - Active gradient colors for icon while stimulation is running
- * @vue-data {Array} inactive_gradient - Inactive gradient colors for icon if stimulation is stopped
- * @vue-data {Array} current_gradient - Dynamically assigned gradient based on when BE recieves start/stop request
- * @vue-event {event} handle_play_stop - Commits corresponding request to state depending on play_state
+ * @vue-data {Boolean} playState - Current play state of stimulation
+ * @vue-data {Array} activeGradient - Active gradient colors for icon while stimulation is running
+ * @vue-data {Array} inactiveGradient - Inactive gradient colors for icon if stimulation is stopped
+ * @vue-data {Array} currentGradient - Dynamically assigned gradient based on when BE recieves start/stop request
+ * @vue-event {event} handlePlayStop - Commits corresponding request to state depending on playState
  */
 
 export default {
@@ -191,28 +187,28 @@ export default {
   },
   data() {
     return {
-      play_state: false,
-      active_gradient: ["#19ac8a", "#24524b"],
-      inactive_gradient: ["#b7b7b7", "#858585"],
-      current_gradient: ["#b7b7b7", "#858585"],
-      start_stim_options: ["Start Stimulation Only", "Start Recording and Stimulation"],
-      controls_block_label: "Stimulation Controls are disabled until device is Calibrated",
-      open_circuit_labels: {
+      playState: false,
+      activeGradient: ["#19ac8a", "#24524b"],
+      inactiveGradient: ["#b7b7b7", "#858585"],
+      currentGradient: ["#b7b7b7", "#858585"],
+      startStimOptions: ["Start Stimulation Only", "Start Recording and Stimulation"],
+      controlsBlockLabel: "Stimulation Controls are disabled until device is Calibrated",
+      openCircuitLabels: {
         header: "Warning!",
-        msg_one:
+        msgOne:
           "You are attempting to assign a protocol to a well that an open circuit was previously found in during the configuration check.",
-        msg_two: "Please unassign all wells labeled with an open circuit.",
-        button_names: ["Okay"],
+        msgTwo: "Please unassign all wells labeled with an open circuit.",
+        buttonNames: ["Okay"],
       },
-      timer_warning_labels: {
+      timerWarningLabels: {
         header: "Warning!",
-        msg_one: "You have been running a stimulation for 24 hours.",
-        msg_two:
+        msgOne: "You have been running a stimulation for 24 hours.",
+        msgTwo:
           "We strongly recommend stopping the stimulation and running another configuration check to ensure the integrity of the stimulation.",
-        button_names: ["Continue Anyway", "Stop Stimulation"],
+        buttonNames: ["Continue Anyway", "Stop Stimulation"],
       },
-      stim_24hr_timer: null,
-      open_start_dropdown: false,
+      stim_24hrTimer: null,
+      openStartDropdown: false,
     };
   },
   computed: {
@@ -223,13 +219,13 @@ export default {
       "stimulatorCircuitStatuses",
     ]),
     ...mapState("playback", ["barcodes"]),
-    is_start_stop_button_enabled: function () {
-      if (!this.play_state) {
+    isStartStopButtonEnabled: function () {
+      if (!this.playState) {
         // if starting stim make sure initial magnetometer calibration has been completed and
         // no additional calibrations are running, stim checks have completed, there are no short or
         // open circuits, and that there are no other errors with stim lid
         return (
-          this.assigned_open_circuits.length === 0 &&
+          this.assignedOpenCircuits.length === 0 &&
           ![
             STIM_STATUS.ERROR,
             STIM_STATUS.NO_PROTOCOLS_ASSIGNED,
@@ -243,13 +239,13 @@ export default {
       // currently, stop button should always be enabled
       return true;
     },
-    assigned_open_circuits: function () {
+    assignedOpenCircuits: function () {
       // filter for matching indices
       return this.stimulatorCircuitStatuses.filter((well) =>
         Object.keys(this.protocolAssignments).includes(well.toString())
       );
     },
-    start_stim_label: function () {
+    startStimLabel: function () {
       if (this.stimStatus === STIM_STATUS.ERROR || this.stimStatus === STIM_STATUS.SHORT_CIRCUIT_ERROR) {
         return "Cannot start a stimulation with error";
       } else if (
@@ -260,36 +256,36 @@ export default {
       } else if (!this.barcodes.stimBarcode.valid) return "Must have a valid Stimulation Lid Barcode";
       else if (this.stimStatus === STIM_STATUS.NO_PROTOCOLS_ASSIGNED) {
         return "No protocols have been assigned";
-      } else if (this.assigned_open_circuits.length !== 0) {
+      } else if (this.assignedOpenCircuits.length !== 0) {
         return "Cannot start stimulation with a protocol assigned to a well with an open circuit.";
       } else {
         return "Start Stimulation";
       }
     },
-    stop_stim_label: function () {
+    stopStimLabel: function () {
       // Tanner (7/27/22): there used to be multiple values, so leaving this as a function in case more values get added in future
       return "Stop Stimulation";
     },
-    svg__stimulation_controls_play_stop_button__dynamic_class: function () {
+    svg__stimulationControlsPlayStopButton__dynamicClass: function () {
       // Tanner (2/1/22): This is only necessary so that the this button is shaded the same as the rest of
       // the stim controls buttons when the controls block is displayed. The button is
       // not actually active here. If the controls block is removed, this branch can likely be removed too.
-      return this.is_start_stop_button_enabled
+      return this.isStartStopButtonEnabled
         ? "span__stimulation-controls-play-stop-button--enabled"
         : "span__stimulation-controls-play-stop-button--disabled";
     },
-    is_config_check_button_enabled: function () {
+    isConfigCheckButtonEnabled: function () {
       return (
-        [STIM_STATUS.CONFIG_CHECK_NEEDED, STIM_STATUS.READY].includes(this.stim_status) &&
+        [STIM_STATUS.CONFIG_CHECK_NEEDED, STIM_STATUS.READY].includes(this.stimStatus) &&
         this.barcodes.stimBarcode.valid
       );
     },
-    svg__stimulation_controls_config_check_button__dynamic_class: function () {
-      return this.is_config_check_button_enabled
+    svg__stimulationControlsConfigCheckButton__dynamicClass: function () {
+      return this.isConfigCheckButtonEnabled
         ? "svg__stimulation-controls-config-check-button--enabled"
         : "svg__stimulation-controls-config-check-button--disabled";
     },
-    configuration_message: function () {
+    configurationMessage: function () {
       if (!this.barcodes.stimBarcode.valid) {
         return "Must have a valid Stimulation Lid Barcode";
       } else if (this.stimStatus == STIM_STATUS.ERROR || this.stimStatus == STIM_STATUS.SHORT_CIRCUIT_ERROR) {
@@ -306,63 +302,63 @@ export default {
         return "Configuration check complete. Click to rerun.";
       }
     },
-    config_check_in_progress: function () {
+    configCheckInProgress: function () {
       return this.stimStatus === STIM_STATUS.CONFIG_CHECK_IN_PROGRESS;
     },
-    dropdown_display: function () {
-      return this.open_start_dropdown ? "flex" : "none";
+    dropdownDisplay: function () {
+      return this.openStartDropdown ? "flex" : "none";
     },
   },
   watch: {
     stimPlayState: function () {
-      this.current_gradient = this.stimPlayState ? this.active_gradient : this.inactive_gradient;
-      this.play_state = this.stimPlayState;
+      this.currentGradient = this.stimPlayState ? this.activeGradient : this.inactiveGradient;
+      this.playState = this.stimPlayState;
     },
-    assigned_open_circuits: function (new_val, old_val) {
-      if (this.stimStatus !== STIM_STATUS.CONFIG_CHECK_COMPLETE && new_val.length > old_val.length)
+    assignedOpenCircuits: function (newVal, oldVal) {
+      if (this.stimStatus !== STIM_STATUS.CONFIG_CHECK_COMPLETE && newVal.length > oldVal.length)
         this.$bvModal.show("open-circuit-warning");
     },
   },
   mounted() {
     document.addEventListener("click", () => {
-      this.open_start_dropdown = false;
+      this.openStartDropdown = false;
     });
   },
   methods: {
-    async handle_play_stop(e) {
+    async handlePlayStop(e) {
       e.preventDefault();
-      if (this.is_start_stop_button_enabled) {
-        if (this.play_state) {
+      if (this.isStartStopButtonEnabled) {
+        if (this.playState) {
           this.$store.dispatch(`stimulation/stopStimulation`);
-          clearTimeout(this.stim_24hr_timer); // clear 24 hour timer for next stimulation
+          clearTimeout(this.stim_24hrTimer); // clear 24 hour timer for next stimulation
         } else {
-          this.open_start_dropdown = true;
+          this.openStartDropdown = true;
         }
       }
     },
     async startStimConfiguration() {
-      if (this.is_config_check_button_enabled && !this.config_check_in_progress)
+      if (this.isConfigCheckButtonEnabled && !this.configCheckInProgress)
         this.$store.dispatch(`stimulation/startStimConfiguration`);
     },
-    async close_warning_modal() {
+    async closeWarningModal() {
       this.$bvModal.hide("open-circuit-warning");
     },
-    async close_timer_modal(idx) {
+    async closeTimerModal(idx) {
       this.$bvModal.hide("stim-24hr-warning");
       if (idx === 1) {
         await this.$store.dispatch(`stimulation/stopStimulation`);
-        clearTimeout(this.start_24hr_timer);
-      } else this.start_24hr_timer(); // start new timer
+        clearTimeout(this.start_24hrTimer);
+      } else this.start_24hrTimer(); // start new timer
     },
-    async start_24hr_timer() {
-      this.stim_24hr_timer = setTimeout(() => {
+    async start_24hrTimer() {
+      this.stim_24hrTimer = setTimeout(() => {
         this.$bvModal.show("stim-24hr-warning");
       }, 24 * 60 * 60e3);
     },
-    async handle_dropdown_select(idx) {
+    async handleDropdownSelect(idx) {
       // always start stimulation
       await this.$store.dispatch(`stimulation/createProtocolMessage`);
-      this.start_24hr_timer();
+      this.start_24hrTimer();
     },
   },
 };
@@ -491,7 +487,7 @@ body {
   left: 2px;
 }
 
-.fontawesome_icon_class {
+.fontawesome-icon-class {
   height: 20px;
   width: 20px;
 }
