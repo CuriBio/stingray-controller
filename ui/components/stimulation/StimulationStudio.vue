@@ -75,7 +75,7 @@ export default {
       };
     },
     stimulationType: function () {
-      return this.protocolEditor.stimulationType;
+      return this.protocolEditor.stimulationType === "C" ? "Current" : "Voltage";
     },
   },
   methods: {

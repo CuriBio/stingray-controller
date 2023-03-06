@@ -235,7 +235,7 @@ export default {
   },
 
   async createProtocolMessage({ commit, state }) {
-    const status = true;
+    // const status = true;
     const message = { protocols: [], protocolAssignments: {} };
 
     const { protocolAssignments } = state;
@@ -258,7 +258,7 @@ export default {
         if (!uniqueProtocolIds.has(letter)) {
           uniqueProtocolIds.add(letter);
           // this needs to be converted before sent because stim type changes independently of pulse settings
-          const convertedSubprotocols = await GetConvertedSettings(subprotocols, stimulationType);
+          const convertedSubprotocols = await _getConvertedSettings(subprotocols, stimulationType);
           const protocolModel = {
             protocolId: letter,
             stimulationType,
@@ -333,9 +333,8 @@ export default {
     }
   },
   async startStimConfiguration({ commit, state }) {
-    const url = `/startStimChecks`;
-    const wellIndices = Object.keys(state.protocolAssignments);
-
+    // const url = `/startStimChecks`;
+    // const wellIndices = Object.keys(state.protocolAssignments);
     // TODO
   },
   async onPulseMouseenter({ state }, idx) {
@@ -370,7 +369,7 @@ export default {
   },
 };
 
-const GetConvertedSettings = async (subprotocols, stimType) => {
+const _getConvertedSettings = async (subprotocols, stimType) => {
   const milliToMicro = 1e3;
   const chargeConversion = { C: 1000, V: 1 };
   const conversion = chargeConversion[stimType];

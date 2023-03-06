@@ -14,7 +14,7 @@
       :class="[
         messageIfInvalid
           ? 'div__input-dropdown-controls-content-widget--invalid'
-          : 'div__input-dropdown-controls-content-widget--valid'
+          : 'div__input-dropdown-controls-content-widget--valid',
       ]"
       :style="'width: ' + inputWidth + 'px;' + 'top:' + inputWidgetTop + 'px;'"
     >
@@ -30,7 +30,7 @@
           :disabled="disabled"
           class="w-100 h-100 edit-id"
           :style="`border-radius: 0; background-color: ${inputBackgroundColor}; border: 0px; color: #ffffff`"
-        ></b-form-input>
+        />
         <datalist v-if="dropdownOptions.length" :id="'option-list' + optionsId">
           <option v-for="item in dropdownOptions" :id="item.id" :key="item.id">
             {{ item.name }}
@@ -68,35 +68,35 @@ export default {
     optionsId: { type: String, default: "" }, // This prop is utilized by the parent component
     messageIfInvalid: { type: Boolean, default: false }, // when set to true, will display a simple feedback
     inputBackgroundColor: { type: String, default: "#1c1c1c" },
-    containerBackgroundColor: { type: String, default: "rgb(0, 0, 0)" }
+    containerBackgroundColor: { type: String, default: "rgb(0, 0, 0)" },
   },
   data() {
     return {
       inputDropdownValueKey: this.value,
-      inputWidthBackground: this.inputWidth + 4
+      inputWidthBackground: this.inputWidth + 4,
     };
   },
   computed: {
-    dropdownOptions: function() {
+    dropdownOptions: function () {
       return this.optionsText.map((option, i) => {
         // the optionsText is required true so a minimum of one element is needed
         // if suppose optionsText.length is zero(0) then return doesn't change its []
         return {
           id: this.optionsId + i,
-          name: option
+          name: option,
         };
       });
     },
-    inputHeightBackground: function() {
+    inputHeightBackground: function () {
       return this.titleLabel !== "" ? 100 : 60;
     },
-    inputWidgetTop: function() {
+    inputWidgetTop: function () {
       return this.titleLabel !== "" ? 40 : 0;
     },
-    inputFeedbackTop: function() {
+    inputFeedbackTop: function () {
       return this.titleLabel !== "" ? 88 : 48;
     },
-    dynamicContainerStyles: function() {
+    dynamicContainerStyles: function () {
       return (
         "width: " +
         this.inputWidthBackground +
@@ -109,17 +109,17 @@ export default {
         this.containerBackgroundColor +
         ";"
       );
-    }
+    },
   },
   watch: {
-    inputDropdownValueKey: function() {
+    inputDropdownValueKey: function () {
       this.$emit("update:value", this.inputDropdownValueKey);
     },
-    value: function() {
+    value: function () {
       this.inputDropdownValueKey = this.value;
-    }
+    },
   },
-  methods: {}
+  methods: {},
 };
 </script>
 <style scoped>

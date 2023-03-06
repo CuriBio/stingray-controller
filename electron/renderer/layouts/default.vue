@@ -24,7 +24,7 @@
         </span>
       </div>
     </div>
-    <div class="div__top-header-bar"></div>
+    <div class="div__top-header-bar" />
     <div class="div__nuxt-page">
       <nuxt />
     </div>
@@ -33,10 +33,7 @@
 <script>
 import Vue from "vue";
 
-import BarcodeViewer from "@/components/playback/controls/BarcodeViewer";
-import StimulationControls from "@/components/playback/controls/StimulationControls";
-import StatusBar from "@/components/status/StatusBar";
-import SimulationMode from "@/components/status/SimulationMode";
+import { BarcodeViewer, StatusBar, SimulationMode, StimulationControls } from "@curi-bio/ui";
 
 import { mapState } from "vuex";
 import { VBPopover, VBToggle } from "bootstrap-vue";
@@ -56,7 +53,6 @@ export default {
     return {
       package_version: "",
       current_year: "2023", // TODO look into better ways of handling this. Not sure if just using the system's current year is the best approach
-      beta2Mode: process.env.SPECTRON || undefined,
       pulse3d_versions: undefined,
     };
   },

@@ -16,10 +16,10 @@
       <svg class="svg__stimulation-controls-loop-button" viewBox="0 0 72 72">
         <path
           d="M63.1,42,40,52.9a1.5,1.5,0,0,0-.2,2.5l4.1,2.8A23.7,23.7,0,0,1,12.4,37.1,1.4,1.4,0,0,0,11,35.7H1.6A1.4,1.4,0,0,0,.2,37.1a27.9,27.9,0,0,0,.7,5.8.4.4,0,0,0,0,.5,35.4,35.4,0,0,0,9.7,18A36.2,36.2,0,0,0,36,71.9a35.7,35.7,0,0,0,19.4-5.7L60.8,70A1.4,1.4,0,0,0,63,68.9l2.1-25.5A1.4,1.4,0,0,0,63.1,42Z"
-        ></path>
+        />
         <path
           d="M71.2,29.2a.5.5,0,0,0,0-.5A35.8,35.8,0,0,0,36.1.2,35.7,35.7,0,0,0,16.7,5.9L11.3,2.1A1.4,1.4,0,0,0,9.1,3.2L7,28.6A1.4,1.4,0,0,0,9,30L32.1,19.2a1.5,1.5,0,0,0,.2-2.5l-4.1-2.9a23.9,23.9,0,0,1,27.2,8.7A23.5,23.5,0,0,1,59.7,35a1.3,1.3,0,0,0,1.4,1.3h9.4a1.5,1.5,0,0,0,1.4-1.5A27.8,27.8,0,0,0,71.2,29.2Z"
-        ></path>
+        />
       </svg>
       <b-dropdown
         id="start-stim-dropdown"
@@ -70,12 +70,14 @@
         </div>
       </b-dropdown>
     </div>
-    <svg class="svg__waveform-container" viewBox="0 0 62 62">
-      <path
-        class="svg__waveform-icon"
-        d="M30.4,0A30.4,30.4,0,1,0,60.7,30.4,30.4,30.4,0,0,0,30.4,0Zm20,42.1a.9.9,0,0,1-.9.9H11.3a.9.9,0,0,1-.9-.9V18.7a.9.9,0,0,1,.9-.9H49.5a.9.9,0,0,1,.9.9Zm-4.1-9.6H43.6a.9.9,0,0,0-.9.9V38H39.3V22a.9.9,0,0,0-.9-.9H32.7a.9.9,0,0,0-.8.9V32.5H29a.9.9,0,0,0-.9.9V38H24.7V22a.9.9,0,0,0-.8-.9H18.2a.9.9,0,0,0-.9.9V32.5H14.5a.9.9,0,1,0,0,1.8h3.7a.9.9,0,0,0,.9-.9V22.8H23V38.9a.9.9,0,0,0,.9.8H29a.9.9,0,0,0,.9-.8V34.3h2.8a.9.9,0,0,0,.9-.9V22.8h3.9V38.9a.9.9,0,0,0,.9.8h5.2a.9.9,0,0,0,.8-.8V34.3h1.9a.9.9,0,0,0,0-1.8Z"
-      />
-    </svg>
+    <div
+      v-b-popover.hover.bottomright="'Edit account settings'"
+      :title="'Settings'"
+      class="div__settings-button-container"
+      @click="$bvModal.show('settings-form')"
+    >
+      <SettingsButton />
+    </div>
     <div
       v-b-popover.hover.bottom="configurationMessage"
       title="Configuration Check"
@@ -149,6 +151,16 @@
     >
       <StatusWarningWidget :modalLabels="timerWarningLabels" @handleConfirmation="closeTimerModal" />
     </b-modal>
+    <b-modal
+      id="settings-form"
+      hide-footer
+      hide-header
+      hide-header-close
+      :no-close-on-backdrop="true"
+      :static="true"
+    >
+      <SettingsForm @closeModal="$bvModal.hide('settings-form')" />
+    </b-modal>
   </div>
 </template>
 <script>
@@ -157,6 +169,8 @@ import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import { mapState } from "vuex";
 import { STIM_STATUS } from "@/store/modules/stimulation/enums";
 import StatusWarningWidget from "@/components/status/StatusWarningWidget.vue";
+import SettingsButton from "@/components/settings/SettingsButton.vue";
+import SettingsForm from "@/components/settings/SettingsForm.vue";
 import { faPlayCircle, faStopCircle, faSpinner } from "@fortawesome/free-solid-svg-icons";
 import Vue from "vue";
 import BootstrapVue from "bootstrap-vue";
@@ -184,6 +198,8 @@ export default {
   components: {
     FontAwesomeIcon,
     StatusWarningWidget,
+    SettingsButton,
+    SettingsForm,
   },
   data() {
     return {
@@ -366,6 +382,21 @@ export default {
 <style>
 body {
   user-select: none;
+}
+
+.div__settings-button-container {
+  top: 33px;
+  left: 0px;
+  width: 0px;
+  position: relative;
+  background-color: #000000;
+  font-family: Muli;
+  font-weight: normal;
+  font-style: normal;
+  text-decoration: none;
+  text-align: center;
+  color: #2f2f2f;
+  fill: #2f2f2f;
 }
 
 .div__stimulation-controls-container {

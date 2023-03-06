@@ -29,7 +29,7 @@ function convertFromJsonOfSampleIdxAndValue(theJson) {
 function findClosestArrayIdx(arr, sampleIdxToMatch) {
   // Modeled from https://stackoverflow.com/questions/22697936/binary-search-in-javascript
   // finds the array idx that has a sample idx >= the one searched for
-  const maxIdx = arr.findIndex(xValue => xValue >= sampleIdxToMatch);
+  const maxIdx = arr.findIndex((xValue) => xValue >= sampleIdxToMatch);
   return maxIdx >= 0 ? maxIdx : arr.length - 1;
 }
 
@@ -56,12 +56,7 @@ function convertXYArraysToD3Array(xArray, yArray) {
  * @param   {int}  wellIdx index
  * @return  {array} converted d3 array
  */
-function getArraySliceToDisplay(
-  sampleIndices,
-  measuredValues,
-  startingSampleIdx,
-  sampleDurationToDisplay
-) {
+function getArraySliceToDisplay(sampleIndices, measuredValues, startingSampleIdx, sampleDurationToDisplay) {
   // TODO (Eli 2/4/20): update the binary search to allow a manual setting of the start idx of the search, and update this to set that start when searching for the end idx (which should always be after the located start idx)
   let startingArrIdx = findClosestArrayIdx(sampleIndices, startingSampleIdx);
   if (sampleIndices[startingArrIdx] > startingSampleIdx) {
@@ -70,10 +65,7 @@ function getArraySliceToDisplay(
       startingArrIdx -= 1;
     }
   }
-  const endingArrIdx = findClosestArrayIdx(
-    sampleIndices,
-    startingSampleIdx + sampleDurationToDisplay
-  );
+  const endingArrIdx = findClosestArrayIdx(sampleIndices, startingSampleIdx + sampleDurationToDisplay);
 
   const slicedXDataPoints = sampleIndices.slice(startingArrIdx, endingArrIdx + 1);
   const slicedYDataPoints = measuredValues.slice(startingArrIdx, endingArrIdx + 1);
@@ -143,18 +135,8 @@ function findClosestWellIdx(arr, sampleIdxToMatch) {
  * @param   {int}  sampleDurationToDisplay combined array
  * @return  {array} converted d3 array
  */
-function getWellSliceToDisplay(
-  sampleIndices,
-  measuredValues,
-  startingSampleIdx,
-  sampleDurationToDisplay
-) {
-  return getArraySliceToDisplay(
-    sampleIndices,
-    measuredValues,
-    startingSampleIdx,
-    sampleDurationToDisplay
-  );
+function getWellSliceToDisplay(sampleIndices, measuredValues, startingSampleIdx, sampleDurationToDisplay) {
+  return getArraySliceToDisplay(sampleIndices, measuredValues, startingSampleIdx, sampleDurationToDisplay);
 }
 
 /**
@@ -173,14 +155,8 @@ function appendWellData(arr, newArr) {
   for (const strWellIdx in waveformDataPoints) {
     if (waveformDataPoints != undefined) {
       const intWellIdx = parseInt(strWellIdx);
-      Array.prototype.push.apply(
-        arr[intWellIdx].xDataPoints,
-        waveformDataPoints[strWellIdx].xDataPoints
-      );
-      Array.prototype.push.apply(
-        arr[intWellIdx].yDataPoints,
-        waveformDataPoints[strWellIdx].yDataPoints
-      );
+      Array.prototype.push.apply(arr[intWellIdx].xDataPoints, waveformDataPoints[strWellIdx].xDataPoints);
+      Array.prototype.push.apply(arr[intWellIdx].yDataPoints, waveformDataPoints[strWellIdx].yDataPoints);
     }
   }
 

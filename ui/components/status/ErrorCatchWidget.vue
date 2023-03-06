@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div class="div__status-error-catch-background" :style="errorBackgroundCssprops"></div>
+    <div class="div__status-error-catch-background" :style="errorBackgroundCssprops" />
     <span class="div_status-error-catch-title-label">An&nbsp;<wbr />error&nbsp;<wbr />occurred. </span>
     <div class="div_status-error-catch-alert-txt" :style="errorCatchAlert">
       <p>{{ shutdownErrorMessage }}</p>
@@ -13,7 +13,7 @@
         spellcheck="false"
         :value.prop="installerLink"
         :disabled="true"
-      ></textarea>
+      />
     </div>
     <div class="div_status-email-txt" :style="emailTextCssprops">
       <p>
@@ -32,7 +32,7 @@
       :value.prop="logFilepath"
       :disabled="true"
       :style="textarea__errorCssprops"
-    ></textarea>
+    />
     <div class="div_status-error-catch-next-step-txt" :style="nextStepCssprops">
       <p>
         Please turn the instrument off, unplug from the PC,<br />

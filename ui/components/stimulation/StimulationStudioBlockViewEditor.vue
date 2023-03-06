@@ -50,14 +50,14 @@
           <div v-b-popover.hover.bottom="restInputHover" class="number-input-container">
             <InputWidget
               :style="'position: relative;'"
-              :initial_value="restDuration"
+              :initialValue="restDuration"
               :placeholder="'0'"
-              :dom_id_suffix="'protocol-rest'"
-              :invalid_text="invalidRestDurText"
+              :domIdSuffix="'protocol-rest'"
+              :invalidText="invalidRestDurText"
               :disabled="disabledTime"
-              :input_width="100"
-              :input_height="25"
-              :top_adjust="-2"
+              :inputWidth="100"
+              :inputHeight="25"
+              :topAdjust="-2"
               @update:value="handleRestDuration($event)"
             />
           </div>
@@ -81,7 +81,7 @@
     >
       <StatusWarningWidget
         id="del-protocol"
-        :modal_labels="delProtocolLabels"
+        :modalLabels="delProtocolLabels"
         @handleConfirmation="closeDelProtocolModal"
       />
     </b-modal>

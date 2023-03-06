@@ -23,7 +23,7 @@
           >
         </div>
       </div>
-      <div class="arrow" :class="{ expanded: visible }"></div>
+      <div class="arrow" :class="{ expanded: visible }" />
       <div :class="{ hidden: !visible, visible }">
         <ul>
           <li v-for="item in filteredOptions" :key="item.id" :value="item" @click="changeSelection(item.id)">

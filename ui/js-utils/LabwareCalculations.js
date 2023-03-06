@@ -7,7 +7,7 @@
  * @param {bool} padding - Whether to zero-pad the number in the well name
  * @return {string}
  */
-function GetFormattedColumnString(columnIdx, padding) {
+function getFormattedColumnString(columnIdx, padding) {
   const columnNumber = columnIdx + 1;
   if (padding) {
     return "0" + columnNumber;
@@ -53,7 +53,7 @@ export class WellTitle {
    */
   getWellNameFromRowAndColumn(rowIdx, columnIdx, padding) {
     const rowChar = String.fromCharCode(65 + rowIdx);
-    const columnChar = GetFormattedColumnString(columnIdx, padding);
+    const columnChar = getFormattedColumnString(columnIdx, padding);
     return rowChar + columnChar;
   }
 

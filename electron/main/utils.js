@@ -1,5 +1,4 @@
 const path = require("path");
-const url_safe_base64 = require("urlsafe-base64");
 import ElectronStore from "./electron_store.js";
 const yaml = require("js-yaml");
 
@@ -49,7 +48,7 @@ const create_store = function ({ file_path = undefined, file_name = "stingray_co
     defaults: {
       customer_id: null,
       usernames: [],
-      beta2Mode: true,
+      beta_2_mode: true,
     },
   });
   return store;
@@ -74,32 +73,11 @@ const get_flask_logs_full_path = function (electron_store) {
  */
 const generate_flask_command_line_args = function (electron_store) {
   console.log("node env: " + process.env.NODE_ENV); // allow-log
-
-  const electron_store_dir = path.dirname(electron_store.path);
   const flask_logs_full_path = get_flask_logs_full_path(electron_store);
 
   const args = [];
   args.push("--log-file-dir=" + flask_logs_full_path);
   args.push("--expected-software-version=" + export_functions.get_current_app_version());
-
-  const recording_directory_path = path.join(electron_store_dir, "recordings");
-  const time_force_dir_path = path.join(electron_store_dir, "time_force_data");
-
-  const settings_to_supply = {
-    log_file_id: FILENAME_PREFIX,
-    recording_directory: recording_directory_path,
-    mag_analysis_output_dir: time_force_dir_path,
-  };
-
-  const settings_to_supply_json_str = JSON.stringify(settings_to_supply);
-  const settings_to_supply_buf = Buffer.from(settings_to_supply_json_str, "utf8");
-  const settings_to_supply_encoded = url_safe_base64.encode(settings_to_supply_buf);
-
-  if (settings_to_supply_json_str !== "{}") {
-    args.push("--initial-base64-settings=" + settings_to_supply_encoded);
-  }
-
-  if (electron_store.get("beta2Mode")) args.push("--beta-2-mode");
 
   return args;
 };

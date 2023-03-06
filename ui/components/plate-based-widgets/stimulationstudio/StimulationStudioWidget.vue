@@ -95,7 +95,7 @@ export default {
   components: { FontAwesomeIcon, StimulationStudioPlateWell },
   props: {
     numberOfWells: { type: Number, default: 24 },
-    disable: { type: Boolean, default: false }
+    disable: { type: Boolean, default: false },
   },
   data() {
     return {
@@ -103,7 +103,7 @@ export default {
         A: [0, 4, 8, 12, 16, 20],
         B: [1, 5, 9, 13, 17, 21],
         C: [2, 6, 10, 14, 18, 22],
-        D: [3, 7, 11, 15, 19, 23]
+        D: [3, 7, 11, 15, 19, 23],
       },
       columnValues: {
         1: [0, 1, 2, 3],
@@ -111,13 +111,13 @@ export default {
         3: [8, 9, 10, 11],
         4: [12, 13, 14, 15],
         5: [16, 17, 18, 19],
-        6: [20, 21, 22, 23]
+        6: [20, 21, 22, 23],
       },
       allSelectOrCancel: false,
       hover: new Array(this.numberOfWells).fill(false),
       allSelect: new Array(this.numberOfWells).fill(false),
       hoverColor: new Array(this.numberOfWells).fill(hoverColor),
-      strokeWidth: new Array(this.numberOfWells).fill(noStrokeWidth)
+      strokeWidth: new Array(this.numberOfWells).fill(noStrokeWidth),
     };
   },
   computed: {
@@ -125,41 +125,41 @@ export default {
       "protocolAssignments",
       "stimStatus",
       "selectedWells",
-      "stimulatorCircuitStatuses"
+      "stimulatorCircuitStatuses",
     ]),
-    shortCircuitErrorFound: function() {
+    shortCircuitErrorFound: function () {
       return this.stimStatus === STIM_STATUS.SHORT_CIRCUIT_ERROR;
     },
-    assignedOpenCircuits: function() {
+    assignedOpenCircuits: function () {
       // filter for matching indices
-      return this.stimulatorCircuitStatuses.filter(well =>
+      return this.stimulatorCircuitStatuses.filter((well) =>
         Object.keys(this.protocolAssignments).includes(well.toString())
       );
     },
-    rowComputedOffsets: function() {
-      return ["41", "103", "165", "224"].map(v => "top:" + v + "px;");
+    rowComputedOffsets: function () {
+      return ["41", "103", "165", "224"].map((v) => "top:" + v + "px;");
     },
-    columnComputedOffsets: function() {
-      return ["39", "101", "164", "225", "287", "349"].map(v => "left:" + v + "px;");
-    }
+    columnComputedOffsets: function () {
+      return ["39", "101", "164", "225", "287", "349"].map((v) => "left:" + v + "px;");
+    },
   },
   watch: {
-    allSelect: function() {
+    allSelect: function () {
       this.$store.dispatch("stimulation/handleSelectedWells", this.allSelect);
     },
-    selectedWells: function(newWells, previousWells) {
+    selectedWells: function (newWells, previousWells) {
       // second conditional prevents infinite looping of constantly reassigning to 0
       if (newWells.length === 0 && previousWells.length !== 0) {
         this.allSelect = new Array(this.numberOfWells).fill(false);
         this.strokeWidth = new Array(this.numberOfWells).fill(noStrokeWidth);
         if (!this.allSelectOrCancel) this.allSelectOrCancel = true;
       }
-    }
+    },
   },
   created() {
     this.strokeWidth.splice(0, this.strokeWidth.length);
     this.checkStrokeWidth();
-    const allEqual = arr => arr.every(v => v === true); // verify in the pre-select all via a const allEqual function.
+    const allEqual = (arr) => arr.every((v) => v === true); // verify in the pre-select all via a const allEqual function.
     this.allSelectOrCancel = allEqual(this.allSelect) ? false : true; // if pre-select has all wells is true, then toggle from (+) to (-) icon.
   },
   methods: {
@@ -192,7 +192,7 @@ export default {
     },
 
     basicShiftSelect(value) {
-      const allEqual = arr => arr.every(v => v === true);
+      const allEqual = (arr) => arr.every((v) => v === true);
       this.allSelect[value] = !this.allSelect[value];
       this.strokeWidth[value] = selectedStrokeWidth;
       if (allEqual(this.allSelect)) this.allSelectOrCancel = false;
@@ -219,7 +219,7 @@ export default {
     onSelect(val, valuesToChange) {
       this.allSelect = new Array(this.numberOfWells).fill(false);
       this.strokeWidth.splice(0, this.strokeWidth.length);
-      valuesToChange[val].map(well => (this.allSelect[well] = true));
+      valuesToChange[val].map((well) => (this.allSelect[well] = true));
       if (!this.allSelectOrCancel) this.allSelectOrCancel = true;
       this.checkStrokeWidth();
     },
@@ -229,7 +229,7 @@ export default {
       this.strokeWidth.splice(0, this.strokeWidth.length);
 
       valuesToChange[val].map(
-        well => (newList[well] = newList[well] == noStrokeWidth ? hoverStrokeWidth : newList[well])
+        (well) => (newList[well] = newList[well] == noStrokeWidth ? hoverStrokeWidth : newList[well])
       );
       this.strokeWidth = newList;
     },
@@ -242,13 +242,13 @@ export default {
     onShiftClick(val, valuesToChange) {
       const newList = JSON.parse(JSON.stringify(this.allSelect));
       this.strokeWidth.splice(0, this.strokeWidth.length);
-      const result = valuesToChange[val].map(i => newList[i]).every(x => x);
-      valuesToChange[val].map(well => {
+      const result = valuesToChange[val].map((i) => newList[i]).every((x) => x);
+      valuesToChange[val].map((well) => {
         newList[well] = !result;
       });
 
       this.allSelect = newList;
-      const allEqual = arr => arr.every(v => v === true); // verify in the pre-select all via a const allEqual function.
+      const allEqual = (arr) => arr.every((v) => v === true); // verify in the pre-select all via a const allEqual function.
       this.allSelectOrCancel = allEqual(this.allSelect) ? false : true; // if pre-select has all wells is true, then toggle from (+) to (-) icon.
       this.checkStrokeWidth();
     },
@@ -264,8 +264,8 @@ export default {
 
     getProtocolLetter(index) {
       return this.protocolAssignments[index] ? this.protocolAssignments[index].letter : "";
-    }
-  }
+    },
+  },
 };
 </script>
 <style scoped>

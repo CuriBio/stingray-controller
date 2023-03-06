@@ -3,7 +3,7 @@ import { createLocalVue } from "@vue/test-utils";
 // import * as axios_helpers from "@/js-utils/axios_helpers.js";
 import { WellTitle as LabwareDefinition } from "@/js-utils/LabwareCalculations.js";
 const twentyFourWellPlateDefinition = new LabwareDefinition(4, 6);
-import { COLOR_PALETTE,stimStatus, ALPHABET } from "../../../store/modules/stimulation/enums";
+import { COLOR_PALETTE, stimStatus, ALPHABET } from "../../../store/modules/stimulation/enums";
 
 describe("store/stimulation", () => {
   const localVue = createLocalVue();
@@ -479,7 +479,7 @@ describe("store/stimulation", () => {
     });
 
     test("When a user wants to save changes to an existing protocol by clicking on Save Changes button, Then the updated protocol will be commited to state in the available protocol list", async () => {
-      const { protocolList, protocolEditor,editMode } = store.state.stimulation;
+      const { protocolList, protocolEditor, editMode } = store.state.stimulation;
 
       const selected_protocol = protocolList[1];
       const { protocol } = protocolList[1];
@@ -662,30 +662,30 @@ describe("store/stimulation", () => {
     //   expect(axios_status_spy).toHaveBeenCalledWith("/setStimStatus?running=false");
     // });
 
-  //   test("When a user adds a repeat delay into the input of the settings panel, Then it will appear at the end of the waveform in the graph", async () => {
-  //     const test_delay = 10;
-  //     const expected_block = [[0, 10]];
-  //     await store.dispatch("stimulation/handleNewRestDuration", test_delay);
-  //     const { delayBlocks } = store.state.stimulation;
-  //     expect(delayBlocks).toStrictEqual(expected_block);
-  //   });
+    //   test("When a user adds a repeat delay into the input of the settings panel, Then it will appear at the end of the waveform in the graph", async () => {
+    //     const test_delay = 10;
+    //     const expected_block = [[0, 10]];
+    //     await store.dispatch("stimulation/handleNewRestDuration", test_delay);
+    //     const { delayBlocks } = store.state.stimulation;
+    //     expect(delayBlocks).toStrictEqual(expected_block);
+    //   });
 
-  //   test.each([
-  //     [{ status: 400 }, "ERROR"],
-  //     [{ status: 200 }, "CONFIG_CHECK_IN_PROGRESS"],
-  //   ])(
-  //     "When a user clicks icon to start a stim configuration check, Then action will post to BE and updatestimStatus",
-  //     async (response, status) => {
-  //       const axios_status_spy = jest
-  //         .spyOn(axios_helpers, "call_axios_post_from_vuex")
-  //         .mockImplementation(() => response);
+    //   test.each([
+    //     [{ status: 400 }, "ERROR"],
+    //     [{ status: 200 }, "CONFIG_CHECK_IN_PROGRESS"],
+    //   ])(
+    //     "When a user clicks icon to start a stim configuration check, Then action will post to BE and updatestimStatus",
+    //     async (response, status) => {
+    //       const axios_status_spy = jest
+    //         .spyOn(axios_helpers, "call_axios_post_from_vuex")
+    //         .mockImplementation(() => response);
 
-  //       store.state.stimulation.protocolAssignments = { 1: {} };
-  //       await store.dispatch("stimulation/startStimConfiguration");
+    //       store.state.stimulation.protocolAssignments = { 1: {} };
+    //       await store.dispatch("stimulation/startStimConfiguration");
 
-  //       expect(axios_status_spy).toHaveBeenCalledWith("/start_stim_checks", { well_indices: ["1"] });
-  //       expect(store.state.stimulation.stim_status).toBe(STIM_STATUS[status]);
-  //     }
-  //   );
-  // });
+    //       expect(axios_status_spy).toHaveBeenCalledWith("/start_stim_checks", { well_indices: ["1"] });
+    //       expect(store.state.stimulation.stim_status).toBe(STIM_STATUS[status]);
+    //     }
+    //   );
+  });
 });

@@ -589,7 +589,6 @@ describe("store/data", () => {
         const message = {
           [barcodeType]: valid_barcode,
         };
-        await store.commit("settings/setBeta2Mode", beta2Mode);
         await store.commit("flask/setBarcodeManualMode", false);
         await store.commit("playback/setBarcode", {
           type: barcodeType,

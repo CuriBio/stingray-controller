@@ -34,7 +34,7 @@
             class="w-100 h-100 edit-id"
             style="border-radius: 0; color: rgb(255, 255, 255); background-color: #3f3f3f; border: 0px"
             @input="onBFormInput"
-          ></b-form-input>
+          />
         </span>
       </div>
       <div

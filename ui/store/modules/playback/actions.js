@@ -37,8 +37,8 @@ export const microsPerMilli = 1000;
 // }
 
 export default {
-  async validateBarcode({ commit, state, dispatch }, { type, newValue }) {
-    const result = TextValidationPlateBarcode.validate(newValue, type, this.state.settings.beta2Mode);
+  async validateBarcode({ commit, state }, { type, newValue }) {
+    const result = TextValidationPlateBarcode.validate(newValue, type);
     const isValid = result == "";
     const { stimPlayState } = this.state.stimulation;
 

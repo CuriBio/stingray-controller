@@ -1,8 +1,6 @@
-// import { ENUMS } from "../modules/playback/enums";
+const io = require("socket.io-client");
 
-// const io = require("socket.io-client");
-
-// export const socket = io("ws://localhost:4567"); // TODO use constant here
+export const socket = io("ws://localhost:4567"); // TODO use constant here
 
 /**
  * Create a socket.io plugin for a Vuex store
@@ -11,19 +9,13 @@
  */
 export default function createWebSocketPlugin(socket) {
   return (store) => {
-    socket.on("stimulation_data", (stimJson, cb) => {
-      // Tanner (12/20/21): may want to put the same checks here as are in the waveformData handler once stim waveforms are sent instead of subprotocol indices
-      store.dispatch("stimulation/appendStimWaveforms", JSON.parse(stimJson));
-      /* istanbul ignore else */
-      if (cb) cb("action done"); // this callback is only used for testing. The backend will not send a callback
-    });
-
     socket.on("stimulatorCircuitStatuses", (messageJson, cb) => {
       store.dispatch("stimulation/checkStimulatorCircuitStatuses", JSON.parse(messageJson));
 
       /* istanbul ignore else */
       if (cb) cb("action done"); // this callback is only used for testing. The backend will not send a callback
     });
+
     socket.on("barcode", (messageJson, cb) => {
       if (!store.state.flask.barcodeManualMode) {
         const message = JSON.parse(messageJson);

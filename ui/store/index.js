@@ -7,7 +7,7 @@ import stimulationModule from "./modules/stimulation";
 import playbackModule from "./modules/playback";
 import { default as createWebSocketPlugin, socket } from "./plugins/websocket";
 
-// const wsPlugin = createWebSocketPlugin(socket);
+const wsPlugin = createWebSocketPlugin(socket);
 
 const createStore = () => {
   return new Vuex.Store({
@@ -18,7 +18,7 @@ const createStore = () => {
       settings: settingsModule,
       playback: playbackModule,
     },
-    // plugins: [wsPlugin],
+    plugins: [wsPlugin],
   });
 };
 

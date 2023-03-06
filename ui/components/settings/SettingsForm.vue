@@ -58,15 +58,15 @@
         </b-modal>
       </span>
     </div>
-    <canvas class="canvas__settings-title-separator" width="510" height="20"> </canvas>
-    <canvas class="canvas__settings-file-upload-separator" width="512" height="22"> </canvas>
-    <div class="div__settings-tool-tip-cancel-btn" width="180" height="55" @click="cancel_changes">
+    <canvas class="canvas__settings-title-separator" width="510" height="20" />
+    <canvas class="canvas__settings-button-separator" width="512" height="22" />
+    <div class="div__settings-tool-tip-cancel-btn" width="180" height="55" @click="cancelChanges">
       <span class="span__settings-tool-tip-cancel-btn-txt">Cancel</span>
     </div>
     <div
       class="div__settings-tool-tip-reset-btn"
       :class="[
-        user_found ? 'div__settings-tool-tip-reset-btn-enable' : 'div__settings-tool-tip-reset-btn-disable',
+        userFound ? 'div__settings-tool-tip-reset-btn-enable' : 'div__settings-tool-tip-reset-btn-disable',
       ]"
       width="180"
       height="55"
@@ -85,7 +85,7 @@
     <div
       class="div__settings-tool-tip-save-btn"
       :class="[
-        user_found ? 'div__settings-tool-tip-save-btn-enable' : 'div__settings-tool-tip-save-btn-disable',
+        userFound ? 'div__settings-tool-tip-save-btn-enable' : 'div__settings-tool-tip-save-btn-disable',
       ]"
       width="180"
       height="55"
@@ -94,11 +94,11 @@
       <span
         class="span__settings-tool-tip-save-btn-txt"
         :class="[
-          user_found
+          userFound
             ? 'span__settings-tool-tip-save-btn-txt-enable'
             : 'span__settings-tool-tip-save-btn-txt-disable',
         ]"
-        @click="save_changes()"
+        @click="saveChanges()"
         >Save&nbsp;<wbr />Changes</span
       >
     </div>
@@ -148,7 +148,7 @@ export default {
     };
   },
   computed: {
-    ...mapState("settings", ["beta2Mode", "userAccounts", "activeUserIndex", "storedCustomerId"]),
+    ...mapState("settings", ["userAccounts", "activeUserIndex", "storedCustomerId"]),
     getUserNames: function () {
       return this.userAccounts.map((userAccount) => userAccount.userName);
     },
@@ -237,7 +237,7 @@ export default {
   left: 0px;
   background-color: rgba(0, 0, 0);
   width: 700px;
-  height: 545px;
+  height: 350px;
   position: absolute;
   overflow: hidden;
   pointer-events: none;
@@ -475,40 +475,6 @@ export default {
   color: white;
 }
 
-.div__pulse3d-input-blocker {
-  position: absolute;
-  width: 285px;
-  height: 30px;
-  top: 327px;
-  left: calc(1026px - 775.511px);
-  visibility: visible;
-  opacity: 0.5;
-  background-color: black;
-  z-index: 100;
-}
-
-.span__settingsform_pulse3d-version-settings {
-  pointer-events: all;
-  line-height: 100%;
-  transform: rotate(0deg);
-  overflow: hidden;
-  position: absolute;
-  width: 285px;
-  height: 30px;
-  top: 327px;
-  left: calc(1026px - 775.511px);
-  padding: 5px;
-  visibility: visible;
-  user-select: none;
-  font-family: Muli;
-  font-weight: normal;
-  font-style: normal;
-  text-decoration: none;
-  font-size: 17px;
-  color: rgb(183, 183, 183);
-  text-align: left;
-  z-index: 41;
-}
 .div__settingsform-dropdown {
   pointer-events: all;
   transform: rotate(0deg);
@@ -523,49 +489,6 @@ export default {
   color: white;
 }
 
-.span__settingsform-delete-local-files-after-upload_txt {
-  pointer-events: all;
-  line-height: 100%;
-  transform: rotate(0deg);
-  overflow: hidden;
-  position: absolute;
-  width: 360px;
-  height: 30px;
-  top: 363px;
-  left: calc(1026px - 775.511px);
-  padding: 5px;
-  visibility: visible;
-  user-select: none;
-  font-family: Muli;
-  font-weight: normal;
-  font-style: normal;
-  text-decoration: none;
-  font-size: 17px;
-  color: rgb(183, 183, 183);
-  text-align: left;
-  z-index: 43;
-}
-.span__settingsform-show-recording-snapshot-text {
-  pointer-events: all;
-  line-height: 100%;
-  transform: rotate(0deg);
-  position: absolute;
-  width: 360px;
-  height: 30px;
-  top: 399px;
-  left: calc(1026px - 775.511px);
-  padding: 5px;
-  visibility: visible;
-  user-select: none;
-  font-family: Muli;
-  font-weight: normal;
-  font-style: normal;
-  text-decoration: none;
-  font-size: 17px;
-  color: rgb(183, 183, 183);
-  text-align: left;
-  z-index: 43;
-}
 .div__settingsform-toggle-icon-2 {
   pointer-events: all;
   transform: rotate(0deg);
@@ -599,7 +522,7 @@ export default {
   position: absolute;
   width: 180px;
   height: 55px;
-  top: 475px;
+  top: 275px;
   left: 450px;
   visibility: visible;
   z-index: 55;
@@ -634,7 +557,7 @@ export default {
   position: absolute;
   width: 180px;
   height: 55px;
-  top: 475px;
+  top: 275px;
   left: 260px;
   visibility: visible;
   z-index: 55;
@@ -667,7 +590,7 @@ export default {
   position: absolute;
   width: 180px;
   height: 55px;
-  top: 475px;
+  top: 275px;
   left: 70px;
   visibility: visible;
   z-index: 55;
@@ -732,13 +655,13 @@ export default {
   color: rgb(0, 0, 0);
 }
 
-.canvas__settings-file-upload-separator {
+.canvas__settings-button-separator {
   transform: rotate(0deg);
   pointer-events: all;
   position: absolute;
   width: 512px;
   height: 1px;
-  top: 454px;
+  top: 250px;
   left: 95px;
   visibility: visible;
   background-color: #878d99;

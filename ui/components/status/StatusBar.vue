@@ -106,31 +106,6 @@
           @handle-confirmation="closeModalsById(['success-qc-check'])"
         />
       </b-modal>
-      <!-- <b-modal
-        id="active-processes-warning"
-        size="sm"
-        hide-footer
-        hide-header
-        hide-header-close
-        :static="true"
-        :no-close-on-backdrop="true"
-      >
-        <StatusWarningWidget
-          :modalLabels="activeProcessesModalLabels"
-          @handle-confirmation="closeDaCheckModal"
-        />
-      </b-modal>
-      <b-modal
-        id="initializing-warning"
-        size="sm"
-        hide-footer
-        hide-header
-        hide-header-close
-        :static="true"
-        :no-close-on-backdrop="true"
-      >
-        <StatusWarningWidget :modalLabels="initializingModalLabels" @handle-confirmation="closeDaCheckModal" /> -->
-      <!-- </b-modal> -->
     </span>
   </div>
 </template>
@@ -236,7 +211,6 @@ export default {
     ...mapState("settings", [
       "logPath",
       "shutdownErrorStatus",
-      "beta2Mode",
       "softwareUpdateAvailable",
       "allowSWUpdateInstall",
       "firmwareUpdateDurMins",
@@ -302,7 +276,7 @@ export default {
         } else if (sensitiveOpsInProgress) {
           this.$bvModal.show("ops-closure-warning");
         } else {
-          this.handle - confirmation(1);
+          this.handleConfirmation(1);
         }
       }
     },

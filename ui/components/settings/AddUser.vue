@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div class="div__addUser-form-controls"></div>
+    <div class="div__addUser-form-controls" />
     <span class="span__addUser-form-controls-content-title"> Add&nbsp;<wbr />New&nbsp;<wbr />User </span>
     <div id="customerId" style="top: 50px; left: 50px; position: absolute; z-index: 24">
       <InputWidget
@@ -12,7 +12,7 @@
         :domIdSuffix="'customer-id'"
         :initialValue="storedCustomerId"
         @update:value="onUpdateId($event)"
-      ></InputWidget>
+      />
     </div>
 
     <div id="userName" style="top: 184px; left: 50px; position: absolute; z-index: 23">
@@ -40,7 +40,7 @@
         :type="'password'"
         :domIdSuffix="'passkey-id'"
         @update:value="onUpdatePass($event)"
-      ></InputWidget>
+      />
     </div>
     <div style="top: 350px; left: 0px; position: absolute">
       <ButtonWidget

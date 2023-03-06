@@ -69,7 +69,7 @@ Vue.directive("b-popover", VBPopover);
 export default {
   name: "StimulationStudioPlateWell",
   components: {
-    PlateWell
+    PlateWell,
   },
   props: {
     disable: { type: Boolean, default: false },
@@ -80,52 +80,34 @@ export default {
     index: {
       type: Number,
       default: 0,
-      validator: value => {
-        // Eli (2/5/21) The way this component currently computes the top/left positions requires that the index be within the valid range for a 24-well plate.
+      validator: (value) => {
         return value >= 0 && value < 24;
-      }
+      },
     },
     errorMessage: { type: String, default: "Open circuit found" },
-    protocolType: { type: String, default: "" }
+    protocolType: { type: String, default: "" },
   },
   computed: {
-    /*   0 4  8 12 16 20     In order to speed the rendering its better to pre-compute
-         1 5  9 13 17 21     top and left postions for the simulated well and center
-         2 6 10 14 18 22
-         3 7 11 15 19 23
-                             The Stimulation studio, always comprises of 24 wells and placed in a japanese order,
-                             as such left to right is a faster way and its quicker way of finding values and just
-                             incrementing the left offset where in the top offset remains the same during rendering
-                             but, our business logic of japanese order makes to recompute top and left offset to
-                             arrange in the japanese order resulting in more computation.
-                             So in order to reduce the same at present we compute the offset and return for left and top
-                             as a result in the renderer the execution improves to a great extent
-
-      */
-    // Eli (2/5/21): The prop validator for ``index`` ensures that the value will always be between 0-23
-    // eslint-disable-next-line vue/return-in-computed-property
-    computedTop: function() {
+    computedTop: function () {
       return 26 + (this.index % 4) * 60;
     },
-    // Eli (2/5/21): The prop validator for ``index`` ensures that the value will always be between 0-23
-    // eslint-disable-next-line vue/return-in-computed-property
-    computedLeft: function() {
+    computedLeft: function () {
       return 29 + Math.floor(this.index / 4) * 62;
     },
-    computedLabelLeft: function() {
+    computedLabelLeft: function () {
       return this.display ? "left: 29px;" : "left: 32px;";
     },
-    computedStyle: function() {
+    computedStyle: function () {
       return "top:" + this.computedTop + "px;" + "left:" + this.computedLeft + "px;";
     },
-    fillOpacity: function() {
+    fillOpacity: function () {
       if (this.disable) return 0.3;
       else if (this.protocolType) return 0.7;
       else return 1;
     },
-    svg_OpenCircuitOuter_DynamicClass: function() {
+    svg_OpenCircuitOuter_DynamicClass: function () {
       return this.strokeWdth !== 0 ? "fill: #FFFFFF;" : "fill: rgb(228, 4, 4);";
-    }
+    },
   },
   methods: {
     onEnterWell(index) {
@@ -139,8 +121,8 @@ export default {
     },
     onClickShiftExact(index) {
       this.$emit("click-shift-exact", index);
-    }
-  }
+    },
+  },
 };
 </script>
 <style>

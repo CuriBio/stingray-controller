@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div class="div__edituser-form-controls"></div>
+    <div class="div__edituser-form-controls" />
     <span class="span__edituser-form-controls-content-title">
       Edit&nbsp;<wbr />User&nbsp;<wbr />Credentials
     </span>
@@ -14,7 +14,7 @@
         :inputWidth="400"
         :domIdSuffix="'customer-id'"
         @update:value="onUpdateId($event)"
-      ></InputWidget>
+      />
     </div>
     <div id="userName" style="top: 145px; left: 50px; position: absolute; z-index: 23">
       <InputWidget
@@ -25,7 +25,7 @@
         :inputWidth="400"
         :domIdSuffix="'username'"
         @update:value="onUpdateUserName($event)"
-      ></InputWidget>
+      />
     </div>
     <div id="passkey" style="top: 241px; left: 50px; position: absolute; z-index: 22">
       <InputWidget
@@ -38,7 +38,7 @@
         :inputWidth="400"
         :domIdSuffix="'passkey-id'"
         @update:value="onUpdatePass($event)"
-      ></InputWidget>
+      />
     </div>
     <div style="top: 350px; left: 0px; position: absolute">
       <ButtonWidget
@@ -50,8 +50,7 @@
         :hoverColor="['#bd4932', '#bd4932', '#19ac8a']"
         :isEnabled="enablelistEditUser"
         @btn-click="clickedButton"
-      >
-      </ButtonWidget>
+      />
     </div>
   </div>
 </template>

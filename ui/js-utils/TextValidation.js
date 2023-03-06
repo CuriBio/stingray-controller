@@ -28,15 +28,14 @@ export class TextValidation {
    *
    * @param  {string}  text The text on which the validation rules are verified
    * @param  {string}  type The type of value being checked: ID, passkey, or userName
-   * @param  {bool}    beta2Mode True if in beta2 mode false if in beta 1 mode
    * @return {string} The string is either empty on valid and <space> or <invalid meessage>
    */
-  validate(text, type, beta2Mode) {
+  validate(text, type) {
     let feedback = "";
     try {
       switch (this.rule) {
         case "plateBarcode":
-          feedback = this.validateBarcode(text, type, beta2Mode);
+          feedback = this.validateBarcode(text, type);
           break;
         case "uuidBase57encode":
           feedback = this.validateUuidBaseFiftysevenEncode(text);
@@ -138,11 +137,10 @@ export class TextValidation {
    *
    * @param  {string}  barcode The barcode string to validate
    * @param {string} type The barcode type "stimBarcode" or "plateBarcode"
-   * @param {bool} beta2Mode True if in bet 2 mode false if in beta 1 mode
    * @return {string} "" if barcode is valid, " " otherwise
    *
    */
-  validateBarcode(barcode, type, beta2Mode) {
+  validateBarcode(barcode, type) {
     if (barcode == null) {
       return " ";
     }
@@ -161,20 +159,17 @@ export class TextValidation {
       return " ";
     }
 
-    return barcode.includes("-")
-      ? this.CheckNewBarcode(barcode, beta2Mode)
-      : this.CheckOldBarcode(barcode);
+    return barcode.includes("-") ? this.checkNewBarcode(barcode) : this.checkOldBarcode(barcode);
   }
 
   /**
    * Returns the feedback text for the new plate barcode validation
    *
    * @param  {string}  barcode The barcode string to validate
-   * @param  {bool}    beta2Mode True if in bet 2 mode false if in beta 1 mode
    * @return {string} "" if barcode is valid, " " otherwise
    *
    */
-  CheckNewBarcode(barcode, beta2Mode) {
+  checkNewBarcode(barcode) {
     // check that barcode is numeric exept for header and dash
     const numericBarcode = barcode.slice(2, 10) + barcode[11];
     if (isNaN(numericBarcode)) {
@@ -197,7 +192,7 @@ export class TextValidation {
       return " ";
     }
     // check if in beta one or two mode. if last digit invalid then mark the barcode as invalid
-    if ((beta2Mode && barcode[11] !== "2") || (!beta2Mode && barcode[11] !== "1")) {
+    if (barcode[11] !== "2") {
       return " ";
     }
     return "";
@@ -209,7 +204,7 @@ export class TextValidation {
    * @return {string} "" if barcode is valid, " " otherwise
    *
    */
-  CheckOldBarcode(barcode) {
+  checkOldBarcode(barcode) {
     const plateBarcodeLen = barcode.length;
     for (let i = 2; i < plateBarcodeLen; i++) {
       const scanAscii = barcode.charCodeAt(i);

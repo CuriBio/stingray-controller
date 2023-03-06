@@ -177,42 +177,42 @@ describe("store/settings", () => {
     expect(total_uploaded_files[0]).toBe(test_filename);
     expect(upload_error).toBe(true);
   });
-  describe("settings/actions", () => {
-    // test("When a user wants to save user credentials in settings, Then the vuex action to update settings will send axios request", async () => {
-    //   jest.spyOn(axios_helpers, "call_axios_get_from_vuex").mockImplementation(() => {
-    //     return {
-    //       status: 200,
-    //     };
-    //   });
+  // describe("settings/actions", () => {
+  // test("When a user wants to save user credentials in settings, Then the vuex action to update settings will send axios request", async () => {
+  //   jest.spyOn(axios_helpers, "call_axios_get_from_vuex").mockImplementation(() => {
+  //     return {
+  //       status: 200,
+  //     };
+  //   });
 
-    //   const array_of_user_accounts = [
-    //     {
-    //       customer_id: "4vqyd62oARXqj9nRUNhtLQ",
-    //       user_password: "941532a0-6be1-443a-a9d5-d57bdf180a52",
-    //       user_name: "User account -1",
-    //     },
-    //   ];
+  //   const array_of_user_accounts = [
+  //     {
+  //       customer_id: "4vqyd62oARXqj9nRUNhtLQ",
+  //       user_password: "941532a0-6be1-443a-a9d5-d57bdf180a52",
+  //       user_name: "User account -1",
+  //     },
+  //   ];
 
-    //   store.commit("settings/set_user_accounts", array_of_user_accounts);
-    //   store.commit("settings/set_active_user_index", 0);
+  //   store.commit("settings/set_user_accounts", array_of_user_accounts);
+  //   store.commit("settings/set_active_user_index", 0);
 
-    //   const { status } = await store.dispatch("settings/update_settings");
-    //   expect(status).toBe(200);
-    // });
-    // test.each([true, false])(
-    //   "When a user confirms whether or not they want to proceed with a FW update, Then that decision is sent to the BE",
-    //   async (decision) => {
-    //     const post_spy = jest.spyOn(axios_helpers, "call_axios_post_from_vuex").mockImplementation(() => {
-    //       return {
-    //         status: 200,
-    //       };
-    //     });
+  //   const { status } = await store.dispatch("settings/update_settings");
+  //   expect(status).toBe(200);
+  // });
+  // test.each([true, false])(
+  //   "When a user confirms whether or not they want to proceed with a FW update, Then that decision is sent to the BE",
+  //   async (decision) => {
+  //     const post_spy = jest.spyOn(axios_helpers, "call_axios_post_from_vuex").mockImplementation(() => {
+  //       return {
+  //         status: 200,
+  //       };
+  //     });
 
-    //     const { status } = await store.dispatch("settings/sendFirmwareUpdateConfirmation", decision);
-    //     expect(status).toBe(200);
-    //     expect(post_spy).toHaveBeenCalledWith(`/firmware_update_confirmation?update_accepted=${decision}`);
-    //   }
-    // );
+  //     const { status } = await store.dispatch("settings/sendFirmwareUpdateConfirmation", decision);
+  //     expect(status).toBe(200);
+  //     expect(post_spy).toHaveBeenCalledWith(`/firmware_update_confirmation?update_accepted=${decision}`);
+  //   }
+  // );
 
   describe("settings/mutations", () => {
     test.each([true, false])(
