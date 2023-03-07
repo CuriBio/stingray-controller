@@ -18,7 +18,7 @@ const state = () => ({
   stimPlayState: false,
   xAxisTimeIdx: 0,
   editMode: { status: false, protocol: "", label: "", color: "" },
-  stimStatus: STIM_STATUS.CALIBRATION_NEEDED,
+  stimStatus: STIM_STATUS.NO_PROTOCOLS_ASSIGNED,
   hoveredPulse: {
     idx: null,
     indices: [],

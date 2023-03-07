@@ -43,14 +43,13 @@ import { library } from "@fortawesome/fontawesome-svg-core";
 import { faPencilAlt } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import StatusWarningWidget from "@/components/status/StatusWarningWidget.vue";
+import { STIM_STATUS } from "@/store/modules/stimulation/enums";
 import Vue from "vue";
 import { VBPopover } from "bootstrap-vue";
 Vue.directive("b-popover", VBPopover);
 
 library.add(faPencilAlt);
 /**
- * @vue-data {String} playbackStateEnums - Current state of playback
- * @vue-computed {String} playbackState - Current value in Vuex store
  * @vue-event {String} setBarcodeManually - User entered String parser
  */
 export default {
@@ -80,8 +79,8 @@ export default {
     };
   },
   computed: {
-    ...mapState("playback", ["barcodes", "barcodeWarning"]),
-    ...mapState("flask", ["barcodeManualMode"]),
+    ...mapState("system", ["barcodes", "barcodeWarning", "barcodeManualMode"]),
+    ...mapState("stimulation", ["stimStatus"]),
     barcodeInfo: function () {
       return this.barcodes[this.barcodeType];
     },
@@ -96,7 +95,7 @@ export default {
       return this.activeProcesses ? "Cannot edit barcodes while stimulating..." : "Click to edit";
     },
     activeProcesses: function () {
-      return false;
+      return [STIM_STATUS.CONFIG_CHECK_IN_PROGRESS, STIM_STATUS.STIM_ACTIVE].includes(this.stimStatus);
     },
     isDisabled: function () {
       return this.activeProcesses || !this.barcodeManualMode;
@@ -111,20 +110,20 @@ export default {
     handleManualModeChoice(choice) {
       const boolChoice = Boolean(choice);
       this.$bvModal.hide("edit-plate-barcode-modal");
-      this.$store.commit("flask/setBarcodeManualMode", boolChoice);
+      this.$store.commit("system/setBarcodeManualMode", boolChoice);
       if (boolChoice) {
         console.log("Barcode Set Manually"); // allow-log
       }
     },
     setBarcodeManually: function (event) {
-      this.$store.dispatch("playback/validateBarcode", {
+      this.$store.dispatch("system/validateBarcode", {
         type: this.barcodeType,
         newValue: event.target.value,
       });
     },
     closeWarningModal() {
       this.$bvModal.hide("barcode-warning");
-      this.$store.commit("playback/setBarcodeWarning", false);
+      this.$store.commit("system/setBarcodeWarning", false);
     },
   },
 };

@@ -25,14 +25,14 @@ describe("PlateWell.vue", () => {
   test("When mounting PlateWell from the build dist file, Then it loads successfully", async () => {
     const propsData = {
       classname: "plate",
-      svg_height: 100,
-      svg_width: 100,
-      circle_x: 50,
-      circle_y: 50,
+      svgHeight: 100,
+      svgWidth: 100,
+      circleX: 50,
+      circleY: 50,
       radius: 50,
       strk: "#ececed",
-      stroke_wdth: 0,
-      plate_fill: "#b7b7b7",
+      strokeWdth: 0,
+      plateFill: "#b7b7b7",
       index: 0,
     };
     const wrapper = mount(DistComponentToTest, {
@@ -45,14 +45,14 @@ describe("PlateWell.vue", () => {
   });
   test("When the PlateWell is mounted, Then mouseenter event on the circle would emit and event 'enter-well' with plate index range [0..23]", async () => {
     const propsData = {
-      svg_height: 100,
-      svg_width: 100,
-      circle_x: 50,
-      circle_y: 50,
+      svgHeight: 100,
+      svgWidth: 100,
+      circleX: 50,
+      circleY: 50,
       radius: 50,
       strk: "#ececed",
-      stroke_wdth: 0,
-      plate_fill: "#b7b7b7",
+      strokeWdth: 0,
+      plateFill: "#b7b7b7",
       index: 0,
     };
     const wrapper = mount(ComponentToTest, {
@@ -63,21 +63,21 @@ describe("PlateWell.vue", () => {
     const plate = wrapper.find(".well");
 
     await plate.trigger("mouseenter");
-    const enter_well_events = wrapper.emitted("enter-well");
-    expect(enter_well_events).toHaveLength(1);
-    expect(enter_well_events[0]).toStrictEqual([0]);
+    const enterWellEvents = wrapper.emitted("enter-well");
+    expect(enterWellEvents).toHaveLength(1);
+    expect(enterWellEvents[0]).toStrictEqual([0]);
   });
   test("When the PlateWell is mounted, Then mouseleave event on the circle would emit and event 'leave-well' with plate index range [0..23]", async () => {
     const propsData = {
       classname: "plate",
-      svg_height: 100,
-      svg_width: 100,
-      circle_x: 50,
-      circle_y: 50,
+      svgHeight: 100,
+      svgWidth: 100,
+      circleX: 50,
+      circleY: 50,
       radius: 50,
       strk: "#ececed",
-      stroke_wdth: 0,
-      plate_fill: "#b7b7b7",
+      strokeWdth: 0,
+      plateFill: "#b7b7b7",
       index: 1,
     };
     const wrapper = mount(ComponentToTest, {
@@ -88,22 +88,22 @@ describe("PlateWell.vue", () => {
     const plate = wrapper.find(".well");
 
     await plate.trigger("mouseleave");
-    const leave_well_events = wrapper.emitted("leave-well");
-    expect(leave_well_events).toHaveLength(1);
-    expect(leave_well_events[0]).toStrictEqual([1]);
+    const leaveWellEvents = wrapper.emitted("leave-well");
+    expect(leaveWellEvents).toHaveLength(1);
+    expect(leaveWellEvents[0]).toStrictEqual([1]);
   });
 
   test("When the PlateWell is mounted, Then click event on the circle would emit and event 'click-exact' with plate index range [0..23]", async () => {
     const propsData = {
       classname: "plate",
-      svg_height: 100,
-      svg_width: 100,
-      circle_x: 50,
-      circle_y: 50,
+      svgHeight: 100,
+      svgWidth: 100,
+      circleX: 50,
+      circleY: 50,
       radius: 50,
       strk: "#ececed",
-      stroke_wdth: 0,
-      plate_fill: "#b7b7b7",
+      strokeWdth: 0,
+      plateFill: "#b7b7b7",
       index: 1,
     };
     const wrapper = mount(ComponentToTest, {
@@ -114,22 +114,22 @@ describe("PlateWell.vue", () => {
     const plate = wrapper.find(".well");
 
     await plate.trigger("click");
-    const click_well_events = wrapper.emitted("click-exact");
-    expect(click_well_events).toHaveLength(1);
-    expect(click_well_events[0]).toStrictEqual([1]);
+    const clickWellEvents = wrapper.emitted("click-exact");
+    expect(clickWellEvents).toHaveLength(1);
+    expect(clickWellEvents[0]).toStrictEqual([1]);
   });
 
   test("When the PlateWell is mounted, Then click+shift event on the circle would emit and event 'click-shift-exact' with plate index range [0..23]", async () => {
     const propsData = {
       classname: "plate",
-      svg_height: 100,
-      svg_width: 100,
-      circle_x: 50,
-      circle_y: 50,
+      svgHeight: 100,
+      svgWidth: 100,
+      circleX: 50,
+      circleY: 50,
       radius: 50,
       strk: "#ececed",
-      stroke_wdth: 0,
-      plate_fill: "#b7b7b7",
+      strokeWdth: 0,
+      plateFill: "#b7b7b7",
       index: 5,
     };
     const wrapper = mount(ComponentToTest, {
@@ -143,22 +143,22 @@ describe("PlateWell.vue", () => {
       shiftKey: true, // For testing @click.shift handlers
     });
     await wrapper.vm.$nextTick(); // wait for update
-    const click_well_events = wrapper.emitted("click-shift-exact");
-    expect(click_well_events).toHaveLength(1);
-    expect(click_well_events[0]).toStrictEqual([5]);
+    const clickWellEvents = wrapper.emitted("click-shift-exact");
+    expect(clickWellEvents).toHaveLength(1);
+    expect(clickWellEvents[0]).toStrictEqual([5]);
   });
 
   test("When the PlateWell is mounted, Then click+ctrl event on the circle would emit and event 'click-ctrl-exact' with plate index range [0..23]", async () => {
     const propsData = {
       classname: "plate",
-      svg_height: 100,
-      svg_width: 100,
-      circle_x: 50,
-      circle_y: 50,
+      svgHeight: 100,
+      svgWidth: 100,
+      circleX: 50,
+      circleY: 50,
       radius: 50,
       strk: "#ececed",
-      stroke_wdth: 0,
-      plate_fill: "#b7b7b7",
+      strokeWdth: 0,
+      plateFill: "#b7b7b7",
       index: 10,
     };
     const wrapper = mount(ComponentToTest, {
@@ -172,8 +172,8 @@ describe("PlateWell.vue", () => {
       ctrlKey: true, // For testing @click.ctrl handlers
     });
     await wrapper.vm.$nextTick(); // wait for update
-    const click_well_events = wrapper.emitted("click-ctrl-exact");
-    expect(click_well_events).toHaveLength(1);
-    expect(click_well_events[0]).toStrictEqual([10]);
+    const clickWellEvents = wrapper.emitted("click-ctrl-exact");
+    expect(clickWellEvents).toHaveLength(1);
+    expect(clickWellEvents[0]).toStrictEqual([10]);
   });
 });

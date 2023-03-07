@@ -1,6 +1,6 @@
 <template>
   <div>
-    <span class="span__playback-player-controls-settings-button">
+    <span class="span__stim-controls-settings-button">
       <FontAwesomeIcon :icon="['fa', 'cog']" />
     </span>
   </div>
@@ -18,7 +18,7 @@ export default {
 };
 </script>
 <style type="text=css">
-.span__playback-player-controls-settings-button {
+.span__stim-controls-settings-button {
   text-align: center;
   position: absolute;
   width: 30px;
@@ -29,7 +29,7 @@ export default {
   color: #b7b7b7;
   font-size: 41px;
 }
-.span__playback-player-controls-settings-button:hover {
+.span__stim-controls-settings-button:hover {
   color: #ffffff;
   cursor: pointer;
 }

@@ -23,14 +23,14 @@ describe("StimulationStudioDelayModal.vue", () => {
       store,
       localVue,
       propsData: {
-        current_color: "hsla(50, 100%, 50%, 1)",
+        currentColor: "hsla(50, 100%, 50%, 1)",
       },
     });
 
     await wrapper.find("#input-widget-field-delay").setValue(MIN_SUBPROTOCOL_DURATION_MS.toString());
-    await wrapper.findAll(".span__button_label").at(1).trigger("click");
+    await wrapper.findAll(".span__button-label").at(1).trigger("click");
 
-    expect(wrapper.emitted("delay_close")).toBeTruthy();
+    expect(wrapper.emitted("delayClose")).toBeTruthy();
   });
 
   test.each([
@@ -38,11 +38,11 @@ describe("StimulationStudioDelayModal.vue", () => {
     [false, ["Save", "Cancel"]],
   ])(
     "When a user opens the delay modal and editing is %s, Then button labels should be %s",
-    async (modal_open_for_edit, expected_button_labels) => {
-      const button_labels = StimulationStudioDelayModal.computed.button_labels.call({
-        modal_open_for_edit,
+    async (modalOpenForEdit, expectedButtonLabels) => {
+      const buttonLabels = StimulationStudioDelayModal.computed.buttonLabels.call({
+        modalOpenForEdit,
       });
-      expect(button_labels).toStrictEqual(expected_button_labels);
+      expect(buttonLabels).toStrictEqual(expectedButtonLabels);
     }
   );
 
@@ -51,11 +51,11 @@ describe("StimulationStudioDelayModal.vue", () => {
     [false, ["#19ac8a", "#bd4932"]],
   ])(
     "When a user opens the delay modal and editing is %s, Then button hover colors should be %s",
-    async (modal_open_for_edit, expected_button_colors) => {
-      const button_labels = StimulationStudioDelayModal.computed.button_hover_colors.call({
-        modal_open_for_edit,
+    async (modalOpenForEdit, expectedButtonColors) => {
+      const buttonLabels = StimulationStudioDelayModal.computed.buttonHoverColors.call({
+        modalOpenForEdit,
       });
-      expect(button_labels).toStrictEqual(expected_button_colors);
+      expect(buttonLabels).toStrictEqual(expectedButtonColors);
     }
   );
 
@@ -64,33 +64,33 @@ describe("StimulationStudioDelayModal.vue", () => {
       store,
       localVue,
       propsData: {
-        current_color: "hsla(50, 100%, 50%, 1)",
+        currentColor: "hsla(50, 100%, 50%, 1)",
       },
     });
-    const target_input_field = wrapper.find("#input-widget-field-delay");
+    const targetInputField = wrapper.find("#input-widget-field-delay");
 
     // invalid
-    await target_input_field.setValue("");
-    expect(wrapper.vm.invalid_text).toBe("Required");
+    await targetInputField.setValue("");
+    expect(wrapper.vm.invalidText).toBe("Required");
 
-    await target_input_field.setValue("test");
-    expect(wrapper.vm.invalid_text).toBe("Must be a (+) number");
+    await targetInputField.setValue("test");
+    expect(wrapper.vm.invalidText).toBe("Must be a (+) number");
 
-    await target_input_field.setValue(`${MIN_SUBPROTOCOL_DURATION_MS - 1}`);
-    expect(wrapper.vm.invalid_text).toBe(`Duration must be >=${MIN_SUBPROTOCOL_DURATION_MS}ms`);
+    await targetInputField.setValue(`${MIN_SUBPROTOCOL_DURATION_MS - 1}`);
+    expect(wrapper.vm.invalidText).toBe(`Duration must be >=${MIN_SUBPROTOCOL_DURATION_MS}ms`);
 
-    await target_input_field.setValue(`${MAX_SUBPROTOCOL_DURATION_MS + 1}`);
-    expect(wrapper.vm.invalid_text).toBe("Duration must be <= 24hrs");
+    await targetInputField.setValue(`${MAX_SUBPROTOCOL_DURATION_MS + 1}`);
+    expect(wrapper.vm.invalidText).toBe("Duration must be <= 24hrs");
 
-    await target_input_field.setValue(`${MIN_SUBPROTOCOL_DURATION_MS + 0.1}`);
-    expect(wrapper.vm.invalid_text).toBe("Must be a whole number of ms");
+    await targetInputField.setValue(`${MIN_SUBPROTOCOL_DURATION_MS + 0.1}`);
+    expect(wrapper.vm.invalidText).toBe("Must be a whole number of ms");
 
     // valid
-    await target_input_field.setValue(`${MIN_SUBPROTOCOL_DURATION_MS}`);
-    expect(wrapper.vm.invalid_text).toBe("");
+    await targetInputField.setValue(`${MIN_SUBPROTOCOL_DURATION_MS}`);
+    expect(wrapper.vm.invalidText).toBe("");
 
-    await target_input_field.setValue(`${MAX_SUBPROTOCOL_DURATION_MS}`);
-    expect(wrapper.vm.invalid_text).toBe("");
+    await targetInputField.setValue(`${MAX_SUBPROTOCOL_DURATION_MS}`);
+    expect(wrapper.vm.invalidText).toBe("");
   });
 
   test("When a user wants to save the delay/repeat value, Then it will only be possible once a all validation checks pass for input", async () => {
@@ -98,29 +98,29 @@ describe("StimulationStudioDelayModal.vue", () => {
       store,
       localVue,
       propsData: {
-        modal_type: "Delay",
-        current_color: "hsla(50, 100%, 50%, 1)",
+        modalType: "Delay",
+        currentColor: "hsla(50, 100%, 50%, 1)",
       },
     });
     await wrapper.find("#input-widget-field-delay").setValue("5000");
-    expect(wrapper.vm.is_valid).toBe(true);
+    expect(wrapper.vm.isValid).toBe(true);
 
     await wrapper.find("#input-widget-field-delay").setValue("test");
-    expect(wrapper.vm.is_valid).toBe(false);
+    expect(wrapper.vm.isValid).toBe(false);
   });
   test("When a user selects a different time unit from the dropdown, Then the index will be saved to state", async () => {
     const wrapper = mount(StimulationStudioDelayModal, {
       store,
       localVue,
       propsData: {
-        current_color: "hsla(50, 100%, 50%, 1)",
+        currentColor: "hsla(50, 100%, 50%, 1)",
       },
     });
 
     await wrapper.find(".div__small-dropdown-controls-content-widget").trigger("click");
     await wrapper.findAll("li").at(0).trigger("click");
 
-    expect(wrapper.vm.timeUnit_idx).toBe(1);
+    expect(wrapper.vm.timeUnitIdx).toBe(1);
   });
 
   test("When a user clicks on a new color for delay block, Then the color will be set to state to be emitted to parent component", async () => {
@@ -128,14 +128,14 @@ describe("StimulationStudioDelayModal.vue", () => {
       store,
       localVue,
       propsData: {
-        current_color: "hsla(50, 100%, 50%, 1)",
+        currentColor: "hsla(50, 100%, 50%, 1)",
       },
     });
 
     await wrapper.find(".div__color-label").trigger("click");
 
-    await wrapper.findAll(".individual_color_block").at(0).trigger("click");
+    await wrapper.findAll(".individualColorBlock").at(0).trigger("click");
 
-    expect(wrapper.vm.selected_color).toBe("hsla(0, 100%, 50%, 1)");
+    expect(wrapper.vm.selectedColor).toBe("hsla(0, 100%, 50%, 1)");
   });
 });

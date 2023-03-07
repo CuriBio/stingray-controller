@@ -17,9 +17,9 @@ localVue.use(BootstrapVue);
 
 let NuxtStore;
 let store;
-let mocked_axios;
+let mockedAxios;
 
-const text_selector = ".span__status-bar-text";
+const textSelector = ".span__status-bar-text";
 
 describe("StatusWidget.vue", () => {
   beforeAll(async () => {
@@ -30,14 +30,14 @@ describe("StatusWidget.vue", () => {
 
   beforeEach(async () => {
     store = await NuxtStore.createStore();
-    mocked_axios = new MockAxiosAdapter(axios);
+    mockedAxios = new MockAxiosAdapter(axios);
   });
 
   afterEach(() => {
     wrapper.destroy();
-    mocked_axios.restore();
+    mockedAxios.restore();
   });
-  describe("system_status", () => {
+  describe("systemStatus", () => {
     test("When BE signals corrupt h5 detected, Then show user the error", async () => {
       const propsData = {};
       wrapper = mount(StatusWidget, {
@@ -45,19 +45,19 @@ describe("StatusWidget.vue", () => {
         store,
         localVue,
       });
-      const text_selector_h5 = "#h5_warning";
-      await store.commit("stimulation/set_h5_warning");
-      //select the correct button
+      const textSelectorH5 = "#h5Warning";
+      await store.commit("stimulation/setH5Warning");
+      // select the correct button
       Vue.nextTick(() => {
-        expect(wrapper.find(text_selector_h5).isVisible()).toBe(true);
-        const h5_exit_button = wrapper.findAll(".span__button_label").at(0);
-        //check we have the correct button
-        expect(h5_exit_button.text()).toBe([]);
-        h5_exit_button.trigger("click");
-        expect(wrapper.find(text_selector_h5).isVisible()).toBe(false);
+        expect(wrapper.find(textSelectorH5).isVisible()).toBe(true);
+        const h5ExitButton = wrapper.findAll(".span__button-label").at(0);
+        // check we have the correct button
+        expect(h5ExitButton.text()).toBe([]);
+        h5ExitButton.trigger("click");
+        expect(wrapper.find(textSelectorH5).isVisible()).toBe(false);
       });
     });
-    //add test to check that false = not visible
+    // add test to check that false = not visible
     test.each([
       ["SERVER_BOOTING_UP", "System status: Booting Up..."],
       ["SERVER_STILL_INITIALIZING", "System status: Connecting..."],
@@ -73,31 +73,31 @@ describe("StatusWidget.vue", () => {
       ["CHECKING_FOR_UPDATES", "System status: Checking for Firmware Updates..."],
     ])(
       "Given that /shutdown is mocked to return status 200, When Vuex is mutated to the state %s, Then the status text should update to be: %s",
-      async (vuex_state, expected_text) => {
-        const shutdown_url = "http://localhost:4567/shutdown";
-        mocked_axios.onGet(shutdown_url).reply(200, {});
+      async (vuexState, expectedText) => {
+        const shutdownUrl = "http://localhost:4567/shutdown";
+        mockedAxios.onGet(shutdownUrl).reply(200, {});
         const propsData = {};
         wrapper = mount(StatusWidget, {
           propsData,
           store,
           localVue,
         });
-        store.commit("flask/setStatusUuid", STATUS.MESSAGE[vuex_state]);
+        store.commit("flask/setStatusUuid", STATUS[vuexState]);
         await wrapper.vm.$nextTick(); // wait for update
 
-        expect(wrapper.find(text_selector).text()).toBe(expected_text);
+        expect(wrapper.find(textSelector).text()).toBe(expectedText);
       }
     );
     test("When initially mounted, Then the status text matches the Vuex state", async () => {
       const propsData = {};
-      store.commit("flask/setStatusUuid", STATUS.MESSAGE.CALIBRATING);
+      store.commit("flask/setStatusUuid", STATUS.CALIBRATING);
       wrapper = mount(StatusWidget, {
         propsData,
         store,
         localVue,
       });
       await wrapper.vm.$nextTick(); // wait for update
-      expect(wrapper.find(text_selector).text()).toBe("System status: Calibrating...");
+      expect(wrapper.find(textSelector).text()).toBe("System status: Calibrating...");
     });
 
     test.each([
@@ -107,14 +107,14 @@ describe("StatusWidget.vue", () => {
       "InstrumentFirmwareError",
     ])(
       "When unique shutdown error gets set to %s in Vuex, Then it will override any status text present before error modal appears",
-      async (error_type) => {
+      async (errorType) => {
         wrapper = mount(StatusWidget, {
           store,
           localVue,
         });
-        expect(wrapper.find(text_selector).text()).toBe("System status: Booting Up..."); // initial status
-        await store.commit("settings/setShutdownErrorStatus", { error_type });
-        expect(wrapper.find(text_selector).text()).toBe(`System status: Error Occurred`);
+        expect(wrapper.find(textSelector).text()).toBe("System status: Booting Up..."); // initial status
+        await store.commit("settings/setShutdownErrorStatus", { errorType });
+        expect(wrapper.find(textSelector).text()).toBe(`System status: Error Occurred`);
       }
     );
 
@@ -126,9 +126,9 @@ describe("StatusWidget.vue", () => {
         localVue,
       });
 
-      expect(wrapper.find(text_selector).text()).toBe("System status: Booting Up..."); // initial status
-      await store.commit("settings/setShutdownErrorStatus", { error_type: "UnknownError" });
-      expect(wrapper.find(text_selector).text()).toBe("System status: Error Occurred");
+      expect(wrapper.find(textSelector).text()).toBe("System status: Booting Up..."); // initial status
+      await store.commit("settings/setShutdownErrorStatus", { errorType: "UnknownError" });
+      expect(wrapper.find(textSelector).text()).toBe("System status: Error Occurred");
     });
 
     test("When Vuex is mutated to an unknown UUID, Then the status text should update to include that UUID", async () => {
@@ -141,11 +141,11 @@ describe("StatusWidget.vue", () => {
 
       store.commit("flask/setStatusUuid", "3dbb8814-09f1-44db-b7d5-7a9f702beac4");
       await wrapper.vm.$nextTick(); // wait for update
-      expect(wrapper.find(text_selector).text()).toBe("System status: 3dbb8814-09f1-44db-b7d5-7a9f702beac4");
+      expect(wrapper.find(textSelector).text()).toBe("System status: 3dbb8814-09f1-44db-b7d5-7a9f702beac4");
     });
     test("Given that the http response is 404 for api request /shutdown, When Vuex is mutated to an ERROR UUID, Then the status text should update as 'Error Occurred' and the the dialog of ErrorCatchWidget is visible", async () => {
-      const shutdown_url = "http://localhost:4567/shutdown";
-      mocked_axios.onGet(shutdown_url).reply(404);
+      const shutdownUrl = "http://localhost:4567/shutdown";
+      mockedAxios.onGet(shutdownUrl).reply(404);
       const propsData = {};
       wrapper = mount(StatusWidget, {
         propsData,
@@ -157,9 +157,9 @@ describe("StatusWidget.vue", () => {
       expect(wrapper.contains("#error-catch")).toBe(true);
       const modal = wrapper.find("#error-catch");
       expect(modal.isVisible()).toBe(false);
-      store.commit("flask/setStatusUuid", STATUS.MESSAGE.ERROR);
+      store.commit("flask/setStatusUuid", STATUS.ERROR);
       await wrapper.vm.$nextTick(); // wait for update
-      expect(wrapper.find(text_selector).text()).toBe("System status: Error Occurred");
+      expect(wrapper.find(textSelector).text()).toBe("System status: Error Occurred");
       Vue.nextTick(() => {
         expect(modal.isVisible()).toBe(true);
       });
@@ -174,10 +174,10 @@ describe("StatusWidget.vue", () => {
       });
 
       await store.commit("settings/setShutdownErrorStatus", {
-        error_type: "InstrumentCreateConnectionError",
+        errorType: "InstrumentCreateConnectionError",
       });
-      store.commit("flask/setStatusUuid", STATUS.MESSAGE.ERROR);
-      expect(wrapper.find(text_selector).text()).toBe(`System status: Error Occurred`);
+      store.commit("flask/setStatusUuid", STATUS.ERROR);
+      expect(wrapper.find(textSelector).text()).toBe(`System status: Error Occurred`);
     });
     test("When Vuex is mutated to an UPDATE ERROR UUID, Then the status text should update as 'Error During Firmware Update' and the the dialog of ErrorCatchWidget is visible", async () => {
       const propsData = {};
@@ -191,19 +191,17 @@ describe("StatusWidget.vue", () => {
       expect(wrapper.contains("#error-catch")).toBe(true);
       const modal = wrapper.find("#error-catch");
 
-      store.commit("flask/setStatusUuid", STATUS.MESSAGE.UPDATE_ERROR);
+      store.commit("flask/setStatusUuid", STATUS.UPDATE_ERROR);
       await wrapper.vm.$nextTick(); // wait for update
-      expect(wrapper.find(text_selector).text()).toBe("System status: Error During Firmware Update");
+      expect(wrapper.find(textSelector).text()).toBe("System status: Error During Firmware Update");
       Vue.nextTick(() => {
         expect(modal.isVisible()).toBe(true);
-        done();
       });
 
-      wrapper.vm.close_modals_by_id(["error-catch"]); // the event of ok-clicked got invoked.
+      wrapper.vm.closeModalsById(["error-catch"]); // the event of ok-clicked got invoked.
 
       Vue.nextTick(() => {
         expect(modal.isVisible()).toBe(false);
-        done();
       });
     });
     test.each([
@@ -220,16 +218,16 @@ describe("StatusWidget.vue", () => {
       "ERROR",
     ])(
       "When a user wants to exit the desktop app, Then the closure warning modals should not appear if there are no active processes or fw update",
-      async (vuex_state) => {
-        const confirmation_spy = jest.spyOn(StatusWidget.methods, "handleConfirmation");
+      async (vuexState) => {
+        const confirmationSpy = jest.spyOn(StatusWidget.methods, "handleConfirmation");
         wrapper = mount(StatusWidget, {
           store,
           localVue,
         });
 
-        await store.commit("flask/setStatusUuid", STATUS.MESSAGE[vuex_state]);
+        await store.commit("flask/setStatusUuid", STATUS[vuexState]);
         await store.commit("settings/setConfirmationRequest", true);
-        expect(confirmation_spy).toHaveBeenCalledWith(1);
+        expect(confirmationSpy).toHaveBeenCalledWith(1);
 
         Vue.nextTick(() => {
           expect(wrapper.find("#fw-closure-warning").isVisible()).toBe(false);
@@ -240,12 +238,12 @@ describe("StatusWidget.vue", () => {
 
     test.each(["BUFFERING", "LIVE_VIEW_ACTIVE", "RECORDING", "CALIBRATING"])(
       "When a user wants to exit the desktop app, Then the closure warning modal should appear if there are active processes",
-      async (vuex_state) => {
+      async (vuexState) => {
         wrapper = mount(StatusWidget, {
           store,
           localVue,
         });
-        await store.commit("flask/setStatusUuid", STATUS.MESSAGE[vuex_state]);
+        await store.commit("flask/setStatusUuid", STATUS[vuexState]);
 
         await store.commit("settings/setConfirmationRequest", false);
         Vue.nextTick(() => {
@@ -279,12 +277,12 @@ describe("StatusWidget.vue", () => {
 
     test.each(["DOWNLOADING_UPDATES", "INSTALLING_UPDATES"])(
       "When a user wants to exit the desktop app, Then the fw closure warning modal should appear if a fw update is in progress",
-      async (vuex_state) => {
+      async (vuexState) => {
         wrapper = mount(StatusWidget, {
           store,
           localVue,
         });
-        await store.commit("flask/setStatusUuid", STATUS.MESSAGE[vuex_state]);
+        await store.commit("flask/setStatusUuid", STATUS[vuexState]);
 
         await store.commit("settings/setConfirmationRequest", false);
         Vue.nextTick(() => {
@@ -314,14 +312,14 @@ describe("StatusWidget.vue", () => {
       ["RECORDING", "active-processes"],
       ["BUFFERING", "active-processes"],
     ])(
-      "When the desktop app is in state %s and the da_check prop changes to true, Then the %s modal will appear that data analysis cannot be performed at this time",
-      async (system_status, modal) => {
+      "When the desktop app is in state %s and the daCheck prop changes to true, Then the %s modal will appear that data analysis cannot be performed at this time",
+      async (systemStatus, modal) => {
         wrapper = mount(StatusWidget, {
           store,
           localVue,
         });
-        await store.commit("flask/setStatusUuid", STATUS.MESSAGE[system_status]);
-        await wrapper.setProps({ da_check: true });
+        await store.commit("flask/setStatusUuid", STATUS[systemStatus]);
+        await wrapper.setProps({ daCheck: true });
 
         Vue.nextTick(() => {
           expect(wrapper.find(`#${modal}-warning`).isVisible()).toBe(true);
@@ -329,20 +327,20 @@ describe("StatusWidget.vue", () => {
       }
     );
     test.each(["CALIBRATION_NEEDED", "CALIBRATED"])(
-      "When the desktop app is in state %s and the da_check prop changes to true, Then close_da_check_modal event will be emitted with 1",
-      async (system_status) => {
+      "When the desktop app is in state %s and the daCheck prop changes to true, Then closeDaCheckModal event will be emitted with 1",
+      async (systemStatus) => {
         wrapper = mount(StatusWidget, {
           store,
           localVue,
         });
-        await store.commit("flask/setStatusUuid", STATUS.MESSAGE[system_status]);
-        await wrapper.setProps({ da_check: true });
+        await store.commit("flask/setStatusUuid", STATUS[systemStatus]);
+        await wrapper.setProps({ daCheck: true });
 
-        expect(wrapper.emitted("close_da_check_modal")).toStrictEqual([[1]]);
+        expect(wrapper.emitted("closeDaCheckModal")).toStrictEqual([[1]]);
 
         // assert no second call gets made
-        await wrapper.setProps({ da_check: false });
-        expect(wrapper.emitted("close_da_check_modal")).toStrictEqual([[1]]);
+        await wrapper.setProps({ daCheck: false });
+        expect(wrapper.emitted("closeDaCheckModal")).toStrictEqual([[1]]);
       }
     );
 
@@ -351,38 +349,38 @@ describe("StatusWidget.vue", () => {
         store,
         localVue,
       });
-      const action_spy = jest.spyOn(store, "dispatch").mockImplementation(() => null);
-      await store.commit("flask/setStatusUuid", STATUS.MESSAGE.RECORDING);
+      const actionSpy = jest.spyOn(store, "dispatch").mockImplementation(() => null);
+      await store.commit("flask/setStatusUuid", STATUS.RECORDING);
       await store.commit("stimulation/setStimPlayState", true);
-      await wrapper.vm.close_da_check_modal(1);
+      await wrapper.vm.closeDaCheckModal(1);
 
-      expect(action_spy).toHaveBeenCalledWith("stimulation/stopStimulation");
-      expect(action_spy).toHaveBeenCalledWith("playback/stop_active_processes");
-      expect(wrapper.emitted("close_da_check_modal")).toStrictEqual([[1]]);
+      expect(actionSpy).toHaveBeenCalledWith("stimulation/stopStimulation");
+      expect(actionSpy).toHaveBeenCalledWith("playback/stopActiveProcesses");
+      expect(wrapper.emitted("closeDaCheckModal")).toStrictEqual([[1]]);
     });
 
     test.each([
-      ["stimulation/setStimPlayState", true, "stimulation/stopStimulation", "playback/stop_active_processes"],
+      ["stimulation/setStimPlayState", true, "stimulation/stopStimulation", "playback/stopActiveProcesses"],
       [
         "flask/setStatusUuid",
-        STATUS.MESSAGE.RECORDING,
-        "playback/stop_active_processes",
+        STATUS.RECORDING,
+        "playback/stopActiveProcesses",
         "stimulation/stopStimulation",
       ],
     ])(
       "When user closes warning that processes are active by selecting button at index 1 'Continue', Then one action will be dispatched to stop all corresponding processes",
-      async (initial_action, state, expected_call, not_expected_call) => {
+      async (initialAction, state, expectedCall, notExpectedCall) => {
         wrapper = mount(StatusWidget, {
           store,
           localVue,
         });
-        const action_spy = jest.spyOn(store, "dispatch").mockImplementation(() => null);
-        await store.commit(initial_action, state);
-        await wrapper.vm.close_da_check_modal(1);
+        const actionSpy = jest.spyOn(store, "dispatch").mockImplementation(() => null);
+        await store.commit(initialAction, state);
+        await wrapper.vm.closeDaCheckModal(1);
 
-        expect(action_spy).toHaveBeenCalledWith(expected_call);
-        expect(action_spy).not.toHaveBeenCalledWith(not_expected_call);
-        expect(wrapper.emitted("close_da_check_modal")).toStrictEqual([[1]]);
+        expect(actionSpy).toHaveBeenCalledWith(expectedCall);
+        expect(actionSpy).not.toHaveBeenCalledWith(notExpectedCall);
+        expect(wrapper.emitted("closeDaCheckModal")).toStrictEqual([[1]]);
       }
     );
 
@@ -391,17 +389,17 @@ describe("StatusWidget.vue", () => {
         store,
         localVue,
       });
-      const action_spy = jest.spyOn(store, "dispatch").mockImplementation(() => null);
-      await store.commit("flask/setStatusUuid", STATUS.MESSAGE.RECORDING);
+      const actionSpy = jest.spyOn(store, "dispatch").mockImplementation(() => null);
+      await store.commit("flask/setStatusUuid", STATUS.RECORDING);
       await store.commit("stimulation/setStimPlayState", true);
-      await wrapper.vm.close_da_check_modal(0);
+      await wrapper.vm.closeDaCheckModal(0);
 
-      expect(action_spy).not.toHaveBeenCalledWith("stimulation/stopStimulation");
-      expect(action_spy).not.toHaveBeenCalledWith("playback/stop_active_processes");
-      expect(wrapper.emitted("close_da_check_modal")).toStrictEqual([[0]]);
+      expect(actionSpy).not.toHaveBeenCalledWith("stimulation/stopStimulation");
+      expect(actionSpy).not.toHaveBeenCalledWith("playback/stopActiveProcesses");
+      expect(wrapper.emitted("closeDaCheckModal")).toStrictEqual([[0]]);
     });
   });
-  describe("stim_status", () => {
+  describe("stimStatus", () => {
     test.each([
       ["CALIBRATION_NEEDED", "Stim status: Calibration Needed", { 1: {} }],
       ["NO_PROTOCOLS_ASSIGNED", "Stim status: No protocols have been assigned", {}],
@@ -414,8 +412,8 @@ describe("StatusWidget.vue", () => {
       ["ERROR", "Stim status: Error Occurred", {}],
     ])(
       "When stim'sstimStatus gets mutated to %s, Then the status text should update to be: %s",
-      async (vuex_state, expected_text, assignments) => {
-        const propsData = { stim_specific: true };
+      async (vuexState, expectedText, assignments) => {
+        const propsData = { stimSpecific: true };
         wrapper = mount(StatusWidget, {
           propsData,
           store,
@@ -424,12 +422,12 @@ describe("StatusWidget.vue", () => {
 
         store.state.stimulation.protocolAssignments = assignments;
 
-        await store.commit("stimulation/setStimStatus", stimStatus[vuex_state]);
-        expect(wrapper.find(text_selector).text()).toBe(expected_text);
+        await store.commit("stimulation/setStimStatus", stimStatus[vuexState]);
+        expect(wrapper.find(textSelector).text()).toBe(expectedText);
       }
     );
     test("When initially mounted, Then the stim status text matches the Vuex state", async () => {
-      const propsData = { stim_specific: true };
+      const propsData = { stimSpecific: true };
       await store.commit("stimulation/setStimStatus", STIM_STATUS.CONFIG_CHECK_NEEDED);
 
       wrapper = mount(StatusWidget, {
@@ -437,7 +435,7 @@ describe("StatusWidget.vue", () => {
         store,
         localVue,
       });
-      expect(wrapper.find(text_selector).text()).toBe("Stim status: No protocols have been assigned");
+      expect(wrapper.find(textSelector).text()).toBe("Stim status: No protocols have been assigned");
     });
   });
 });

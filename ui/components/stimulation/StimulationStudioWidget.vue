@@ -71,7 +71,7 @@
 </template>
 
 <script>
-import StimulationStudioPlateWell from "@/components/basic-widgets/StimulationStudioPlateWell.vue";
+import StimulationStudioPlateWell from "@/components/stimulation/StimulationStudioPlateWell.vue";
 import { library } from "@fortawesome/fontawesome-svg-core";
 import { faPlusCircle, faMinusCircle } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";

@@ -8,7 +8,7 @@ import { ping_system_status } from "../../../store/modules/flask/actions";
 import { system_status_regexp } from "@/store/modules/flask/url_regex";
 import { STIM_STATUS } from "../../../store/modules/stimulation/enums";
 
-describe("store/flask", () => {
+describe("store/system", () => {
   const localVue = createLocalVue();
   localVue.use(Vuex);
   let NuxtStore;
@@ -49,54 +49,54 @@ describe("store/flask", () => {
     });
     test("Given the current state is SERVER_READY, When the status response is CALIBRATION_NEEDED, Then the vuex status state should update to CALIBRATION_NEEDED and the Vuex Playback State should update to CALIBRATION_NEEDED", async () => {
       mocked_axios.onGet(system_status_regexp).reply(200, {
-        ui_status_code: STATUS.MESSAGE.CALIBRATION_NEEDED,
+        ui_status_code: STATUS.CALIBRATION_NEEDED,
         in_simulation_mode: true,
       });
 
-      store.commit("flask/setStatusUuid", STATUS.MESSAGE.SERVER_READY);
+      store.commit("flask/setStatusUuid", STATUS.SERVER_READY);
 
       await bound_ping_system_status();
 
-      expect(store.state.flask.statusUuid).toStrictEqual(STATUS.MESSAGE.CALIBRATION_NEEDED);
+      expect(store.state.flask.statusUuid).toStrictEqual(STATUS.CALIBRATION_NEEDED);
     });
     test("Given the Axios Get method is mocked with response of 404, When ping_system_status is invoked, Then assert playback_state is set NOT_CONNECTED_TO_INSTRUMENT", async () => {
       mocked_axios.onGet(system_status_regexp).reply(404);
 
-      store.commit("flask/setStatusUuid", STATUS.MESSAGE.SERVER_STILL_INITIALIZING);
+      store.commit("flask/setStatusUuid", STATUS.SERVER_STILL_INITIALIZING);
       await bound_ping_system_status();
 
-      expect(store.state.flask.statusUuid).not.toBe(STATUS.MESSAGE.CALIBRATION_NEEDED);
+      expect(store.state.flask.statusUuid).not.toBe(STATUS.CALIBRATION_NEEDED);
     });
     test("Given /system_status is mocked to return CALIBRATED as the status and the current status is CALIBRATING, When ping_system_status is called, Then the URL should include the current state UUID and the vuex status should update to CALIBRATED and the Vuex Playback State should update to CALIBRATED", async () => {
       mocked_axios.onGet(system_status_regexp).reply(200, {
-        ui_status_code: STATUS.MESSAGE.CALIBRATED,
+        ui_status_code: STATUS.CALIBRATED,
         in_simulation_mode: false,
       });
       const commit_spy = jest.spyOn(store, "commit");
 
-      store.commit("flask/setStatusUuid", STATUS.MESSAGE.CALIBRATING);
+      store.commit("flask/setStatusUuid", STATUS.CALIBRATING);
 
       await bound_ping_system_status();
 
       expect(mocked_axios.history.get).toHaveLength(1);
       expect(mocked_axios.history.get[0].url).toMatch(system_status_regexp);
       expect(mocked_axios.history.get[0].params).toStrictEqual({
-        current_vuex_statusUuid: STATUS.MESSAGE.CALIBRATING,
+        current_vuex_statusUuid: STATUS.CALIBRATING,
       });
 
-      expect(store.state.flask.statusUuid).toStrictEqual(STATUS.MESSAGE.CALIBRATED);
+      expect(store.state.flask.statusUuid).toStrictEqual(STATUS.CALIBRATED);
     });
     describe("Given /system_status is mocked to return CALIBRATED, and the current status is LIVE_VIEW_ACTIVE", () => {
       beforeEach(() => {
         mocked_axios.onGet(system_status_regexp).reply(200, {
-          ui_status_code: STATUS.MESSAGE.CALIBRATED,
+          ui_status_code: STATUS.CALIBRATED,
           in_simulation_mode: false,
         });
 
-        store.commit("flask/setStatusUuid", STATUS.MESSAGE.LIVE_VIEW_ACTIVE);
+        store.commit("flask/setStatusUuid", STATUS.LIVE_VIEW_ACTIVE);
       });
       test("Given the ignoreNextSystemStatusIfMatchingThisStatus state is not null, When ping_system_status is called, Then the ignoreNextSystemStatusIfMatchingThisStatus state becomes null", async () => {
-        store.commit("flask/ignore_next_system_status_if_matching_status", STATUS.MESSAGE.RECORDING);
+        store.commit("flask/ignore_next_system_status_if_matching_status", STATUS.RECORDING);
 
         // confirm pre-condition
         expect(store.state.flask.ignoreNextSystemStatusIfMatchingThisStatus).not.toBeNull();
@@ -111,20 +111,20 @@ describe("store/flask", () => {
       mocked_axios
         .onGet(system_status_regexp) // We pass in_simulation_mode true and validate default false is replaced
         .reply(200, {
-          ui_status_code: STATUS.MESSAGE.LIVE_VIEW_ACTIVE,
+          ui_status_code: STATUS.LIVE_VIEW_ACTIVE,
           in_simulation_mode: true,
         });
 
-      store.commit("flask/setStatusUuid", STATUS.MESSAGE.BUFFERING);
+      store.commit("flask/setStatusUuid", STATUS.BUFFERING);
 
       await bound_ping_system_status();
       expect(mocked_axios.history.get).toHaveLength(1);
       expect(mocked_axios.history.get[0].url).toMatch(system_status_regexp);
       expect(mocked_axios.history.get[0].params).toStrictEqual({
-        current_vuex_statusUuid: STATUS.MESSAGE.BUFFERING,
+        current_vuex_statusUuid: STATUS.BUFFERING,
       });
 
-      expect(store.state.flask.statusUuid).toStrictEqual(STATUS.MESSAGE.LIVE_VIEW_ACTIVE);
+      expect(store.state.flask.statusUuid).toStrictEqual(STATUS.LIVE_VIEW_ACTIVE);
       expect(store.state.flask.simulation_mode).toStrictEqual(true);
     });
   });
@@ -136,11 +136,11 @@ describe("store/flask", () => {
 
       test("When start_status_pinging is dispatched, Then setInterval is called and returned ID set as the statusPingIntervald state, and the Vuex state for status ID and Playback states are updated", async () => {
         mocked_axios.onGet(system_status_regexp).reply(200, {
-          ui_status_code: STATUS.MESSAGE.LIVE_VIEW_ACTIVE,
+          ui_status_code: STATUS.LIVE_VIEW_ACTIVE,
           in_simulation_mode: false,
         });
 
-        store.commit("flask/setStatusUuid", STATUS.MESSAGE.BUFFERING);
+        store.commit("flask/setStatusUuid", STATUS.BUFFERING);
 
         // confirm pre-condition
         expect(store.state.flask.statusPingIntervald).toBeNull();
@@ -151,13 +151,13 @@ describe("store/flask", () => {
         await store.dispatch("flask/start_status_pinging");
         expect(spied_set_interval.mock.calls).toHaveLength(1);
         expect(store.state.flask.statusPingIntervald).toStrictEqual(expected_interval_id);
-        expect(store.state.flask.statusUuid).toStrictEqual(STATUS.MESSAGE.LIVE_VIEW_ACTIVE);
+        expect(store.state.flask.statusUuid).toStrictEqual(STATUS.LIVE_VIEW_ACTIVE);
       });
     });
     describe("Given status pinging is active", () => {
       beforeEach(async () => {
         mocked_axios.onGet(system_status_regexp).reply(200, {
-          ui_status_code: STATUS.MESSAGE.CALIBRATION_NEEDED,
+          ui_status_code: STATUS.CALIBRATION_NEEDED,
           in_simulation_mode: false,
         });
 
@@ -180,17 +180,17 @@ describe("store/flask", () => {
         // confirm pre-condition
         expect(store.state.flask.ignoreNextSystemStatusIfMatchingThisStatus).toBeNull();
 
-        const expected = STATUS.MESSAGE.CALIBRATION_NEEDED;
+        const expected = STATUS.CALIBRATION_NEEDED;
 
         store.commit("flask/ignore_next_system_status_if_matching_status", expected);
         expect(store.state.flask.ignoreNextSystemStatusIfMatchingThisStatus).toStrictEqual(expected);
       });
 
       test("Given the status is set to ERROR, When attempting to commit a different system status, Then it remains in ERROR mode", () => {
-        store.commit("flask/setStatusUuid", STATUS.MESSAGE.ERROR);
+        store.commit("flask/setStatusUuid", STATUS.ERROR);
 
-        store.commit("flask/setStatusUuid", STATUS.MESSAGE.CALIBRATION_NEEDED);
-        expect(store.state.flask.statusUuid).toStrictEqual(STATUS.MESSAGE.ERROR);
+        store.commit("flask/setStatusUuid", STATUS.CALIBRATION_NEEDED);
+        expect(store.state.flask.statusUuid).toStrictEqual(STATUS.ERROR);
       });
       test("When setStatusPingIntervald is committed, Then ID mutates", async () => {
         const expected_id = 2993;
@@ -226,7 +226,7 @@ describe("store/flask", () => {
     describe("Given status pinging is active", () => {
       beforeEach(async () => {
         mocked_axios.onGet(system_status_regexp).reply(200, {
-          ui_status_code: STATUS.MESSAGE.CALIBRATION_NEEDED,
+          ui_status_code: STATUS.CALIBRATION_NEEDED,
           in_simulation_mode: false,
         });
 
@@ -254,7 +254,7 @@ describe("store/flask", () => {
 
       test("Given that /system_status is mocked to include an is_stimulating value, When the ping_system_status is active, Then stimulation/setStimPlayState is called with that value", async () => {
         mocked_axios.onGet(system_status_regexp).reply(200, {
-          ui_status_code: STATUS.MESSAGE.CALIBRATION_NEEDED,
+          ui_status_code: STATUS.CALIBRATION_NEEDED,
           in_simulation_mode: false,
           is_stimulating: true,
         });
@@ -263,7 +263,7 @@ describe("store/flask", () => {
         expect(store.state.stimulation.stimPlayState).toBe(true);
 
         mocked_axios.onGet(system_status_regexp).reply(200, {
-          ui_status_code: STATUS.MESSAGE.CALIBRATION_NEEDED,
+          ui_status_code: STATUS.CALIBRATION_NEEDED,
           in_simulation_mode: false,
           is_stimulating: false,
         });
@@ -276,7 +276,7 @@ describe("store/flask", () => {
         store.state.stimulation.stimStatus = STIM_STATUS.STIM_ACTIVE;
 
         mocked_axios.onGet(system_status_regexp).reply(200, {
-          ui_status_code: STATUS.MESSAGE.LIVE_VIEW_ACTIVE,
+          ui_status_code: STATUS.LIVE_VIEW_ACTIVE,
           in_simulation_mode: false,
           is_stimulating: false,
         });

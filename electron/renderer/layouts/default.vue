@@ -53,17 +53,11 @@ export default {
     return {
       package_version: "",
       current_year: "2023", // TODO look into better ways of handling this. Not sure if just using the system's current year is the best approach
-      pulse3d_versions: undefined,
     };
   },
   computed: {
-    ...mapState("settings", ["allowSWUpdateInstall"]),
     ...mapState("stimulation", ["stimPlayState"]),
-    ...mapState("flask", ["statusUuid"]),
-  },
-
-  created: async function () {
-    this.$store.dispatch("flask/start_status_pinging");
+    ...mapState("system", ["statusUuid", "allowSWUpdateInstall"]),
   },
   methods: {
     send_confirmation: function (idx) {

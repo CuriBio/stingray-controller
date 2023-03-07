@@ -17,11 +17,11 @@ export default function createWebSocketPlugin(socket) {
     });
 
     socket.on("barcode", (messageJson, cb) => {
-      if (!store.state.flask.barcodeManualMode) {
+      if (!store.state.system.barcodeManualMode) {
         const message = JSON.parse(messageJson);
-        for (const barcodeType in store.state.playback.barcodes)
+        for (const barcodeType in store.state.system.barcodes)
           if (message[barcodeType])
-            store.dispatch("playback/validateBarcode", {
+            store.dispatch("system/validateBarcode", {
               type: barcodeType,
               newValue: message[barcodeType],
             });
@@ -34,12 +34,12 @@ export default function createWebSocketPlugin(socket) {
     socket.on("sw_update", (messageJson, cb) => {
       const message = JSON.parse(messageJson);
       if (message.allow_software_update !== undefined) {
-        store.commit("settings/setAllowSwUpdateInstall", message.allow_software_update);
+        store.commit("system/setAllowSwUpdateInstall", message.allow_software_update);
       }
       if (message.softwareUpdateAvailable !== undefined) {
         const status = message.softwareUpdateAvailable ? "found" : "not found";
         console.log("Software update " + status); // allow-log
-        store.commit("settings/setSoftwareUpdateAvailable", message.softwareUpdateAvailable);
+        store.commit("system/setSoftwareUpdateAvailable", message.softwareUpdateAvailable);
       }
 
       /* istanbul ignore else */
@@ -49,16 +49,21 @@ export default function createWebSocketPlugin(socket) {
       const message = JSON.parse(messageJson);
       if (message.firmwareUpdateAvailable === true) {
         console.log("Firmware update found"); // allow-log
-        store.commit("settings/setFirmwareUpdateAvailable", message);
+        store.commit("system/setFirmwareUpdateAvailable", message);
       }
 
       /* istanbul ignore else */
       if (cb) cb("commit done"); // this callback is only used for testing. The backend will not send a callback
     });
-
+    socket.on("system_status", async (messageJson, cb) => {
+      const statusUuid = JSON.parse(messageJson);
+      await store.commit("system/setStatusUuid", statusUuid);
+      /* istanbul ignore else */
+      if (cb) cb("commit done"); // this callback is only used for testing. The backend will not send a callback
+    });
     socket.on("error", async (messageJson, cb) => {
       const message = JSON.parse(messageJson);
-      await store.commit("settings/setShutdownErrorStatus", message);
+      await store.commit("system/setShutdownErrorStatus", message);
       /* istanbul ignore else */
       if (cb) cb("commit done"); // this callback is only used for testing. The backend will not send a callback
     });

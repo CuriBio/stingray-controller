@@ -40,6 +40,9 @@ export class TextValidation {
         case "uuidBase57encode":
           feedback = this.validateUuidBaseFiftysevenEncode(text);
           break;
+        case "userAccountInput":
+          feedback = this.validateUserAccountInput(text, type);
+          break;
       }
     } catch (exception) {
       exception.err = "Not Supported " + exception.err;
@@ -109,7 +112,7 @@ export class TextValidation {
         case scanAscii >= 48 &&
           scanAscii <= 57: /* 0, 1, 2, 3, 4, 5, 6, 7, 8, 9  ascii of '0' is 48 and '9' is 57*/
         case scanAscii >= 65 && scanAscii <= 90: /* A ascii of 'A' is 65  Z ascii of 'Z' is 90 */
-        case scanAscii == 95: /* underscore _   */
+        case scanAscii == 95: /* underscore    */
         case scanAscii >= 97 && scanAscii <= 122:
           parseError = "";
           break;
@@ -124,14 +127,34 @@ export class TextValidation {
         case scanAscii >= 91 && scanAscii <= 94:
         case scanAscii == 96:
         case scanAscii >= 123:
-          parseError = "Invalid character present. Valid characters are alphanumeric & # - . _  ( ) /";
+          parseError = "Invalid character present. Valid characters are alphanumeric & # - .   ( ) /";
           i = len + 1;
           break;
       }
     }
     return parseError;
   }
-
+  /**
+   * Returns the feedback text with either value of "" or text with reason for failure
+   *
+   * @param  {text}  text The text on which the validation rules are verified
+   * @param  {string}  type The type of value being checked: ID, passkey, or userName
+   * @return {string} The string is either empty on valid and <space> or <invalid meessage>
+   */
+  validateUserAccountInput(text, type) {
+    let feedback = "";
+    if (text != null) {
+      const valLength = text.length;
+      if (valLength >= 1 && valLength <= 36) {
+        feedback = this.inputErrorfinder(true, text, type, valLength);
+      } else {
+        feedback = this.inputErrorfinder(false, text, type, valLength);
+      }
+    } else {
+      feedback = this.inputErrorfinder(false, text, type, 0);
+    }
+    return feedback;
+  }
   /**
    * Returns the feedback text for the plate barcode validation
    *

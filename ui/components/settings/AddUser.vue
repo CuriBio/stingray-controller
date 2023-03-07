@@ -1,7 +1,7 @@
 <template>
   <div>
     <div class="div__addUser-form-controls" />
-    <span class="span__addUser-form-controls-content-title"> Add&nbsp;<wbr />New&nbsp;<wbr />User </span>
+    <span class="span__addUser-form-controls-content-title">Add New User</span>
     <div id="customerId" style="top: 50px; left: 50px; position: absolute; z-index: 24">
       <InputWidget
         :titleLabel="'Enter Customer ID'"
@@ -66,12 +66,13 @@ import { BFormInput } from "bootstrap-vue";
 import InputWidget from "@/components/basic-widgets/InputWidget.vue";
 import ButtonWidget from "@/components/basic-widgets/ButtonWidget.vue";
 import { TextValidation } from "@/js-utils/TextValidation.js";
+import InputDropDown from "@/components/basic-widgets/InputDropDown.vue";
+import "bootstrap/dist/css/bootstrap.min.css";
+
 Vue.use(BootstrapVue);
 Vue.component("BFormInput", BFormInput);
 Vue.component("BButton", BButton);
-import "bootstrap/dist/css/bootstrap.min.css";
-const TextValidation_User = new TextValidation("user_account_input");
-import InputDropDown from "@/components/basic-widgets/InputDropDown.vue";
+const TextValidation_User = new TextValidation("userAccountInput");
 
 export default {
   name: "AddUser",

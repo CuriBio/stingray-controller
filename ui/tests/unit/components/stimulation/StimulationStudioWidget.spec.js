@@ -1,5 +1,5 @@
 import { mount } from "@vue/test-utils";
-import StimulationStudioWidget from "@/components/plate-based-widgets/stimulationstudio/StimulationStudioWidget.vue";
+import StimulationStudioWidget from "@/components/stimulation/StimulationStudioWidget.vue";
 import { StimulationStudioWidget as ComponentToTest } from "@/dist/mantarray.common";
 import { createLocalVue } from "@vue/test-utils";
 import { STIM_STATUS } from "@/store/modules/stimulation/enums";
@@ -23,7 +23,7 @@ describe("StimulationStudioWidget.vue", () => {
 
   test("When mounting StimulationStudioWidget from the built dist file, Then it loads successfully", async () => {
     const propsData = {
-      protocol_codes: [],
+      protocolCodes: [],
     };
     const wrapper = mount(ComponentToTest, {
       propsData,
@@ -33,7 +33,7 @@ describe("StimulationStudioWidget.vue", () => {
     expect(wrapper.exists()).toBe(true);
   });
 
-  test("When mounted without an explicitly supplied protocol_code prop, Then representative wells are all colored grey and without any displayed letter", async () => {
+  test("When mounted without an explicitly supplied protocolCode prop, Then representative wells are all colored grey and without any displayed letter", async () => {
     const propsData = {};
     const wrapper = mount(StimulationStudioWidget, {
       propsData,
@@ -41,18 +41,18 @@ describe("StimulationStudioWidget.vue", () => {
       localVue,
     });
     const well = wrapper.findAll("circle");
-    const protocol_name = wrapper.findAll(".span__simulationstudio-plate-well-protocol-location");
+    const protocolName = wrapper.findAll(".span__simulationstudio-plate-well-protocol-location");
     expect(well.at(0).attributes("fill")).toStrictEqual("#B7B7B7");
-    expect(protocol_name.at(0).text()).toStrictEqual("");
+    expect(protocolName.at(0).text()).toStrictEqual("");
     expect(well.at(23).attributes("fill")).toStrictEqual("#B7B7B7");
-    expect(protocol_name.at(23).text()).toStrictEqual("");
+    expect(protocolName.at(23).text()).toStrictEqual("");
   });
 
   test("When mounted with an empty protocol code array, Then representative wells are all colored grey and without any displayed letter", async () => {
     const protocolList = [];
 
     const propsData = {
-      protocol_codes: protocolList,
+      protocolCodes: protocolList,
     };
     const wrapper = mount(StimulationStudioWidget, {
       propsData,
@@ -60,43 +60,43 @@ describe("StimulationStudioWidget.vue", () => {
       localVue,
     });
     const well = wrapper.findAll("circle");
-    const protocol_name = wrapper.findAll(".span__simulationstudio-plate-well-protocol-location");
+    const protocolName = wrapper.findAll(".span__simulationstudio-plate-well-protocol-location");
     expect(well.at(0).attributes("fill")).toStrictEqual("#B7B7B7");
-    expect(protocol_name.at(0).text()).toStrictEqual("");
+    expect(protocolName.at(0).text()).toStrictEqual("");
     expect(well.at(6).attributes("fill")).toStrictEqual("#B7B7B7");
-    expect(protocol_name.at(6).text()).toStrictEqual("");
+    expect(protocolName.at(6).text()).toStrictEqual("");
     expect(well.at(23).attributes("fill")).toStrictEqual("#B7B7B7");
-    expect(protocol_name.at(23).text()).toStrictEqual("");
+    expect(protocolName.at(23).text()).toStrictEqual("");
   });
 
   test("Given that none of the wells are selected, minus button should not be visible and stroke outlines should be zero on all wells, When user clicks the plus button, Then all 24 wells should have a stroke outline", async () => {
     const propsData = {
-      protocol_codes: [],
+      protocolCodes: [],
     };
     const wrapper = mount(StimulationStudioWidget, {
       propsData,
       store,
       localVue,
     });
-    const icon_btn = wrapper.find(".span__stimulationstudio-toggle-plus-minus-icon");
-    const svg_plus = wrapper.find("#plus");
-    const svg_minus = wrapper.find("#minus");
-    expect(svg_plus.isVisible()).toBe(true);
-    wrapper.vm.stroke_width.map((well) => {
+    const iconBtn = wrapper.find(".span__stimulationstudio-toggle-plus-minus-icon");
+    const svgPlus = wrapper.find("#plus");
+    const svgMinus = wrapper.find("#minus");
+    expect(svgPlus.isVisible()).toBe(true);
+    wrapper.vm.strokeWidth.map((well) => {
       expect(well).toBe(0);
     });
-    expect(svg_minus.isVisible()).toBe(false);
-    await icon_btn.trigger("click");
-    expect(svg_plus.isVisible()).toBe(false);
-    wrapper.vm.stroke_width.map((well) => {
+    expect(svgMinus.isVisible()).toBe(false);
+    await iconBtn.trigger("click");
+    expect(svgPlus.isVisible()).toBe(false);
+    wrapper.vm.strokeWidth.map((well) => {
       expect(well).toBe(4);
     });
-    expect(svg_minus.isVisible()).toBe(true);
+    expect(svgMinus.isVisible()).toBe(true);
   });
 
   test("Given all wells are selected, When well, column, or row is unselected, Then minus icon should toggle to plus", async () => {
     const propsData = {
-      protocol_codes: [],
+      protocolCodes: [],
     };
     const wrapper = mount(StimulationStudioWidget, {
       propsData,
@@ -105,13 +105,13 @@ describe("StimulationStudioWidget.vue", () => {
     });
     await wrapper.find(".span__stimulationstudio-toggle-plus-minus-icon").trigger("click");
     expect(wrapper.find("#plus").isVisible()).toBe(false);
-    await wrapper.vm.basic_select(4);
+    await wrapper.vm.basicSelect(4);
     expect(wrapper.find("#plus").isVisible()).toBe(true);
     await wrapper.find(".span__stimulationstudio-toggle-plus-minus-icon").trigger("click");
-    await wrapper.find("#column_3").trigger("click");
+    await wrapper.find("#column3").trigger("click");
     expect(wrapper.find("#plus").isVisible()).toBe(true);
     await wrapper.find(".span__stimulationstudio-toggle-plus-minus-icon").trigger("click");
-    await wrapper.find("#row_3").trigger("click");
+    await wrapper.find("#row3").trigger("click");
     expect(wrapper.find("#plus").isVisible()).toBe(true);
   });
 
@@ -119,39 +119,39 @@ describe("StimulationStudioWidget.vue", () => {
 
   test("Given no wells are selected in a row/column, When user hovers over row/column label, Then corresponding unselected wells will show stroke-width of 2px", async () => {
     const propsData = {
-      protocol_codes: [],
+      protocolCodes: [],
     };
     const wrapper = mount(StimulationStudioWidget, {
       propsData,
       store,
       localVue,
     });
-    Object.keys(wrapper.vm.column_values).map(async (column) => {
+    Object.keys(wrapper.vm.columnValues).map(async (column) => {
       await wrapper.find("#column_" + column).trigger("mouseenter");
-      wrapper.vm.column_values[column].map((well) => expect(wrapper.vm.stroke_width[well]).toBe(2));
+      wrapper.vm.columnValues[column].map((well) => expect(wrapper.vm.strokeWidth[well]).toBe(2));
     });
     ["A", "B", "C", "D"].map(async (row, i) => {
       await wrapper.find("#row_" + i).trigger("mouseenter");
-      wrapper.vm.row_values[row].map((well) => expect(wrapper.vm.stroke_width[well]).toBe(2));
+      wrapper.vm.rowValues[row].map((well) => expect(wrapper.vm.strokeWidth[well]).toBe(2));
     });
   });
 
   test("Given no wells are selected in a row/column, When user leaves a row/column label, Then corresponding unselected wells will show stroke-width of 0px", async () => {
     const propsData = {
-      protocol_codes: [],
+      protocolCodes: [],
     };
     const wrapper = mount(StimulationStudioWidget, {
       propsData,
       store,
       localVue,
     });
-    Object.keys(wrapper.vm.column_values).map(async (column) => {
+    Object.keys(wrapper.vm.columnValues).map(async (column) => {
       await wrapper.find("#column_" + column).trigger("mouseleave");
-      wrapper.vm.column_values[column].map((well) => expect(wrapper.vm.stroke_width[well]).toBe(0));
+      wrapper.vm.columnValues[column].map((well) => expect(wrapper.vm.strokeWidth[well]).toBe(0));
     });
     ["A", "B", "C", "D"].map(async (row, i) => {
       await wrapper.find("#row_" + i).trigger("mouseleave");
-      wrapper.vm.row_values[row].map((well) => expect(wrapper.vm.stroke_width[well]).toBe(0));
+      wrapper.vm.rowValues[row].map((well) => expect(wrapper.vm.strokeWidth[well]).toBe(0));
     });
   });
 
@@ -161,14 +161,14 @@ describe("StimulationStudioWidget.vue", () => {
       localVue,
     });
     const test = [
-      ["#row_0", [0, 4, 8, 12, 16, 20]],
-      ["#row_1", [1, 5, 9, 13, 17, 21]],
-      ["#row_2", [2, 6, 10, 14, 18, 22]],
-      ["#row_3", [3, 7, 11, 15, 19, 23]],
+      ["#row0", [0, 4, 8, 12, 16, 20]],
+      ["#row1", [1, 5, 9, 13, 17, 21]],
+      ["#row2", [2, 6, 10, 14, 18, 22]],
+      ["#row3", [3, 7, 11, 15, 19, 23]],
     ];
     test.map(async (row) => {
       await wrapper.find(row[0]).trigger("click", { shiftKey: true });
-      row[1].map((well) => expect(wrapper.vm.stroke_width[well]).toBe(4));
+      row[1].map((well) => expect(wrapper.vm.strokeWidth[well]).toBe(4));
     });
   });
 
@@ -178,25 +178,25 @@ describe("StimulationStudioWidget.vue", () => {
       localVue,
     });
     const test = [
-      ["#column_1", [0, 1, 2, 3]],
-      ["#column_2", [4, 5, 6, 7]],
-      ["#column_3", [8, 9, 10, 11]],
-      ["#column_4", [12, 13, 14, 15]],
-      ["#column_5", [16, 17, 18, 19]],
-      ["#column_6", [20, 21, 22, 23]],
+      ["#column1", [0, 1, 2, 3]],
+      ["#column2", [4, 5, 6, 7]],
+      ["#column3", [8, 9, 10, 11]],
+      ["#column4", [12, 13, 14, 15]],
+      ["#column5", [16, 17, 18, 19]],
+      ["#column6", [20, 21, 22, 23]],
     ];
     test.map(async (column) => {
       await wrapper.find(column[0]).trigger("click", { shiftKey: true });
-      column[1].map((well) => expect(wrapper.vm.stroke_width[well]).toBe(4));
+      column[1].map((well) => expect(wrapper.vm.strokeWidth[well]).toBe(4));
     });
   });
 
-  test("When there is a change to all_selected wells, Then commit the mutation to state to the store", async () => {
+  test("When there is a change to allSelected wells, Then commit the mutation to state to the store", async () => {
     const wrapper = mount(StimulationStudioWidget, {
       store,
       localVue,
     });
-    await wrapper.vm.basic_select(3);
+    await wrapper.vm.basicSelect(3);
     expect(store.state.stimulation.selectedWells).toStrictEqual([3]);
   });
 
@@ -231,11 +231,11 @@ describe("StimulationStudioWidget.vue", () => {
       localVue,
     });
     await wrapper.find(".span__stimulationstudio-toggle-plus-minus-icon").trigger("mouseenter");
-    wrapper.vm.stroke_width.map((well) => {
+    wrapper.vm.strokeWidth.map((well) => {
       expect(well).toBe(2);
     });
     await wrapper.find(".span__stimulationstudio-toggle-plus-minus-icon").trigger("mouseleave");
-    wrapper.vm.stroke_width.map((well) => {
+    wrapper.vm.strokeWidth.map((well) => {
       expect(well).toBe(0);
     });
   });
@@ -256,15 +256,5 @@ describe("StimulationStudioWidget.vue", () => {
     });
     await store.commit("stimulation/setStimStatus", STIM_STATUS.SHORT_CIRCUIT_ERROR);
     expect(wrapper.find(".div__simulationstudio-disable-overlay").isVisible()).toBe(true);
-  });
-
-  test("When exiting instance, Then instance is effectively destroyed", async () => {
-    const destroyed_spy = jest.spyOn(StimulationStudioWidget, "beforeDestroy");
-    const wrapper = mount(StimulationStudioWidget, {
-      store,
-      localVue,
-    });
-    wrapper.destroy();
-    expect(destroyed_spy).toHaveBeenCalled();
   });
 });

@@ -66,7 +66,7 @@ export default {
     logFilepath: { type: String, default: "" },
   },
   computed: {
-    ...mapState("settings", ["shutdownErrorMessage", "installerLink"]),
+    ...mapState("system", ["shutdownErrorMessage", "installerLink"]),
     computeNumberOfRows: function () {
       return Math.ceil(((this.logFilepath.length * 1.0) / 30).toFixed(1));
     },

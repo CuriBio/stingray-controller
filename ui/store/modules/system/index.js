@@ -3,9 +3,13 @@
 import actions from "./actions";
 import getters from "./getters";
 import mutations from "./mutations";
-import { ENUMS } from "./enums";
+import { STATUS } from "./enums";
 
 const defaultState = {
+  port: 4567, // http://localhost:4567/
+  statusUuid: STATUS.SERVER_INITIALIZING_STATE,
+  simulation_mode: false,
+  barcodeManualMode: false,
   xTimeIndex: 0, // milliseconds
   barcodes: {
     plateBarcode: {
@@ -17,6 +21,14 @@ const defaultState = {
       valid: false,
     },
   },
+  shutdownErrorMessage: "Stringray software is about to shut down.",
+  shutdownErrorStatus: "",
+  installerLink: null,
+  softwareUpdateAvailable: false,
+  firmwareUpdateAvailable: false,
+  firmwareUpdateDurMins: null,
+  allowSWUpdateInstall: false,
+  confirmationRequest: false,
 };
 
 // adapted from https://itnext.io/eating-my-advice-efficiently-improving-on-understanding-and-using-nuxt-vuex-6d00769014a2
@@ -28,5 +40,5 @@ export default {
   actions,
   mutations,
   getters,
-  ENUMS,
+  STATUS,
 };

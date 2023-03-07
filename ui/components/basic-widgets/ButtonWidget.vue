@@ -5,7 +5,7 @@
         v-for="btnIndex in numOfBtn"
         :key="btnIndex"
         :ref="btnIndex.toString()"
-        class="span__button_label"
+        class="span__button-label"
         :style="btnStateprop(btnIndex)"
         @click="selected(btnIndex)"
         @mouseenter="hoverActive(btnIndex)"
@@ -147,7 +147,7 @@ body {
   overflow: hidden;
 }
 
-.span__button_label {
+.span__button-label {
   pointer-events: all;
   line-height: 100%;
   transform: rotate(0deg);

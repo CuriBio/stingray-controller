@@ -1,6 +1,6 @@
 <template>
   <div class="div__status-bar">
-    <span class="span__status-bar-text">{{ statusLabel }}: {{ alertTxt }}</span>
+    <span class="span__status-bar-text">Status: {{ alertTxt }}</span>
     <span>
       <b-modal id="error-catch" size="sm" hide-footer hide-header hide-header-close :static="true">
         <ErrorCatchWidget :logFilepath="logPath" @ok-clicked="closeModalsById(['error-catch'])" />
@@ -112,7 +112,7 @@
 <script>
 import Vue from "vue";
 import { mapGetters, mapState } from "vuex";
-import { STATUS } from "@/store/modules/flask/enums";
+import { STATUS } from "@/store/modules/system/enums";
 import { STIM_STATUS } from "@/store/modules/stimulation/enums";
 import BootstrapVue from "bootstrap-vue";
 import { BButton } from "bootstrap-vue";
@@ -138,19 +138,10 @@ export default {
     StatusSpinnerWidget,
     StimQCSummary,
   },
-  props: {
-    stimSpecific: {
-      type: Boolean,
-      default: false,
-    },
-    daCheck: {
-      type: Boolean,
-      default: false,
-    },
-  },
   data() {
     return {
       alertTxt: "",
+      stimAlertTxt: "",
       fwClosureWarningLabels: {
         header: "Warning!",
         msgOne:
@@ -200,7 +191,7 @@ export default {
   },
   computed: {
     ...mapGetters({
-      statusUuid: "flask/statusId",
+      statusUuid: "system/statusId",
     }),
     ...mapState("stimulation", [
       "stimulatorCircuitStatuses",
@@ -208,8 +199,8 @@ export default {
       "stimPlayState",
       "stimStatus",
     ]),
-    ...mapState("settings", [
-      "logPath",
+    ...mapState("settings", ["logPath"]),
+    ...mapState("system", [
       "shutdownErrorStatus",
       "softwareUpdateAvailable",
       "allowSWUpdateInstall",
@@ -225,9 +216,7 @@ export default {
         msgTwo: "Do not close the Mantarray software or power off the Mantarray instrument.",
       };
     },
-    statusLabel: function () {
-      return this.stimSpecific ? "Stim status" : "System status";
-    },
+
     assignedOpenCircuits: function () {
       // filter for matching indices
       return this.stimulatorCircuitStatuses.filter((well) =>
@@ -236,41 +225,38 @@ export default {
     },
     isInitializing: function () {
       return [
-        STATUS.MESSAGE.SERVER_BOOTING_UP,
-        STATUS.MESSAGE.SERVER_STILL_INITIALIZING,
-        STATUS.MESSAGE.SERVER_READY,
-        STATUS.MESSAGE.INITIALIZING_INSTRUMENT,
-        STATUS.MESSAGE.CALIBRATING, // this is added to be included in specific modal
+        STATUS.SERVER_BOOTING_UP,
+        STATUS.SERVER_STILL_INITIALIZING,
+        STATUS.SERVER_READY,
+        STATUS.INITIALIZING_INSTRUMENT,
+        STATUS.CALIBRATING, // this is added to be included in specific modal
       ].includes(this.statusUuid);
     },
     isUpdating: function () {
-      return [
-        STATUS.MESSAGE.CHECKING_FOR_UPDATES,
-        STATUS.MESSAGE.INSTALLING_UPDATES,
-        STATUS.MESSAGE.DOWNLOADING_UPDATES,
-      ].includes(this.statusUuid);
+      return [STATUS.CHECKING_FOR_UPDATES, STATUS.INSTALLING_UPDATES, STATUS.DOWNLOADING_UPDATES].includes(
+        this.statusUuid
+      );
     },
   },
   watch: {
     statusUuid: function (newStatus) {
       // set message for stimulation status and system status if error occurs
-      if (!this.stimSpecific && !this.shutdownErrorStatus) this.setSystemSpecificStatus(newStatus);
+      if (!this.shutdownErrorStatus) this.setSystemSpecificStatus(newStatus);
     },
     stimStatus: function (newStatus) {
-      if (this.stimSpecific) this.setStimSpecificStatus(newStatus);
+      this.setStimSpecificStatus(newStatus);
     },
     confirmationRequest: function () {
       const sensitiveOpsInProgress =
-        this.statusUuid === STATUS.MESSAGE.CALIBRATING ||
+        this.statusUuid === STATUS.CALIBRATING ||
         this.stimStatus === STIM_STATUS.CONFIG_CHECK_IN_PROGRESS ||
         this.stimPlayState ||
         this.totalUploadedFiles.length < this.totalFileCount;
 
       const fwUpdateInProgress =
-        this.statusUuid === STATUS.MESSAGE.DOWNLOADING_UPDATES ||
-        this.statusUuid === STATUS.MESSAGE.INSTALLING_UPDATES;
+        this.statusUuid === STATUS.DOWNLOADING_UPDATES || this.statusUuid === STATUS.INSTALLING_UPDATES;
 
-      if (this.confirmationRequest && !this.stimSpecific) {
+      if (this.confirmationRequest) {
         if (fwUpdateInProgress) {
           this.$bvModal.show("fw-closure-warning");
         } else if (sensitiveOpsInProgress) {
@@ -289,13 +275,11 @@ export default {
     },
   },
   created() {
-    this.stimSpecific
-      ? this.setStimSpecificStatus(this.stimStatus)
-      : this.setSystemSpecificStatus(this.statusUuid);
+    this.setSystemSpecificStatus(this.statusUuid);
   },
   methods: {
     setStimSpecificStatus: function (status) {
-      this.alertTxt = status;
+      this.stimAlertTxt = status;
 
       if (status === STIM_STATUS.CONFIG_CHECK_COMPLETE)
         this.assignedOpenCircuits.length > 0
@@ -305,62 +289,47 @@ export default {
     },
     setSystemSpecificStatus: function (status) {
       switch (status) {
-        case STATUS.MESSAGE.SERVER_BOOTING_UP:
+        case STATUS.SERVER_INITIALIZING_STATE:
           this.alertTxt = "Booting Up...";
           break;
-        case STATUS.MESSAGE.SERVER_STILL_INITIALIZING:
+        case STATUS.SERVER_READY_STATE:
           this.alertTxt = "Connecting...";
           break;
-        case STATUS.MESSAGE.SERVER_READY:
-          this.alertTxt = "Connecting...";
-          break;
-        case STATUS.MESSAGE.INITIALIZING_INSTRUMENT:
+        case STATUS.INSTRUMENT_INITIALIZING_STATE:
           this.alertTxt = "Initializing...";
           break;
-        case STATUS.MESSAGE.CALIBRATION_NEEDED:
-          this.alertTxt = `Connected...Calibration Needed`;
+        case STATUS.IDLE_READY_STATE:
+          // TODO coordinate with Tanner on this status or if we want this to remain calibration needed
+          // once system is in a ready state, then update to a stim status
+          // TODO check that this updates correctly when stim statuses change
+          this.alertTxt = this.stimAlertTxt;
           break;
-        case STATUS.MESSAGE.CALIBRATING:
-          this.alertTxt = `Calibrating...`;
-          break;
-        case STATUS.MESSAGE.CALIBRATED:
-          this.alertTxt = `Ready`;
-          break;
-        case STATUS.MESSAGE.BUFFERING:
-          this.alertTxt = `Preparing for Live View...`;
-          break;
-        case STATUS.MESSAGE.LIVE_VIEW_ACTIVE:
-          this.alertTxt = `Live View Active`;
-          break;
-        case STATUS.MESSAGE.RECORDING:
-          this.alertTxt = `Recording to File...`;
-          break;
-        case STATUS.MESSAGE.CHECKING_FOR_UPDATES:
+        case STATUS.CHECKING_FOR_UPDATES_STATE:
           this.alertTxt = "Checking for Firmware Updates...";
           break;
-        case STATUS.MESSAGE.UPDATES_NEEDED:
+        case STATUS.UPDATES_NEEDED_STATE:
           this.alertTxt = `Firmware Updates Required`;
           break;
-        case STATUS.MESSAGE.DOWNLOADING_UPDATES:
+        case STATUS.DOWNLOADING_UPDATES_STATE:
           this.alertTxt = `Downloading Firmware Updates...`;
           this.$bvModal.show("fw-updates-in-progress-message");
           break;
-        case STATUS.MESSAGE.INSTALLING_UPDATES:
+        case STATUS.INSTALLING_UPDATES_STATE:
           this.alertTxt = `Installing Firmware Updates...`;
           break;
-        case STATUS.MESSAGE.UPDATES_COMPLETE:
+        case STATUS.UPDATES_COMPLETE_STATE:
           this.alertTxt = `Firmware Updates Complete`;
           this.closeModalsById(["fw-updates-in-progress-message", "fw-closure-warning"]);
           this.$bvModal.show("fw-updates-complete-message");
           break;
-        case STATUS.MESSAGE.UPDATE_ERROR:
+        case STATUS.UPDATE_ERROR_STATE:
           this.alertTxt = `Error During Firmware Update`;
           this.closeModalsById(["fw-updates-in-progress-message", "fw-closure-warning"]);
-          this.$store.commit("flask/stopStatusPinging");
-          this.$store.commit("settings/setShutdownErrorMessage", "Error during firmware update.");
+          this.$store.commit("system/stopStatusPinging");
+          this.$store.commit("system/setShutdownErrorMessage", "Error during firmware update.");
           this.$bvModal.show("error-catch");
           break;
-        case STATUS.MESSAGE.ERROR:
+        case STATUS.ERROR:
           this.closeModalsById([
             "fw-updates-in-progress-message",
             "fw-closure-warning",

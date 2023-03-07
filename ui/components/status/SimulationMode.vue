@@ -216,7 +216,7 @@ import { mapState } from "vuex";
 export default {
   name: "SimulationMode",
   computed: {
-    ...mapState("flask", {
+    ...mapState("system", {
       mode: "simulation_mode",
     }),
   },

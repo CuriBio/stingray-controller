@@ -15,21 +15,20 @@ export { TextValidation } from "./js-utils/TextValidation";
 
 // Store
 export { default as settings_store_module } from "./store/modules/settings";
-export { default as flask_store_module } from "./store/modules/flask";
-export { system_status_regexp, all_mantarray_commands_regexp } from "./store/modules/flask/url_regex";
+export { default as system_store_module } from "./store/modules/system";
 export { default as stimulation_store_module } from "./store/modules/stimulation";
 export {
   stimStatus,
   MAX_SUBPROTOCOL_DURATION_MS,
   MIN_SUBPROTOCOL_DURATION_MS,
 } from "./store/modules/stimulation/enums";
-export { STATUS as FLASK_STATUS_ENUMS } from "./store/modules/flask/enums";
+export { STATUS as SYSTEM_STATUS_ENUMS } from "./store/modules/system/enums";
 
 export { default as create_web_socket_plugin } from "./store/plugins/websocket";
 export { socket } from "./store/plugins/websocket";
 
-export { default as BarcodeViewer } from "./components/playback/controls/BarcodeViewer.vue";
-export { default as StimulationControls } from "./components/playback/controls/StimulationControls.vue";
+export { default as BarcodeViewer } from "./components/system/controls/BarcodeViewer.vue";
+export { default as StimulationControls } from "./components/system/controls/StimulationControls.vue";
 
 // Basic Widgets
 export { default as PlateWell } from "./components/basic-widgets/PlateWell.vue";
@@ -38,11 +37,13 @@ export { default as ButtonWidget } from "./components/basic-widgets/ButtonWidget
 export { default as InputDropDown } from "./components/basic-widgets/InputDropDown.vue";
 export { default as SelectDropDown } from "./components/basic-widgets/SelectDropDown.vue";
 export { default as CheckBoxWidget } from "./components/basic-widgets/CheckBoxWidget.vue";
-export { default as StimulationStudioPlateWell } from "./components/basic-widgets/StimulationStudioPlateWell.vue";
-export { default as ToggleWidget } from "./components/basic-widgets/ToggleWidget.vue";
+export { default as StimulationStudioPlateWell } from "./components/stimulation/StimulationStudioPlateWell.vue";
 
-// Plate Based
-export { default as StimulationStudioWidget } from "./components/plate-based-widgets/stimulationstudio/StimulationStudioWidget.vue";
+// Settings related
+export { default as AddUser } from "./components/settings/AddUser.vue";
+export { default as EditUser } from "./components/settings/EditUser.vue";
+export { default as SettingsButton } from "./components/settings/SettingsButton.vue";
+export { default as SettingsForm } from "./components/settings/SettingsForm.vue";
 
 // Status Related
 export { default as StatusBar } from "./components/status/StatusBar.vue";
@@ -62,3 +63,4 @@ export { default as StimulationStudioProtocolViewer } from "./components/stimula
 export { default as StimulationStudioWaveform } from "./components/stimulation/StimulationStudioWaveform.vue";
 export { default as StimulationStudioZoomControls } from "./components/stimulation/StimulationStudioZoomControls.vue";
 export { default as StimulationStudio } from "./components/stimulation/StimulationStudio.vue";
+export { default as StimulationStudioWidget } from "./components/stimulation/StimulationStudioWidget.vue";

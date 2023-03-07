@@ -473,7 +473,6 @@ export default {
         this.checkValidity(value, input);
       }
     }
-
     this.checkValidity(this.inputPulseFrequency, "pulseFrequency");
     this.checkValidity(duration, "totalActiveDuration");
     this.checkValidity(this.numCycles, "numCycles");
@@ -574,16 +573,16 @@ export default {
       } else {
         if (label.includes("phase")) {
           this.pulseSettings[label] = value;
-        } else if (label.includes("active")) {
+        } else if (label.includes("Active")) {
           this.pulseSettings.totalActiveDuration.duration = value;
         }
 
-        if (label.includes("duration") || label.includes("interval")) {
+        if (label.includes("Duration") || label.includes("Interval")) {
           this.checkPulseDurationValidity();
           this.checkActiveDuration();
-        } else if (label.includes("charge")) {
+        } else if (label.includes("Charge")) {
           this.checkChargeValidity(value, label);
-        } else if (label.includes("frequency")) {
+        } else if (label.includes("Frequency")) {
           this.inputPulseFrequency = value;
           this.checkPulseFrequency();
         }

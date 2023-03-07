@@ -21,54 +21,24 @@
           d="M71.2,29.2a.5.5,0,0,0,0-.5A35.8,35.8,0,0,0,36.1.2,35.7,35.7,0,0,0,16.7,5.9L11.3,2.1A1.4,1.4,0,0,0,9.1,3.2L7,28.6A1.4,1.4,0,0,0,9,30L32.1,19.2a1.5,1.5,0,0,0,.2-2.5l-4.1-2.9a23.9,23.9,0,0,1,27.2,8.7A23.5,23.5,0,0,1,59.7,35a1.3,1.3,0,0,0,1.4,1.3h9.4a1.5,1.5,0,0,0,1.4-1.5A27.8,27.8,0,0,0,71.2,29.2Z"
         />
       </svg>
-      <b-dropdown
-        id="start-stim-dropdown"
-        variant="link"
-        class="b-dropdown__container"
-        no-caret
-        @show="handlePlayStop"
-      >
-        <template #button-content>
-          <span :class="svg__stimulationControlsPlayStopButton__dynamicClass">
-            <div
-              v-if="!playState"
-              id="start-stim-button"
-              v-b-popover.hover.top="startStimLabel"
-              title="Start Stimulation"
-            >
-              <!-- this is here for testing the popover message -->
-              <span id="start-popover-msg" style="display: none">{{ startStimLabel }}</span>
-              <FontAwesomeIcon class="fontawesome-icon-class" :icon="['fa', 'play-circle']" />
-            </div>
-            <div v-if="playState" v-b-popover.hover.bottom="stopStimLabel" title="Stop Stimulation">
-              <!-- this is here for testing the popover message -->
-              <span id="stop-popover-msg" style="display: none">{{ stopStimLabel }}</span>
-              <FontAwesomeIcon class="fontawesome-icon-class" :icon="['fa', 'stop-circle']" />
-            </div>
-          </span>
-        </template>
+
+      <span :class="svg__stimulationControlsPlayStopButton__dynamicClass" @click="handlePlayStop">
         <div
-          v-if="openStartDropdown"
-          class="dropdown-menu"
-          aria-labelledby="dropdownMenuButton"
-          :style="`display: ${dropdownDisplay}`"
+          v-if="!playState"
+          id="start-stim-button"
+          v-b-popover.hover.top="startStimLabel"
+          title="Start Stimulation"
         >
-          <b-dropdown-item-button
-            v-for="(option, idx) in startStimOptions"
-            id="dropdown-option"
-            :key="option"
-            href="#"
-            :disabled="idx === 1 && !startRecAndStimEnabled"
-            @click="
-              (e) => {
-                e.preventDefault();
-                handleDropdownSelect(idx);
-              }
-            "
-            >{{ option }}</b-dropdown-item-button
-          >
+          <!-- this is here for testing the popover message -->
+          <span id="start-popover-msg" style="display: none">{{ startStimLabel }}</span>
+          <FontAwesomeIcon class="fontawesome-icon-class" :icon="['fa', 'play-circle']" />
         </div>
-      </b-dropdown>
+        <div v-if="playState" v-b-popover.hover.bottom="stopStimLabel" title="Stop Stimulation">
+          <!-- this is here for testing the popover message -->
+          <span id="stop-popover-msg" style="display: none">{{ stopStimLabel }}</span>
+          <FontAwesomeIcon class="fontawesome-icon-class" :icon="['fa', 'stop-circle']" />
+        </div>
+      </span>
     </div>
     <div
       v-b-popover.hover.bottomright="'Edit account settings'"
@@ -159,7 +129,7 @@
       :no-close-on-backdrop="true"
       :static="true"
     >
-      <SettingsForm @closeModal="$bvModal.hide('settings-form')" />
+      <SettingsForm @close-modal="$bvModal.hide('settings-form')" />
     </b-modal>
   </div>
 </template>
@@ -207,7 +177,6 @@ export default {
       activeGradient: ["#19ac8a", "#24524b"],
       inactiveGradient: ["#b7b7b7", "#858585"],
       currentGradient: ["#b7b7b7", "#858585"],
-      startStimOptions: ["Start Stimulation Only", "Start Recording and Stimulation"],
       controlsBlockLabel: "Stimulation Controls are disabled until device is Calibrated",
       openCircuitLabels: {
         header: "Warning!",
@@ -234,7 +203,7 @@ export default {
       "stimStatus",
       "stimulatorCircuitStatuses",
     ]),
-    ...mapState("playback", ["barcodes"]),
+    ...mapState("system", ["barcodes"]),
     isStartStopButtonEnabled: function () {
       if (!this.playState) {
         // if starting stim make sure initial magnetometer calibration has been completed and
@@ -321,9 +290,6 @@ export default {
     configCheckInProgress: function () {
       return this.stimStatus === STIM_STATUS.CONFIG_CHECK_IN_PROGRESS;
     },
-    dropdownDisplay: function () {
-      return this.openStartDropdown ? "flex" : "none";
-    },
   },
   watch: {
     stimPlayState: function () {
@@ -348,7 +314,8 @@ export default {
           this.$store.dispatch(`stimulation/stopStimulation`);
           clearTimeout(this.stim_24hrTimer); // clear 24 hour timer for next stimulation
         } else {
-          this.openStartDropdown = true;
+          await this.$store.dispatch(`stimulation/createProtocolMessage`);
+          this.start_24hrTimer();
         }
       }
     },
@@ -370,11 +337,6 @@ export default {
       this.stim_24hrTimer = setTimeout(() => {
         this.$bvModal.show("stim-24hr-warning");
       }, 24 * 60 * 60e3);
-    },
-    async handleDropdownSelect(idx) {
-      // always start stimulation
-      await this.$store.dispatch(`stimulation/createProtocolMessage`);
-      this.start_24hrTimer();
     },
   },
 };
@@ -446,9 +408,8 @@ body {
 .span__stimulation-controls-play-stop-button--disabled {
   position: relative;
   color: #2f2f2f;
-  font-size: 20px;
-  left: -13px;
-  bottom: 7px;
+  font-size: 23px;
+  grid-column: 4;
 }
 
 .b-dropdown__container {
@@ -481,9 +442,8 @@ body {
 .span__stimulation-controls-play-stop-button--enabled {
   position: relative;
   color: #b7b7b7;
-  font-size: 20px;
-  left: -13px;
-  bottom: 7px;
+  font-size: 22px;
+  grid-column: 4;
 }
 
 .span__stimulation-controls-play-stop-button--enabled:hover {

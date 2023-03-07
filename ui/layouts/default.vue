@@ -10,7 +10,7 @@
           <BarcodeViewer :barcodeType="'stimBarcode'" />
         </div>
         <div class="div__stim-status-container">
-          <StatusBar :stimSpecific="true" @send-confirmation="sendConfirmation" />
+          <StatusBar @send-confirmation="sendConfirmation" />
         </div>
         <div class="div__stimulationControls-controls-icon-container">
           <StimulationControls />
@@ -33,8 +33,8 @@
 <script>
 import Vue from "vue";
 
-import BarcodeViewer from "@/components/playback/controls/BarcodeViewer";
-import StimulationControls from "@/components/playback/controls/StimulationControls";
+import BarcodeViewer from "@/components/system/controls/BarcodeViewer";
+import StimulationControls from "@/components/system/controls/StimulationControls";
 import StatusBar from "@/components/status/StatusBar";
 import SimulationMode from "@/components/status/SimulationMode";
 
@@ -56,18 +56,13 @@ export default {
     return {
       packageVersion: "",
       currentYear: "2023", // TODO look into better ways of handling this. Not sure if just using the system's current year is the best approach
-      pulse3dVersions: undefined,
     };
   },
   computed: {
-    ...mapState("settings", ["allowSWUpdateInstall"]),
     ...mapState("stimulation", ["stimPlayState"]),
-    ...mapState("flask", ["statusUuid"]),
+    ...mapState("system", ["statusUuid", "allowSWUpdateInstall"]),
   },
 
-  created: async function () {
-    this.$store.dispatch("flask/startStatusPinging");
-  },
   methods: {
     sendConfirmation: function (idx) {
       this.$store.commit("settings/setConfirmationRequest", false);

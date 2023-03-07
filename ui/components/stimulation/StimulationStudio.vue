@@ -32,7 +32,7 @@
 
 <script>
 import StimulationStudioCreateAndEdit from "@/components/stimulation/StimulationStudioCreateAndEdit.vue";
-import StimulationStudioWidget from "@/components/plate-based-widgets/stimulationstudio/StimulationStudioWidget.vue";
+import StimulationStudioWidget from "@/components/stimulation/StimulationStudioWidget.vue";
 import StimulationStudioDragAndDropPanel from "@/components/stimulation/StimulationStudioDragAndDropPanel.vue";
 import StimulationStudioBlockViewEditor from "@/components/stimulation/StimulationStudioBlockViewEditor.vue";
 import StimulationStudioProtocolViewer from "@/components/stimulation/StimulationStudioProtocolViewer.vue";

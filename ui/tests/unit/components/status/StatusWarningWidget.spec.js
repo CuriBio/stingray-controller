@@ -12,31 +12,31 @@ describe("StatusWarningWidget.vue", () => {
     wrapper = mount(DistComponentToTest, {
       localVue,
     });
-    const target_span = wrapper.find(".span__status-warning-label");
-    expect(target_span.text()).toStrictEqual("Warning!");
+    const targetSpan = wrapper.find(".span__status-warning-label");
+    expect(targetSpan.text()).toStrictEqual("Warning!");
   });
   test("Given that StatusWarningWidget is active, When the lifecyle hook mounted is created, Then it will display a confirmation message that operations are still in progress", async () => {
     wrapper = mount(ComponentToTest, {
       localVue,
     });
     const background = wrapper.find(".div__status-warning-background");
-    const target_message_span = wrapper.find(".span__status-warning-message");
-    const target_message_span_p = target_message_span.findAll("p");
-    expect(target_message_span_p.at(0).text()).toStrictEqual("Operations are still in progress.");
-    expect(target_message_span_p.at(1).text()).toStrictEqual("Are you sure you want to exit?");
+    const targetMessageSpan = wrapper.find(".span__status-warning-message");
+    const targetMessageSpanP = targetMessageSpan.findAll("p");
+    expect(targetMessageSpanP.at(0).text()).toStrictEqual("Operations are still in progress.");
+    expect(targetMessageSpanP.at(1).text()).toStrictEqual("Are you sure you want to exit?");
     expect(background.attributes().style).toBe("height: 161px;");
   });
-  test("Given that StatusWarningWidget is mounted, When the StatusWarningWidget is visible, Then click on 'Yes' or 'Cancel' results in an event 'handle_warning_closure' to be emitted", async () => {
+  test("Given that StatusWarningWidget is mounted, When the StatusWarningWidget is visible, Then click on 'Yes' or 'Cancel' results in an event 'handleWarningClosure' to be emitted", async () => {
     wrapper = mount(ComponentToTest, {
       localVue,
     });
 
-    const cancel_yes_btn = wrapper.findAll(".span__button_label");
-    await cancel_yes_btn.at(1).trigger("click");
-    const yes_btn_events = wrapper.emitted("handleConfirmation");
-    expect(yes_btn_events[0]).toStrictEqual([1]);
+    const cancelYesBtn = wrapper.findAll(".span__button-label");
+    await cancelYesBtn.at(1).trigger("click");
+    const yesBtnEvents = wrapper.emitted("handleConfirmation");
+    expect(yesBtnEvents[0]).toStrictEqual([1]);
 
-    await cancel_yes_btn.at(0).trigger("click");
-    expect(yes_btn_events[1]).toStrictEqual([0]);
+    await cancelYesBtn.at(0).trigger("click");
+    expect(yesBtnEvents[1]).toStrictEqual([0]);
   });
 });

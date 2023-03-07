@@ -7,8 +7,8 @@ localVue.use(Vuex);
 let NuxtStore;
 let store;
 
-const non_green_ranges = [...Array(71).keys(), ...[...Array(360).keys()].splice(170)];
-const colors_to_display = non_green_ranges
+const nonGreenRanges = [...Array(71).keys(), ...[...Array(360).keys()].splice(170)];
+const colorsToDisplay = nonGreenRanges
   .filter((hue) => hue % 23 === 0)
   .map((hue) => `hsla(${hue}, 100%, 50%, 1)`);
 
@@ -27,48 +27,48 @@ describe("StimulationStudioColorModal.vue", () => {
       store,
       localVue,
       propsData: {
-        current_color: "hsla(100, 100%, 50%, 1)",
+        currentColor: "hsla(100, 100%, 50%, 1)",
       },
     });
 
-    const color_blocks = wrapper.findAll(".individual_color_block");
-    expect(color_blocks).toHaveLength(12);
+    const colorBlocks = wrapper.findAll(".individualColorBlock");
+    expect(colorBlocks).toHaveLength(12);
   });
 
-  test("When a user selects 'Cancel', Then change_pulse_color will be emitted with the original color", async () => {
+  test("When a user selects 'Cancel', Then changePulseColor will be emitted with the original color", async () => {
     const wrapper = mount(StimulationStudioColorModal, {
       store,
       localVue,
       propsData: {
-        current_color: "hsla(100, 100%, 50%, 1)",
+        currentColor: "hsla(100, 100%, 50%, 1)",
       },
     });
 
-    const cancel_button = wrapper.findAll(".span__button_label").at(0);
-    await cancel_button.trigger("click");
+    const cancelButton = wrapper.findAll(".span__button-label").at(0);
+    await cancelButton.trigger("click");
 
-    const emitedt_events = wrapper.emitted("change_pulse_color");
-    expect(emitedt_events).toHaveLength(1);
-    expect(emitedt_events[0]).toStrictEqual(["hsla(100, 100%, 50%, 1)"]);
+    const emitedtEvents = wrapper.emitted("changePulseColor");
+    expect(emitedtEvents).toHaveLength(1);
+    expect(emitedtEvents[0]).toStrictEqual(["hsla(100, 100%, 50%, 1)"]);
   });
 
-  test.each(colors_to_display)(
+  test.each(colorsToDisplay)(
     "When a user selects %s from the 12 colors, Then the new color will be emitted to parent component",
     async (color) => {
       const wrapper = mount(StimulationStudioColorModal, {
         store,
         localVue,
         propsData: {
-          current_color: "hsla(100, 100%, 50%, 1)",
+          currentColor: "hsla(100, 100%, 50%, 1)",
         },
       });
 
-      const color_idx = colors_to_display.indexOf(color);
-      const color_blocks = wrapper.findAll(".individual_color_block");
+      const colorIdx = colorsToDisplay.indexOf(color);
+      const colorBlocks = wrapper.findAll(".individualColorBlock");
 
-      await color_blocks.at(color_idx).trigger("click");
-      const emitedt_events = wrapper.emitted("change_pulse_color");
-      expect(emitedt_events[0]).toStrictEqual([colors_to_display[color_idx]]);
+      await colorBlocks.at(colorIdx).trigger("click");
+      const emitedtEvents = wrapper.emitted("changePulseColor");
+      expect(emitedtEvents[0]).toStrictEqual([colorsToDisplay[colorIdx]]);
     }
   );
 });

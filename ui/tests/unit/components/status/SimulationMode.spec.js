@@ -14,45 +14,44 @@ localVue.use(Vuex);
 let NuxtStore;
 let store;
 
-beforeAll(async () => {
-  // note the store will mutate across tests, so make sure to re-create it in beforeEach
-  const storePath = `${process.env.buildDir}/store.js`;
-  NuxtStore = await import(storePath);
-});
-
-beforeEach(async () => {
-  store = await NuxtStore.createStore();
-});
-
-afterEach(() => wrapper.destroy());
-
 describe("SimulationMode.vue", () => {
-  it("initially the simulation_mode is set to false ", async () => {
+  beforeAll(async () => {
+    // note the store will mutate across tests, so make sure to re-create it in beforeEach
+    const storePath = `${process.env.buildDir}/store.js`;
+    NuxtStore = await import(storePath);
+  });
+
+  beforeEach(async () => {
+    store = await NuxtStore.createStore();
+  });
+
+  afterEach(() => wrapper.destroy());
+  test("initially the simulationMode is set to false ", async () => {
     const propsData = {};
     wrapper = shallowMount(SimulationMode, { propsData, store, localVue });
 
-    const target_button = wrapper.find(".div__simulationmode");
+    const targetButton = wrapper.find(".div__simulationmode");
 
-    expect(target_button.isVisible()).toBe(false);
+    expect(targetButton.isVisible()).toBe(false);
   });
-  it("Vuex mutation of simulation_mode is set to true component becomes visible ", async () => {
+  test("Vuex mutation of simulationMode is set to true component becomes visible ", async () => {
     const propsData = {};
     wrapper = shallowMount(SimulationMode, { propsData, store, localVue });
 
     store.commit("flask/setSimulationStatus", true);
     await wrapper.vm.$nextTick(); // wait for update
-    const target_button = wrapper.find(".div__simulationmode");
+    const targetButton = wrapper.find(".div__simulationmode");
 
-    expect(target_button.isVisible()).toBe(true);
+    expect(targetButton.isVisible()).toBe(true);
   });
-  it("Vuex mutation of simulation_mode is set to false component becomes hidden ", async () => {
+  test("Vuex mutation of simulationMode is set to false component becomes hidden ", async () => {
     const propsData = {};
     wrapper = shallowMount(SimulationMode, { propsData, store, localVue });
 
     store.commit("flask/setSimulationStatus", false);
     await wrapper.vm.$nextTick(); // wait for update
-    const target_button = wrapper.find(".div__simulationmode");
+    const targetButton = wrapper.find(".div__simulationmode");
 
-    expect(target_button.isVisible()).toBe(false);
+    expect(targetButton.isVisible()).toBe(false);
   });
 });

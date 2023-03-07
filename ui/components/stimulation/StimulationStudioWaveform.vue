@@ -116,7 +116,7 @@ export default {
     };
   },
   computed: {
-    ...mapState("stimulation", ["hoveredPulse"]),
+    ...mapState("stimulation", ["hoveredPulse", "xAxisTimeIdx"]),
     div__waveformGraph_dynamicStyle: function () {
       return { width: this.plotAreaPixelWidth + this.margin.left + this.margin.right + "px" };
     },
@@ -136,6 +136,10 @@ export default {
     },
     dataPoints() {
       this.renderPlot();
+    },
+    xAxisTimeIdx() {
+      // reset time unit x axis dropdown when protocol editor resets
+      this.activeDurationIdx = this.xAxisTimeIdx;
     },
     plotAreaPixelWidth() {
       this.theSvg = d3Select(this.$el)
@@ -180,7 +184,7 @@ export default {
   mounted: function () {
     // Eli (2/2/2020): having the svg be appended in the `data` function didn't work, so moved it to here
     this.theSvg = d3Select(this.$el)
-      .select(".div_Waveform-graph")
+      .select(".div__waveform-graph")
       .append("svg")
       .attr("width", this.plotAreaPixelWidth + this.margin.left + this.margin.right)
       .attr("height", this.plotAreaPixelHeight + this.margin.top + this.margin.bottom)

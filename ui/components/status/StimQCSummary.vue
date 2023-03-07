@@ -26,7 +26,7 @@
 </template>
 <script>
 import ButtonWidget from "@/components/basic-widgets/ButtonWidget.vue";
-import StimulationStudioWidget from "@/components/plate-based-widgets/stimulationstudio/StimulationStudioWidget.vue";
+import StimulationStudioWidget from "@/components/stimulation/StimulationStudioWidget.vue";
 
 export default {
   name: "StimQCSummary",

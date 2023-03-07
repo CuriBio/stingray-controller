@@ -679,7 +679,7 @@ describe("store/data", () => {
       store.commit("data/set_plate_waveforms", ar);
       context = await store.dispatch("flask/get_flask_action_context");
 
-      store.commit("flask/setStatusUuid", STATUS.MESSAGE.LIVE_VIEW_ACTIVE);
+      store.commit("flask/setStatusUuid", STATUS.LIVE_VIEW_ACTIVE);
     });
 
     test("When xTimeIndex is set to a specific value in Vuex, Then the /system_status route is called with Axios with the xTimeIndex as a parameter", async () => {
@@ -698,7 +698,7 @@ describe("store/data", () => {
       mocked_axios
         .onGet(system_status_regexp)
         .reply(200, {
-          ui_status_code: STATUS.MESSAGE.CALIBRATION_NEEDED,
+          ui_status_code: STATUS.CALIBRATION_NEEDED,
           in_simulation_mode: true,
         })
         .onGet("/start_recording")
@@ -713,7 +713,7 @@ describe("store/data", () => {
 
       await store.dispatch("playback/start_recording");
 
-      expect(store.state.flask.statusUuid).toStrictEqual(STATUS.MESSAGE.ERROR);
+      expect(store.state.flask.statusUuid).toStrictEqual(STATUS.ERROR);
       expect(store.state.flask.statusPingIntervald).toBeNull();
       expect(store.state.playback.playback_progression_interval_id).toBeNull();
     });

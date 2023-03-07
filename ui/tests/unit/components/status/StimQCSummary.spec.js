@@ -20,25 +20,23 @@ describe("StimQCSummary.vue", () => {
       localVue,
       store,
     });
-    const target_header_text = wrapper.find(".span__stimqc-label");
-    const target_message_span_p = wrapper.findAll("p");
+    const targetHeaderText = wrapper.find(".span__stimqc-label");
+    const targetMessageSpanP = wrapper.findAll("p");
 
-    expect(target_header_text.text()).toStrictEqual("Configuration Check Summary!");
-    expect(target_message_span_p.at(0).text()).toStrictEqual(
+    expect(targetHeaderText.text()).toStrictEqual("Configuration Check Summary!");
+    expect(targetMessageSpanP.at(0).text()).toStrictEqual(
       "An open circuit was detected in the assigned wells shown below. This will prevent you from being able to start a stimulation."
     );
-    expect(target_message_span_p.at(1).text()).toStrictEqual(
-      "Please unassign these wells before proceeding."
-    );
+    expect(targetMessageSpanP.at(1).text()).toStrictEqual("Please unassign these wells before proceeding.");
   });
   test("Given that StimQCSummary is mounted, When the StimQCSummary is visible, Then click on 'Okay results in an event 'handleConfirmation' to be emitted", async () => {
     const wrapper = mount(StimQCSummary, {
       localVue,
       store,
     });
-    const cancel_yes_btn = wrapper.findAll(".span__button_label");
-    await cancel_yes_btn.at(0).trigger("click");
-    const yes_btn_events = wrapper.emitted("handleConfirmation");
-    expect(yes_btn_events[0]).toStrictEqual([0]);
+    const cancelYesBtn = wrapper.findAll(".span__button-label");
+    await cancelYesBtn.at(0).trigger("click");
+    const yesBtnEvents = wrapper.emitted("handleConfirmation");
+    expect(yesBtnEvents[0]).toStrictEqual([0]);
   });
 });

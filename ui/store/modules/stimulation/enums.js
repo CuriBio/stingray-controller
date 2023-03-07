@@ -1,7 +1,4 @@
 export const STIM_STATUS = {
-  // initial state
-  CALIBRATION_NEEDED: "Calibration Needed",
-
   // configuration states
   CONFIG_CHECK_NEEDED: "Configuration Check Needed",
   CONFIG_CHECK_IN_PROGRESS: "Configuration Check in Progress...",

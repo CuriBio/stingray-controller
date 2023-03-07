@@ -29,19 +29,19 @@ describe("ErrorCatchWidget.vue", () => {
 
   test("When mounting ErrorCatchWidget from the build dist file, Then it loads successfully and the background black box is displayed", () => {
     const propsData = {
-      log_filepath: "C:\\ ",
+      logFilepath: "C:\\ ",
     };
     wrapper = shallowMount(DistComponentToTest, {
       propsData,
       store,
       localVue,
     });
-    const target_background_div = wrapper.find(".div__status-error-catch-background");
-    expect(target_background_div.isVisible()).toBe(true);
+    const targetBackgroundDiv = wrapper.find(".div__status-error-catch-background");
+    expect(targetBackgroundDiv.isVisible()).toBe(true);
   });
   test("Given that ErrorCatchWidget has a props having error file name and error message, When the lifecyle hook mounted is created, Then title, alert text, contact e-mail and error file name is rendered properly", async () => {
     const propsData = {
-      log_filepath: "C:\test_file_log.txt",
+      logFilepath: "C:\testFileLog.txt",
       shutdownErrorMessage: "Mantarray software is about to shut down.",
     };
     wrapper = mount(ComponentToTest, {
@@ -49,27 +49,27 @@ describe("ErrorCatchWidget.vue", () => {
       store,
       localVue,
     });
-    const target_title_div = wrapper.find(".div_status-error-catch-title-label");
-    expect(target_title_div.text()).toStrictEqual("An error occurred.");
-    const target_alert_div = wrapper.find(".div_status-error-catch-alert-txt");
-    const target_alert_div_p = target_alert_div.findAll("p");
-    expect(target_alert_div_p.at(0).text()).toStrictEqual("Mantarray software is about to shut down.");
+    const targetTitleDiv = wrapper.find(".divStatus-error-catch-title-label");
+    expect(targetTitleDiv.text()).toStrictEqual("An error occurred.");
+    const targetAlertDiv = wrapper.find(".divStatus-error-catch-alert-txt");
+    const targetAlertDivP = targetAlertDiv.findAll("p");
+    expect(targetAlertDivP.at(0).text()).toStrictEqual("Mantarray software is about to shut down.");
 
-    const target_email_div_p = wrapper.find(".div_status-email-txt").findAll("p");
-    expect(target_email_div_p.at(0)).toMatchInlineSnapshot(`
+    const targetEmailDivP = wrapper.find(".divStatus-email-txt").findAll("p");
+    expect(targetEmailDivP.at(0)).toMatchInlineSnapshot(`
       <p>
         Please send the folder shown below to
-        <a id="error_contact" href="mailto:support@curibio.com ? subject = Mantarray Error log">support@curibio.com</a>
+        <a id="errorContact" href="mailto:support@curibio.com ? subject = Mantarray Error log">support@curibio.com</a>
       </p>
     `);
 
     await wrapper.vm.$nextTick(); // wait for update
-    const target_text_area = wrapper.find(".textarea__error-file-path");
-    expect(target_text_area.element.value).toStrictEqual("C:\test_file_log.txt");
+    const targetTextArea = wrapper.find(".textarea__error-file-path");
+    expect(targetTextArea.element.value).toStrictEqual("C:\testFileLog.txt");
   });
-  test("Given that ErrorCatchWidget has a props having log_filepath is small, When mounting the component with short log_filepath, Then the text area rows attribute is modified to suite the length of props log_filepath intially, at run time based on new log_filepath then the rows attribute of textarea is updated", async () => {
+  test("Given that ErrorCatchWidget has a props having logFilepath is small, When mounting the component with short logFilepath, Then the text area rows attribute is modified to suite the length of props logFilepath intially, at run time based on new logFilepath then the rows attribute of textarea is updated", async () => {
     const propsData = {
-      log_filepath: "C:\test_file_log.txt",
+      logFilepath: "C:\testFileLog.txt",
     };
     wrapper = mount(ComponentToTest, {
       propsData,
@@ -77,40 +77,40 @@ describe("ErrorCatchWidget.vue", () => {
       localVue,
     });
     await wrapper.vm.$nextTick(); // wait for update
-    const target_text_area = wrapper.find(".textarea__error-file-path");
-    expect(target_text_area.attributes("rows")).toBe("1");
+    const targetTextArea = wrapper.find(".textarea__error-file-path");
+    expect(targetTextArea.attributes("rows")).toBe("1");
     await wrapper.setProps({
-      log_filepath:
-        "C:UsersEliCuriBioAppDataRoamingStringrayControllerlogs_flaskmantarray-2020-10-21-185640.txt",
+      logFilepath:
+        "C:UsersEliCuriBioAppDataRoamingStringrayControllerlogsFlaskmantarray-2020-10-21-185640.txt",
     });
-    expect(target_text_area.attributes("rows")).toBe("3");
+    expect(targetTextArea.attributes("rows")).toBe("3");
   });
-  test("Given that ErrorCatchWidget has a props having log_filepath is small, When mounting the component with short log_filepath, Then the height attribute of the status-error-catch-background, textarea__error-file-path and the top attribute of error_catch_button is updated based on the length prop log_filepath", async () => {
+  test("Given that ErrorCatchWidget has a props having logFilepath is small, When mounting the component with short logFilepath, Then the height attribute of the status-error-catch-background, textarea__error-file-path and the top attribute of errorCatchButton is updated based on the length prop logFilepath", async () => {
     const propsData = {
-      log_filepath: "C:\test_file_log.txt",
+      logFilepath: "C:\testFileLog.txt",
     };
     wrapper = mount(ComponentToTest, {
       propsData,
       store,
       localVue,
     });
-    const target_background_div = wrapper.find(".div__status-error-catch-background");
-    expect(target_background_div.attributes().style).toBe("height: 262px;");
-    const target_text_area = wrapper.find(".textarea__error-file-path");
-    expect(target_text_area.attributes().style).toBe("height: 37px; top: 145px;");
-    const target_error_button = wrapper.find(".div__error-button");
-    expect(target_error_button.attributes().style).toBe("top: 262px; left: 0px; position: absolute;");
+    const targetBackgroundDiv = wrapper.find(".div__status-error-catch-background");
+    expect(targetBackgroundDiv.attributes().style).toBe("height: 262px;");
+    const targetTextArea = wrapper.find(".textarea__error-file-path");
+    expect(targetTextArea.attributes().style).toBe("height: 37px; top: 145px;");
+    const targetErrorButton = wrapper.find(".div__error-button");
+    expect(targetErrorButton.attributes().style).toBe("top: 262px; left: 0px; position: absolute;");
     /* A run time update of prop occured below then observe that height value and top is updated */
     await wrapper.setProps({
-      log_filepath: "C:UsersMantarrayAppDataRoamingStringrayControllerlogs_flask",
+      logFilepath: "C:UsersMantarrayAppDataRoamingStringrayControllerlogsFlask",
     });
-    expect(target_background_div.attributes().style).toBe("height: 274px;");
-    expect(target_text_area.attributes().style).toBe("height: 49px; top: 145px;");
-    expect(target_error_button.attributes().style).toBe("top: 274px; left: 0px; position: absolute;");
+    expect(targetBackgroundDiv.attributes().style).toBe("height: 274px;");
+    expect(targetTextArea.attributes().style).toBe("height: 49px; top: 145px;");
+    expect(targetErrorButton.attributes().style).toBe("top: 274px; left: 0px; position: absolute;");
   });
   test("Given that ErrorCatchWidget is mounted, When the ErrorCatchWidget is visible, Then click on 'Okay' results in an event 'ok-clicked' to be emitted", async () => {
     const propsData = {
-      log_filepath: "C:\test_file_log.txt",
+      logFilepath: "C:\testFileLog.txt",
     };
     wrapper = mount(ComponentToTest, {
       propsData,
@@ -118,11 +118,11 @@ describe("ErrorCatchWidget.vue", () => {
       localVue,
     });
 
-    const okay_btn = wrapper.find(".span__button_label");
-    await okay_btn.trigger("click");
+    const okayBtn = wrapper.find(".span__button-label");
+    await okayBtn.trigger("click");
     await wrapper.vm.$nextTick();
-    const okay_btn_events = wrapper.emitted("ok-clicked");
-    expect(okay_btn_events).toHaveLength(1);
-    expect(okay_btn_events[0]).toStrictEqual([]);
+    const okayBtnEvents = wrapper.emitted("ok-clicked");
+    expect(okayBtnEvents).toHaveLength(1);
+    expect(okayBtnEvents[0]).toStrictEqual([]);
   });
 });

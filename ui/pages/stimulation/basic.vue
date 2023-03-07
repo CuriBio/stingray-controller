@@ -164,11 +164,10 @@ export default {
       this.createProtocolMessage();
     },
     enableControls() {
-      this.$store.dispatch("playback/validateBarcode", {
+      this.$store.dispatch("system/validateBarcode", {
         type: "stimBarcode",
         newValue: "MS2022001000",
       });
-      // this.$store.commit("playback/setPlaybackState", playbackModule.ENUMS.PLAYBACK_STATES.CALIBRATED);
     },
     mockConfigCheck() {
       //   this.setStimStatus(STIM_STATUS.CONFIG_CHECK_IN_PROGRESS);
