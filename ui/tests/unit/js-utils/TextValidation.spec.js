@@ -1,10 +1,10 @@
 import { TextValidation } from "@/js-utils/TextValidation.js";
-import { TextValidation as DistTextValidation } from "@/dist/mantarray.common";
+import { TextValidation as DistTextValidation } from "@/dist/stingray.common";
 
 const TextValidation_BarcodeViewer = new TextValidation("plateBarcode");
 const TextValidation_UUIDBase57 = new TextValidation("uuidBase57encode");
 const TextValidation_Alphanumeric = new TextValidation("alphanumeric");
-const TextValidation_user_account = new TextValidation("user_account_input");
+const TextValidationUserAccount = new TextValidation("userAccountInput");
 const TextValidation_MyRule = new TextValidation("myrule");
 
 describe("DistTextValidation", () => {
@@ -26,18 +26,18 @@ describe("TextValidation", () => {
     const validation = TextValidation_Alphanumeric;
     expect(validation.toString()).toStrictEqual("TextValidation.alphanumeric");
   });
-  test("Given a text validation is for user_name, When called toString(), Then return would match the text rule of 'user_name' applied", () => {
-    const validation = TextValidation_user_account;
-    expect(validation.toString()).toStrictEqual("TextValidation.user_account_input");
+  test("Given a text validation is for userName, When called toString(), Then return would match the text rule of 'userName' applied", () => {
+    const validation = TextValidationUserAccount;
+    expect(validation.toString()).toStrictEqual("TextValidation.userAccountInput");
   });
   test("Given a text validation is for Myrule, When called for validate, Then return would thow an error", () => {
     const validation = TextValidation_MyRule;
-    const obj_error = { err: "Not Supported rule error" };
+    const objError = { err: "Not Supported rule error" };
     try {
       validation.validate("my criteria");
     } catch (err) {
       /* eslint-disable jest/no-conditional-expect */
-      expect(err).toStrictEqual(obj_error);
+      expect(err).toStrictEqual(objError);
       /* eslint-enable */
     }
   });
@@ -83,7 +83,7 @@ describe("TextValidation.validateBarcode with new barcodes", () => {
   );
 });
 
-describe("TextValidation.validate_uuidBase_fiftyseven_encode", () => {
+describe("TextValidation.validateUuidBaseFiftysevenEncode", () => {
   test.each([
     ["0VSckkBYH2An3dqHEyfRRE", "0", "The entered ID has an invalid character 0,"],
     [
@@ -104,14 +104,14 @@ describe("TextValidation.validate_uuidBase_fiftyseven_encode", () => {
     ["4vqyd62oARXqj9nRUNhtLQ", "", "This combination of 22 characters is invalid encoded id"],
   ])(
     "Given the encoded-uuid %s is the invalid and fails the matching criteria, When the text contains (%s) charcter, Then validation fails and appropriate invalid text is returned",
-    (uuid_text, error, message) => {
+    (uuidText, error, message) => {
       const text = message;
       const TestBase57Code = TextValidation_UUIDBase57;
-      expect(TestBase57Code.validate(uuid_text)).toStrictEqual(text);
+      expect(TestBase57Code.validate(uuidText)).toStrictEqual(text);
     }
   );
 });
-// describe("TextValidation.validate_alphanumeric", () => {
+// describe("TextValidation.validateAlphanumeric", () => {
 //   test.each([
 //     ["06ad547f fe02-477b-9473-f7977e4d5e17", "Wrong Format of pass Key"],
 //     ["06ad547f-fe02-477b-9473-f7977e4d5e1", "Wrong Format of pass Key"],
@@ -126,18 +126,18 @@ describe("TextValidation.validate_uuidBase_fiftyseven_encode", () => {
 //     }
 //   );
 // });
-describe("TextValidation.validate_user_account_input", () => {
+describe("TextValidation.validateUserAccountInput", () => {
   test.each([
     ["C", ""],
     ["Experiment anemia -1", ""],
     [null, "This field is required"],
     ["Experiment anemia -1234567890-1234567890", "Invalid as its more than 36 charcters"],
   ])(
-    "Given the user_name %s is invalid and fails the matching criteria, When the text contains (%s), Then validation fails and appropriate invalid text is returned",
-    (user_name_id, message) => {
+    "Given the userName %s is invalid and fails the matching criteria, When the text contains (%s), Then validation fails and appropriate invalid text is returned",
+    (userNameId, message) => {
       const text = message;
-      const TestValidationuser_name = TextValidation_user_account;
-      expect(TestValidationuser_name.validate(user_name_id, "user_name")).toStrictEqual(text);
+      const TestValidationuserName = TextValidationUserAccount;
+      expect(TestValidationuserName.validate(userNameId, "userName")).toStrictEqual(text);
     }
   );
 });
@@ -163,16 +163,10 @@ describe("Test new scheme for barcode", () => {
       expect(TestBarcodeViewer.validate(plateBarcode)).toStrictEqual(" ");
     }
   );
-  test("Test valid barcodes for beta 1 and beta 2 modes", async () => {
-    //check valid beta 1 mode
+  test("Test valid barcodes", async () => {
     const TestBarcodeViewer = TextValidation_BarcodeViewer;
-    expect(TestBarcodeViewer.validate("ML22123099-1", "", false)).toStrictEqual("");
-    //check invalid beta 1 mode
-    expect(TestBarcodeViewer.validate("ML22123099-3", "", false)).toStrictEqual(" ");
 
-    //check valid beta 2 mode
-    expect(TestBarcodeViewer.validate("ML22123099-2", "", true)).toStrictEqual("");
-    //check invalid beta 2 mode
-    expect(TestBarcodeViewer.validate("ML22123099-1", "", true)).toStrictEqual(" ");
+    expect(TestBarcodeViewer.validate("ML22123099-2", "")).toStrictEqual("");
+    expect(TestBarcodeViewer.validate("ML22123099-1", "")).toStrictEqual(" ");
   });
 });

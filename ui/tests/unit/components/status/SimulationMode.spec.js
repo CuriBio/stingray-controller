@@ -1,11 +1,9 @@
 import { mount } from "@vue/test-utils";
 import SimulationMode from "@/components/status/SimulationMode.vue";
-import { SimulationMode as dist_SimulationMode } from "@/dist/mantarray.common";
+import { SimulationMode as dist_SimulationMode } from "@/dist/stingray.common";
 import { shallowMount } from "@vue/test-utils";
 import Vuex from "vuex";
 import { createLocalVue } from "@vue/test-utils";
-import { STATUS } from "../../../../store/modules/flask/enums";
-import { mapGetters } from "vuex";
 
 let wrapper = null;
 
@@ -38,7 +36,7 @@ describe("SimulationMode.vue", () => {
     const propsData = {};
     wrapper = shallowMount(SimulationMode, { propsData, store, localVue });
 
-    store.commit("flask/setSimulationStatus", true);
+    store.commit("system/setSimulationStatus", true);
     await wrapper.vm.$nextTick(); // wait for update
     const targetButton = wrapper.find(".div__simulationmode");
 
@@ -48,7 +46,7 @@ describe("SimulationMode.vue", () => {
     const propsData = {};
     wrapper = shallowMount(SimulationMode, { propsData, store, localVue });
 
-    store.commit("flask/setSimulationStatus", false);
+    store.commit("system/setSimulationStatus", false);
     await wrapper.vm.$nextTick(); // wait for update
     const targetButton = wrapper.find(".div__simulationmode");
 

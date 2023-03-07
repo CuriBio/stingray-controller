@@ -1,6 +1,6 @@
 import { mount } from "@vue/test-utils";
 import StimulationStudioWidget from "@/components/stimulation/StimulationStudioWidget.vue";
-import { StimulationStudioWidget as ComponentToTest } from "@/dist/mantarray.common";
+import { StimulationStudioWidget as ComponentToTest } from "@/dist/stingray.common";
 import { createLocalVue } from "@vue/test-utils";
 import { STIM_STATUS } from "@/store/modules/stimulation/enums";
 import Vuex from "vuex";
@@ -108,10 +108,10 @@ describe("StimulationStudioWidget.vue", () => {
     await wrapper.vm.basicSelect(4);
     expect(wrapper.find("#plus").isVisible()).toBe(true);
     await wrapper.find(".span__stimulationstudio-toggle-plus-minus-icon").trigger("click");
-    await wrapper.find("#column3").trigger("click");
+    await wrapper.find("#column_3").trigger("click");
     expect(wrapper.find("#plus").isVisible()).toBe(true);
     await wrapper.find(".span__stimulationstudio-toggle-plus-minus-icon").trigger("click");
-    await wrapper.find("#row3").trigger("click");
+    await wrapper.find("#row_3").trigger("click");
     expect(wrapper.find("#plus").isVisible()).toBe(true);
   });
 
@@ -155,41 +155,43 @@ describe("StimulationStudioWidget.vue", () => {
     });
   });
 
-  test("Given no wells are selected, When user shift+clicks a row label, Then corresponding unselected wells will toggle stroke-width of 4px and 0px", async () => {
-    const wrapper = mount(StimulationStudioWidget, {
-      store,
-      localVue,
-    });
-    const test = [
-      ["#row0", [0, 4, 8, 12, 16, 20]],
-      ["#row1", [1, 5, 9, 13, 17, 21]],
-      ["#row2", [2, 6, 10, 14, 18, 22]],
-      ["#row3", [3, 7, 11, 15, 19, 23]],
-    ];
-    test.map(async (row) => {
-      await wrapper.find(row[0]).trigger("click", { shiftKey: true });
-      row[1].map((well) => expect(wrapper.vm.strokeWidth[well]).toBe(4));
-    });
-  });
+  test.each([
+    ["#row_0", [0, 4, 8, 12, 16, 20]],
+    ["#row_1", [1, 5, 9, 13, 17, 21]],
+    ["#row_2", [2, 6, 10, 14, 18, 22]],
+    ["#row_3", [3, 7, 11, 15, 19, 23]],
+  ])(
+    "Given no wells are selected, When user shift+clicks a row label, Then corresponding unselected wells will toggle stroke-width of 4px and 0px",
+    async (row, wells) => {
+      const wrapper = mount(StimulationStudioWidget, {
+        store,
+        localVue,
+      });
 
-  test("Given no wells are selected, When user shift+clicks a column label, Then corresponding unselected wells will toggle stroke-width of 4px and 0px", async () => {
-    const wrapper = mount(StimulationStudioWidget, {
-      store,
-      localVue,
-    });
-    const test = [
-      ["#column1", [0, 1, 2, 3]],
-      ["#column2", [4, 5, 6, 7]],
-      ["#column3", [8, 9, 10, 11]],
-      ["#column4", [12, 13, 14, 15]],
-      ["#column5", [16, 17, 18, 19]],
-      ["#column6", [20, 21, 22, 23]],
-    ];
-    test.map(async (column) => {
-      await wrapper.find(column[0]).trigger("click", { shiftKey: true });
-      column[1].map((well) => expect(wrapper.vm.strokeWidth[well]).toBe(4));
-    });
-  });
+      await wrapper.find(row).trigger("click", { shiftKey: true });
+      wells.map((well) => expect(wrapper.vm.strokeWidth[well]).toBe(4));
+    }
+  );
+
+  test.each([
+    ["#column_1", [0, 1, 2, 3]],
+    ["#column_2", [4, 5, 6, 7]],
+    ["#column_3", [8, 9, 10, 11]],
+    ["#column_4", [12, 13, 14, 15]],
+    ["#column_5", [16, 17, 18, 19]],
+    ["#column_6", [20, 21, 22, 23]],
+  ])(
+    "Given no wells are selected, When user shift+clicks a column label, Then corresponding unselected wells will toggle stroke-width of 4px and 0px",
+    async (column, wells) => {
+      const wrapper = mount(StimulationStudioWidget, {
+        store,
+        localVue,
+      });
+
+      await wrapper.find(column).trigger("click", { shiftKey: true });
+      wells.map((well) => expect(wrapper.vm.strokeWidth[well]).toBe(4));
+    }
+  );
 
   test("When there is a change to allSelected wells, Then commit the mutation to state to the store", async () => {
     const wrapper = mount(StimulationStudioWidget, {

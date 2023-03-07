@@ -37,10 +37,12 @@ export default {
   },
   methods: {
     zoomIn() {
-      this.$store.commit("stimulation/setZoomIn", this.axis);
+      if (this.axis === "y-axis") this.$store.commit("stimulation/setZoomIn", this.axis);
+      else this.$emit("zoom-in");
     },
     zoomOut() {
-      this.$store.commit("stimulation/setZoomOut", this.axis);
+      if (this.axis === "y-axis") this.$store.commit("stimulation/setZoomOut", this.axis);
+      else this.$emit("zoom-out");
     },
   },
 };

@@ -1,6 +1,6 @@
 import { mount } from "@vue/test-utils";
 import ComponentToTest from "@/components/settings/SettingsForm.vue";
-import { SettingsForm as DistComponentToTest } from "@/dist/mantarray.common";
+import { SettingsForm as DistComponentToTest } from "@/dist/stingray.common";
 
 import Vuex from "vuex";
 import { createLocalVue } from "@vue/test-utils";

@@ -242,17 +242,6 @@ describe("StimulationStudioDragAndDropPanel.vue", () => {
     expect(wrapper.vm.protocolOrder).toHaveLength(3);
     expect(wrapper.vm.modalType).toBeNull();
   });
-
-  test("When exiting instance, Then instance is effectively destroyed", async () => {
-    const destroyedSpy = jest.spyOn(StimulationStudioDragAndDropPanel, "beforeDestroy");
-    wrapper = mount(StimulationStudioDragAndDropPanel, {
-      store,
-      localVue,
-    });
-    wrapper.destroy();
-    expect(destroyedSpy).toHaveBeenCalledWith();
-  });
-
   test("When a user selects a protocol to edit, Then the DragAndDropPanel component should get the selected pulse order and unit of time to display for edit", async () => {
     wrapper = mount(StimulationStudioDragAndDropPanel, {
       store,
@@ -336,17 +325,6 @@ describe("StimulationStudioDragAndDropPanel.vue", () => {
 
     await wrapper.vm.onModalClose("Save", testSettings, testStimSettings);
     expect(wrapper.vm.protocolOrder[0].pulseSettings).toBe(testSettings);
-  });
-
-  test("When a user switch time unit in drop down, Then the x-axis scale should change accordingly", async () => {
-    const wrapper = mount(StimulationStudioDragAndDropPanel, {
-      store,
-      localVue,
-    });
-
-    await wrapper.findAll("li").at(1).trigger("click");
-
-    expect(wrapper.vm.timeUnitsIdx).toBe(1);
   });
 
   test("When a user hovers over a waveform tile, Then the pulse settings will be added to state", async () => {

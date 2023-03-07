@@ -206,7 +206,6 @@ export default {
     const { protocolEditor, editMode, protocolList } = state;
     const { letter, color } = state.currentAssignment;
     const updatedProtocol = { color, letter, label: protocolEditor.name, protocol: protocolEditor };
-
     if (!editMode.status) {
       commit("setNewProtocol", updatedProtocol);
     } else if (editMode.status) {
@@ -218,7 +217,6 @@ export default {
             protocol: protocolEditor,
           };
       });
-
       await commit("setEditModeOff");
       await dispatch("updateProtocolAssignments", updatedProtocol);
     }
@@ -260,9 +258,9 @@ export default {
           // this needs to be converted before sent because stim type changes independently of pulse settings
           const convertedSubprotocols = await _getConvertedSettings(subprotocols, stimulationType);
           const protocolModel = {
-            protocolId: letter,
-            stimulationType,
-            runUntilStopped,
+            protocol_id: letter,
+            stimulation_type: stimulationType,
+            run_until_stopped: runUntilStopped,
             subprotocols: convertedSubprotocols,
           };
 
@@ -333,8 +331,6 @@ export default {
     }
   },
   async startStimConfiguration({ commit, state }) {
-    // const url = `/startStimChecks`;
-    // const wellIndices = Object.keys(state.protocolAssignments);
     // TODO
   },
   async onPulseMouseenter({ state }, idx) {
@@ -380,18 +376,18 @@ const _getConvertedSettings = async (subprotocols, stimType) => {
       typeSpecificSettings.duration = pulse.duration * TIME_CONVERSION_TO_MILLIS[pulse.unit] * milliToMicro;
     else
       typeSpecificSettings = {
-        numCycles: pulse.numCycles,
-        postphaseInterval: Math.round(pulse.postphaseInterval * milliToMicro), // sent in µs, also needs to be an integer value
-        phaseOneDuration: pulse.phaseOneDuration * milliToMicro, // sent in µs
-        phaseOneCharge: pulse.phaseOneCharge * conversion, // sent in mV
+        num_cycles: pulse.numCycles,
+        postphase_interval: Math.round(pulse.postphaseInterval * milliToMicro), // sent in µs, also needs to be an integer value
+        phase_one_duration: pulse.phaseOneDuration * milliToMicro, // sent in µs
+        phase_cne_charge: pulse.phaseOneCharge * conversion, // sent in mV
       };
 
     if (pulse.type === "Biphasic")
       typeSpecificSettings = {
         ...typeSpecificSettings,
-        interphaseInterval: pulse.interphaseInterval * milliToMicro, // sent in µs
-        phaseTwoCharge: pulse.phaseTwoCharge * conversion, // sent in mV or µA
-        phaseTwoDuration: pulse.phaseTwoDuration * milliToMicro, // sent in µs
+        interphase_interval: pulse.interphaseInterval * milliToMicro, // sent in µs
+        phase_two_charge: pulse.phaseTwoCharge * conversion, // sent in mV or µA
+        phase_two_duration: pulse.phaseTwoDuration * milliToMicro, // sent in µs
       };
 
     return {

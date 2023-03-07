@@ -1,6 +1,6 @@
 import { mount } from "@vue/test-utils";
 import ComponentToTest from "@/components/status/StatusWarningWidget.vue";
-import { StatusWarningWidget as DistComponentToTest } from "@/dist/mantarray.common";
+import { StatusWarningWidget as DistComponentToTest } from "@/dist/stingray.common";
 
 import { createLocalVue } from "@vue/test-utils";
 let wrapper = null;

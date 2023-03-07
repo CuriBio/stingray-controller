@@ -351,7 +351,7 @@ class SubprocessMonitor:
     #             )
     #     elif communication_type == "board_connection_status_change":
     #         board_idx = communication["board_index"]
-    #         self._system_state["in_simulation_mode"] = not communication[
+    #         self._system_state["in_simulationMode"] = not communication[
     #             "is_connected"
     #         ]  # TODO change the name of this
     #     elif communication_type == "barcode_comm":
@@ -473,11 +473,11 @@ class SubprocessMonitor:
     #         self._system_state["system_status"] = INSTRUMENT_INITIALIZING_STATE
     #     elif self._system_state["system_status"] == INSTRUMENT_INITIALIZING_STATE:
     #         if (
-    #             "in_simulation_mode" not in self._system_state
+    #             "in_simulationMode" not in self._system_state
     #             or "instrument_metadata" not in self._system_state
     #         ):
     #             pass  # need to wait for these values before proceeding with state transition
-    #         elif self._system_state["in_simulation_mode"]:
+    #         elif self._system_state["in_simulationMode"]:
     #             self._system_state["system_status"] = CALIBRATION_NEEDED_STATE
     #         elif self._system_state["latest_software_version"] is not None:
     #             self._system_state["system_status"] = CHECKING_FOR_UPDATES_STATE

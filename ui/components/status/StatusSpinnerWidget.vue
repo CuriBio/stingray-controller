@@ -29,7 +29,7 @@ export default {
         return {
           header: "Important!",
           msgOne: "The firmware update is in progress. It will take about 7 minutes to complete.",
-          msgTwo: "Do not close the Mantarray software or power off the Mantarray instrument.",
+          msgTwo: "Do not close the Stingray software or power off the Stingray instrument.",
         };
       },
     },

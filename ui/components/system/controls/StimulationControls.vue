@@ -131,6 +131,21 @@
     >
       <SettingsForm @close-modal="$bvModal.hide('settings-form')" />
     </b-modal>
+    <b-modal
+      id="user-input-prompt-message"
+      size="sm"
+      hide-footer
+      hide-header
+      hide-header-close
+      :static="true"
+      :no-close-on-backdrop="true"
+    >
+      <StatusWarningWidget
+        id="user-input-prompt"
+        :modalLabels="userInputPromptLabels"
+        @handle-confirmation="closeUserInputPromptModal"
+      />
+    </b-modal>
   </div>
 </template>
 <script>
@@ -192,7 +207,13 @@ export default {
           "We strongly recommend stopping the stimulation and running another configuration check to ensure the integrity of the stimulation.",
         buttonNames: ["Continue Anyway", "Stop Stimulation"],
       },
-      stim_24hrTimer: null,
+      userInputPromptLabels: {
+        header: "Important!",
+        msgOne: "Downloading the firmware update requires your user credentials.",
+        msgTwo: "Please input them to begin the download",
+        buttonNames: ["Okay"],
+      },
+      stim24hrTimer: null,
       openStartDropdown: false,
     };
   },
@@ -204,6 +225,7 @@ export default {
       "stimulatorCircuitStatuses",
     ]),
     ...mapState("system", ["barcodes"]),
+    ...mapState("settings", ["userCredInputNeeded"]),
     isStartStopButtonEnabled: function () {
       if (!this.playState) {
         // if starting stim make sure initial magnetometer calibration has been completed and
@@ -300,6 +322,9 @@ export default {
       if (this.stimStatus !== STIM_STATUS.CONFIG_CHECK_COMPLETE && newVal.length > oldVal.length)
         this.$bvModal.show("open-circuit-warning");
     },
+    userCredInputNeeded: function () {
+      if (this.userCredInputNeeded) this.$bvModal.show("user-input-prompt-message");
+    },
   },
   mounted() {
     document.addEventListener("click", () => {
@@ -312,10 +337,10 @@ export default {
       if (this.isStartStopButtonEnabled) {
         if (this.playState) {
           this.$store.dispatch(`stimulation/stopStimulation`);
-          clearTimeout(this.stim_24hrTimer); // clear 24 hour timer for next stimulation
+          clearTimeout(this.stim24hrTimer); // clear 24 hour timer for next stimulation
         } else {
           await this.$store.dispatch(`stimulation/createProtocolMessage`);
-          this.start_24hrTimer();
+          this.start24hrTimer();
         }
       }
     },
@@ -330,13 +355,17 @@ export default {
       this.$bvModal.hide("stim-24hr-warning");
       if (idx === 1) {
         await this.$store.dispatch(`stimulation/stopStimulation`);
-        clearTimeout(this.start_24hrTimer);
-      } else this.start_24hrTimer(); // start new timer
+        clearTimeout(this.start24hrTimer);
+      } else this.start24hrTimer(); // start new timer
     },
-    async start_24hrTimer() {
-      this.stim_24hrTimer = setTimeout(() => {
+    async start24hrTimer() {
+      this.stim24hrTimer = setTimeout(() => {
         this.$bvModal.show("stim-24hr-warning");
       }, 24 * 60 * 60e3);
+    },
+    closeUserInputPromptModal() {
+      this.$bvModal.hide("user-input-prompt-message");
+      this.$bvModal.show("settings-form");
     },
   },
 };

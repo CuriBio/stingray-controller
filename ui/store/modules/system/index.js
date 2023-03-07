@@ -8,7 +8,7 @@ import { STATUS } from "./enums";
 const defaultState = {
   port: 4567, // http://localhost:4567/
   statusUuid: STATUS.SERVER_INITIALIZING_STATE,
-  simulation_mode: false,
+  simulationMode: false,
   barcodeManualMode: false,
   xTimeIndex: 0, // milliseconds
   barcodes: {
@@ -21,7 +21,7 @@ const defaultState = {
       valid: false,
     },
   },
-  shutdownErrorMessage: "Stringray software is about to shut down.",
+  shutdownErrorMessage: "Stingray software is about to shut down.",
   shutdownErrorStatus: "",
   installerLink: null,
   softwareUpdateAvailable: false,

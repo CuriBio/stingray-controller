@@ -27,11 +27,11 @@ export default {
   setShutdownErrorStatus(state, { errorType, latestCompatibleSwVersion }) {
     let error = `${ERRORS[errorType]}.`;
     if (latestCompatibleSwVersion) {
-      state.installerLink = `https://downloads.curibio.com/software/StringrayController-Setup-prod-${latestCompatibleSwVersion}.exe`;
+      state.installerLink = `https://downloads.curibio.com/software/StingrayController-Setup-prod-${latestCompatibleSwVersion}.exe`;
       error += " Please download the installer for the correct version here:";
     } else {
       state.installerLink = null;
-      error += " Mantarray Controller is about to shutdown.";
+      error += " Stingray Controller is about to shutdown.";
     }
     state.shutdownErrorStatus = error;
     state.shutdownErrorMessage = error;

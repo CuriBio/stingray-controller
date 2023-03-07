@@ -11,6 +11,8 @@
       :xAxisLabel="xAxisLabel"
       :repeatColors="repeatColors"
       :delayBlocks="delayBlocks"
+      @zoom-out="zoomOutXAxis"
+      @zoom-in="zoomInXAxis"
     />
   </div>
 </template>
@@ -78,18 +80,17 @@ export default {
       this.dynamicPlotWidth = 1200;
     },
   },
-  created: function () {
-    this.unsubscribe = this.$store.subscribe(async (mutation) => {
-      if (mutation.type === "stimulation/setZoomOut") {
-        if (this.dynamicPlotWidth === 1200) this.xAxisSampleLength *= 1.5;
-        else if (this.dynamicPlotWidth > 1200) this.dynamicPlotWidth /= 1.5;
-      }
-      if (mutation.type === "stimulation/setZoomIn") {
-        if (this.xAxisSampleLength > this.lastXValue + 50 || this.datapoints.length === 0)
-          this.xAxisSampleLength /= 1.5;
-        else this.dynamicPlotWidth *= 1.5;
-      }
-    });
+
+  methods: {
+    zoomOutXAxis: function () {
+      if (this.dynamicPlotWidth === 1200) this.xAxisSampleLength *= 1.5;
+      else if (this.dynamicPlotWidth > 1200) this.dynamicPlotWidth /= 1.5;
+    },
+    zoomInXAxis: function () {
+      if (this.xAxisSampleLength > this.lastXValue + 50 || this.datapoints.length === 0)
+        this.xAxisSampleLength /= 1.5;
+      else this.dynamicPlotWidth *= 1.5;
+    },
   },
 };
 </script>

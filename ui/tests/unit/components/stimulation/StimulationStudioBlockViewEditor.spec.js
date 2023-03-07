@@ -155,16 +155,6 @@ describe("StimulationStudioDragAndDropPanel.vue", () => {
     expect(updateSpy).toHaveBeenCalledWith();
   });
 
-  test("When exiting instance, Then instance is effectively destroyed", async () => {
-    const destroyedSpy = jest.spyOn(StimulationStudioBlockViewEditor, "beforeDestroy");
-    const wrapper = mount(StimulationStudioBlockViewEditor, {
-      store,
-      localVue,
-    });
-    wrapper.destroy();
-    expect(destroyedSpy).toHaveBeenCalledWith();
-  });
-
   test("When a user clicks the Clear All button, Then the dropdowns will reset to default value", async () => {
     const wrapper = mount(StimulationStudioBlockViewEditor, {
       store,
@@ -180,7 +170,7 @@ describe("StimulationStudioDragAndDropPanel.vue", () => {
     await store.commit("stimulation/resetState");
 
     expect(wrapper.vm.protocolName).toBe("");
-    expect(wrapper.vm.restDuration).toBe("");
+    expect(wrapper.vm.restDuration).toBe("0");
     expect(wrapper.vm.nameValidity).toBe("");
   });
 
@@ -189,8 +179,8 @@ describe("StimulationStudioDragAndDropPanel.vue", () => {
       store,
       localVue,
     });
-    const toggleStopOptions = wrapper.find("#smallDropdownStopOptions");
-    const visibleOption = wrapper.find("#stopOptions1");
+    const toggleStopOptions = wrapper.find("#smallDropdown_stopOptions");
+    const visibleOption = wrapper.find("#stopOptions_1");
 
     expect(wrapper.vm.disabledTime).toBe(false);
 
@@ -200,14 +190,14 @@ describe("StimulationStudioDragAndDropPanel.vue", () => {
     expect(wrapper.vm.disabledTime).toBe(true);
   });
 
-  // test("When a user clicks the trash icon and deletes the protocol, Then it should reset local data and mutate state", async () => {
-  //   const wrapper = mount(StimulationStudioBlockViewEditor, {
-  //     store,
-  //     localVue,
-  //   });
-  //   await wrapper.find("#trashIcon").trigger("click");
-  //   expect(wrapper.find("#del-protocol").isVisible()).toBe(true);
-  //   await wrapper.vm.closeDelProtocolModal();
-  //   expect(wrapper.find("#del-protocol").isVisible()).toBe(false);
-  // });
+  test("When a user clicks the trash icon and deletes the protocol, Then it should reset local data and mutate state", async () => {
+    const wrapper = mount(StimulationStudioBlockViewEditor, {
+      store,
+      localVue,
+    });
+    await wrapper.find("#trashIcon").trigger("click");
+    expect(wrapper.find("#del-protocol").isVisible()).toBe(true);
+    await wrapper.vm.closeDelProtocolModal();
+    expect(wrapper.find("#del-protocol").isVisible()).toBe(false);
+  });
 });

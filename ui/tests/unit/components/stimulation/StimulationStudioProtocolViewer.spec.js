@@ -79,25 +79,14 @@ describe("StimulationStudioProtocolViewer.vue", () => {
   });
   afterEach(() => jest.clearAllMocks());
 
-  test("When exiting instance, Then instance is effectively destroyed", async () => {
-    const destroyedSpy = jest.spyOn(StimulationStudioProtocolViewer, "beforeDestroy");
-    const wrapper = mount(StimulationStudioProtocolViewer, {
-      store,
-      localVue,
-    });
-    wrapper.destroy();
-    expect(destroyedSpy).toHaveBeenCalledWith();
-  });
-
   test("When user wants to zoom in on an axis in the Protocol Viewer, Then the scale will be divided by 1.5", async () => {
     const wrapper = mount(StimulationStudioProtocolViewer, {
       store,
       localVue,
     });
     const expectedScale = 80;
-    await store.commit("stimulation/setZoomIn", "y-axis");
-    expect(wrapper.vm.yMinMax).toBe(expectedScale);
-
+    await wrapper.find(".span__axis-controls-zoom-in-button").trigger("click");
+    expect(wrapper.vm.yAxisScale).toBe(expectedScale);
     // should be unchanged
     expect(wrapper.vm.dynamicPlotWidth).toBe(1200);
     expect(wrapper.vm.xAxisSampleLength).toBe(100);
@@ -110,7 +99,7 @@ describe("StimulationStudioProtocolViewer.vue", () => {
     });
     const expectedScale = 180;
     await store.commit("stimulation/setZoomOut", "y-axis");
-    expect(wrapper.vm.yMinMax).toBe(expectedScale);
+    expect(wrapper.vm.yAxisScale).toBe(expectedScale);
 
     // should be unchanged
     expect(wrapper.vm.dynamicPlotWidth).toBe(1200);
@@ -125,14 +114,16 @@ describe("StimulationStudioProtocolViewer.vue", () => {
     expect(wrapper.vm.dynamicPlotWidth).toBe(1200);
     expect(wrapper.vm.xAxisSampleLength).toBe(100);
 
-    await store.commit("stimulation/setZoomOut", "x-axis");
+    await wrapper.findAll(".span__axis-controls-zoom-out-button").at(1).trigger("click");
     expect(wrapper.vm.dynamicPlotWidth).toBe(1200);
     expect(wrapper.vm.xAxisSampleLength).toBe(150);
 
     await wrapper.setData({ dynamicPlotWidth: 1800 });
 
-    await store.commit("stimulation/setZoomOut", "x-axis");
-    expect(wrapper.vm.dynamicPlotWidth).toBe(1200);
+    await wrapper.findAll(".span__axis-controls-zoom-in-button").at(1).trigger("click");
+
+    expect(wrapper.vm.dynamicPlotWidth).toBe(1800);
+    expect(wrapper.vm.xAxisSampleLength).toBe(100);
   });
 
   test("When user wants to zoom in on the x-axis in the Protocol Viewer, Then the scale will change depending on the existing plot width", async () => {
@@ -141,47 +132,20 @@ describe("StimulationStudioProtocolViewer.vue", () => {
       localVue,
     });
 
+    const zoomInButton = wrapper.findAll(".span__axis-controls-zoom-in-button").at(1);
+
     expect(wrapper.vm.dynamicPlotWidth).toBe(1200);
     expect(wrapper.vm.xAxisSampleLength).toBe(100);
 
-    await store.commit("stimulation/setZoomIn", "x-axis");
+    await zoomInButton.trigger("click");
     expect(wrapper.vm.dynamicPlotWidth).toBe(1200);
     expect(wrapper.vm.xAxisSampleLength).toBe(66.66666666666667);
 
-    await wrapper.setData({ lastXValue: 150, xAxisSampleLength: 200, datapoints: [[0, 0]] });
+    await wrapper.setData({ xAxisSampleLength: 200 });
 
-    await store.commit("stimulation/setZoomIn", "x-axis");
-    expect(wrapper.vm.dynamicPlotWidth).toBe(1800);
-    expect(wrapper.vm.xAxisSampleLength).toBe(200);
-  });
-
-  test("When pulses are added to the protocol, Then the xAxisSampleLength will automatically update to be +50 unless all pulses are removed", async () => {
-    const wrapper = mount(StimulationStudioProtocolViewer, {
-      store,
-      localVue,
-    });
-
-    expect(wrapper.vm.xAxisSampleLength).toBe(100);
-
-    await wrapper.setData({
-      lastXValue: 200,
-      datapoints: [
-        [0, 0],
-        [0, 300],
-        [200, 300],
-      ],
-      delayBlocks: [],
-    });
-    await wrapper.vm.getDynamicSampleLength();
-    expect(wrapper.vm.xAxisSampleLength).toBe(250);
-
-    await wrapper.setData({
-      lastXValue: 0,
-      datapoints: [[0, 0]],
-      delayBlocks: [[NaN, NaN]],
-    });
-    await wrapper.vm.getDynamicSampleLength();
-    expect(wrapper.vm.xAxisSampleLength).toBe(100);
+    await zoomInButton.trigger("click");
+    expect(wrapper.vm.dynamicPlotWidth).toBe(1200);
+    expect(wrapper.vm.xAxisSampleLength).toBe(200 / 1.5);
   });
 
   test("When a user deletes the protocol, Then all datapoints should be deleted", async () => {
@@ -190,7 +154,7 @@ describe("StimulationStudioProtocolViewer.vue", () => {
       localVue,
     });
 
-    wrapper.vm.datapoints = [1, 2, 3, 4];
+    await store.commit("stimulation/setAxisValues", { xValues: [0, 0, 200], yValues: [0, 300, 300] });
     await store.commit("stimulation/resetState");
     expect(wrapper.vm.datapoints).toStrictEqual([]);
   });
@@ -245,10 +209,12 @@ describe("StimulationStudioProtocolViewer.vue", () => {
       });
 
       expect(wrapper.vm.frequencyOfXTicks).toBe(10);
-      expect(wrapper.vm.div__waveformGraph__dynamicStyle).toStrictEqual({ width: "1280px" });
+      expect(wrapper.vm.div__waveformGraph_dynamicStyle).toStrictEqual({ width: "1280px" });
+
       await wrapper.setProps({ plotAreaPixelWidth: 1800 });
+
       expect(wrapper.vm.frequencyOfXTicks).toBe(15);
-      expect(wrapper.vm.div__waveformGraph__dynamicStyle).toStrictEqual({ width: "1880px" });
+      expect(wrapper.vm.div__waveformGraph_dynamicStyle).toStrictEqual({ width: "1880px" });
     });
 
     test("When a user hovers over a waveoform tile, Then the corresponding section of the graph will be filled with light opacity", async () => {

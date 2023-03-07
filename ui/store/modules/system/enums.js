@@ -9,6 +9,7 @@ export const STATUS = {
   INSTALLING_UPDATES_STATE: "19c9c2d6-0de4-4334-8cb3-a4c7ab0eab00",
   UPDATES_COMPLETE_STATE: "31f8fbc9-9b41-4191-8598-6462b7490789",
   UPDATE_ERROR_STATE: "33742bfc-d354-4ae5-88b6-2b3cee23aff8",
+  ERROR_STATE: "42bfc-d354-4ae5-88", // TODO
 };
 
 export const ERRORS = {
@@ -17,5 +18,5 @@ export const ERRORS = {
   InstrumentBadDataError: "Malformed data received from the instrument",
   InstrumentFirmwareError: "An error occurred in the instrument's firmware",
   FirmwareAndSoftwareNotCompatibleError:
-    "The instrument's firmware is not compatible with this version of the Mantarray Controller",
+    "The instrument's firmware is not compatible with this version of the Stingray Controller",
 };

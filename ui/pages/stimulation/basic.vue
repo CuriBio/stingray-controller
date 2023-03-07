@@ -11,7 +11,7 @@
 import StimulationStudio from "@/components/stimulation/StimulationStudio.vue";
 import { mapMutations, mapActions } from "vuex";
 import { STIM_STATUS } from "@/store/modules/stimulation/enums";
-// import { StimulationStudio, StimulationControls } from "@/dist/mantarray.common";
+// import { StimulationStudio, StimulationControls } from "@/dist/stingray.common";
 
 export default {
   components: {

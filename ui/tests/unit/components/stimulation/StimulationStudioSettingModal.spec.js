@@ -1,6 +1,6 @@
 import { mount, shallowMount, createLocalVue } from "@vue/test-utils";
 import StimulationStudioWaveformSettingModal from "@/components/stimulation/StimulationStudioWaveformSettingModal.vue";
-import { StimulationStudioWaveformSettingModal as dist_StimulationStudioWaveformSettingModal } from "@/dist/mantarray.common";
+import { StimulationStudioWaveformSettingModal as dist_StimulationStudioWaveformSettingModal } from "@/dist/stingray.common";
 import { MIN_SUBPROTOCOL_DURATION_MS } from "@/store/modules/stimulation/enums";
 import Vuex from "vuex";
 
@@ -345,7 +345,7 @@ describe("StimulationStudioWaveformSettingModal.vue", () => {
 
     await wrapper.find(".div__color-label").trigger("click");
 
-    await wrapper.findAll(".individualColorBlock").at(0).trigger("click");
+    await wrapper.findAll(".individual-color-block").at(0).trigger("click");
 
     expect(wrapper.vm.selectedColor).toBe("hsla(0, 100%, 50%, 1)");
   });

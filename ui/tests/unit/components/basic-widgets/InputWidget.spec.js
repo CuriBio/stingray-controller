@@ -1,6 +1,6 @@
 import { mount } from "@vue/test-utils";
 import ComponentToTest from "@/components/basic-widgets/InputWidget.vue";
-import { InputWidget as DistComponentToTest } from "@/dist/mantarray.common";
+import { InputWidget as DistComponentToTest } from "@/dist/stingray.common";
 
 import Vuex from "vuex";
 import { createLocalVue } from "@vue/test-utils";

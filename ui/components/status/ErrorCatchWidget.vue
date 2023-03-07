@@ -1,8 +1,8 @@
 <template>
   <div>
     <div class="div__status-error-catch-background" :style="errorBackgroundCssprops" />
-    <span class="div_status-error-catch-title-label">An&nbsp;<wbr />error&nbsp;<wbr />occurred. </span>
-    <div class="div_status-error-catch-alert-txt" :style="errorCatchAlert">
+    <span class="div__status-error-catch-title-label">An&nbsp;<wbr />error&nbsp;<wbr />occurred. </span>
+    <div class="div__status-error-catch-alert-txt" :style="errorCatchAlert">
       <p>{{ shutdownErrorMessage }}</p>
       <textarea
         v-if="installerLink"
@@ -15,10 +15,10 @@
         :disabled="true"
       />
     </div>
-    <div class="div_status-email-txt" :style="emailTextCssprops">
+    <div class="div__status-email-txt" :style="emailTextCssprops">
       <p>
         Please send the folder shown below to
-        <a id="errorContact" href="mailto:support@curibio.com ? subject = Mantarray Error log"
+        <a id="errorContact" href="mailto:support@curibio.com ? subject = Stingray Error log"
           >support@curibio.com</a
         >
       </p>
@@ -33,7 +33,7 @@
       :disabled="true"
       :style="textarea__errorCssprops"
     />
-    <div class="div_status-error-catch-next-step-txt" :style="nextStepCssprops">
+    <div class="div__status-error-catch-next-step-txt" :style="nextStepCssprops">
       <p>
         Please turn the instrument off, unplug from the PC,<br />
         and then wait 10 seconds before attempting to use again.
@@ -135,7 +135,7 @@ a:hover {
   z-index: 1;
 }
 
-.div_status-error-catch-title-label {
+.div__status-error-catch-title-label {
   pointer-events: all;
   line-height: 100%;
   transform: rotate(0deg);
@@ -157,7 +157,7 @@ a:hover {
   text-align: center;
   z-index: 3;
 }
-.div_status-error-catch-alert-txt {
+.div__status-error-catch-alert-txt {
   line-height: 1.2;
   transform: rotate(0deg);
   padding: 0px;
@@ -181,7 +181,7 @@ a:hover {
   z-index: 5;
   pointer-events: all;
 }
-.div_status-email-txt {
+.div__status-email-txt {
   line-height: 1.2;
   transform: rotate(0deg);
   padding: 0px;
@@ -268,7 +268,7 @@ a:hover {
   pointer-events: all;
 }
 
-.div_status-error-catch-next-step-txt {
+.div__status-error-catch-next-step-txt {
   line-height: 1.2;
   transform: rotate(0deg);
   padding: 0px;

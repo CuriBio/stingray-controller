@@ -49,7 +49,6 @@ import { mapActions, mapMutations, mapState } from "vuex";
  * @vue-data {Int} inputHeight - Height passed down to dropdown for styling
  * @vue-data {Int} inputWidth -  Width passed down to dropdown for styling
  * @vue-data {Array} protocolList - Availble protocols to display in dropdown
- * @vue-event {Event} updateProtocols - Gets called when a change to the available protocol list occurs to update next available color/letter assignment and dropdown options
  * @vue-event {Event} selectedProtocolChange - Changes when a new protocol is selected from dropdown
  * @vue-event {Event} handleClick - Performs functions based on which button is clicked regarding assigning and clearing protocols from plate editor
  * @vue-event {Event} getClass - Dynamically renders button class depending on if button is disabled

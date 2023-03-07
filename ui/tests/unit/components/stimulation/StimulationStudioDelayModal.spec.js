@@ -134,7 +134,7 @@ describe("StimulationStudioDelayModal.vue", () => {
 
     await wrapper.find(".div__color-label").trigger("click");
 
-    await wrapper.findAll(".individualColorBlock").at(0).trigger("click");
+    await wrapper.findAll(".individual-color-block").at(0).trigger("click");
 
     expect(wrapper.vm.selectedColor).toBe("hsla(0, 100%, 50%, 1)");
   });

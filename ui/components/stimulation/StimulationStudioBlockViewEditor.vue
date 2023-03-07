@@ -161,7 +161,7 @@ export default {
   },
   computed: {
     ...mapState("stimulation", ["protocolEditor", "editMode", "protocolList"]),
-    ...mapGetters("stimulation", ["getProtocols", "getNextProtocol"]),
+    ...mapGetters("stimulation", ["getNextProtocol"]),
     restInputHover: function () {
       return {
         content: 'Cannot set this value if using "Stimulate Until Complete"',
@@ -208,7 +208,7 @@ export default {
     ...mapActions("stimulation", ["handleProtocolEditorReset", "handleNewRestDuration"]),
     ...mapMutations("stimulation", ["setStimulationType", "setProtocolName", "setStopSetting"]),
     updateProtocols() {
-      this.localProtocolList = this.getProtocols;
+      this.localProtocolList = this.protocolList;
       const { letter, color } = this.getNextProtocol;
       this.currentLetter = letter;
       this.currentColor = color;

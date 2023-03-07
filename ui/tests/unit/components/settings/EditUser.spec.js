@@ -1,6 +1,6 @@
 import { mount } from "@vue/test-utils";
 import ComponentToTest from "@/components/settings/EditUser.vue";
-import { EditUser as DistComponentToTest } from "@/dist/mantarray.common";
+import { EditUser as DistComponentToTest } from "@/dist/stingray.common";
 
 import Vue from "vue";
 import Vuex from "vuex";

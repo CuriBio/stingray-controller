@@ -1,6 +1,6 @@
 import { mount } from "@vue/test-utils";
 import StimulationStudioPlateWell from "@/components/stimulation/StimulationStudioPlateWell.vue";
-import { StimulationStudioPlateWell as DistComponentToTest } from "@/dist/mantarray.common";
+import { StimulationStudioPlateWell as DistComponentToTest } from "@/dist/stingray.common";
 import { createLocalVue } from "@vue/test-utils";
 
 let wrapper = null;

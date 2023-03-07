@@ -163,7 +163,7 @@
           text-align: center;
         "
       >
-        SIMULATION&nbsp;<wbr />MODE:&nbsp;<wbr />Not&nbsp;<wbr />Connected&nbsp;<wbr />to&nbsp;<wbr />Mantarray</span
+        SIMULATION&nbsp;<wbr />MODE:&nbsp;<wbr />Not&nbsp;<wbr />Connected&nbsp;<wbr />to&nbsp;<wbr />Stingray</span
       >
       <div
         id="D38e122d9d8d294fa97a320550b2a0a9e"
@@ -210,14 +210,14 @@
 import { mapState } from "vuex";
 /**
  * @vue-data     {Boolean} mode - Contains a true or false based on if its in simulation mode or not
- * @vue-computed {Boolean} simulation_mode_id - Contains a true or false based based on the value set in Vuex store.
- * @vue-event    {Event} simulation_mode_id - A function which is invoked when siumlation mode is modified.
+ * @vue-computed {Boolean} simulationMode_id - Contains a true or false based based on the value set in Vuex store.
+ * @vue-event    {Event} simulationMode_id - A function which is invoked when siumlation mode is modified.
  */
 export default {
   name: "SimulationMode",
   computed: {
     ...mapState("system", {
-      mode: "simulation_mode",
+      mode: "simulationMode",
     }),
   },
 };

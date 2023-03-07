@@ -141,11 +141,10 @@ export default {
   data() {
     return {
       alertTxt: "",
-      stimAlertTxt: "",
       fwClosureWarningLabels: {
         header: "Warning!",
         msgOne:
-          "A firmware update for the Mantarray instrument is in progress. Closing the software now could damage the instrument.",
+          "A firmware update for the Stingray instrument is in progress. Closing the software now could damage the instrument.",
         msgTwo: "Are you sure you want to exit?",
         buttonNames: ["Cancel", "Yes"],
       },
@@ -153,7 +152,7 @@ export default {
         header: "Important!",
         msgOne: "Firmware updates have been successfully installed.",
         msgTwo:
-          "Please close the Mantarray software, power the Mantarray instrument off and on, then restart the Mantarray software.",
+          "Please close the Stingray software, power the Stingray instrument off and on, then restart the Stingray software.",
         buttonNames: ["Okay"],
       },
       swUpdateLabels: {
@@ -175,18 +174,6 @@ export default {
         msgTwo: "You can now run this stimulation.",
         buttonNames: ["Okay"],
       },
-      activeProcessesModalLabels: {
-        header: "Warning!",
-        msgOne: "Data analysis cannot be performed while other processes are running.",
-        msgTwo: "Active processes will be automatically stopped if you choose to continue.",
-        buttonNames: ["Cancel", "Continue"],
-      },
-      initializingModalLabels: {
-        header: "Warning!",
-        msgOne: "Data analysis cannot be performed while the instrument is initializing or calibrating.",
-        msgTwo: "It will become available shortly.",
-        buttonNames: ["Close"],
-      },
     };
   },
   computed: {
@@ -206,6 +193,7 @@ export default {
       "allowSWUpdateInstall",
       "firmwareUpdateDurMins",
       "confirmationRequest",
+      "statusUuid",
     ]),
     fwUpdateInProgressLabels: function () {
       let duration = `${this.firmwareUpdateDurMins} minute`;
@@ -213,7 +201,7 @@ export default {
       return {
         header: "Important!",
         msgOne: `The firmware update is in progress. It will take about ${duration} to complete.`,
-        msgTwo: "Do not close the Mantarray software or power off the Mantarray instrument.",
+        msgTwo: "Do not close the Stingray software or power off the Stingray instrument.",
       };
     },
 
@@ -225,41 +213,42 @@ export default {
     },
     isInitializing: function () {
       return [
-        STATUS.SERVER_BOOTING_UP,
-        STATUS.SERVER_STILL_INITIALIZING,
-        STATUS.SERVER_READY,
-        STATUS.INITIALIZING_INSTRUMENT,
-        STATUS.CALIBRATING, // this is added to be included in specific modal
+        STATUS.SERVER_INITIALIZING_STATE,
+        STATUS.SERVER_READY_STATE,
+        STATUS.INSTRUMENT_INITIALIZING_STATE,
       ].includes(this.statusUuid);
     },
     isUpdating: function () {
-      return [STATUS.CHECKING_FOR_UPDATES, STATUS.INSTALLING_UPDATES, STATUS.DOWNLOADING_UPDATES].includes(
-        this.statusUuid
-      );
+      return [
+        STATUS.CHECKING_FOR_UPDATES_STATE,
+        STATUS.INSTALLING_UPDATES_STATE,
+        STATUS.DOWNLOADING_UPDATES_STATE,
+      ].includes(this.statusUuid);
     },
   },
   watch: {
     statusUuid: function (newStatus) {
       // set message for stimulation status and system status if error occurs
-      if (!this.shutdownErrorStatus) this.setSystemSpecificStatus(newStatus);
+      if (!this.shutdownErrorStatus && newStatus !== STATUS.IDLE_READY_STATE)
+        this.setSystemSpecificStatus(newStatus);
+      else if (newStatus === STATUS.IDLE_READY_STATE) this.setStimSpecificStatus();
     },
     stimStatus: function (newStatus) {
-      this.setStimSpecificStatus(newStatus);
+      // only let stim messages through if system is in idle ready state
+      if (this.statusUuid === STATUS.IDLE_READY_STATE) this.setStimSpecificStatus(newStatus);
     },
     confirmationRequest: function () {
-      const sensitiveOpsInProgress =
-        this.statusUuid === STATUS.CALIBRATING ||
-        this.stimStatus === STIM_STATUS.CONFIG_CHECK_IN_PROGRESS ||
-        this.stimPlayState ||
-        this.totalUploadedFiles.length < this.totalFileCount;
+      const stimOpsInProgress =
+        this.stimStatus === STIM_STATUS.CONFIG_CHECK_IN_PROGRESS || this.stimPlayState;
 
       const fwUpdateInProgress =
-        this.statusUuid === STATUS.DOWNLOADING_UPDATES || this.statusUuid === STATUS.INSTALLING_UPDATES;
+        this.statusUuid === STATUS.DOWNLOADING_UPDATES_STATE ||
+        this.statusUuid === STATUS.INSTALLING_UPDATES_STATE;
 
       if (this.confirmationRequest) {
         if (fwUpdateInProgress) {
           this.$bvModal.show("fw-closure-warning");
-        } else if (sensitiveOpsInProgress) {
+        } else if (stimOpsInProgress) {
           this.$bvModal.show("ops-closure-warning");
         } else {
           this.handleConfirmation(1);
@@ -279,7 +268,7 @@ export default {
   },
   methods: {
     setStimSpecificStatus: function (status) {
-      this.stimAlertTxt = status;
+      this.alertTxt = status ? status : this.stimStatus;
 
       if (status === STIM_STATUS.CONFIG_CHECK_COMPLETE)
         this.assignedOpenCircuits.length > 0
@@ -297,12 +286,6 @@ export default {
           break;
         case STATUS.INSTRUMENT_INITIALIZING_STATE:
           this.alertTxt = "Initializing...";
-          break;
-        case STATUS.IDLE_READY_STATE:
-          // TODO coordinate with Tanner on this status or if we want this to remain calibration needed
-          // once system is in a ready state, then update to a stim status
-          // TODO check that this updates correctly when stim statuses change
-          this.alertTxt = this.stimAlertTxt;
           break;
         case STATUS.CHECKING_FOR_UPDATES_STATE:
           this.alertTxt = "Checking for Firmware Updates...";
@@ -329,7 +312,7 @@ export default {
           this.$store.commit("system/setShutdownErrorMessage", "Error during firmware update.");
           this.$bvModal.show("error-catch");
           break;
-        case STATUS.ERROR:
+        case STATUS.ERROR_STATE:
           this.closeModalsById([
             "fw-updates-in-progress-message",
             "fw-closure-warning",

@@ -1,6 +1,6 @@
 import { mount } from "@vue/test-utils";
 import ComponentToTest from "@/components/status/ErrorCatchWidget.vue";
-import { ErrorCatchWidget as DistComponentToTest } from "@/dist/mantarray.common";
+import { ErrorCatchWidget as DistComponentToTest } from "@/dist/stingray.common";
 import { shallowMount } from "@vue/test-utils";
 
 import Vuex from "vuex";
@@ -42,24 +42,24 @@ describe("ErrorCatchWidget.vue", () => {
   test("Given that ErrorCatchWidget has a props having error file name and error message, When the lifecyle hook mounted is created, Then title, alert text, contact e-mail and error file name is rendered properly", async () => {
     const propsData = {
       logFilepath: "C:\testFileLog.txt",
-      shutdownErrorMessage: "Mantarray software is about to shut down.",
+      shutdownErrorMessage: "Stingray software is about to shut down.",
     };
     wrapper = mount(ComponentToTest, {
       propsData,
       store,
       localVue,
     });
-    const targetTitleDiv = wrapper.find(".divStatus-error-catch-title-label");
+    const targetTitleDiv = wrapper.find(".div__status-error-catch-title-label");
     expect(targetTitleDiv.text()).toStrictEqual("An error occurred.");
-    const targetAlertDiv = wrapper.find(".divStatus-error-catch-alert-txt");
+    const targetAlertDiv = wrapper.find(".div__status-error-catch-alert-txt");
     const targetAlertDivP = targetAlertDiv.findAll("p");
-    expect(targetAlertDivP.at(0).text()).toStrictEqual("Mantarray software is about to shut down.");
+    expect(targetAlertDivP.at(0).text()).toStrictEqual("Stingray software is about to shut down.");
 
-    const targetEmailDivP = wrapper.find(".divStatus-email-txt").findAll("p");
+    const targetEmailDivP = wrapper.find(".div__status-email-txt").findAll("p");
     expect(targetEmailDivP.at(0)).toMatchInlineSnapshot(`
       <p>
         Please send the folder shown below to
-        <a id="errorContact" href="mailto:support@curibio.com ? subject = Mantarray Error log">support@curibio.com</a>
+        <a id="errorContact" href="mailto:support@curibio.com ? subject = Stingray Error log">support@curibio.com</a>
       </p>
     `);
 
@@ -80,8 +80,7 @@ describe("ErrorCatchWidget.vue", () => {
     const targetTextArea = wrapper.find(".textarea__error-file-path");
     expect(targetTextArea.attributes("rows")).toBe("1");
     await wrapper.setProps({
-      logFilepath:
-        "C:UsersEliCuriBioAppDataRoamingStringrayControllerlogsFlaskmantarray-2020-10-21-185640.txt",
+      logFilepath: "C:UsersEliCuriBioAppDataRoamingStingrayControllerlogsFlaskStingray-2020-10-21-185640.txt",
     });
     expect(targetTextArea.attributes("rows")).toBe("3");
   });
@@ -102,7 +101,7 @@ describe("ErrorCatchWidget.vue", () => {
     expect(targetErrorButton.attributes().style).toBe("top: 262px; left: 0px; position: absolute;");
     /* A run time update of prop occured below then observe that height value and top is updated */
     await wrapper.setProps({
-      logFilepath: "C:UsersMantarrayAppDataRoamingStringrayControllerlogsFlask",
+      logFilepath: "C:UsersStingrayAppDataRoamingStingrayControllerlogsFlask",
     });
     expect(targetBackgroundDiv.attributes().style).toBe("height: 274px;");
     expect(targetTextArea.attributes().style).toBe("height: 49px; top: 145px;");

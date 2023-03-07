@@ -1,28 +1,28 @@
 import Vuex from "vuex";
 import { createLocalVue } from "@vue/test-utils";
-// import * as axios_helpers from "@/js-utils/axios_helpers.js";
+// import * as axiosHelpers from "@/js-utils/axiosHelpers.js";
 import { WellTitle as LabwareDefinition } from "@/js-utils/LabwareCalculations.js";
 const twentyFourWellPlateDefinition = new LabwareDefinition(4, 6);
-import { COLOR_PALETTE, stimStatus, ALPHABET } from "../../../store/modules/stimulation/enums";
+import { COLOR_PALETTE, STIM_STATUS, ALPHABET } from "../../../store/modules/stimulation/enums";
 
 describe("store/stimulation", () => {
   const localVue = createLocalVue();
   localVue.use(Vuex);
   let NuxtStore;
   let store;
-  const test_wells = {
+  const testWells = {
     SELECTED: [true, true, false, false, false],
     UNSELECTED: [false, true, false, false, false],
   };
 
-  const test_stim_json = JSON.stringify({
+  const testStimJson = JSON.stringify({
     protocols: [
       {
         color: "hsla(51, 90%, 40%, 1)",
         letter: "A",
         label: "",
         protocol: {
-          name: "test_proto_1",
+          name: "testProto1",
           runUntilStopped: true,
           stimulationType: "C",
           restDuration: 0,
@@ -38,7 +38,7 @@ describe("store/stimulation", () => {
             {
               type: "Delay",
               color: "hsla(69, 92%, 45%, 1)",
-              pulse_settings: {
+              pulseSettings: {
                 duration: 333,
                 unit: "milliseconds",
               },
@@ -51,7 +51,7 @@ describe("store/stimulation", () => {
         letter: "B",
         label: "",
         protocol: {
-          name: "test_proto_2",
+          name: "testProto2",
           runUntilStopped: true,
           stimulationType: "C",
           restDuration: 0,
@@ -67,7 +67,7 @@ describe("store/stimulation", () => {
             {
               type: "Delay",
               color: "hsla(69, 92%, 45%, 1)",
-              pulse_settings: {
+              pulseSettings: {
                 duration: 15000,
                 unit: "milliseconds",
               },
@@ -104,29 +104,29 @@ describe("store/stimulation", () => {
     },
   });
 
-  const test_protocol_order = [
+  const testProtocolOrder = [
     {
       type: "Biphasic",
       src: "test",
       color: "b7b7b7",
-      pulse_settings: {
+      pulseSettings: {
         phaseOneDuration: 100,
         phaseOneCharge: 200,
         interphaseInterval: 10,
         phaseTwoDuration: 3,
         phaseTwoCharge: 200,
         postphaseInterval: 5,
-        total_active_duration: {
+        totalActiveDuration: {
           duration: 1000,
           unit: "milliseconds",
         },
-        num_cycles: 1,
+        numCycles: 1,
       },
-      nested_protocols: [],
+      nestedProtocols: [],
     },
   ];
 
-  const test_protocolList = [
+  const testProtocolList = [
     { letter: "", color: "", label: "Create New" },
     {
       letter: "A",
@@ -153,9 +153,9 @@ describe("store/stimulation", () => {
           {
             type: "Delay",
             src: "/delay-tile.png",
-            nested_protocols: [],
+            nestedProtocols: [],
             color: "hsla(99, 60%, 40%, 1)",
-            pulse_settings: { duration: 15, unit: "seconds" },
+            pulseSettings: { duration: 15, unit: "seconds" },
           },
         ],
       },
@@ -170,15 +170,15 @@ describe("store/stimulation", () => {
 
     beforeEach(async () => {
       store = await NuxtStore.createStore();
-      store.state.stimulation.protocolList = JSON.parse(JSON.stringify(test_protocolList));
+      store.state.stimulation.protocolList = JSON.parse(JSON.stringify(testProtocolList));
     });
 
     test("When the protocol dropdown displays available protocols, Then only only protocols with defined label should return", async () => {
       const protocols = store.getters["stimulation/getProtocols"];
-      const labeled_protocols = store.state.stimulation.protocolList.filter(
+      const labeledProtocols = store.state.stimulation.protocolList.filter(
         (protocol) => protocol.label.length != 0
       ).length;
-      expect(protocols).toHaveLength(labeled_protocols);
+      expect(protocols).toHaveLength(labeledProtocols);
     });
     test("When requesting the next available protocol assignment(color, letter), Then the protocol recieved should be unused and unique", async () => {
       store.state.stimulation.protocolList = [{ letter: "", color: "", label: "Create New" }];
@@ -216,8 +216,8 @@ describe("store/stimulation", () => {
     });
 
     test("When a protocol is selected to be editted, Then the letter and color assignment should be that of the selected protocol", async () => {
-      const selected_protocol = store.state.stimulation.protocolList[1];
-      await store.dispatch("stimulation/editSelectedProtocol", selected_protocol);
+      const selectedProtocol = store.state.stimulation.protocolList[1];
+      await store.dispatch("stimulation/editSelectedProtocol", selectedProtocol);
 
       const { letter, color } = store.getters["stimulation/getNextProtocol"];
 
@@ -229,37 +229,37 @@ describe("store/stimulation", () => {
       const voltage = "Voltage";
       const current = "Current";
 
-      const default_type = store.getters["stimulation/getStimulationType"];
-      expect(default_type).toBe(current);
+      const defaultType = store.getters["stimulation/getStimulationType"];
+      expect(defaultType).toBe(current);
 
       store.state.stimulation.protocolEditor.stimulationType = "V";
-      const voltage_selection = store.getters["stimulation/getStimulationType"];
-      expect(voltage_selection).toBe(voltage);
+      const voltageSelection = store.getters["stimulation/getStimulationType"];
+      expect(voltageSelection).toBe(voltage);
 
       store.state.stimulation.protocolEditor.stimulationType = "C";
-      const current_selection = store.getters["stimulation/getStimulationType"];
-      expect(current_selection).toBe(current);
+      const currentSelection = store.getters["stimulation/getStimulationType"];
+      expect(currentSelection).toBe(current);
     });
 
     test("When requesting the name and rest duration to edit existing protocol in the editor, Then it should return specified pulse order", async () => {
-      const selected_protocol = store.state.stimulation.protocolList[1];
-      const { name, restDuration } = selected_protocol.protocol;
-      await store.dispatch("stimulation/editSelectedProtocol", selected_protocol);
+      const selectedProtocol = store.state.stimulation.protocolList[1];
+      const { name, restDuration } = selectedProtocol.protocol;
+      await store.dispatch("stimulation/editSelectedProtocol", selectedProtocol);
 
-      const actual_name = store.getters["stimulation/getProtocolName"];
-      expect(actual_name).toBe(name);
+      const actualName = store.getters["stimulation/getProtocolName"];
+      expect(actualName).toBe(name);
 
-      const actual_delay = store.getters["stimulation/getRestDuration"];
-      expect(actual_delay).toBe(restDuration);
+      const actualDelay = store.getters["stimulation/getRestDuration"];
+      expect(actualDelay).toBe(restDuration);
     });
 
     test("Given a protocol has been selected for edit, When requesting the protocol assignment in the protocol editor, Then it should return the assignment of the selected protocol for edit", async () => {
-      const selected_protocol = store.state.stimulation.protocolList[1];
-      const { letter, color } = selected_protocol;
-      const expected_assignment = { letter, color };
-      await store.dispatch("stimulation/editSelectedProtocol", selected_protocol);
-      const default_type = store.getters["stimulation/getNextProtocol"];
-      expect(default_type).toStrictEqual(expected_assignment);
+      const selectedProtocol = store.state.stimulation.protocolList[1];
+      const { letter, color } = selectedProtocol;
+      const expectedAssignment = { letter, color };
+      await store.dispatch("stimulation/editSelectedProtocol", selectedProtocol);
+      const defaultType = store.getters["stimulation/getNextProtocol"];
+      expect(defaultType).toStrictEqual(expectedAssignment);
     });
   });
   describe("stimulation/mutations/actions", () => {
@@ -270,7 +270,7 @@ describe("store/stimulation", () => {
 
     beforeEach(async () => {
       store = await NuxtStore.createStore();
-      store.state.stimulation.protocolList = JSON.parse(JSON.stringify(test_protocolList));
+      store.state.stimulation.protocolList = JSON.parse(JSON.stringify(testProtocolList));
     });
     afterEach(() => {
       jest.resetAllMocks();
@@ -282,71 +282,71 @@ describe("store/stimulation", () => {
     });
 
     test("When stimulation store is mutated to add or remove selected wells, Then selected wells in state should update according to wells", () => {
-      store.dispatch("stimulation/handleSelectedWells", test_wells.SELECTED);
+      store.dispatch("stimulation/handleSelectedWells", testWells.SELECTED);
       expect(store.state.stimulation.selectedWells).toStrictEqual([0, 1]);
 
-      store.dispatch("stimulation/handleSelectedWells", test_wells.UNSELECTED);
+      store.dispatch("stimulation/handleSelectedWells", testWells.UNSELECTED);
       expect(store.state.stimulation.selectedWells).toStrictEqual([1]);
     });
 
     test("When stimulation store is mutated with a new protocol name, Then said name should update in state", () => {
-      const name = "Test_name";
+      const name = "TestName";
       store.commit("stimulation/setProtocolName", name);
       expect(store.state.stimulation.protocolEditor.name).toBe(name);
     });
 
     test("When stimulation store is mutated with a new delay frequency, Then said frequency should update in state", () => {
       const delay = "10";
-      const int_delay = 10;
+      const intDelay = 10;
       store.commit("stimulation/setRestDuration", delay);
-      expect(store.state.stimulation.protocolEditor.restDuration).toBe(int_delay);
+      expect(store.state.stimulation.protocolEditor.restDuration).toBe(intDelay);
     });
 
     test("When a user adds a protocol to selected wells, Then the selected wells should be added to protocol assignments with specified protocol", async () => {
-      const test_assignment = {
+      const testAssignment = {
         0: { letter: "B", color: "#45847b", label: "test_B" },
         1: { letter: "B", color: "#45847b", label: "test_B" },
       };
       const { protocolList } = store.state.stimulation;
-      protocolList.push(test_assignment[0]);
-      await store.dispatch("stimulation/handleSelectedWells", test_wells.SELECTED);
+      protocolList.push(testAssignment[0]);
+      await store.dispatch("stimulation/handleSelectedWells", testWells.SELECTED);
       await store.commit("stimulation/applySelectedProtocol", protocolList[2]);
 
-      expect(store.state.stimulation.protocolAssignments).toStrictEqual(test_assignment);
-      expect(store.state.stimulation.stim_status).toBe(STIM_STATUS.CONFIG_CHECK_NEEDED);
+      expect(store.state.stimulation.protocolAssignments).toStrictEqual(testAssignment);
+      expect(store.state.stimulation.stimStatus).toBe(STIM_STATUS.CONFIG_CHECK_NEEDED);
     });
     test("When changes the stim studios x-axis unit, Then the coordinate values in the store will be changed accordingly", async () => {
-      const test_ms_coordinates = {
-        x_values: [0, 5000, 10000, 15000],
-        y_values: [50, 55, 60, 65],
+      const testMsCoordinates = {
+        xValues: [0, 5000, 10000, 15000],
+        yValues: [50, 55, 60, 65],
       };
-      const test_sec_coordinates = {
-        x_values: [0, 5, 10, 15],
-        y_values: [50, 55, 60, 65],
+      const testSecCoordinates = {
+        xValues: [0, 5, 10, 15],
+        yValues: [50, 55, 60, 65],
       };
 
-      const ms_obj = { idx: 0, unit_name: "milliseconds" };
-      const sec_obj = { idx: 1, unit_name: "seconds" };
+      const msObj = { idx: 0, unitName: "milliseconds" };
+      const secObj = { idx: 1, unitName: "seconds" };
 
-      await store.commit("stimulation/setAxisValues", test_ms_coordinates);
+      await store.commit("stimulation/setAxisValues", testMsCoordinates);
 
-      await store.dispatch("stimulation/handleXAxisUnit", sec_obj);
-      expect(store.state.stimulation.xAxisValues).toStrictEqual(test_sec_coordinates.x_values);
-      expect(store.state.stimulation.yAxisValues).toStrictEqual(test_sec_coordinates.y_values);
+      await store.dispatch("stimulation/handleXAxisUnit", secObj);
+      expect(store.state.stimulation.xAxisValues).toStrictEqual(testSecCoordinates.xValues);
+      expect(store.state.stimulation.yAxisValues).toStrictEqual(testSecCoordinates.yValues);
 
       // test to ensure it won't happen twice in a row, will only occur when the index value is changed
-      await store.dispatch("stimulation/handleXAxisUnit", sec_obj);
-      expect(store.state.stimulation.xAxisValues).toStrictEqual(test_sec_coordinates.x_values);
-      expect(store.state.stimulation.yAxisValues).toStrictEqual(test_sec_coordinates.y_values);
+      await store.dispatch("stimulation/handleXAxisUnit", secObj);
+      expect(store.state.stimulation.xAxisValues).toStrictEqual(testSecCoordinates.xValues);
+      expect(store.state.stimulation.yAxisValues).toStrictEqual(testSecCoordinates.yValues);
 
-      await store.dispatch("stimulation/handleXAxisUnit", ms_obj);
-      expect(store.state.stimulation.xAxisValues).toStrictEqual(test_ms_coordinates.x_values);
-      expect(store.state.stimulation.yAxisValues).toStrictEqual(test_ms_coordinates.y_values);
+      await store.dispatch("stimulation/handleXAxisUnit", msObj);
+      expect(store.state.stimulation.xAxisValues).toStrictEqual(testMsCoordinates.xValues);
+      expect(store.state.stimulation.yAxisValues).toStrictEqual(testMsCoordinates.yValues);
 
       // test to ensure it won't happen twice in a row, will only occur when the index value is changed
-      await store.dispatch("stimulation/handleXAxisUnit", ms_obj);
-      expect(store.state.stimulation.xAxisValues).toStrictEqual(test_ms_coordinates.x_values);
-      expect(store.state.stimulation.yAxisValues).toStrictEqual(test_ms_coordinates.y_values);
+      await store.dispatch("stimulation/handleXAxisUnit", msObj);
+      expect(store.state.stimulation.xAxisValues).toStrictEqual(testMsCoordinates.xValues);
+      expect(store.state.stimulation.yAxisValues).toStrictEqual(testMsCoordinates.yValues);
     });
 
     test("When a user imports a new protocol file, Then it will be read by the FileReader API and dispatched", async () => {
@@ -360,7 +360,7 @@ describe("store/stimulation", () => {
         readAsText: jest.fn(),
         onload: jest.fn(),
         onerror: jest.fn(),
-        result: test_stim_json,
+        result: testStimJson,
       };
       jest.spyOn(global, "FileReader").mockImplementation(() => reader);
       await store.dispatch("stimulation/handleImportProtocol", file);
@@ -371,40 +371,40 @@ describe("store/stimulation", () => {
 
     test("When a user clicks to export current protocol, Then json document will be downloaded locally", async () => {
       window.webkitURL.createObjectURL = function () {};
-      const mock_create_element = jest.spyOn(document, "createElement");
+      const mockCreateElement = jest.spyOn(document, "createElement");
 
       await store.dispatch("stimulation/handleExportProtocol");
-      expect(mock_create_element).toHaveBeenCalledTimes(1);
-      expect(mock_create_element).toHaveBeenCalledWith("a");
+      expect(mockCreateElement).toHaveBeenCalledTimes(1);
+      expect(mockCreateElement).toHaveBeenCalledWith("a");
 
       window.URL.createObjectURL = function () {};
       window.webkitURL = null;
 
       await store.dispatch("stimulation/handleExportProtocol");
-      expect(mock_create_element).toHaveBeenCalledTimes(2);
+      expect(mockCreateElement).toHaveBeenCalledTimes(2);
     });
 
     test("When protocol file has been read, Then it will be given a new color/letter assignment and added to protocol list in state", async () => {
-      const parsed_stim_data = JSON.parse(test_stim_json);
-      await store.dispatch("stimulation/addImportedProtocol", parsed_stim_data);
+      const parsedStimData = JSON.parse(testStimJson);
+      await store.dispatch("stimulation/addImportedProtocol", parsedStimData);
 
-      const expected_name = store.state.stimulation.protocolList[2].label;
-      const expected_letter = store.state.stimulation.protocolList[2].letter;
-      expect(expected_name).toBe(parsed_stim_data.protocols[0].protocol.name);
-      expect(expected_letter).toBe("B"); // imported letter assignments won't be used, will always be next in line
+      const expectedName = store.state.stimulation.protocolList[2].label;
+      const expectedLetter = store.state.stimulation.protocolList[2].letter;
+      expect(expectedName).toBe(parsedStimData.protocols[0].protocol.name);
+      expect(expectedLetter).toBe("B"); // imported letter assignments won't be used, will always be next in line
     });
 
     test("When a user selects wells with a protocol applied, Then the selected wells should be cleared of any protocol assignments with specified protocol", async () => {
-      const test_assigment = {
+      const testAssigment = {
         0: { letter: "A", color: "#118075", label: "Tester", protocol: { test: null } },
       };
 
-      await store.dispatch("stimulation/handleSelectedWells", test_wells.SELECTED);
-      await store.commit("stimulation/applySelectedProtocol", test_assigment[0]);
-      await store.dispatch("stimulation/handleSelectedWells", test_wells.UNSELECTED);
-      await store.commit("stimulation/clear_selected_protocol");
+      await store.dispatch("stimulation/handleSelectedWells", testWells.SELECTED);
+      await store.commit("stimulation/applySelectedProtocol", testAssigment[0]);
+      await store.dispatch("stimulation/handleSelectedWells", testWells.UNSELECTED);
+      await store.commit("stimulation/clearSelectedProtocol");
 
-      expect(store.state.stimulation.protocolAssignments).toStrictEqual(test_assigment);
+      expect(store.state.stimulation.protocolAssignments).toStrictEqual(testAssigment);
     });
 
     test("When a user requests to delete the current stimulation by using the trash icon, Then it should reset just the Protocol Viewer and Block View Editor components", async () => {
@@ -437,27 +437,27 @@ describe("store/stimulation", () => {
     });
 
     test("When a user wants to zoom in on a the y-axis in the Protocol Viewer, Then the scale will divide by 10", async () => {
-      expect(store.state.stimulation.y_axis_scale).toBe(120);
+      expect(store.state.stimulation.yAxisScale).toBe(120);
       await store.commit("stimulation/setZoomIn", "y-axis");
-      expect(store.state.stimulation.y_axis_scale).toBe(80);
+      expect(store.state.stimulation.yAxisScale).toBe(80);
     });
 
     test("When a user wants to zoom out on the y-axis, Then the scale will multiple by a power of 10", async () => {
-      expect(store.state.stimulation.y_axis_scale).toBe(120);
+      expect(store.state.stimulation.yAxisScale).toBe(120);
       await store.commit("stimulation/setZoomOut", "y-axis");
-      expect(store.state.stimulation.y_axis_scale).toBe(180);
+      expect(store.state.stimulation.yAxisScale).toBe(180);
     });
 
     test("When a user makes changes to the protocol order, Then new x and y coordinates will be established and mutated to state", async () => {
-      const x_values = [0, 0, 100, 100, 110, 110, 113, 113, 118, 118];
-      const y_values = [0, 200, 200, 0, 0, 200, 200, 0, 0, 0];
+      const xValues = [0, 0, 100, 100, 110, 110, 113, 113, 118, 118];
+      const yValues = [0, 200, 200, 0, 0, 200, 200, 0, 0, 0];
       const colors = [["b7b7b7", [0, 10]]];
 
-      await store.dispatch("stimulation/handleProtocolOrder", test_protocol_order);
+      await store.dispatch("stimulation/handleProtocolOrder", testProtocolOrder);
       const { xAxisValues, yAxisValues, repeatColors } = store.state.stimulation;
 
-      expect(xAxisValues).toStrictEqual(x_values);
-      expect(yAxisValues).toStrictEqual(y_values);
+      expect(xAxisValues).toStrictEqual(xValues);
+      expect(yAxisValues).toStrictEqual(yValues);
       expect(repeatColors).toStrictEqual(colors);
     });
 
@@ -465,71 +465,71 @@ describe("store/stimulation", () => {
       const { currentAssignment, protocolEditor } = store.state.stimulation;
       currentAssignment.letter = "B";
       currentAssignment.color = "#000000";
-      protocolEditor.name = "mock_protocol";
+      protocolEditor.name = "mockProtocol";
 
-      const expected_protocol = {
+      const expectedProtocol = {
         letter: "B",
         color: "#000000",
-        label: "mock_protocol",
+        label: "mockProtocol",
         protocol: protocolEditor,
       };
 
       await store.dispatch("stimulation/addSavedPotocol");
-      expect(store.state.stimulation.protocolList[2]).toStrictEqual(expected_protocol);
+      expect(store.state.stimulation.protocolList[2]).toStrictEqual(expectedProtocol);
     });
 
     test("When a user wants to save changes to an existing protocol by clicking on Save Changes button, Then the updated protocol will be commited to state in the available protocol list", async () => {
       const { protocolList, protocolEditor, editMode } = store.state.stimulation;
 
-      const selected_protocol = protocolList[1];
+      const selectedProtocol = protocolList[1];
       const { protocol } = protocolList[1];
-      const old_name = "Tester";
-      const new_name = "New_name";
+      const oldName = "Tester";
+      const newName = "NewName";
 
-      expect(protocol.name).toBe(old_name);
-      await store.dispatch("stimulation/editSelectedProtocol", selected_protocol);
-      expect(protocolEditor.name).toBe(old_name);
+      expect(protocol.name).toBe(oldName);
+      await store.dispatch("stimulation/editSelectedProtocol", selectedProtocol);
+      expect(protocolEditor.name).toBe(oldName);
       expect(editMode.status).toBe(true);
-      await store.commit("stimulation/setProtocolName", new_name);
+      await store.commit("stimulation/setProtocolName", newName);
       await store.dispatch("stimulation/addSavedPotocol");
 
       const test = protocolList[1].protocol.name;
-      expect(test).toBe(new_name);
+      expect(test).toBe(newName);
 
       expect(editMode.status).toBe(false);
     });
 
     test("When a user wants to save changes to an existing protocol by clicking on Save Changes button, Then the edited protocol will be updated in protocol assignments if assigned", async () => {
       const protocolList = store.state.stimulation.protocolList;
-      const selected_protocol = protocolList[1];
-      const old_name = "Tester";
-      const new_name = "New_name";
+      const selectedProtocol = protocolList[1];
+      const oldName = "Tester";
+      const newName = "NewName";
 
-      await store.dispatch("stimulation/handleSelectedWells", test_wells.SELECTED);
-      await store.commit("stimulation/applySelectedProtocol", selected_protocol);
+      await store.dispatch("stimulation/handleSelectedWells", testWells.SELECTED);
+      await store.commit("stimulation/applySelectedProtocol", selectedProtocol);
 
-      const previous_status = store.state.stimulation.stim_status;
+      const previousStatus = store.state.stimulation.stimStatus;
       let protocolAssignments = store.state.stimulation.protocolAssignments;
-      const pre_assignment_name = protocolAssignments[0].protocol.name;
-      expect(pre_assignment_name).toBe(old_name);
+      const preAssignmentName = protocolAssignments[0].protocol.name;
+      expect(preAssignmentName).toBe(oldName);
 
-      await store.dispatch("stimulation/editSelectedProtocol", selected_protocol);
-      await store.commit("stimulation/setProtocolName", new_name);
+      await store.dispatch("stimulation/editSelectedProtocol", selectedProtocol);
+      await store.commit("stimulation/setProtocolName", newName);
       await store.dispatch("stimulation/addSavedPotocol");
 
       protocolAssignments = store.state.stimulation.protocolAssignments; // have to get this value again since it is reassigned inside the store
-      const post_assignment_name = protocolAssignments[0].protocol.name;
-      expect(post_assignment_name).toBe(new_name);
-      expect(previous_status).toBe(store.state.stimulation.stim_status); // shouldn't change if only editing existing assignment
+      const postAssignmentName = protocolAssignments[0].protocol.name;
+      expect(postAssignmentName).toBe(newName);
+      expect(previousStatus).toBe(store.state.stimulation.stimStatus); // shouldn't change if only editing existing assignment
     });
 
     test("When a user wants to delete an existing protocol by clicking on trash icon, Then the selected protocol will be removed from the list of available protocols, removed from any assigned wells, and the editor will be reset", async () => {
       const protocolList = store.state.stimulation.protocolList;
-      const selected_protocol = protocolList[1];
+      const selectedProtocol = protocolList[1];
 
-      await store.dispatch("stimulation/handleSelectedWells", test_wells.SELECTED);
-      await store.commit("stimulation/applySelectedProtocol", selected_protocol);
-      await store.dispatch("stimulation/editSelectedProtocol", selected_protocol);
+      await store.dispatch("stimulation/handleSelectedWells", testWells.SELECTED);
+      await store.commit("stimulation/applySelectedProtocol", selectedProtocol);
+      await store.dispatch("stimulation/editSelectedProtocol", selectedProtocol);
       await store.dispatch("stimulation/handleProtocolEditorReset");
 
       expect(store.state.stimulation.protocolAssignments).toStrictEqual({});
@@ -537,21 +537,21 @@ describe("store/stimulation", () => {
     });
 
     // test("When a user starts a stimulation, Then the protocol message should be created and then posted to the BE", async () => {
-    //   const axios_spy = jest.spyOn(axios_helpers, "call_axios_post_from_vuex").mockImplementation(() => null);
+    //   const axiosSpy = jest.spyOn(axiosHelpers, "callAxiosPostFromVuex").mockImplementation(() => null);
 
-    //   const test_well_protocol_pairs = {};
-    //   for (let well_idx = 0; well_idx < 24; well_idx++) {
-    //     const well_name = twentyFourWellPlateDefinition.get_well_name_from_well_index(well_idx, false);
-    //     test_well_protocol_pairs[well_name] = null;
+    //   const testWellProtocolPairs = {};
+    //   for (let wellIdx = 0; wellIdx < 24; wellIdx++) {
+    //     const wellName = twentyFourWellPlateDefinition.getWellNameFromWellIndex(wellIdx, false);
+    //     testWellProtocolPairs[wellName] = null;
     //   }
-    //   test_well_protocol_pairs["A2"] = "B";
-    //   test_well_protocol_pairs["C2"] = "D";
-    //   test_well_protocol_pairs["D3"] = "D";
+    //   testWellProtocolPairs["A2"] = "B";
+    //   testWellProtocolPairs["C2"] = "D";
+    //   testWellProtocolPairs["D3"] = "D";
 
-    //   const test_protocol_B = {
+    //   const testProtocol_B = {
     //     letter: "B",
     //     color: "#000000",
-    //     label: "test_1",
+    //     label: "test1",
     //     protocol: {
     //       stimulationType: "C",
     //       runUntilStopped: true,
@@ -561,7 +561,7 @@ describe("store/stimulation", () => {
     //           phaseOneDuration: 15,
     //           phaseOneCharge: 500,
     //           postphaseInterval: 3,
-    //           num_cycles: 1,
+    //           numCycles: 1,
     //         },
     //       ],
     //       detailedSubprotocols: [
@@ -571,10 +571,10 @@ describe("store/stimulation", () => {
     //       ],
     //     },
     //   };
-    //   const test_protocol_D = {
+    //   const testProtocol_D = {
     //     letter: "D",
     //     color: "#000001",
-    //     label: "test_2",
+    //     label: "test2",
     //     protocol: {
     //       stimulationType: "V",
     //       runUntilStopped: false,
@@ -587,7 +587,7 @@ describe("store/stimulation", () => {
     //           phaseTwoCharge: -400,
     //           phaseTwoDuration: 20,
     //           postphaseInterval: 0,
-    //           num_cycles: 2,
+    //           numCycles: 2,
     //         },
     //       ],
     //       detailedSubprotocols: [
@@ -597,22 +597,22 @@ describe("store/stimulation", () => {
     //       ],
     //     },
     //   };
-    //   const test_assignment = {
-    //     4: test_protocol_B,
-    //     6: test_protocol_D,
-    //     11: test_protocol_D,
+    //   const testAssignment = {
+    //     4: testProtocol_B,
+    //     6: testProtocol_D,
+    //     11: testProtocol_D,
     //   };
 
-    //   const expected_message = {
+    //   const expectedMessage = {
     //     protocols: [
     //       {
-    //         protocol_id: "B",
+    //         protocolId: "B",
     //         stimulationType: "C",
     //         runUntilStopped: true,
     //         subprotocols: [
     //           {
     //             type: "Monophasic",
-    //             num_cycles: 1,
+    //             numCycles: 1,
     //             postphaseInterval: 3000,
     //             phaseOneDuration: 15000,
     //             phaseOneCharge: 500000,
@@ -620,13 +620,13 @@ describe("store/stimulation", () => {
     //         ],
     //       },
     //       {
-    //         protocol_id: "D",
+    //         protocolId: "D",
     //         stimulationType: "V",
     //         runUntilStopped: false,
     //         subprotocols: [
     //           {
     //             type: "Biphasic",
-    //             num_cycles: 2,
+    //             numCycles: 2,
     //             postphaseInterval: 0,
     //             phaseOneDuration: 20000,
     //             phaseOneCharge: 400,
@@ -637,55 +637,31 @@ describe("store/stimulation", () => {
     //         ],
     //       },
     //     ],
-    //     protocolAssignments: test_well_protocol_pairs,
+    //     protocolAssignments: testWellProtocolPairs,
     //   };
 
-    //   store.state.stimulation.protocolAssignments = test_assignment;
+    //   store.state.stimulation.protocolAssignments = testAssignment;
     //   // send message once
     //   await store.dispatch("stimulation/createProtocolMessage");
-    //   expect(axios_spy).toHaveBeenCalledWith("/set_protocols", {
-    //     data: JSON.stringify(expected_message),
+    //   expect(axiosSpy).toHaveBeenCalledWith("/setProtocols", {
+    //     data: JSON.stringify(expectedMessage),
     //   });
-    //   expect(axios_spy).toHaveBeenCalledWith("/setStimStatus?running=true");
+    //   expect(axiosSpy).toHaveBeenCalledWith("/setStimStatus?running=true");
     //   // send message again and make sure nothing was modified. Tanner (11/3/21): there was an issue where the protocols were modified inside of createProtocolMessage, so sending message twice to catch that issue if present
     //   await store.dispatch("stimulation/createProtocolMessage");
-    //   expect(axios_spy).toHaveBeenCalledWith("/set_protocols", {
-    //     data: JSON.stringify(expected_message),
+    //   expect(axiosSpy).toHaveBeenCalledWith("/setProtocols", {
+    //     data: JSON.stringify(expectedMessage),
     //   });
-    //   expect(axios_spy).toHaveBeenCalledWith("/setStimStatus?running=true");
+    //   expect(axiosSpy).toHaveBeenCalledWith("/setStimStatus?running=true");
     // });
-    // test("When a user stops a stimulation, Then the protocol message should be created and then posted to the BE", async () => {
-    //   const axios_status_spy = jest
-    //     .spyOn(axios_helpers, "call_axios_post_from_vuex")
-    //     .mockImplementation(() => null);
-    //   await store.dispatch("stimulation/stopStimulation");
-    //   expect(axios_status_spy).toHaveBeenCalledWith("/setStimStatus?running=false");
-    // });
+    //
 
-    //   test("When a user adds a repeat delay into the input of the settings panel, Then it will appear at the end of the waveform in the graph", async () => {
-    //     const test_delay = 10;
-    //     const expected_block = [[0, 10]];
-    //     await store.dispatch("stimulation/handleNewRestDuration", test_delay);
-    //     const { delayBlocks } = store.state.stimulation;
-    //     expect(delayBlocks).toStrictEqual(expected_block);
-    //   });
-
-    //   test.each([
-    //     [{ status: 400 }, "ERROR"],
-    //     [{ status: 200 }, "CONFIG_CHECK_IN_PROGRESS"],
-    //   ])(
-    //     "When a user clicks icon to start a stim configuration check, Then action will post to BE and updatestimStatus",
-    //     async (response, status) => {
-    //       const axios_status_spy = jest
-    //         .spyOn(axios_helpers, "call_axios_post_from_vuex")
-    //         .mockImplementation(() => response);
-
-    //       store.state.stimulation.protocolAssignments = { 1: {} };
-    //       await store.dispatch("stimulation/startStimConfiguration");
-
-    //       expect(axios_status_spy).toHaveBeenCalledWith("/start_stim_checks", { well_indices: ["1"] });
-    //       expect(store.state.stimulation.stim_status).toBe(STIM_STATUS[status]);
-    //     }
-    //   );
+    test("When a user adds a repeat delay into the input of the settings panel, Then it will appear at the end of the waveform in the graph", async () => {
+      const testDelay = 10;
+      const expectedBlock = [[0, 10]];
+      await store.dispatch("stimulation/handleNewRestDuration", testDelay);
+      const { delayBlocks } = store.state.stimulation;
+      expect(delayBlocks).toStrictEqual(expectedBlock);
+    });
   });
 });

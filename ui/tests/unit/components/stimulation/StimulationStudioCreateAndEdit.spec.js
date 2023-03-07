@@ -111,7 +111,10 @@ describe("StimulationStudioCreateAndEdit.vue", () => {
     const options = wrapper.findAll("li");
     await options.at(0).trigger("click");
     await wrapper.vm.handleClick(0);
+
     expect(store.state.stimulation.protocolAssignments[1]).toBeTruthy();
+
+    await store.dispatch("stimulation/handleSelectedWells", [false, true, false, false]);
     await wrapper.vm.handleClick(1);
     expect(store.state.stimulation.protocolAssignments[1]).toBeFalsy();
   });
@@ -133,17 +136,6 @@ describe("StimulationStudioCreateAndEdit.vue", () => {
     });
     expect(inputHeightBackground).toBe(60);
     expect(inputWidgetTop).toBe(0);
-  });
-
-  test("When a user imports a new protocol, Then the the available protocol list in dropdown will get updated", async () => {
-    const updateSpy = jest.spyOn(StimulationStudioCreateAndEdit.methods, "updateProtocols");
-    mount(StimulationStudioCreateAndEdit, {
-      store,
-      localVue,
-    });
-    const testProtocol = store.state.stimulation.protocolList[1];
-    await store.commit("stimulation/setNewProtocol", testProtocol);
-    expect(updateSpy).toHaveBeenCalledWith();
   });
 
   test("When a user selects Create New in the protocol dropdown, Then the protocol editor will reset to be empty", async () => {
@@ -173,16 +165,6 @@ describe("StimulationStudioCreateAndEdit.vue", () => {
     await wrapper.findAll("li").at(0).trigger("click");
 
     expect(actionSpy).toHaveBeenCalledTimes(1);
-  });
-
-  test("When exiting instance, Then instance is effectively destroyed", async () => {
-    const destroyedSpy = jest.spyOn(StimulationStudioCreateAndEdit, "beforeDestroy");
-    const wrapper = mount(StimulationStudioCreateAndEdit, {
-      store,
-      localVue,
-    });
-    wrapper.destroy();
-    expect(destroyedSpy).toHaveBeenCalledWith();
   });
 
   test("When clicks on export protocol button, Then action will be dispatched to store", async () => {
@@ -222,8 +204,7 @@ describe("StimulationStudioCreateAndEdit.vue", () => {
     expect(wrapper.vm.selectedProtocolIdx).toBe(0);
   });
 
-  test("When a user imports a new protocol, Then the dropdown will default to that new protocol", async () => {
-    const importedOptionIdx = 2;
+  test("When a user imports a new protocol, Then the dropdown will default to 0 and the list length will increase accordingly", async () => {
     const mockProtocol = {
       label: "test",
       protocol: {
@@ -236,8 +217,11 @@ describe("StimulationStudioCreateAndEdit.vue", () => {
       store,
       localVue,
     });
+    expect(store.state.stimulation.protocolList).toHaveLength(2);
 
     await store.commit("stimulation/setImportedProtocol", mockProtocol);
-    expect(wrapper.vm.selectedProtocolIdx).toBe(importedOptionIdx);
+
+    expect(wrapper.vm.selectedProtocolIdx).toBe(0);
+    expect(store.state.stimulation.protocolList).toHaveLength(3);
   });
 });

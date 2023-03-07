@@ -17,7 +17,12 @@
         :domIdSuffix="'timeUnits'"
         @selection-changed="handleTotalDurationUnitChange"
       />
-      <StimulationStudioZoomControls :style="'grid-column: 3; align-self: center;'" :axis="'x-axis'" />
+      <StimulationStudioZoomControls
+        :style="'grid-column: 3; align-self: center;'"
+        :axis="'x-axis'"
+        @zoom-out="zoomOutXAxis"
+        @zoom-in="zoomInXAxis"
+      />
     </div>
   </div>
 </template>
@@ -267,6 +272,12 @@ export default {
       this.displayXAxis();
       this.displayYAxis();
       this.plotData();
+    },
+    zoomOutXAxis: function () {
+      this.$emit("zoom-out");
+    },
+    zoomInXAxis: function () {
+      this.$emit("zoom-in");
     },
     createXAxisScale: function () {
       this.xAxisScale = scaleLinear().domain([0, this.xAxisSampleLength]).range([0, this.plotAreaPixelWidth]);

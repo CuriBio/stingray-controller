@@ -1,6 +1,6 @@
 import { mount } from "@vue/test-utils";
 import ComponentToTest from "@/components/basic-widgets/PlateWell.vue";
-import { PlateWell as DistComponentToTest } from "@/dist/mantarray.common";
+import { PlateWell as DistComponentToTest } from "@/dist/stingray.common";
 // import { shallowMount } from "@vue/test-utils";
 
 import Vuex from "vuex";

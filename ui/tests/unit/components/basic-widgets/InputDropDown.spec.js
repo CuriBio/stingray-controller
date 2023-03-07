@@ -1,6 +1,6 @@
 import { mount } from "@vue/test-utils";
 import ComponentToTest from "@/components/basic-widgets/InputDropDown.vue";
-import { InputDropDown as DistComponentToTest } from "@/dist/mantarray.common";
+import { InputDropDown as DistComponentToTest } from "@/dist/stingray.common";
 import { shallowMount } from "@vue/test-utils";
 import SmallDropDown from "@/components/basic-widgets/SmallDropDown.vue";
 import SelectDropDown from "@/components/basic-widgets/SelectDropDown.vue";

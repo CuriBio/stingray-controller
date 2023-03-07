@@ -6,7 +6,7 @@
         v-for="color in colorSelection"
         :id="color"
         :key="color"
-        class="individual_color_block"
+        class="individual-color-block"
         :style="'background-color: ' + color"
         @click="handleColorSelection"
       />
@@ -79,10 +79,10 @@ export default {
     "4 5 6 7"
     "8 9 10 11";
 }
-.individual_color_block {
+.individual-color-block {
   border: 1px solid #292929;
 }
-.individual_color_block:hover {
+.individual-color-block:hover {
   border: 2px solid white;
   cursor: pointer;
 }

@@ -31,7 +31,7 @@ describe("StimulationStudioColorModal.vue", () => {
       },
     });
 
-    const colorBlocks = wrapper.findAll(".individualColorBlock");
+    const colorBlocks = wrapper.findAll(".individual-color-block");
     expect(colorBlocks).toHaveLength(12);
   });
 
@@ -47,7 +47,7 @@ describe("StimulationStudioColorModal.vue", () => {
     const cancelButton = wrapper.findAll(".span__button-label").at(0);
     await cancelButton.trigger("click");
 
-    const emitedtEvents = wrapper.emitted("changePulseColor");
+    const emitedtEvents = wrapper.emitted("change-pulse-color");
     expect(emitedtEvents).toHaveLength(1);
     expect(emitedtEvents[0]).toStrictEqual(["hsla(100, 100%, 50%, 1)"]);
   });
@@ -64,10 +64,10 @@ describe("StimulationStudioColorModal.vue", () => {
       });
 
       const colorIdx = colorsToDisplay.indexOf(color);
-      const colorBlocks = wrapper.findAll(".individualColorBlock");
+      const colorBlocks = wrapper.findAll(".individual-color-block");
 
       await colorBlocks.at(colorIdx).trigger("click");
-      const emitedtEvents = wrapper.emitted("changePulseColor");
+      const emitedtEvents = wrapper.emitted("change-pulse-color");
       expect(emitedtEvents[0]).toStrictEqual([colorsToDisplay[colorIdx]]);
     }
   );
