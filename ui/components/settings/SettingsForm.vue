@@ -176,12 +176,12 @@ export default {
       if (this.userFound) {
         this.$store.commit("settings/setActiveUserIndex", this.userFocusIdx);
 
-        const { status } = await this.$store.dispatch("settings/updateSettings");
+        const res = await this.$store.dispatch("settings/updateSettings");
 
         // Currently, error-handling by resetting inputs to force user to try again if axios request fails
-        if (status === 200) {
-          this.$emit("closeModal", true);
-        } else if (status == 401) {
+        if (res == 200) {
+          this.$emit("close-modal", true);
+        } else if (res == 401) {
           this.openForInvalidCreds = true;
           this.$bvModal.show("edit-user");
         } else {

@@ -1,6 +1,5 @@
 import { mount } from "@vue/test-utils";
 import ComponentToTest from "@/components/settings/SettingsForm.vue";
-import ToggleWidget from "@/components/basic-widgets/ToggleWidget.vue";
 import Vuex from "vuex";
 import { createLocalVue } from "@vue/test-utils";
 import BootstrapVue from "bootstrap-vue";
@@ -233,7 +232,7 @@ describe("SettingsForm.vue", () => {
       expect(settingsButtons.cancelBtn.isVisible()).toBe(true);
       await settingsButtons.cancelBtn.trigger("click");
 
-      const closeEvent = wrapper.emitted("closeModal");
+      const closeEvent = wrapper.emitted("close-modal");
       expect(closeEvent[0]).toStrictEqual([false]);
     });
 

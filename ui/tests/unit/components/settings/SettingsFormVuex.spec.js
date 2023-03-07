@@ -112,9 +112,7 @@ describe("SettingsForm.vue", () => {
         localVue,
       });
       jest.spyOn(store, "dispatch").mockImplementation(() => {
-        return {
-          status: 401,
-        };
+        return 401;
       });
       const editCustModal = wrapper.find(".div__edituser-form-controls");
       const saveChanges = wrapper.find(".span__settings-tool-tip-save-btn-txt-enable");
@@ -151,17 +149,13 @@ describe("SettingsForm.vue", () => {
       });
 
       jest.spyOn(store, "dispatch").mockImplementation(() => {
-        return {
-          status: 200,
-        };
+        return 200;
       });
 
       const saveChanges = wrapper.find(".span__settings-tool-tip-save-btn-txt-enable");
       await saveChanges.trigger("click");
-      const closeEvent = wrapper.emitted("closeModal");
+      const closeEvent = wrapper.emitted("close-modal");
       expect(closeEvent[0]).toStrictEqual([true]);
-
-      // expect(emitClose).toBeTruthy();
     });
 
     test("Given a customer and user account selected in Vuex and the textbox for Customer Account is changed to an account different than the one in Vuex and a user account is selected in thet textbox, When the Save Changes button is clicked, Then the selected indices in Vuex for Customer and User accounts are updated to reflect the chosen options in the textboxes", async () => {

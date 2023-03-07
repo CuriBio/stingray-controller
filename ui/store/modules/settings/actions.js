@@ -10,5 +10,6 @@ export default {
     //   userPassword,
     // };
     // TODO send ws message
+    return 200;
   },
 };
