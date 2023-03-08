@@ -14,7 +14,7 @@
     />
     <StimulationStudioBlockViewEditor
       class="stimulationstudio_blockvieweditor-container"
-      @new-rest-dur="newRestDur"
+      @rest-duration-validity="setNewRestDuration"
     />
     <StimulationStudioProtocolViewer
       class="stimulationstudio_protocolviewer-container"
@@ -36,14 +36,21 @@ import StimulationStudioWidget from "@/components/stimulation/StimulationStudioW
 import StimulationStudioDragAndDropPanel from "@/components/stimulation/StimulationStudioDragAndDropPanel.vue";
 import StimulationStudioBlockViewEditor from "@/components/stimulation/StimulationStudioBlockViewEditor.vue";
 import StimulationStudioProtocolViewer from "@/components/stimulation/StimulationStudioProtocolViewer.vue";
-import { mapState } from "vuex";
 import { STIM_STATUS } from "@/store/modules/stimulation/enums";
+
+import { mapState } from "vuex";
 
 /**
  * @vue-data {Array} btnLabels - button labels for base of stim studio component
- * @vue-data {String} stimulationType - Current selected stimulation type in BlockViewEditor component
  * @vue-data {Object} selectedProtocol - Current selected protocol from drop down in CreateAndEdit component
+ * @vue-data {Boolean} restDurIsValid - State of validity of current rest duration for protocol
+ * @vue-computed {Boolean} disableEdits - Boolean to conditionally check if stim is active
+ * @vue-computed {Object} btnHover - Handle tooltip text based off is stim is currently active
+ * @vue-computed {Boolean} stimulationType - Conditionally expand type of stimulation based on state
  * @vue-event {Event} handleClick - Handles what gets executed when any of the base buttons are selected
+ * @vue-event {Event} setNewRestDuration - Set validity of new rest duration in stim studio
+ * @vue-event {Event} getBtnClass - Get dynamic button class based on disabled state
+ * @vue-event {Event} getBtnLabelClass - Get dynamic button label class based on disabled state
  * @vue-event {Event} handleSelectionChanged - Gets emitted when a user selected a protocol for edit so it can be used if new changes need to be discarded
  */
 
@@ -70,7 +77,7 @@ export default {
     },
     btnHover: function () {
       return {
-        content: "Cannot make changes to stim settings while actively stimulating or recording",
+        content: "Cannot make changes to stim settings while actively stimulating",
         disabled: !this.disableEdits,
       };
     },
@@ -98,7 +105,7 @@ export default {
         }
       }
     },
-    newRestDur(isValid) {
+    setNewRestDuration(isValid) {
       this.restDurIsValid = isValid;
     },
 

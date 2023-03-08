@@ -27,10 +27,11 @@
   </div>
 </template>
 <script>
-import { axisBottom, axisLeft, line as d3Line, select as d3Select, scaleLinear } from "d3";
 import StimulationStudioZoomControls from "@/components/stimulation/StimulationStudioZoomControls.vue";
 import SmallDropDown from "@/components/basic-widgets/SmallDropDown.vue";
+
 import { mapState } from "vuex";
+import { axisBottom, axisLeft, line as d3Line, select as d3Select, scaleLinear } from "d3";
 
 /**
  * @vue-prop {String} title - Current title of the waveform

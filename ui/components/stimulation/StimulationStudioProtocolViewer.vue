@@ -19,6 +19,7 @@
 <script>
 import StimulationStudioWaveform from "@/components/stimulation/StimulationStudioWaveform.vue";
 import { convertXYArraysToD3Array } from "@/js-utils/WaveformDataFormatter.js";
+
 import { mapState } from "vuex";
 
 /**

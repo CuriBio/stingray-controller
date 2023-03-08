@@ -13,6 +13,7 @@
 import { library } from "@fortawesome/fontawesome-svg-core";
 import { faMinusCircle, faPlusCircle } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
+
 library.add(faMinusCircle, faPlusCircle);
 
 /**

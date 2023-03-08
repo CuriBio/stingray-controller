@@ -55,14 +55,7 @@ import { BFormInput } from "bootstrap-vue";
 Vue.use(BootstrapVue);
 Vue.component("BFormInput", BFormInput);
 import "bootstrap/dist/css/bootstrap.min.css";
-/* IMPORTANT NOTE ON UTILIZATION */
-/* ==========================================================================================================================================*/
-/* The Parent component which utilises the widget has to follow the rule when using on the dialogs or components.
-   From the Mockflow page they need to extract the proper width on which the PopInput Widget has to appear and reduce the width by 4 pixels
-   As the PopInput background introduces a border of 2px and surronding the <input> box the red and green validation boxes introduces 2px.
-   Request you to consider for the prop assignment the following formula:-
-   inputWidth = MockflowUIWidth - 4
-   ==========================================================================================================================================*/
+
 export default {
   name: "InputWidget",
   props: {

@@ -63,9 +63,11 @@
 </template>
 <script>
 import PlateWell from "@/components/basic-widgets/PlateWell.vue";
+
 import Vue from "vue";
 import { VBPopover } from "bootstrap-vue";
 Vue.directive("b-popover", VBPopover);
+
 export default {
   name: "StimulationStudioPlateWell",
   components: {

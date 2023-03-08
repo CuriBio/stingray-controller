@@ -299,19 +299,24 @@
   </div>
 </template>
 <script>
-import Vue from "vue";
 import SmallDropDown from "@/components/basic-widgets/SmallDropDown.vue";
 import InputWidget from "@/components/basic-widgets/InputWidget.vue";
 import CheckBoxWidget from "@/components/basic-widgets/CheckBoxWidget.vue";
 import StimulationStudioColorModal from "@/components/stimulation/StimulationStudioColorModal.vue";
 import ButtonWidget from "@/components/basic-widgets/ButtonWidget.vue";
+import {
+  MIN_SUBPROTOCOL_DURATION_MS,
+  MAX_SUBPROTOCOL_DURATION_MS,
+  TIME_CONVERSION_TO_MILLIS,
+} from "@/store/modules/stimulation/enums";
+
+import Vue from "vue";
 import { library } from "@fortawesome/fontawesome-svg-core";
 import { faBalanceScale, faQuestionCircle } from "@fortawesome/free-solid-svg-icons";
 import { VBPopover } from "bootstrap-vue";
-import { MIN_SUBPROTOCOL_DURATION_MS, TIME_CONVERSION_TO_MILLIS } from "@/store/modules/stimulation/enums";
-import { MAX_SUBPROTOCOL_DURATION_MS } from "../../store/modules/stimulation/enums";
 import BootstrapVue from "bootstrap-vue";
 import { BModal } from "bootstrap-vue";
+
 Vue.directive("b-popover", VBPopover);
 Vue.component("BModal", BModal);
 Vue.use(BootstrapVue);

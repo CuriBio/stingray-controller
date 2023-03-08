@@ -59,11 +59,12 @@ import {
   MIN_SUBPROTOCOL_DURATION_MS,
   TIME_CONVERSION_TO_MILLIS,
 } from "@/store/modules/stimulation/enums";
+
 import Vue from "vue";
 import BootstrapVue from "bootstrap-vue";
-
 import { BModal } from "bootstrap-vue";
 import { VBPopover } from "bootstrap-vue";
+
 Vue.directive("b-popover", VBPopover);
 Vue.component("BModal", BModal);
 Vue.use(BootstrapVue);

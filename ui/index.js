@@ -5,18 +5,18 @@
 // https://humanwhocodes.com/blog/2019/01/stop-using-default-exports-javascript-module/
 
 // Pure JS
-export { convert_from_json_of_sample_idx_and_value } from "./js-utils/WaveformDataFormatter";
-export { get_well_slice_to_display } from "./js-utils/WaveformDataFormatter";
-export { get_array_slice_to_display } from "./js-utils/WaveformDataFormatter";
-export { convert_from_json_of_well_indices_and_x_y_arrays } from "./js-utils/WaveformDataFormatter";
-export { append_well_data } from "./js-utils/WaveformDataFormatter";
+export { convertFromJsonOfSampleIdxAndValue } from "./js-utils/WaveformDataFormatter";
+export { getWellSliceToDisplay } from "./js-utils/WaveformDataFormatter";
+export { getArraySliceToDisplay } from "./js-utils/WaveformDataFormatter";
+export { convertFromJsonOfWellIndicesAndXYArrays } from "./js-utils/WaveformDataFormatter";
+export { appendWellData } from "./js-utils/WaveformDataFormatter";
 export { WellTitle } from "./js-utils/LabwareCalculations";
 export { TextValidation } from "./js-utils/TextValidation";
 
 // Store
-export { default as settings_store_module } from "./store/modules/settings";
-export { default as system_store_module } from "./store/modules/system";
-export { default as stimulation_store_module } from "./store/modules/stimulation";
+export { default as settingsStoreModule } from "./store/modules/settings";
+export { default as systemStoreModule } from "./store/modules/system";
+export { default as stimulationStoreModule } from "./store/modules/stimulation";
 export {
   stimStatus,
   MAX_SUBPROTOCOL_DURATION_MS,
@@ -24,11 +24,8 @@ export {
 } from "./store/modules/stimulation/enums";
 export { STATUS as SYSTEM_STATUS_ENUMS } from "./store/modules/system/enums";
 
-export { default as create_web_socket_plugin } from "./store/plugins/websocket";
+export { default as createWebSocketPlugin } from "./store/plugins/websocket";
 export { socket } from "./store/plugins/websocket";
-
-export { default as BarcodeViewer } from "./components/status/BarcodeViewer.vue";
-export { default as StimulationStudioControls } from "./components/stimulation/StimulationStudioControls.vue";
 
 // Basic Widgets
 export { default as PlateWell } from "./components/basic-widgets/PlateWell.vue";
@@ -52,6 +49,7 @@ export { default as ErrorCatchWidget } from "./components/status/ErrorCatchWidge
 export { default as StatusWarningWidget } from "./components/status/StatusWarningWidget.vue";
 export { default as StatusSpinnerWidget } from "./components/status/StatusSpinnerWidget.vue";
 export { default as StimQCSummary } from "./components/status/StimQCSummary.vue";
+export { default as BarcodeViewer } from "./components/status/BarcodeViewer.vue";
 
 // Stimulation Studio
 export { default as StimulationStudioCreateAndEdit } from "./components/stimulation/StimulationStudioCreateAndEdit.vue";
@@ -64,3 +62,4 @@ export { default as StimulationStudioWaveform } from "./components/stimulation/S
 export { default as StimulationStudioZoomControls } from "./components/stimulation/StimulationStudioZoomControls.vue";
 export { default as StimulationStudio } from "./components/stimulation/StimulationStudio.vue";
 export { default as StimulationStudioWidget } from "./components/stimulation/StimulationStudioWidget.vue";
+export { default as StimulationStudioControls } from "./components/stimulation/StimulationStudioControls.vue";

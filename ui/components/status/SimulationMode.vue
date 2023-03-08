@@ -210,8 +210,6 @@
 import { mapState } from "vuex";
 /**
  * @vue-data     {Boolean} mode - Contains a true or false based on if its in simulation mode or not
- * @vue-computed {Boolean} simulationMode_id - Contains a true or false based based on the value set in Vuex store.
- * @vue-event    {Event} simulationMode_id - A function which is invoked when siumlation mode is modified.
  */
 export default {
   name: "SimulationMode",

@@ -51,8 +51,8 @@
         :index="wellIndex"
         :disable="assignedOpenCircuits.includes(wellIndex)"
         :display="disable"
-        @enter-well="onWellenter(wellIndex)"
-        @leave-well="onWellleave(wellIndex)"
+        @enter-well="onWellEnter(wellIndex)"
+        @leave-well="onWellLeave(wellIndex)"
         @click-exact="basicSelect(wellIndex)"
         @click-shift-exact="basicShiftSelect(wellIndex)"
       />
@@ -72,11 +72,12 @@
 
 <script>
 import StimulationStudioPlateWell from "@/components/stimulation/StimulationStudioPlateWell.vue";
+import { STIM_STATUS } from "@/store/modules/stimulation/enums";
+
 import { library } from "@fortawesome/fontawesome-svg-core";
 import { faPlusCircle, faMinusCircle } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import { mapState } from "vuex";
-import { STIM_STATUS } from "@/store/modules/stimulation/enums";
 import Vue from "vue";
 import { VBPopover } from "bootstrap-vue";
 
@@ -188,7 +189,7 @@ export default {
       this.allSelect[value] = true;
       this.strokeWidth[value] = selectedStrokeWidth;
       if (!this.allSelectOrCancel) this.allSelectOrCancel = true;
-      this.onWellenter(value);
+      this.onWellEnter(value);
     },
 
     basicShiftSelect(value) {
@@ -198,10 +199,10 @@ export default {
       if (allEqual(this.allSelect)) this.allSelectOrCancel = false;
       else this.allSelectOrCancel = true;
       this.$store.dispatch("stimulation/handleSelectedWells", this.allSelect);
-      this.onWellenter(value);
+      this.onWellEnter(value);
     },
 
-    onWellenter(value) {
+    onWellEnter(value) {
       this.hover[value] = true;
       this.hoverColor[value] = "#ececed";
       this.strokeWidth.splice(0, this.strokeWidth.length);
@@ -209,7 +210,7 @@ export default {
       this.strokeWidth[value] = this.allSelect[value] ? selectedStrokeWidth : hoverStrokeWidth;
     },
 
-    onWellleave(value) {
+    onWellLeave(value) {
       this.hover[value] = false;
       this.hoverColor[value] = selectedColor;
       this.strokeWidth.splice(0, this.strokeWidth.length);

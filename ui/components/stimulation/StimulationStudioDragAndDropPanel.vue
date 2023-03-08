@@ -77,13 +77,13 @@
   </div>
 </template>
 <script>
-import draggable from "vuedraggable";
-import { mapState, mapActions, mapMutations } from "vuex";
 import StimulationStudioWaveformSettingModal from "@/components/stimulation/StimulationStudioWaveformSettingModal.vue";
 import StimulationStudioDelayModal from "@/components/stimulation/StimulationStudioDelayModal.vue";
 import SmallDropDown from "@/components/basic-widgets/SmallDropDown.vue";
 import { generateRandomColor } from "@/js-utils/WaveformDataFormatter";
 
+import draggable from "vuedraggable";
+import { mapState, mapActions, mapMutations } from "vuex";
 /**
  * @vue-props {String} stimulationType - Current selected stimulation type user selects from drowdown
  * @vue-data {Array} iconType - The source for the draggable pulse tiles

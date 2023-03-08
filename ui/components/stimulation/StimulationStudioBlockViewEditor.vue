@@ -65,7 +65,7 @@
             id="trashIcon"
             class="trash-icon"
             :icon="['fa', 'trash-alt']"
-            @click="openDelModal"
+            @click="openDeleteModal"
           />
         </div>
       </div>
@@ -82,41 +82,49 @@
       <StatusWarningWidget
         id="del-protocol"
         :modalLabels="delProtocolLabels"
-        @handleConfirmation="closeDelProtocolModal"
+        @handleConfirmation="closeDeleteProtocolModal"
       />
     </b-modal>
   </div>
 </template>
 <script>
-import Vue from "vue";
 import SmallDropDown from "@/components/basic-widgets/SmallDropDown.vue";
+import StatusWarningWidget from "@/components/status/StatusWarningWidget.vue";
+import InputWidget from "@/components/basic-widgets/InputWidget.vue";
+import { MAX_SUBPROTOCOL_DURATION_MS } from "@/store/modules/stimulation/enums";
+
+import Vue from "vue";
+import BootstrapVue from "bootstrap-vue";
 import { mapState, mapGetters, mapActions, mapMutations } from "vuex";
 import { library } from "@fortawesome/fontawesome-svg-core";
 import { faTrashAlt } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
-import StatusWarningWidget from "@/components/status/StatusWarningWidget.vue";
-import BootstrapVue from "bootstrap-vue";
 import { BModal } from "bootstrap-vue";
-import InputWidget from "@/components/basic-widgets/InputWidget.vue";
-import { MAX_SUBPROTOCOL_DURATION_MS } from "@/store/modules/stimulation/enums";
+
 Vue.use(BootstrapVue);
 Vue.component("BModal", BModal);
 library.add(faTrashAlt);
 
 /**
  * @vue-data {String} activeTab - Shows current selected tab
- * @vue-data {Boolean} disabled - Disables the name and time input fields
+ * @vue-data {Boolean} disabledTime - Disables the name and time input fields
  * @vue-data {String} currentLetter - Next available letter in alphabet
  * @vue-data {String} currentColor -  Next available color in alphabet
  * @vue-data {Array} stimulationTypesArray - Availble options in dropdown
  * @vue-data {Array} stopOptionsArray - Available options in dropdown
+ * @vue-data {Number} stopOptionIdx - Currently selected option from dropdown displaying stim run setting
  * @vue-data {String} protocolName - Inputted new protocol name
  * @vue-data {String} stopSetting - Selected setting from dropdown
  * @vue-data {String} restDuration - Inputted delay to be set at the end of the protocol between repeats
  * @vue-data {String} nameValidity - Corresponding border style after name validity check
  * @vue-data {String} errorMessage - Error message that appears under name input field after validity check
+ * @vue-data {String} invalidRestDurText - Error message that appears under rest duration input field after validity check
  * @vue-data {Array} localProtocolList - All available protocols from Vuex
  * @vue-data {Int} stimulationTypeIdx - Used to change preselected index in the dropdown when user wants to edit existing protocols
+ * @vue-computed {Object} restInputHover - Handle tooltip text when hovering rest duration input
+ * @vue-computed {String} restTimeUnit - Current time unit selected for rest duration
+ * @vue-computed {String} editModeLabel - Current protocol name in protocol editor when editing is active
+ * @vue-computed {Boolean} editModeStatus - Boolean to check if user is editing an existing protocol
  * @vue-event {Event} updateProtocols - Gets called when a change to the available protocol list occurs to update next available color/letter assignment and dropdown options
  * @vue-event {Event} handleTrashModal - Toggle view of delete popover on trash icon
  * @vue-event {Event} toggleTab - Toggles which tab is active
@@ -124,7 +132,8 @@ library.add(faTrashAlt);
  * @vue-event {Event} handleStimulationType - Commits the new selected stimulation type to state
  * @vue-event {Event} handleStopSetting - Currently just assigns the new stop setting to local state
  * @vue-event {Event} handleRestDuration - Commits the new delay input to state
- * @vue-event {Event} checkNameValidity - Checks if the inputted name has already been used
+ * @vue-event {Event} openDeleteModal - Open confirmation modal when user selects trash icon
+ * @vue-event {Event} closeDeleteProtocolModal - Handle confirmation modal for deleting protocols
  */
 
 export default {
@@ -226,10 +235,10 @@ export default {
     toggleTab(tab) {
       this.activeTab = tab === "Basic" ? "Basic" : "Advanced";
     },
-    openDelModal() {
+    openDeleteModal() {
       this.$bvModal.show("del-protocol-modal");
     },
-    closeDelProtocolModal(idx) {
+    closeDeleteProtocolModal(idx) {
       this.$bvModal.hide("del-protocol-modal");
       if (idx === 0) this.handleProtocolEditorReset();
     },
@@ -260,7 +269,7 @@ export default {
       }
 
       const restDurIsValid = this.invalidRestDurText === "";
-      this.$emit("new-rest-dur", restDurIsValid);
+      this.$emit("rest-duration-validity", restDurIsValid);
     },
     getDurInMs(value) {
       return this.restTimeUnit === "milliseconds" ? value : value * 1000;

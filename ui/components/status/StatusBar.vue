@@ -125,11 +125,7 @@ import StimQCSummary from "@/components/status/StimQCSummary.vue";
 Vue.use(BootstrapVue);
 Vue.component("BButton", BButton);
 Vue.component("BModal", BModal);
-/**
- * @vue-data     {String} alertTxt - Contains the current status of the Application and its updated as status change.
- * @vue-computed {String} statusUuid - Contains a UUID which represents a meaningful information, from Vuex store.
- * @vue-event    {Event} statusUuid - A function which is invoked when UUID is modified in the Vuex store.
- */
+
 export default {
   name: "StatusBar",
   components: {
