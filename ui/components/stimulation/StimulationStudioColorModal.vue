@@ -3,31 +3,31 @@
     Select color:
     <div class="div__container-color-block">
       <div
-        v-for="color in color_selection"
+        v-for="color in colorSelection"
         :id="color"
         :key="color"
-        class="individual_color_block"
+        class="individual-color-block"
         :style="'background-color: ' + color"
-        @click="handle_color_selection"
+        @click="handleColorSelection"
       />
     </div>
     <div class="div__color-button-container">
       <ButtonWidget
         :id="'button-widget-id'"
-        :button_widget_width="202"
-        :button_widget_height="40"
-        :button_widget_top="0"
-        :button_widget_left="0"
-        :button_background_color="'#292929'"
-        :button_names="['Cancel']"
-        :hover_color="['#bd4932']"
-        @btn-click="handle_color_selection"
+        :buttonWidgetWidth="202"
+        :buttonWidgetHeight="40"
+        :buttonWidgetTop="0"
+        :buttonWidgetLeft="0"
+        :buttonBackgroundColor="'#292929'"
+        :buttonNames="['Cancel']"
+        :hoverColor="['#bd4932']"
+        @btn-click="handleColorSelection"
       />
     </div>
   </div>
 </template>
 <script>
-import ButtonWidget from "@/components/basic_widgets/ButtonWidget.vue";
+import ButtonWidget from "@/components/basic-widgets/ButtonWidget.vue";
 
 export default {
   name: "StimulationStudioColorModal",
@@ -35,22 +35,22 @@ export default {
     ButtonWidget,
   },
   props: {
-    current_color: {
+    currentColor: {
       type: String,
       required: true,
     },
   },
   computed: {
-    color_selection: function () {
-      const non_green_ranges = [...Array(71).keys(), ...[...Array(360).keys()].splice(170)];
+    colorSelection: function () {
+      const nonGreenRanges = [...Array(71).keys(), ...[...Array(360).keys()].splice(170)];
 
-      return non_green_ranges.filter((hue) => hue % 23 === 0).map((hue) => `hsla(${hue}, 100%, 50%, 1)`);
+      return nonGreenRanges.filter((hue) => hue % 23 === 0).map((hue) => `hsla(${hue}, 100%, 50%, 1)`);
     },
   },
   methods: {
-    handle_color_selection({ target }) {
-      const color_to_emit = !target ? this.current_color : target.id;
-      this.$emit("change_pulse_color", color_to_emit);
+    handleColorSelection({ target }) {
+      const colorToEmit = !target ? this.currentColor : target.id;
+      this.$emit("change-pulse-color", colorToEmit);
     },
   },
 };
@@ -79,10 +79,10 @@ export default {
     "4 5 6 7"
     "8 9 10 11";
 }
-.individual_color_block {
+.individual-color-block {
   border: 1px solid #292929;
 }
-.individual_color_block:hover {
+.individual-color-block:hover {
   border: 2px solid white;
   cursor: pointer;
 }

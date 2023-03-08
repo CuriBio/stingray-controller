@@ -1,6 +1,6 @@
 import { mount } from "@vue/test-utils";
 import ComponentToTest from "@/components/settings/EditUser.vue";
-import { EditUser as DistComponentToTest } from "@/dist/mantarray.common";
+import { EditUser as DistComponentToTest } from "@/dist/stingray.common";
 
 import Vue from "vue";
 import Vuex from "vuex";
@@ -9,7 +9,7 @@ import { createLocalVue } from "@vue/test-utils";
 import BootstrapVue from "bootstrap-vue";
 import "bootstrap/dist/css/bootstrap.min.css";
 import uuid from "@tofandel/uuid-base62";
-import { TextValidation } from "@/js_utils/text_validation.js";
+import { TextValidation } from "@/js-utils/TextValidation.js";
 let wrapper = null;
 
 const localVue = createLocalVue();
@@ -34,7 +34,7 @@ describe("EditUser", () => {
     const editcustomer = {
       uuid: "",
       passkey: "",
-      user_name: "",
+      userName: "",
     };
     const propsData = {
       dialogdata: editcustomer,
@@ -53,18 +53,18 @@ describe("EditUser", () => {
         propsData,
         localVue,
       });
-      const target_span = wrapper.find(".span__edituser-form-controls-content-title");
-      expect(target_span.text()).toStrictEqual("Edit User Credentials");
+      const targetSpan = wrapper.find(".span__edituser-form-controls-content-title");
+      expect(targetSpan.text()).toStrictEqual("Edit User Credentials");
     });
   });
 
-  describe("EditUser.invalid_creds", () => {
+  describe("EditUser.invalidCreds", () => {
     const propsData = {
-      open_for_invalid_creds: true,
+      openForInvalidCreds: true,
       dialogdata: {
-        customer_id: "test_id",
-        passkey: "test_pass",
-        user_name: "test_user_name",
+        customerId: "testId",
+        passkey: "testPass",
+        userName: "testUserName",
       },
     };
     beforeEach(async () => {
@@ -76,43 +76,43 @@ describe("EditUser", () => {
     });
     afterEach(() => wrapper.destroy());
     test("When mounting EditUser with invalid credentials, Then it loads with 'Invalid Customer ID, Username, or Password' text", () => {
-      const id_error_message = wrapper.find("#input-widget-feedback-customer-id");
-      const pass_error_message = wrapper.find("#input-widget-feedback-passkey-id");
-      const user_name_error_message = wrapper.find("#input-widget-feedback-username");
+      const idErrorMessage = wrapper.find("#input-widget-feedback-customer-id");
+      const passErrorMessage = wrapper.find("#input-widget-feedback-passkey-id");
+      const userNameErrorMessage = wrapper.find("#input-widget-feedback-username");
 
-      const invalid_text = "Invalid Customer ID, Username, or Password";
+      const invalidText = "Invalid Customer ID, Username, or Password";
 
-      expect(id_error_message.text()).toStrictEqual(invalid_text);
-      expect(pass_error_message.text()).toStrictEqual(invalid_text);
-      expect(user_name_error_message.text()).toStrictEqual(invalid_text);
+      expect(idErrorMessage.text()).toStrictEqual(invalidText);
+      expect(passErrorMessage.text()).toStrictEqual(invalidText);
+      expect(userNameErrorMessage.text()).toStrictEqual(invalidText);
     });
     test.each(["passkey-id", "customer-id", "username"])(
       "When EditUser has invalid credentials, Then both ID and passkey will mount with invalid text and will both become become valid with any change to %s",
-      async (selector_id_suffix) => {
-        const id_error_message = wrapper.find("#input-widget-feedback-customer-id");
-        const pass_error_message = wrapper.find("#input-widget-feedback-passkey-id");
-        const user_name_error_message = wrapper.find("#input-widget-feedback-username");
-        const invalid_text = "Invalid Customer ID, Username, or Password";
+      async (selectorIdSuffix) => {
+        const idErrorMessage = wrapper.find("#input-widget-feedback-customer-id");
+        const passErrorMessage = wrapper.find("#input-widget-feedback-passkey-id");
+        const userNameErrorMessage = wrapper.find("#input-widget-feedback-username");
+        const invalidText = "Invalid Customer ID, Username, or Password";
 
-        expect(id_error_message.text()).toStrictEqual(invalid_text);
-        expect(pass_error_message.text()).toStrictEqual(invalid_text);
-        expect(user_name_error_message.text()).toStrictEqual(invalid_text);
+        expect(idErrorMessage.text()).toStrictEqual(invalidText);
+        expect(passErrorMessage.text()).toStrictEqual(invalidText);
+        expect(userNameErrorMessage.text()).toStrictEqual(invalidText);
 
-        const target_input_field = wrapper.find("#input-widget-field-" + selector_id_suffix);
-        await target_input_field.setValue("new entry");
+        const targetInputField = wrapper.find("#input-widget-field-" + selectorIdSuffix);
+        await targetInputField.setValue("new entry");
         await wrapper.vm.$nextTick(); // wait for update
 
-        expect(id_error_message.text()).toStrictEqual("");
-        expect(pass_error_message.text()).toStrictEqual("");
-        expect(user_name_error_message.text()).toStrictEqual("");
+        expect(idErrorMessage.text()).toStrictEqual("");
+        expect(passErrorMessage.text()).toStrictEqual("");
+        expect(userNameErrorMessage.text()).toStrictEqual("");
       }
     );
   });
-  describe("EditUser.enter_uuidbase57", () => {
+  describe("EditUser.enterUuidbase57", () => {
     const editcustomer = {
       uuid: "",
       passkey: "",
-      user_name: "",
+      userName: "",
     };
     afterEach(() => {
       wrapper.destroy();
@@ -120,26 +120,26 @@ describe("EditUser", () => {
     });
 
     test.each([
-      ["06ad547f-fe02-477b-9473-f7977e4d5e14k", "ID", "customer-id", "validate_user_account_input"],
-      ["Cat lab;", "ID", "customer-id", "validate_user_account_input"],
-      ["Experiment anemia -1", "ID", "customer-id", "validate_user_account_input"],
-      ["Cat * lab", "passkey", "passkey-id", "validate_user_account_input"],
-      ["Valid", "passkey", "passkey-id", "validate_user_account_input"],
-      ["Cat lab", "passkey", "passkey-id", "validate_user_account_input"],
-      ["Experiment anemia alpha cells -1", "user_name", "username", "validate_user_account_input"],
-      ["C", "user_name", "username", "validate_user_account_input"],
-      ["", "user_name", "username", "validate_user_account_input"],
+      ["06ad547f-fe02-477b-9473-f7977e4d5e14k", "ID", "customer-id", "validateUserAccountInput"],
+      ["Cat lab;", "ID", "customer-id", "validateUserAccountInput"],
+      ["Experiment anemia -1", "ID", "customer-id", "validateUserAccountInput"],
+      ["Cat * lab", "passkey", "passkey-id", "validateUserAccountInput"],
+      ["Valid", "passkey", "passkey-id", "validateUserAccountInput"],
+      ["Cat lab", "passkey", "passkey-id", "validateUserAccountInput"],
+      ["Experiment anemia alpha cells -1", "userName", "username", "validateUserAccountInput"],
+      ["C", "userName", "username", "validateUserAccountInput"],
+      ["", "userName", "username", "validateUserAccountInput"],
     ])(
       "When the text %s (%s) is entered into the field found with the selector ID %s, Then the correct text validation function (%s) is called and the error message from the validation function is rendered below the input in the DOM",
-      async (entry, text_id, selector_id_suffix, text_validation_type) => {
-        if (selector_id_suffix === "customer-id") {
-          editcustomer.customer_id = entry;
+      async (entry, textId, selectorIdSuffix, TextValidationType) => {
+        if (selectorIdSuffix === "customer-id") {
+          editcustomer.customerId = entry;
         }
-        if (selector_id_suffix === "passkey-id") {
+        if (selectorIdSuffix === "passkey-id") {
           editcustomer.passkey = entry;
         }
-        if (selector_id_suffix === "username") {
-          editcustomer.user_name = entry;
+        if (selectorIdSuffix === "username") {
+          editcustomer.userName = entry;
         }
 
         const propsData = {
@@ -151,18 +151,18 @@ describe("EditUser", () => {
           localVue,
         });
 
-        const spied_text_validator = jest.spyOn(TextValidation.prototype, text_validation_type);
+        const spiedTextValidator = jest.spyOn(TextValidation.prototype, TextValidationType);
 
-        const target_input_field = wrapper.find("#input-widget-field-" + selector_id_suffix);
+        const targetInputField = wrapper.find("#input-widget-field-" + selectorIdSuffix);
 
-        const target_error_message = wrapper.find("#input-widget-feedback-" + selector_id_suffix);
+        const targetErrorMessage = wrapper.find("#input-widget-feedback-" + selectorIdSuffix);
 
-        target_input_field.setValue(entry);
+        targetInputField.setValue(entry);
 
         await wrapper.vm.$nextTick();
-        expect(spied_text_validator).toHaveBeenCalledWith(entry, text_id);
+        expect(spiedTextValidator).toHaveBeenCalledWith(entry, textId);
 
-        expect(target_error_message.text()).toStrictEqual(spied_text_validator.mock.results[0].value);
+        expect(targetErrorMessage.text()).toStrictEqual(spiedTextValidator.mock.results[0].value);
       }
     );
 
@@ -172,7 +172,7 @@ describe("EditUser", () => {
       ["username", "This field is required"],
     ])(
       "Given some nonsense value in the input field with the DOM Id suffix %s, When the input field is updated to be a blank value, Then the error message below the text in the DOM matches what the business logic dictates (%s)",
-      async (selector_id_suffix, expected_message) => {
+      async (selectorIdSuffix, expectedMessage) => {
         const propsData = {
           dialogdata: editcustomer,
         };
@@ -182,26 +182,26 @@ describe("EditUser", () => {
           localVue,
         });
 
-        const target_input_field = wrapper.find("#input-widget-field-" + selector_id_suffix);
-        const target_error_message = wrapper.find("#input-widget-feedback-" + selector_id_suffix);
-        target_input_field.setValue("blah");
+        const targetInputField = wrapper.find("#input-widget-field-" + selectorIdSuffix);
+        const targetErrorMessage = wrapper.find("#input-widget-feedback-" + selectorIdSuffix);
+        targetInputField.setValue("blah");
         await wrapper.vm.$nextTick();
         // confirm that the pre-condition is different
-        expect(target_error_message.text()).not.toStrictEqual(expected_message);
+        expect(targetErrorMessage.text()).not.toStrictEqual(expectedMessage);
 
-        target_input_field.setValue("");
+        targetInputField.setValue("");
         await wrapper.vm.$nextTick();
 
-        expect(target_error_message.text()).toStrictEqual(expected_message);
+        expect(targetErrorMessage.text()).toStrictEqual(expectedMessage);
       }
     );
   });
 
-  describe("EditUser.enable_save_button", () => {
+  describe("EditUser.enableSaveButton", () => {
     const editcustomer = {
       uuid: "",
       passkey: "",
-      user_name: "",
+      userName: "",
     };
     afterEach(() => wrapper.destroy());
     test.each([
@@ -216,15 +216,15 @@ describe("EditUser", () => {
       ["fasd44", "06ad54", "Experiment anemia -1", "color: rgb(255, 255, 255);"],
       ["", "", "Experiment anemia -1", "color: rgb(63, 63, 63);"],
     ])(
-      "Given an UUID (%s), pass Key (%s), user_name (%s) for 'Edit Customer' as input, When the input contains based on valid the critera or failure, Then display of Label 'Save ID' is visible or greyed (%s)",
-      async (uuid, passkey, user_name, save_btn_css) => {
-        const selector_id_suffix_alphanumeric_id = "customer-id";
-        const selector_id_suffix_passkey_id = "passkey-id";
-        const selector_id_suffix_user_name = "username";
+      "Given an UUID (%s), pass Key (%s), userName (%s) for 'Edit Customer' as input, When the input contains based on valid the critera or failure, Then display of Label 'Save ID' is visible or greyed (%s)",
+      async (uuid, passkey, userName, saveBtnCss) => {
+        const selectorIdSuffixAlphanumericId = "customer-id";
+        const selectorIdSuffixPasskeyId = "passkey-id";
+        const selectorIdSuffixUserName = "username";
 
         editcustomer.uuid = uuid;
         editcustomer.passkey = passkey;
-        editcustomer.user_name = user_name;
+        editcustomer.userName = userName;
 
         const propsData = {
           dialogdata: editcustomer,
@@ -235,39 +235,33 @@ describe("EditUser", () => {
           localVue,
         });
 
-        const target_input_field_uuid = wrapper.find(
-          "#input-widget-field-" + selector_id_suffix_alphanumeric_id
-        );
-        target_input_field_uuid.setValue(uuid);
+        const targetInputFieldUuid = wrapper.find("#input-widget-field-" + selectorIdSuffixAlphanumericId);
+        targetInputFieldUuid.setValue(uuid);
         await wrapper.vm.$nextTick();
-        const target_input_field_passkey = wrapper.find(
-          "#input-widget-field-" + selector_id_suffix_passkey_id
-        );
-        target_input_field_passkey.setValue(passkey);
+        const targetInputFieldPasskey = wrapper.find("#input-widget-field-" + selectorIdSuffixPasskeyId);
+        targetInputFieldPasskey.setValue(passkey);
         await wrapper.vm.$nextTick();
 
-        const target_input_field_user_name = wrapper.find(
-          "#input-widget-field-" + selector_id_suffix_user_name
-        );
-        target_input_field_user_name.setValue(user_name);
+        const targetInputFieldUserName = wrapper.find("#input-widget-field-" + selectorIdSuffixUserName);
+        targetInputFieldUserName.setValue(userName);
         await wrapper.vm.$nextTick();
 
-        const target_button_label_btn = wrapper.findAll(".span__button_label");
-        const cancel_btn = target_button_label_btn.at(0);
-        expect(cancel_btn.attributes().style).toContain("color: rgb(255, 255, 255);");
-        const delete_btn = target_button_label_btn.at(1);
-        expect(delete_btn.attributes().style).toContain("color: rgb(255, 255, 255);");
-        const save_btn = target_button_label_btn.at(2);
-        expect(save_btn.attributes().style).toContain(save_btn_css);
+        const targetButtonLabelBtn = wrapper.findAll(".span__button-label");
+        const cancelBtn = targetButtonLabelBtn.at(0);
+        expect(cancelBtn.attributes().style).toContain("color: rgb(255, 255, 255);");
+        const deleteBtn = targetButtonLabelBtn.at(1);
+        expect(deleteBtn.attributes().style).toContain("color: rgb(255, 255, 255);");
+        const saveBtn = targetButtonLabelBtn.at(2);
+        expect(saveBtn.attributes().style).toContain(saveBtnCss);
       }
     );
   });
 
-  describe("EditUser.clicked_button", () => {
+  describe("EditUser.clickedButton", () => {
     const editcustomer = {
-      customer_id: "",
+      customerId: "",
       passkey: "",
-      user_name: "",
+      userName: "",
     };
     afterEach(() => wrapper.destroy());
     test.each([
@@ -281,23 +275,23 @@ describe("EditUser", () => {
         "color: rgb(255, 255, 255);",
       ],
     ])(
-      "Given an UUID(%s) , pass Key(%s), user_name(%s) for 'Edit Customer' as input, When the input contains based on valid the critera or failure %s %s %s, Then display of Label 'Save ID' is visible %s, click on Cancel, an event 'cancel-id' is emmited to the parent, click on Delete an event 'delete-id' is emmited to the parent, and click on Save an event 'save-id' is emmited to parent",
+      "Given an UUID(%s) , pass Key(%s), userName(%s) for 'Edit Customer' as input, When the input contains based on valid the critera or failure %s %s %s, Then display of Label 'Save ID' is visible %s, click on Cancel, an event 'cancel-id' is emmited to the parent, click on Delete an event 'delete-id' is emmited to the parent, and click on Save an event 'save-id' is emmited to parent",
       async (
-        uuid_test,
-        passkey_test,
-        user_name_test,
-        invalid_passkey,
-        invalid_uuid,
-        invalid_user_name,
-        save_btn_css
+        uuidTest,
+        passkeyTest,
+        userNameTest,
+        invalidPasskey,
+        invalidUuid,
+        invalidUserName,
+        saveBtnCss
       ) => {
-        const selector_id_suffix_alphanumeric_id = "customer-id";
-        const selector_id_suffix_passkey_id = "passkey-id";
-        const selector_id_suffix_user_name = "username";
+        const selectorIdSuffixAlphanumericId = "customer-id";
+        const selectorIdSuffixPasskeyId = "passkey-id";
+        const selectorIdSuffixUserName = "username";
 
-        editcustomer.customer_id = uuid_test;
-        editcustomer.passkey = passkey_test;
-        editcustomer.user_name = user_name_test;
+        editcustomer.customerId = uuidTest;
+        editcustomer.passkey = passkeyTest;
+        editcustomer.userName = userNameTest;
 
         const propsData = {
           dialogdata: editcustomer,
@@ -308,69 +302,59 @@ describe("EditUser", () => {
           localVue,
         });
 
-        const target_input_field_uuid = wrapper.find(
-          "#input-widget-field-" + selector_id_suffix_alphanumeric_id
+        const targetInputFieldUuid = wrapper.find("#input-widget-field-" + selectorIdSuffixAlphanumericId);
+        const targetErrorMessageUuid = wrapper.find(
+          "#input-widget-feedback-" + selectorIdSuffixAlphanumericId
         );
-        const target_error_message_uuid = wrapper.find(
-          "#input-widget-feedback-" + selector_id_suffix_alphanumeric_id
-        );
-        target_input_field_uuid.setValue(uuid_test);
+        targetInputFieldUuid.setValue(uuidTest);
         await wrapper.vm.$nextTick();
 
-        expect(target_error_message_uuid.text()).toStrictEqual(invalid_uuid);
+        expect(targetErrorMessageUuid.text()).toStrictEqual(invalidUuid);
 
-        const target_input_field_passkey = wrapper.find(
-          "#input-widget-field-" + selector_id_suffix_passkey_id
-        );
-        const target_error_message_passkey = wrapper.find(
-          "#input-widget-feedback-" + selector_id_suffix_passkey_id
-        );
-        target_input_field_passkey.setValue(passkey_test);
+        const targetInputFieldPasskey = wrapper.find("#input-widget-field-" + selectorIdSuffixPasskeyId);
+        const targetErrorMessagePasskey = wrapper.find("#input-widget-feedback-" + selectorIdSuffixPasskeyId);
+        targetInputFieldPasskey.setValue(passkeyTest);
         await wrapper.vm.$nextTick();
 
-        expect(target_error_message_passkey.text()).toStrictEqual(invalid_passkey);
+        expect(targetErrorMessagePasskey.text()).toStrictEqual(invalidPasskey);
 
-        const target_input_field_user_name = wrapper.find(
-          "#input-widget-field-" + selector_id_suffix_user_name
-        );
-        const target_error_message_user_name = wrapper.find(
-          "#input-widget-feedback-" + selector_id_suffix_user_name
-        );
-        target_input_field_user_name.setValue(user_name_test);
+        const targetInputFieldUserName = wrapper.find("#input-widget-field-" + selectorIdSuffixUserName);
+        const targetErrorMessageUserName = wrapper.find("#input-widget-feedback-" + selectorIdSuffixUserName);
+        targetInputFieldUserName.setValue(userNameTest);
         await wrapper.vm.$nextTick();
 
-        expect(target_error_message_user_name.text()).toStrictEqual(invalid_user_name);
+        expect(targetErrorMessageUserName.text()).toStrictEqual(invalidUserName);
 
-        const target_button_label_btn = wrapper.findAll(".span__button_label");
-        const cancel_btn = target_button_label_btn.at(0);
-        expect(cancel_btn.attributes().style).toContain("color: rgb(255, 255, 255);");
-        const delete_btn = target_button_label_btn.at(1);
-        expect(delete_btn.attributes().style).toContain("color: rgb(255, 255, 255);");
-        const save_btn = target_button_label_btn.at(2);
-        expect(save_btn.attributes().style).toContain(save_btn_css);
+        const targetButtonLabelBtn = wrapper.findAll(".span__button-label");
+        const cancelBtn = targetButtonLabelBtn.at(0);
+        expect(cancelBtn.attributes().style).toContain("color: rgb(255, 255, 255);");
+        const deleteBtn = targetButtonLabelBtn.at(1);
+        expect(deleteBtn.attributes().style).toContain("color: rgb(255, 255, 255);");
+        const saveBtn = targetButtonLabelBtn.at(2);
+        expect(saveBtn.attributes().style).toContain(saveBtnCss);
 
-        await cancel_btn.trigger("click");
+        await cancelBtn.trigger("click");
         await wrapper.vm.$nextTick();
-        const cancel_id_events = wrapper.emitted("cancel-id");
-        expect(cancel_id_events).toHaveLength(1);
-        expect(cancel_id_events[0]).toStrictEqual([]);
+        const cancelIdEvents = wrapper.emitted("cancel-id");
+        expect(cancelIdEvents).toHaveLength(1);
+        expect(cancelIdEvents[0]).toStrictEqual([]);
 
-        await delete_btn.trigger("click");
-        await wrapper.vm.$nextTick();
-
-        const delete_id_events = wrapper.emitted("delete-id");
-        expect(delete_id_events).toHaveLength(1);
-
-        await save_btn.trigger("click");
+        await deleteBtn.trigger("click");
         await wrapper.vm.$nextTick();
 
-        const save_id_events = wrapper.emitted("save-id");
-        expect(save_id_events).toHaveLength(1);
-        expect(save_id_events[0]).toStrictEqual([
+        const deleteIdEvents = wrapper.emitted("delete-id");
+        expect(deleteIdEvents).toHaveLength(1);
+
+        await saveBtn.trigger("click");
+        await wrapper.vm.$nextTick();
+
+        const saveIdEvents = wrapper.emitted("save-id");
+        expect(saveIdEvents).toHaveLength(1);
+        expect(saveIdEvents[0]).toStrictEqual([
           {
-            customer_id: uuid_test,
-            user_password: passkey_test,
-            user_name: user_name_test,
+            customerId: uuidTest,
+            userPassword: passkeyTest,
+            userName: userNameTest,
           },
         ]);
       }

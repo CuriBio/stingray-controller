@@ -1,9 +1,9 @@
 <template>
   <div class="div__status-bar">
-    <span class="span__status-bar-text">{{ status_label }}: {{ alert_txt }}</span>
+    <span class="span__status-bar-text">Status: {{ alertTxt }}</span>
     <span>
       <b-modal id="error-catch" size="sm" hide-footer hide-header hide-header-close :static="true">
-        <ErrorCatchWidget :log_filepath="log_path" @ok-clicked="close_modals_by_id(['error-catch'])" />
+        <ErrorCatchWidget :logFilepath="logPath" @ok-clicked="closeModalsById(['error-catch'])" />
       </b-modal>
       <b-modal
         id="fw-updates-complete-message"
@@ -15,22 +15,8 @@
         :no-close-on-backdrop="true"
       >
         <StatusWarningWidget
-          :modal_labels="fw_updates_complete_labels"
-          @handle_confirmation="close_modals_by_id(['fw-updates-complete-message'])"
-        />
-      </b-modal>
-      <b-modal
-        id="h5_warning"
-        size="sm"
-        hide-footer
-        hide-header
-        hide-header-close
-        :static="true"
-        :no-close-on-backdrop="true"
-      >
-        <StatusWarningWidget
-          :modal_labels="h5_warning_label"
-          @handle_confirmation="close_modals_by_id(['h5_warning'])"
+          :modalLabels="fwUpdatesCompleteLabels"
+          @handle-confirmation="closeModalsById(['fw-updates-complete-message'])"
         />
       </b-modal>
       <b-modal
@@ -43,9 +29,9 @@
         :no-close-on-backdrop="true"
       >
         <StatusWarningWidget
-          :modal_labels="short_circuit_labels"
-          :email_error="true"
-          @handle_confirmation="close_modals_by_id(['short-circuit-err'])"
+          :modalLabels="shortCircuitLabels"
+          :emailError="true"
+          @handle-confirmation="closeModalsById(['short-circuit-err'])"
         />
       </b-modal>
       <b-modal
@@ -57,7 +43,7 @@
         :static="true"
         :no-close-on-backdrop="true"
       >
-        <StatusSpinnerWidget :modal_labels="fw_update_in_progress_labels" />
+        <StatusSpinnerWidget :modalLabels="fwUpdateInProgressLabels" />
       </b-modal>
       <b-modal
         id="sw-update-message"
@@ -68,7 +54,7 @@
         :static="true"
         :no-close-on-backdrop="true"
       >
-        <StatusWarningWidget :modal_labels="sw_update_labels" @handle_confirmation="close_sw_update_modal" />
+        <StatusWarningWidget :modalLabels="swUpdateLabels" @handle-confirmation="closeSwUpdateModal" />
       </b-modal>
       <b-modal
         id="fw-closure-warning"
@@ -80,8 +66,8 @@
         :no-close-on-backdrop="true"
       >
         <StatusWarningWidget
-          :modal_labels="fw_closure_warning_labels"
-          @handle_confirmation="handle_confirmation"
+          :modalLabels="fwClosureWarningLabels"
+          @handle-confirmation="handleConfirmation"
         />
       </b-modal>
       <b-modal
@@ -93,7 +79,7 @@
         :static="true"
         :no-close-on-backdrop="true"
       >
-        <StatusWarningWidget @handle_confirmation="handle_confirmation" />
+        <StatusWarningWidget @handle-confirmation="handleConfirmation" />
       </b-modal>
       <b-modal
         id="failed-qc-check"
@@ -104,7 +90,7 @@
         :static="true"
         :no-close-on-backdrop="true"
       >
-        <StimQCSummary @handle_confirmation="close_modals_by_id(['failed-qc-check'])" />
+        <StimQCSummary @handle-confirmation="closeModalsById(['failed-qc-check'])" />
       </b-modal>
       <b-modal
         id="success-qc-check"
@@ -116,36 +102,8 @@
         :no-close-on-backdrop="true"
       >
         <StatusWarningWidget
-          :modal_labels="successful_qc_check_labels"
-          @handle_confirmation="close_modals_by_id(['success-qc-check'])"
-        />
-      </b-modal>
-      <b-modal
-        id="active-processes-warning"
-        size="sm"
-        hide-footer
-        hide-header
-        hide-header-close
-        :static="true"
-        :no-close-on-backdrop="true"
-      >
-        <StatusWarningWidget
-          :modal_labels="active_processes_modal_labels"
-          @handle_confirmation="close_da_check_modal"
-        />
-      </b-modal>
-      <b-modal
-        id="initializing-warning"
-        size="sm"
-        hide-footer
-        hide-header
-        hide-header-close
-        :static="true"
-        :no-close-on-backdrop="true"
-      >
-        <StatusWarningWidget
-          :modal_labels="initializing_modal_labels"
-          @handle_confirmation="close_da_check_modal"
+          :modalLabels="successfulQcCheckLabels"
+          @handle-confirmation="closeModalsById(['success-qc-check'])"
         />
       </b-modal>
     </span>
@@ -154,9 +112,8 @@
 <script>
 import Vue from "vue";
 import { mapGetters, mapState } from "vuex";
-import { STATUS } from "@/store/modules/flask/enums";
+import { STATUS } from "@/store/modules/system/enums";
 import { STIM_STATUS } from "@/store/modules/stimulation/enums";
-import { ENUMS } from "@/store/modules/playback/enums";
 import BootstrapVue from "bootstrap-vue";
 import { BButton } from "bootstrap-vue";
 import { BModal } from "bootstrap-vue";
@@ -168,11 +125,7 @@ import StimQCSummary from "@/components/status/StimQCSummary.vue";
 Vue.use(BootstrapVue);
 Vue.component("BButton", BButton);
 Vue.component("BModal", BModal);
-/**
- * @vue-data     {String} alert_txt - Contains the current status of the Application and its updated as status change.
- * @vue-computed {String} status_uuid - Contains a UUID which represents a meaningful information, from Vuex store.
- * @vue-event    {Event} status_uuid - A function which is invoked when UUID is modified in the Vuex store.
- */
+
 export default {
   name: "StatusBar",
   components: {
@@ -181,340 +134,239 @@ export default {
     StatusSpinnerWidget,
     StimQCSummary,
   },
-  props: {
-    stim_specific: {
-      type: Boolean,
-      default: false,
-    },
-    da_check: {
-      type: Boolean,
-      default: false,
-    },
-  },
   data() {
     return {
-      alert_txt: "",
-      fw_closure_warning_labels: {
+      alertTxt: "",
+      fwClosureWarningLabels: {
         header: "Warning!",
-        msg_one:
-          "A firmware update for the Mantarray instrument is in progress. Closing the software now could damage the instrument.",
-        msg_two: "Are you sure you want to exit?",
-        button_names: ["Cancel", "Yes"],
+        msgOne:
+          "A firmware update for the Stingray instrument is in progress. Closing the software now could damage the instrument.",
+        msgTwo: "Are you sure you want to exit?",
+        buttonNames: ["Cancel", "Yes"],
       },
-      fw_updates_complete_labels: {
+      fwUpdatesCompleteLabels: {
         header: "Important!",
-        msg_one: "Firmware updates have been successfully installed.",
-        msg_two:
-          "Please close the Mantarray software, power the Mantarray instrument off and on, then restart the Mantarray software.",
-        button_names: ["Okay"],
+        msgOne: "Firmware updates have been successfully installed.",
+        msgTwo:
+          "Please close the Stingray software, power the Stingray instrument off and on, then restart the Stingray software.",
+        buttonNames: ["Okay"],
       },
-      sw_update_labels: {
+      swUpdateLabels: {
         header: "Important!",
-        msg_one: "A software update will be installed after exiting.",
-        msg_two:
+        msgOne: "A software update will be installed after exiting.",
+        msgTwo:
           "The installer may prompt you to take action while it is running. Please watch it after this software closes.",
-        button_names: ["Okay"],
+        buttonNames: ["Okay"],
       },
-      short_circuit_labels: {
+      shortCircuitLabels: {
         header: "Error!",
-        msg_one:
-          "A short circuit has been found during the configuration check. Replace the stimulation lid.",
-        msg_two: "If the issue persists, please contact:  ",
-        button_names: ["Okay"],
+        msgOne: "A short circuit has been found during the configuration check. Replace the stimulation lid.",
+        msgTwo: "If the issue persists, please contact:  ",
+        buttonNames: ["Okay"],
       },
-      successful_qc_check_labels: {
+      successfulQcCheckLabels: {
         header: "Configuration Check Complete!",
-        msg_one: "No open circuits were detected in a well assigned with a protocol.",
-        msg_two: "You can now run this stimulation.",
-        button_names: ["Okay"],
-      },
-      active_processes_modal_labels: {
-        header: "Warning!",
-        msg_one: "Data analysis cannot be performed while other processes are running.",
-        msg_two: "Active processes will be automatically stopped if you choose to continue.",
-        button_names: ["Cancel", "Continue"],
-      },
-      initializing_modal_labels: {
-        header: "Warning!",
-        msg_one: "Data analysis cannot be performed while the instrument is initializing or calibrating.",
-        msg_two: "It will become available shortly.",
-        button_names: ["Close"],
-      },
-      h5_warning_label: {
-        header: "Error!",
-        msg_one: "Corrupt h5 files found",
-        msg_two: "",
-        button_names: ["Close"],
+        msgOne: "No open circuits were detected in a well assigned with a protocol.",
+        msgTwo: "You can now run this stimulation.",
+        buttonNames: ["Okay"],
       },
     };
   },
   computed: {
     ...mapGetters({
-      status_uuid: "flask/status_id",
+      statusUuid: "system/statusId",
     }),
-    ...mapState("playback", ["data_analysis_state", "is_recording_snapshot_running"]),
-    ...mapState("stimulation", ["protocol_assignments", "stim_play_state", "stim_status"]),
-    ...mapState("data", ["stimulator_circuit_statuses", "h5_warning"]),
-    ...mapState("settings", [
-      "log_path",
-      "shutdown_error_status",
-      "total_uploaded_files",
-      "total_file_count",
-      "beta_2_mode",
-      "software_update_available",
-      "allow_sw_update_install",
-      "firmware_update_dur_mins",
-      "confirmation_request",
+    ...mapState("stimulation", [
+      "stimulatorCircuitStatuses",
+      "protocolAssignments",
+      "stimPlayState",
+      "stimStatus",
     ]),
-    fw_update_in_progress_labels: function () {
-      let duration = `${this.firmware_update_dur_mins} minute`;
-      if (this.firmware_update_dur_mins !== 1) duration += "s";
+    ...mapState("settings", ["logPath"]),
+    ...mapState("system", [
+      "shutdownErrorStatus",
+      "softwareUpdateAvailable",
+      "allowSWUpdateInstall",
+      "firmwareUpdateDurMins",
+      "confirmationRequest",
+      "statusUuid",
+    ]),
+    fwUpdateInProgressLabels: function () {
+      let duration = `${this.firmwareUpdateDurMins} minute`;
+      if (this.firmwareUpdateDurMins !== 1) duration += "s";
       return {
         header: "Important!",
-        msg_one: `The firmware update is in progress. It will take about ${duration} to complete.`,
-        msg_two: "Do not close the Mantarray software or power off the Mantarray instrument.",
+        msgOne: `The firmware update is in progress. It will take about ${duration} to complete.`,
+        msgTwo: "Do not close the Stingray software or power off the Stingray instrument.",
       };
     },
-    status_label: function () {
-      return this.stim_specific ? "Stim status" : "System status";
-    },
-    assigned_open_circuits: function () {
+
+    assignedOpenCircuits: function () {
       // filter for matching indices
-      return this.stimulator_circuit_statuses.filter((well) =>
-        Object.keys(this.protocol_assignments).includes(well.toString())
+      return this.stimulatorCircuitStatuses.filter((well) =>
+        Object.keys(this.protocolAssignments).includes(well.toString())
       );
     },
-    is_playback_active: function () {
-      return [STATUS.MESSAGE.LIVE_VIEW_ACTIVE, STATUS.MESSAGE.RECORDING, STATUS.MESSAGE.BUFFERING].includes(
-        this.status_uuid
-      );
-    },
-    is_initializing: function () {
+    isInitializing: function () {
       return [
-        STATUS.MESSAGE.SERVER_BOOTING_UP,
-        STATUS.MESSAGE.SERVER_STILL_INITIALIZING,
-        STATUS.MESSAGE.SERVER_READY,
-        STATUS.MESSAGE.INITIALIZING_INSTRUMENT,
-        STATUS.MESSAGE.CALIBRATING, // this is added to be included in specific modal
-      ].includes(this.status_uuid);
+        STATUS.SERVER_INITIALIZING_STATE,
+        STATUS.SERVER_READY_STATE,
+        STATUS.INSTRUMENT_INITIALIZING_STATE,
+      ].includes(this.statusUuid);
     },
-    is_updating: function () {
+    isUpdating: function () {
       return [
-        STATUS.MESSAGE.CHECKING_FOR_UPDATES,
-        STATUS.MESSAGE.INSTALLING_UPDATES,
-        STATUS.MESSAGE.DOWNLOADING_UPDATES,
-      ].includes(this.status_uuid);
-    },
-    is_data_analysis_enabled: function () {
-      return !this.stim_play_state && !this.is_playback_active && !this.is_initializing && !this.is_updating;
+        STATUS.CHECKING_FOR_UPDATES_STATE,
+        STATUS.INSTALLING_UPDATES_STATE,
+        STATUS.DOWNLOADING_UPDATES_STATE,
+      ].includes(this.statusUuid);
     },
   },
   watch: {
-    status_uuid: function (new_status) {
+    statusUuid: function (newStatus) {
       // set message for stimulation status and system status if error occurs
-      if (!this.stim_specific && !this.shutdown_error_status) this.set_system_specific_status(new_status);
+      if (!this.shutdownErrorStatus && newStatus !== STATUS.IDLE_READY_STATE)
+        this.setSystemSpecificStatus(newStatus);
+      else if (newStatus === STATUS.IDLE_READY_STATE) this.setStimSpecificStatus();
     },
-    stim_status: function (new_status) {
-      if (this.stim_specific) this.set_stim_specific_status(new_status);
+    stimStatus: function (newStatus) {
+      // only let stim messages through if system is in idle ready state
+      if (this.statusUuid === STATUS.IDLE_READY_STATE) this.setStimSpecificStatus(newStatus);
     },
-    confirmation_request: function () {
-      const sensitive_ops_in_progress =
-        this.is_playback_active ||
-        this.status_uuid === STATUS.MESSAGE.CALIBRATING ||
-        this.stim_status === STIM_STATUS.CONFIG_CHECK_IN_PROGRESS ||
-        this.stim_play_state ||
-        this.total_uploaded_files.length < this.total_file_count ||
-        this.is_recording_snapshot_running;
+    confirmationRequest: function () {
+      const stimOpsInProgress =
+        this.stimStatus === STIM_STATUS.CONFIG_CHECK_IN_PROGRESS || this.stimPlayState;
 
-      const data_analysis_in_progress = this.data_analysis_state === ENUMS.DATA_ANALYSIS_STATE.ACTIVE;
+      const fwUpdateInProgress =
+        this.statusUuid === STATUS.DOWNLOADING_UPDATES_STATE ||
+        this.statusUuid === STATUS.INSTALLING_UPDATES_STATE;
 
-      const fw_update_in_progress =
-        this.status_uuid === STATUS.MESSAGE.DOWNLOADING_UPDATES ||
-        this.status_uuid === STATUS.MESSAGE.INSTALLING_UPDATES;
-
-      if (this.confirmation_request && !this.stim_specific && !data_analysis_in_progress) {
-        if (fw_update_in_progress) {
+      if (this.confirmationRequest) {
+        if (fwUpdateInProgress) {
           this.$bvModal.show("fw-closure-warning");
-        } else if (sensitive_ops_in_progress) {
+        } else if (stimOpsInProgress) {
           this.$bvModal.show("ops-closure-warning");
         } else {
-          this.handle_confirmation(1);
+          this.handleConfirmation(1);
         }
       }
     },
-    da_check: function (new_val, _) {
-      if (new_val) {
-        if (!this.is_data_analysis_enabled) {
-          this.is_initializing || this.is_updating
-            ? this.$bvModal.show("initializing-warning")
-            : this.$bvModal.show("active-processes-warning");
-        } else {
-          this.$emit("close_da_check_modal", 1);
-        }
-      }
-    },
-    shutdown_error_status: function (new_val, _) {
-      if (new_val) {
-        this.close_modals_by_id([
-          "fw-updates-in-progress-message",
-          "fw-closure-warning",
-          "ops-closure-warning",
-        ]);
-        this.alert_txt = "Error Occurred";
+    shutdownErrorStatus: function (newVal, _) {
+      if (newVal) {
+        this.closeModalsById(["fw-updates-in-progress-message", "fw-closure-warning", "ops-closure-warning"]);
+        this.alertTxt = "Error Occurred";
         this.$bvModal.show("error-catch");
-      }
-    },
-    h5_warning: function (new_val, _) {
-      this.$bvModal.show("h5_warning");
-    },
-    is_recording_snapshot_running: function (new_bool) {
-      if (!new_bool) {
-        this.close_modals_by_id(["ops-closure-warning"]);
       }
     },
   },
   created() {
-    this.stim_specific
-      ? this.set_stim_specific_status(this.stim_status)
-      : this.set_system_specific_status(this.status_uuid);
+    this.setSystemSpecificStatus(this.statusUuid);
   },
   methods: {
-    set_stim_specific_status: function (status) {
-      this.alert_txt = status;
+    setStimSpecificStatus: function (status) {
+      this.alertTxt = status ? status : this.stimStatus;
 
       if (status === STIM_STATUS.CONFIG_CHECK_COMPLETE)
-        this.assigned_open_circuits.length > 0
+        this.assignedOpenCircuits.length > 0
           ? this.$bvModal.show("failed-qc-check")
           : this.$bvModal.show("success-qc-check");
       else if (status === STIM_STATUS.SHORT_CIRCUIT_ERROR) this.$bvModal.show("short-circuit-err");
     },
-    set_system_specific_status: function (status) {
+    setSystemSpecificStatus: function (status) {
       switch (status) {
-        case STATUS.MESSAGE.SERVER_BOOTING_UP:
-          this.alert_txt = "Booting Up...";
+        case STATUS.SERVER_INITIALIZING_STATE:
+          this.alertTxt = "Booting Up...";
           break;
-        case STATUS.MESSAGE.SERVER_STILL_INITIALIZING:
-          this.alert_txt = "Connecting...";
+        case STATUS.SERVER_READY_STATE:
+          this.alertTxt = "Connecting...";
           break;
-        case STATUS.MESSAGE.SERVER_READY:
-          this.alert_txt = "Connecting...";
+        case STATUS.INSTRUMENT_INITIALIZING_STATE:
+          this.alertTxt = "Initializing...";
           break;
-        case STATUS.MESSAGE.INITIALIZING_INSTRUMENT:
-          this.alert_txt = "Initializing...";
+        case STATUS.CHECKING_FOR_UPDATES_STATE:
+          this.alertTxt = "Checking for Firmware Updates...";
           break;
-        case STATUS.MESSAGE.CALIBRATION_NEEDED:
-          this.alert_txt = `Connected...Calibration Needed`;
+        case STATUS.UPDATES_NEEDED_STATE:
+          this.alertTxt = `Firmware Updates Required`;
           break;
-        case STATUS.MESSAGE.CALIBRATING:
-          this.alert_txt = `Calibrating...`;
-          break;
-        case STATUS.MESSAGE.CALIBRATED:
-          this.alert_txt = `Ready`;
-          break;
-        case STATUS.MESSAGE.BUFFERING:
-          this.alert_txt = `Preparing for Live View...`;
-          break;
-        case STATUS.MESSAGE.LIVE_VIEW_ACTIVE:
-          this.alert_txt = `Live View Active`;
-          break;
-        case STATUS.MESSAGE.RECORDING:
-          this.alert_txt = `Recording to File...`;
-          break;
-        case STATUS.MESSAGE.CHECKING_FOR_UPDATES:
-          this.alert_txt = "Checking for Firmware Updates...";
-          break;
-        case STATUS.MESSAGE.UPDATES_NEEDED:
-          this.alert_txt = `Firmware Updates Required`;
-          break;
-        case STATUS.MESSAGE.DOWNLOADING_UPDATES:
-          this.alert_txt = `Downloading Firmware Updates...`;
+        case STATUS.DOWNLOADING_UPDATES_STATE:
+          this.alertTxt = `Downloading Firmware Updates...`;
           this.$bvModal.show("fw-updates-in-progress-message");
           break;
-        case STATUS.MESSAGE.INSTALLING_UPDATES:
-          this.alert_txt = `Installing Firmware Updates...`;
+        case STATUS.INSTALLING_UPDATES_STATE:
+          this.alertTxt = `Installing Firmware Updates...`;
           break;
-        case STATUS.MESSAGE.UPDATES_COMPLETE:
-          this.alert_txt = `Firmware Updates Complete`;
-          this.close_modals_by_id(["fw-updates-in-progress-message", "fw-closure-warning"]);
+        case STATUS.UPDATES_COMPLETE_STATE:
+          this.alertTxt = `Firmware Updates Complete`;
+          this.closeModalsById(["fw-updates-in-progress-message", "fw-closure-warning"]);
           this.$bvModal.show("fw-updates-complete-message");
           break;
-        case STATUS.MESSAGE.UPDATE_ERROR:
-          this.alert_txt = `Error During Firmware Update`;
-          this.close_modals_by_id(["fw-updates-in-progress-message", "fw-closure-warning"]);
-          this.$store.commit("flask/stop_status_pinging");
-          this.$store.commit("settings/set_shutdown_error_message", "Error during firmware update.");
+        case STATUS.UPDATE_ERROR_STATE:
+          this.alertTxt = `Error During Firmware Update`;
+          this.closeModalsById(["fw-updates-in-progress-message", "fw-closure-warning"]);
+          this.$store.commit("system/stopStatusPinging");
+          this.$store.commit("system/setShutdownErrorMessage", "Error during firmware update.");
           this.$bvModal.show("error-catch");
           break;
-        case STATUS.MESSAGE.ERROR:
-          this.close_modals_by_id([
+        case STATUS.ERROR_STATE:
+          this.closeModalsById([
             "fw-updates-in-progress-message",
             "fw-closure-warning",
             "ops-closure-warning",
           ]);
 
-          this.alert_txt = "Error Occurred";
+          this.alertTxt = "Error Occurred";
           this.$bvModal.show("error-catch");
           break;
         default:
-          this.alert_txt = status;
+          this.alertTxt = status;
           break;
       }
     },
 
-    handle_confirmation: function (idx) {
+    handleConfirmation: function (idx) {
       // Tanner (1/19/22): skipping automatic closure cancellation since this method gaurantees
-      // send_confirmation will be emitted, either immediately or after closing sw-update-message
-      this.close_modals_by_id(["ops-closure-warning", "fw-closure-warning"], false);
+      // sendConfirmation will be emitted, either immediately or after closing sw-update-message
+      this.closeModalsById(["ops-closure-warning", "fw-closure-warning"], false);
 
       // if a SW update is available, show message before confirming closure
-      if (idx === 1 && this.software_update_available && this.allow_sw_update_install) {
+      if (idx === 1 && this.softwareUpdateAvailable && this.allowSWUpdateInstall) {
         this.$bvModal.show("sw-update-message");
       } else {
-        this.$emit("send_confirmation", idx);
+        this.$emit("send-confirmation", idx);
       }
     },
-    close_modals_by_id: function (ids, auto_cancel_closure = true) {
+    closeModalsById: function (ids, autoCancelClosure = true) {
       for (const id of ids) {
         this.$bvModal.hide(id);
       }
 
       // Tanner (1/19/22): if one of the closure warning modals is given here while there is an unresolved
       // closure confirmation, need to respond with cancel value. If this step is skipped, need to make sure
-      // send_confirmation will definitely be emitted, or the window will essentially be locked open
+      // sendConfirmation will definitely be emitted, or the window will essentially be locked open
       if (
-        auto_cancel_closure &&
-        this.confirmation_request &&
+        autoCancelClosure &&
+        this.confirmationRequest &&
         (ids.includes("ops-closure-warning") || ids.includes("fw-closure-warning"))
       ) {
-        this.$emit("send_confirmation", 0);
+        this.$emit("sendConfirmation", 0);
       } else if (ids.includes("failed-qc-check") || ids.includes("success-qc-check")) {
-        this.$store.commit("stimulation/set_stim_status", STIM_STATUS.READY);
+        this.$store.commit("stimulation/setStimStatus", STIM_STATUS.READY);
       } else if (ids.includes("error-catch")) {
-        this.shutdown_request();
+        this.shutdownRequest();
       }
     },
-    close_sw_update_modal: function () {
+    closeSwUpdateModal: function () {
       this.$bvModal.hide("sw-update-message");
-      this.$emit("send_confirmation", 1);
+      this.$emit("send-confirmation", 1);
     },
-    shutdown_request: async function () {
-      const shutdown_url = "http://localhost:4567/shutdown";
+    shutdownRequest: async function () {
+      const shutdownUrl = "http://localhost:4567/shutdown";
       try {
-        await Vue.axios.get(shutdown_url);
+        await Vue.axios.get(shutdownUrl);
       } catch (error) {
         return;
       }
-    },
-    close_da_check_modal: function (idx) {
-      this.$bvModal.hide("active-processes-warning");
-      this.$bvModal.hide("initializing-warning");
-
-      if (idx === 1) {
-        if (this.stim_play_state) this.$store.dispatch("stimulation/stop_stimulation");
-        if (this.is_playback_active) this.$store.dispatch("playback/stop_active_processes");
-      }
-
-      this.$emit("close_da_check_modal", idx);
     },
   },
 };
@@ -573,9 +425,7 @@ export default {
 #active-processes-warning,
 #initializing-warning,
 #short-circuit-err,
-#success-qc-check,
-#h5_warning,
-#new-assignment-modal {
+#success-qc-check {
   position: fixed;
   margin: 5% auto;
   top: 15%;

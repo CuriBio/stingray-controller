@@ -4,26 +4,26 @@
     <StimulationStudioWidget class="stimulationstudio_widget-container" />
     <StimulationStudioCreateAndEdit
       class="stimulationstudio_createandedit-container"
-      :disable_edits="disable_edits"
-      @handle_selection_change="handle_selection_change"
+      :disablEdits="disableEdits"
+      @handle-selection-change="handleSelectionChange"
     />
     <StimulationStudioDragAndDropPanel
       class="stimulationstudio_draganddroppanel-container"
-      :stimulation_type="stimulation_type"
-      :disable_edits="disable_edits"
+      :stimulationType="stimulationType"
+      :disableEdits="disableEdits"
     />
     <StimulationStudioBlockViewEditor
       class="stimulationstudio_blockvieweditor-container"
-      @new-rest-dur="new_rest_dur"
+      @rest-duration-validity="setNewRestDuration"
     />
     <StimulationStudioProtocolViewer
       class="stimulationstudio_protocolviewer-container"
-      :stimulation_type="stimulation_type"
+      :stimulationType="stimulationType"
     />
     <div class="button-background">
-      <div v-for="(value, idx) in btn_labels" :id="value" :key="value" @click.exact="handle_click(idx)">
-        <div v-b-popover.hover.top="btn_hover" :class="get_btn_class(idx)">
-          <span :class="get_btn_label_class(idx)">{{ value }}</span>
+      <div v-for="(value, idx) in btnLabels" :id="value" :key="value" @click.exact="handleClick(idx)">
+        <div v-b-popover.hover.top="btnHover" :class="getBtnClass(idx)">
+          <span :class="getBtnLabelClass(idx)">{{ value }}</span>
         </div>
       </div>
     </div>
@@ -32,20 +32,26 @@
 
 <script>
 import StimulationStudioCreateAndEdit from "@/components/stimulation/StimulationStudioCreateAndEdit.vue";
-import StimulationStudioWidget from "@/components/plate_based_widgets/stimulationstudio/StimulationStudioWidget.vue";
+import StimulationStudioWidget from "@/components/stimulation/StimulationStudioWidget.vue";
 import StimulationStudioDragAndDropPanel from "@/components/stimulation/StimulationStudioDragAndDropPanel.vue";
 import StimulationStudioBlockViewEditor from "@/components/stimulation/StimulationStudioBlockViewEditor.vue";
 import StimulationStudioProtocolViewer from "@/components/stimulation/StimulationStudioProtocolViewer.vue";
-import { mapState } from "vuex";
-import playback_module from "@/store/modules/playback";
 import { STIM_STATUS } from "@/store/modules/stimulation/enums";
 
+import { mapState } from "vuex";
+
 /**
- * @vue-data {Array} btn_labels - button labels for base of stim studio component
- * @vue-data {String} stimulation_type - Current selected stimulation type in BlockViewEditor component
- * @vue-data {Object} selected_protocol - Current selected protocol from drop down in CreateAndEdit component
- * @vue-event {Event} handle_click - Handles what gets executed when any of the base buttons are selected
- * @vue-event {Event} handle_selection_changed - Gets emitted when a user selected a protocol for edit so it can be used if new changes need to be discarded
+ * @vue-data {Array} btnLabels - button labels for base of stim studio component
+ * @vue-data {Object} selectedProtocol - Current selected protocol from drop down in CreateAndEdit component
+ * @vue-data {Boolean} restDurIsValid - State of validity of current rest duration for protocol
+ * @vue-computed {Boolean} disableEdits - Boolean to conditionally check if stim is active
+ * @vue-computed {Object} btnHover - Handle tooltip text based off is stim is currently active
+ * @vue-computed {Boolean} stimulationType - Conditionally expand type of stimulation based on state
+ * @vue-event {Event} handleClick - Handles what gets executed when any of the base buttons are selected
+ * @vue-event {Event} setNewRestDuration - Set validity of new rest duration in stim studio
+ * @vue-event {Event} getBtnClass - Get dynamic button class based on disabled state
+ * @vue-event {Event} getBtnLabelClass - Get dynamic button label class based on disabled state
+ * @vue-event {Event} handleSelectionChanged - Gets emitted when a user selected a protocol for edit so it can be used if new changes need to be discarded
  */
 
 export default {
@@ -59,78 +65,60 @@ export default {
   },
   data() {
     return {
-      btn_labels: ["Save Changes", "Clear/Reset All", "Discard Changes"],
-      stimulation_type: "Current",
-      selected_protocol: { label: "Create New", color: "", letter: "" },
-      rest_dur_is_valid: true,
+      btnLabels: ["Save Changes", "Clear/Reset All", "Discard Changes"],
+      selectedProtocol: { label: "Create New", color: "", letter: "" },
+      restDurIsValid: true,
     };
   },
   computed: {
-    ...mapState("playback", ["playback_state"]),
-    ...mapState("stimulation", ["stim_status"]),
-    disable_edits: function () {
-      return (
-        this.playback_state === playback_module.ENUMS.PLAYBACK_STATES.RECORDING ||
-        this.stim_status === STIM_STATUS.STIM_ACTIVE
-      );
+    ...mapState("stimulation", ["stimStatus", "protocolEditor"]),
+    disableEdits: function () {
+      return this.stimStatus === STIM_STATUS.STIM_ACTIVE;
     },
-    btn_hover: function () {
+    btnHover: function () {
       return {
-        content: "Cannot make changes to stim settings while actively stimulating or recording",
-        disabled: !this.disable_edits,
+        content: "Cannot make changes to stim settings while actively stimulating",
+        disabled: !this.disableEdits,
       };
     },
-  },
-  created: async function () {
-    this.unsubscribe = this.$store.subscribe(async (mutation) => {
-      if (mutation.type === "stimulation/set_stimulation_type") {
-        this.stimulation_type = this.$store.getters["stimulation/get_stimulation_type"];
-      }
-      if (
-        mutation.type === "stimulation/reset_state" ||
-        mutation.type === "stimulation/reset_protocol_editor"
-      ) {
-        this.stimulation_type = "Current";
-      }
-    });
-  },
-  beforeDestroy() {
-    this.unsubscribe();
+    stimulationType: function () {
+      return this.protocolEditor.stimulationType === "C" ? "Current" : "Voltage";
+    },
   },
   methods: {
-    async handle_click(idx) {
-      if (this.disable_edits) {
+    async handleClick(idx) {
+      if (this.disableEdits) {
         return;
       }
 
       if (idx === 0) {
-        await this.$store.dispatch("stimulation/add_saved_protocol");
-        this.$store.dispatch("stimulation/handle_protocol_editor_reset");
-        this.selected_protocol = { label: "Create New", color: "", letter: "" };
+        await this.$store.dispatch("stimulation/addSavedPotocol");
+        this.$store.dispatch("stimulation/handleProtocolEditorReset");
+        this.selectedProtocol = { label: "Create New", color: "", letter: "" };
       } else if (idx === 1) {
-        this.$store.commit("stimulation/reset_state");
+        this.$store.commit("stimulation/resetState");
       } else if (idx === 2) {
-        if (this.selected_protocol.label === "Create New") {
-          this.$store.commit("stimulation/reset_protocol_editor");
+        if (this.selectedProtocol.label === "Create New") {
+          this.$store.commit("stimulation/resetProtocolEditor");
         } else {
-          this.$store.dispatch("stimulation/edit_selected_protocol", this.selected_protocol);
+          this.$store.dispatch("stimulation/editSelectedProtocol", this.selectedProtocol);
         }
       }
     },
-    new_rest_dur(is_valid) {
-      this.rest_dur_is_valid = is_valid;
+    setNewRestDuration(isValid) {
+      this.restDurIsValid = isValid;
     },
 
-    handle_selection_change(protocol) {
-      this.selected_protocol = protocol;
+    handleSelectionChange(protocol) {
+      this.selectedProtocol = protocol;
     },
-    get_btn_class(idx) {
-      return this.disable_edits || (idx === 0 && !this.rest_dur_is_valid)
+    getBtnClass(idx) {
+      return this.disableEdits || (idx === 0 && !this.restDurIsValid)
         ? "btn-container-disable"
         : "btn-container";
     },
-    get_btn_label_class(idx) {
-      return this.disable_edits || (idx === 0 && !this.rest_dur_is_valid) ? "btn-label-disable" : "btn-label";
+    getBtnLabelClass(idx) {
+      return this.disableEdits || (idx === 0 && !this.restDurIsValid) ? "btn-label-disable" : "btn-label";
     },
   },
 };

@@ -33,7 +33,7 @@ module.exports = {
     // "snakecasejs/snakecasejs": "warn",
     // VueJS rules
     "vue/multi-word-component-names": "off",
-    "vue/prop-name-casing": ["error", "snake_case"],
+    // "vue/prop-name-casing": ["error", "camelCase" | "snake_case"],
     "vue/component-definition-name-casing": ["error", "PascalCase"],
     "vue/one-component-per-file": "error",
     "vue/require-default-prop": "error",

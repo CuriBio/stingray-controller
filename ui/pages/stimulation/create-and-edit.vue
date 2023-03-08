@@ -5,7 +5,7 @@
 </template>
 
 <script>
-// import { StimulationStudioCreateAndEdit } from "@/dist/mantarray.common";
+// import { StimulationStudioCreateAndEdit } from "@/dist/stingray.common";
 import StimulationStudioCreateAndEdit from "@/components/stimulation/StimulationStudioCreateAndEdit.vue";
 
 export default {

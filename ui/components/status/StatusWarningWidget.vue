@@ -1,47 +1,47 @@
 <template>
   <div>
-    <div class="div__status-warning-background" :style="`height: ${dynamic_modal_height}px;`">
-      <span class="span__status-warning-label">{{ modal_labels.header }}</span>
-      <div ref="message_area" class="span__status-warning-message">
-        <p id="p__status_warning_msg1">{{ modal_labels.msg_one }}</p>
-        <p v-show="!include_filepath">
-          {{ modal_labels.msg_two }}
+    <div class="div__status-warning-background" :style="`height: ${dynamicModalHeight}px;`">
+      <span class="span__status-warning-label">{{ modalLabels.header }}</span>
+      <div ref="messageArea" class="span__status-warning-message">
+        <p id="p__statusWarningsg1">{{ modalLabels.msgOne }}</p>
+        <p v-show="!includeFilepath">
+          {{ modalLabels.msgTwo }}
           <a
-            v-if="email_error"
-            id="error_contact"
+            v-if="emailError"
+            id="errorContact"
             href="mailto:support@curibio.com ? subject = Short circuit error"
             >support@curibio.com</a
           >
         </p>
         <textarea
-          v-show="include_filepath"
+          v-show="includeFilepath"
           ref="textarea"
           class="textarea__upload-file-path"
           spellcheck="false"
-          :value.prop="modal_labels.msg_two"
-          :rows="compute_number_of_rows"
+          :value.prop="modalLabels.msgTwo"
+          :rows="computeNumberOfRows"
           :cols="50"
           :disabled="true"
-          :style="`height: ${textarea__dynamic_height}`"
+          :style="`height: ${textareaDynamicHeight}`"
         />
       </div>
-      <div class="div__status-warning-button" :style="`top: ${dynamic_modal_height}px;`">
+      <div class="div__status-warning-button" :style="`top: ${dynamicModalHeight}px;`">
         <ButtonWidget
-          :button_widget_width="420"
-          :button_widget_height="50"
-          :button_widget_top="0"
-          :button_widget_left="0"
-          :button_names="modal_labels.button_names"
-          :enabled_color="'#B7B7B7'"
-          :hover_color="['#bd4932', '#19ac8a']"
-          @btn-click="handle_click"
+          :buttonWidgetWidth="420"
+          :buttonWidgetHeight="50"
+          :buttonWidgetTop="0"
+          :buttonWidgetLeft="0"
+          :buttonNames="modalLabels.buttonNames"
+          :enabledColor="'#B7B7B7'"
+          :hoverColor="['#bd4932', '#19ac8a']"
+          @btn-click="handleClick"
         />
       </div>
     </div>
   </div>
 </template>
 <script>
-import ButtonWidget from "@/components/basic_widgets/ButtonWidget.vue";
+import ButtonWidget from "@/components/basic-widgets/ButtonWidget.vue";
 
 export default {
   name: "StatusWarningWidget",
@@ -49,44 +49,44 @@ export default {
     ButtonWidget,
   },
   props: {
-    modal_labels: {
+    modalLabels: {
       type: Object,
       default() {
         return {
           header: "Warning!",
-          msg_one: "Operations are still in progress.",
-          msg_two: "Are you sure you want to exit?",
-          button_names: ["Cancel", "Yes"],
+          msgOne: "Operations are still in progress.",
+          msgTwo: "Are you sure you want to exit?",
+          buttonNames: ["Cancel", "Yes"],
         };
       },
     },
-    email_error: {
+    emailError: {
       type: Boolean,
       default: false,
     },
-    include_filepath: {
+    includeFilepath: {
       type: Boolean,
       default: false,
     },
   },
   computed: {
-    textarea__dynamic_height: function () {
-      return this.compute_number_of_rows * 18 + 25;
+    textareaDynamicHeight: function () {
+      return this.computeNumberOfRows * 18 + 25;
     },
-    compute_number_of_rows: function () {
-      return Math.ceil(((this.modal_labels.msg_two.length * 1.0) / 40).toFixed(1));
+    computeNumberOfRows: function () {
+      return Math.ceil(((this.modalLabels.msgTwo.length * 1.0) / 40).toFixed(1));
     },
-    dynamic_modal_height: function () {
-      const msg_rows = Math.ceil(
-        ((this.modal_labels.msg_one.length + this.modal_labels.msg_two.length) / 50).toFixed(1)
+    dynamicModalHeight: function () {
+      const msgRows = Math.ceil(
+        ((this.modalLabels.msgOne.length + this.modalLabels.msgTwo.length) / 50).toFixed(1)
       );
-      return msg_rows * 18 + 125;
+      return msgRows * 18 + 125;
     },
   },
 
   methods: {
-    handle_click: function (idx) {
-      this.$emit("handle_confirmation", idx);
+    handleClick: function (idx) {
+      this.$emit("handleConfirmation", idx);
     },
   },
 };
@@ -182,7 +182,7 @@ export default {
   pointer-events: all;
 }
 
-#error_contact {
+#errorContact {
   color: rgb(183, 183, 183);
 }
 </style>
