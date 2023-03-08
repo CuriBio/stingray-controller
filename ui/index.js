@@ -21,6 +21,9 @@ export {
   stimStatus,
   MAX_SUBPROTOCOL_DURATION_MS,
   MIN_SUBPROTOCOL_DURATION_MS,
+  MIN_CHARGE_MA,
+  MIN_PHASE_DURATION_US,
+  MAX_CHARGE_MA,
 } from "./store/modules/stimulation/enums";
 export { STATUS as SYSTEM_STATUS_ENUMS } from "./store/modules/system/enums";
 

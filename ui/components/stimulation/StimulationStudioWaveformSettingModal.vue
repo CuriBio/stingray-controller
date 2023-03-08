@@ -308,6 +308,9 @@ import {
   MIN_SUBPROTOCOL_DURATION_MS,
   MAX_SUBPROTOCOL_DURATION_MS,
   TIME_CONVERSION_TO_MILLIS,
+  MIN_CHARGE_MA,
+  MAX_CHARGE_MA,
+  MIN_PHASE_DURATION_US,
 } from "@/store/modules/stimulation/enums";
 
 import Vue from "vue";
@@ -381,12 +384,13 @@ export default {
       pulseSettings: {},
       invalidErrMsg: {
         numErr: "Must be a number",
-        minNumErr: "Must be a positive number",
+        minPulseDuration: `Duration must be >= ${MIN_PHASE_DURATION_US}μs`,
+        minInterphaseDuration: `Duration must be 0ms or >= ${MIN_PHASE_DURATION_US}μs`,
         required: "Required",
         maxPulseDuration: "Duration must be <= 50ms",
         minActiveDuration: "Duration must be >= 100ms",
         valid: "",
-        maxCurrent: "Must be within +/- 100",
+        maxMinCurrent: `Must be within [-${MIN_CHARGE_MA}, -${MAX_CHARGE_MA}] or [${MIN_CHARGE_MA}, ${MAX_CHARGE_MA}]`,
         maxVoltage: "Must be within +/- 1200",
         frequency: "Must be a non-zero value <= 100",
         numCycles: "Must be a whole number > 0",
@@ -613,10 +617,17 @@ export default {
     checkPulseDuration(label) {
       const valueStr = this.pulseSettings[label];
       const value = +valueStr;
+      const isInterphaseDur = label === "interphaseInterval";
+      const isValueLessThanMin = value < MIN_PHASE_DURATION_US / 1000;
+
       if (valueStr === "") {
         this.errMsgs[label] = this.invalidErrMsg.required;
-      } else if (isNaN(value) || value < 0) {
-        this.errMsgs[label] = this.invalidErrMsg.minNumErr;
+      } else if (isNaN(value)) {
+        this.errMsgs[label] = this.invalidErrMsg.numErr;
+      } else if (isValueLessThanMin && !isInterphaseDur) {
+        this.errMsgs[label] = this.invalidErrMsg.minPulseDuration;
+      } else if (isValueLessThanMin && value !== 0 && isInterphaseDur) {
+        this.errMsgs[label] = this.invalidErrMsg.minInterphaseDuration;
       } else if (this.totalPulseDuration > this.maxPulseDurationForFreq) {
         this.errMsgs[label] = this.invalidErrMsg.maxPulseDuration;
       } else {
@@ -674,8 +685,11 @@ export default {
         this.errMsgs[label] = this.invalidErrMsg.required;
       } else if (isNaN(value)) {
         this.errMsgs[label] = this.invalidErrMsg.numErr;
-      } else if (this.stimulationType.includes("C") && Math.abs(value) > 100) {
-        this.errMsgs[label] = this.invalidErrMsg.maxCurrent;
+      } else if (
+        this.stimulationType.includes("C") &&
+        (Math.abs(value) > MAX_CHARGE_MA || Math.abs(value) < MIN_CHARGE_MA)
+      ) {
+        this.errMsgs[label] = this.invalidErrMsg.maxMinCurrent;
       } else if (this.stimulationType.includes("V") && Math.abs(value) > 1200) {
         this.errMsgs[label] = this.invalidErrMsg.maxVoltage;
       } else {
