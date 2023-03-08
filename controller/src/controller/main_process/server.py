@@ -182,7 +182,7 @@ class Server:
     async def _get_system_status(self) -> dict[str, Any]:
         """Get the system status and other information.
 
-        in_simulationMode is only accurate if ui_status_code is '009301eb-625c-4dc4-9e92-1a4d0762465f'
+        in_simulation_mode is only accurate if ui_status_code is '009301eb-625c-4dc4-9e92-1a4d0762465f'
 
         instrument_serial_number and instrument_nickname are only accurate if ui_status_code is '8e24ef4d-2353-4e9d-aa32-4346126e73e3'
         """
@@ -202,7 +202,7 @@ class Server:
             "ui_status_code": str(SYSTEM_STATUS_UUIDS[system_state["system_status"]]),
             "is_stimulating": _is_stimulating_on_any_well(system_state),
             # Tanner (7/1/20): this route may be called before process_monitor adds the following values to shared_values_dict, so default values are needed
-            "in_simulationMode": system_state.get("in_simulationMode", False),
+            "in_simulation_mode": system_state.get("in_simulation_mode", False),
             "instrument_serial_number": system_state.get("instrument_serial_number", ""),
             "instrument_nickname": system_state.get("instrument_nickname", ""),
         }

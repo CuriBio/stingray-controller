@@ -184,7 +184,7 @@ async def test_main__initializes_system_state_correctly(
         "system_status": SERVER_INITIALIZING_STATE,
         "stimulation_running": [False] * NUM_WELLS,
         "config_settings": {"log_directory": log_file_dir},
-        "stimulatorCircuitStatuses": {},
+        "stimulator_circuit_statuses": {},
         "stimulation_info": None,
         # "latest_software_version": None,
         "log_file_id": spied_uuid4.spy_return,

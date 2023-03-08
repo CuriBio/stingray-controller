@@ -107,7 +107,7 @@ class SubprocessMonitor:
         #     self._system_state["firmware_update_accepted"] = communication["update_accepted"]
         # elif communication_type == "stimulation":
         #     command = communication["command"]
-        #     if command == "setStimStatus":
+        #     if command == "setstim_status":
         #         self._queues["to"]["instrument_comm"].put_nowait(
         #             {
         #                 "communication_type": communication_type,
@@ -119,8 +119,8 @@ class SubprocessMonitor:
         #         self._queues["to"]["instrument_comm"].put_nowait(communication)
         #         self._queues["to"]["file_writer"].put_nowait(communication)
         #     elif command == "start_stim_checks":
-        #         self._system_state["stimulatorCircuitStatuses"] = {
-        #             well_idx: StimulatorCircuitStatuses.CALCULATING.name.lower()
+        #         self._system_state["stimulator_circuit_statuses"] = {
+        #             well_idx: stimulator_circuit_statuses.CALCULATING.name.lower()
         #             for well_idx in communication["well_indices"]
         #         }
         #         self._queues["to"]["instrument_comm"].put_nowait(communication)
@@ -298,7 +298,7 @@ class SubprocessMonitor:
     #         comm_str = str(comm_copy)
     #     elif communication_type == "stimulation" and command == "start_stim_checks":
     #         comm_copy = copy.deepcopy(communication)
-    #         for sub_dict_name in ("stimulatorCircuitStatuses", "adc_readings"):
+    #         for sub_dict_name in ("stimulator_circuit_statuses", "adc_readings"):
     #             sub_dict = comm_copy[sub_dict_name]
     #             for well_idx in sorted(sub_dict):
     #                 well_name = GENERIC_24_WELL_DEFINITION.get_well_name_from_well_index(well_idx)
@@ -343,15 +343,15 @@ class SubprocessMonitor:
     #             for well_idx in communication["wells_done_stimulating"]:
     #                 self._system_state["stimulation_running"][well_idx] = False
     #         elif command == "start_stim_checks":
-    #             key = "stimulatorCircuitStatuses"
-    #             stimulatorCircuitStatuses = communication[key]
-    #             self._system_state[key] = stimulatorCircuitStatuses
+    #             key = "stimulator_circuit_statuses"
+    #             stimulator_circuit_statuses = communication[key]
+    #             self._system_state[key] = stimulator_circuit_statuses
     #             self._queue_websocket_message(
-    #                 {"data_type": key, "data_json": json.dumps(stimulatorCircuitStatuses)}
+    #                 {"data_type": key, "data_json": json.dumps(stimulator_circuit_statuses)}
     #             )
     #     elif communication_type == "board_connection_status_change":
     #         board_idx = communication["board_index"]
-    #         self._system_state["in_simulationMode"] = not communication[
+    #         self._system_state["in_simulation_mode"] = not communication[
     #             "is_connected"
     #         ]  # TODO change the name of this
     #     elif communication_type == "barcode_comm":
@@ -473,11 +473,11 @@ class SubprocessMonitor:
     #         self._system_state["system_status"] = INSTRUMENT_INITIALIZING_STATE
     #     elif self._system_state["system_status"] == INSTRUMENT_INITIALIZING_STATE:
     #         if (
-    #             "in_simulationMode" not in self._system_state
+    #             "in_simulation_mode" not in self._system_state
     #             or "instrument_metadata" not in self._system_state
     #         ):
     #             pass  # need to wait for these values before proceeding with state transition
-    #         elif self._system_state["in_simulationMode"]:
+    #         elif self._system_state["in_simulation_mode"]:
     #             self._system_state["system_status"] = CALIBRATION_NEEDED_STATE
     #         elif self._system_state["latest_software_version"] is not None:
     #             self._system_state["system_status"] = CHECKING_FOR_UPDATES_STATE

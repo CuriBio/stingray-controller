@@ -7,7 +7,6 @@ license = "MIT"
 packages = [
     { include = "controller", from = "src" }
 ]
-# build = "build.py"
 
 [tool.poetry.dependencies]
 python = "~3.10.7"
