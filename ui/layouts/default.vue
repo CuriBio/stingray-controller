@@ -12,8 +12,8 @@
         <div class="div__stim-status-container">
           <StatusBar @send-confirmation="sendConfirmation" />
         </div>
-        <div class="div__stimulationControls-controls-icon-container">
-          <StimulationControls />
+        <div class="div__StimulationStudioControls-controls-icon-container">
+          <StimulationStudioControls />
         </div>
         <div class="div__simulation-mode-container">
           <SimulationMode />
@@ -33,8 +33,8 @@
 <script>
 import Vue from "vue";
 
-import BarcodeViewer from "@/components/system/controls/BarcodeViewer";
-import StimulationControls from "@/components/system/controls/StimulationControls";
+import BarcodeViewer from "@/components/status/BarcodeViewer";
+import StimulationStudioControls from "@/components/stimulation/StimulationStudioControls";
 import StatusBar from "@/components/status/StatusBar";
 import SimulationMode from "@/components/status/SimulationMode";
 
@@ -50,7 +50,7 @@ export default {
     BarcodeViewer,
     StatusBar,
     SimulationMode,
-    StimulationControls,
+    StimulationStudioControls,
   },
   data: function () {
     return {
@@ -134,7 +134,7 @@ body {
   margin-top: 10px;
 }
 
-.div__stimulationControls-controls-icon-container {
+.div__StimulationStudioControls-controls-icon-container {
   position: relative;
   margin-top: 3px;
   left: 0px;

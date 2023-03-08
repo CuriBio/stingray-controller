@@ -44,6 +44,33 @@ describe("store/system", () => {
         expect(store.state.system.firmwareUpdateAvailable).toStrictEqual(update);
       }
     );
+    describe("Barcode validity", () => {
+      test.each([
+        ["", "error due to empty string", false],
+        ["ML34567890123", "error due tolength over 12", false],
+        ["ML345678901", "error due tolength under 12", false],
+        ["ML二千万一千〇九", "error due to all unicode", false],
+        ["ML2021$72144", "error due to invalid character '$'", false],
+        ["ML2020172144", "error due to invalid year '2020'", false],
+        ["ML2021000144", "error due to invalid Julian date '000'", false],
+        ["ML2021367144", "error due to invalid Julian date '367'", false],
+        ["MS2021172000", "header 'MS'", false],
+        ["ML2021172001", "valid kit ID '001'", true],
+        ["ML2021172002", "valid kit ID '002'", true],
+        ["ML2021172003", "valid kit ID '003'", true],
+        ["ML2021172004", "valid kit ID '004'", true],
+        ["ML9999172001", "year '9999'", true],
+        ["ML2021001144", "julian date '001'", true],
+        ["ML2021366144", "julian date '366'", true],
+      ])(
+        "Given a plate barcode scanned results in value %s, When validation rule FAILS  or PASSES due %s, Then validation results set valid to %s",
+        async (plateBarcode, reason, valid) => {
+          // testing with plate barcode here but the functionality is exactly the same for stim barcodes
+          store.dispatch("system/validateBarcode", { type: "plateBarcode", newValue: plateBarcode });
+          expect(store.state.system.barcodes.plateBarcode.valid).toBe(valid);
+        }
+      );
+    });
   });
   // describe("websocket", () => {
   //   let httpServer;
@@ -102,7 +129,7 @@ describe("store/system", () => {
   //     });
 
   //     await new Promise((resolve) => {
-  //       socketServerSide.emit("stimulator_circuit_statuses", JSON.stringify(stimulatorStatusesObj), (ack) => {
+  //       socketServerSide.emit("stimulatorCircuitStatuses", JSON.stringify(stimulatorStatusesObj), (ack) => {
   //         resolve(ack);
   //       });
   //     });
@@ -125,7 +152,7 @@ describe("store/system", () => {
   //       .fill("error", 20, 24);
 
   //     await new Promise((resolve) => {
-  //       socketServerSide.emit("stimulator_circuit_statuses", JSON.stringify(stimulatorStatuses), (ack) => {
+  //       socketServerSide.emit("stimulatorCircuitStatuses", JSON.stringify(stimulatorStatuses), (ack) => {
   //         resolve(ack);
   //       });
   //     });
@@ -145,7 +172,7 @@ describe("store/system", () => {
   //     const stimulatorStatuses = new Array(24).fill("open", 0, 10).fill("media", 10, 24);
 
   //     await new Promise((resolve) => {
-  //       socketServerSide.emit("stimulator_circuit_statuses", JSON.stringify(stimulatorStatuses), (ack) => {
+  //       socketServerSide.emit("stimulatorCircuitStatuses", JSON.stringify(stimulatorStatuses), (ack) => {
   //         resolve(ack);
   //       });
   //     });
@@ -166,7 +193,7 @@ describe("store/system", () => {
   //     expect(store.state.system.allowSWUpdateInstall).toBe(false);
 
   //     await new Promise((resolve) => {
-  //       socketServerSide.emit("sw_update", JSON.stringify(message), (ack) => {
+  //       socketServerSide.emit("swUpdate", JSON.stringify(message), (ack) => {
   //         resolve(ack);
   //       });
   //     });
@@ -181,7 +208,7 @@ describe("store/system", () => {
   //     expect(store.state.system.softwareUpdateAvailable).toBe(false);
 
   //     await new Promise((resolve) => {
-  //       socketServerSide.emit("sw_update", JSON.stringify(message), (ack) => {
+  //       socketServerSide.emit("swUpdate", JSON.stringify(message), (ack) => {
   //         resolve(ack);
   //       });
   //     });
@@ -198,7 +225,7 @@ describe("store/system", () => {
   //     expect(store.state.system.firmwareUpdateDurMins).toBeNull();
 
   //     await new Promise((resolve) => {
-  //       socketServerSide.emit("fw_update", JSON.stringify(message), (ack) => {
+  //       socketServerSide.emit("fwUpdate", JSON.stringify(message), (ack) => {
   //         resolve(ack);
   //       });
   //     });
@@ -215,7 +242,7 @@ describe("store/system", () => {
   //     expect(store.state.system.firmwareUpdateDurMins).toBeNull();
 
   //     await new Promise((resolve) => {
-  //       socketServerSide.emit("fw_update", JSON.stringify(message), (ack) => {
+  //       socketServerSide.emit("fwUpdate", JSON.stringify(message), (ack) => {
   //         resolve(ack);
   //       });
   //     });
@@ -231,7 +258,7 @@ describe("store/system", () => {
   //     expect(store.state.settings.userCredInputNeeded).toBe(false);
 
   //     await new Promise((resolve) => {
-  //       socketServerSide.emit("prompt_user_input", JSON.stringify(message), (ack) => {
+  //       socketServerSide.emit("promptUserInput", JSON.stringify(message), (ack) => {
   //         resolve(ack);
   //       });
   //     });

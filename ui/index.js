@@ -27,8 +27,8 @@ export { STATUS as SYSTEM_STATUS_ENUMS } from "./store/modules/system/enums";
 export { default as create_web_socket_plugin } from "./store/plugins/websocket";
 export { socket } from "./store/plugins/websocket";
 
-export { default as BarcodeViewer } from "./components/system/controls/BarcodeViewer.vue";
-export { default as StimulationControls } from "./components/system/controls/StimulationControls.vue";
+export { default as BarcodeViewer } from "./components/status/BarcodeViewer.vue";
+export { default as StimulationStudioControls } from "./components/stimulation/StimulationStudioControls.vue";
 
 // Basic Widgets
 export { default as PlateWell } from "./components/basic-widgets/PlateWell.vue";

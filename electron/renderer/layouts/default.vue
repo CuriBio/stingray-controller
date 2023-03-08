@@ -13,7 +13,7 @@
           <StatusBar :stim_specific="true" @send_confirmation="send_confirmation" />
         </div>
         <div class="div__stimulation_controls-controls-icon-container">
-          <StimulationControls />
+          <StimulationStudioControls />
         </div>
         <div class="div__simulation-mode-container">
           <SimulationMode />
@@ -33,7 +33,7 @@
 <script>
 import Vue from "vue";
 
-import { BarcodeViewer, StatusBar, SimulationMode, StimulationControls } from "@curi-bio/ui";
+import { BarcodeViewer, StatusBar, SimulationMode, StimulationStudioControls } from "@curi-bio/ui";
 
 import { mapState } from "vuex";
 import { VBPopover, VBToggle } from "bootstrap-vue";
@@ -47,7 +47,7 @@ export default {
     BarcodeViewer,
     StatusBar,
     SimulationMode,
-    StimulationControls,
+    StimulationStudioControls,
   },
   data: function () {
     return {
