@@ -278,7 +278,7 @@ cpdef dict parse_stim_data(unsigned char [:] stim_packet_bytes, int num_stim_pac
         bytes_idx += 1
         for _ in range(num_status_updates):
             well_idx = STIM_MODULE_ID_TO_WELL_IDX[stim_packet_bytes[bytes_idx]]
-           stim_status = stim_packet_bytes[bytes_idx + 1]
+            stim_status = stim_packet_bytes[bytes_idx + 1]
             time_index = (<uint64_t *> &stim_packet_bytes[bytes_idx + 2])[0]
             subprotocol_idx = stim_packet_bytes[bytes_idx + 2 + TIME_INDEX_LEN]
             bytes_idx += 2 + TIME_INDEX_LEN + 1
@@ -290,7 +290,7 @@ cpdef dict parse_stim_data(unsigned char [:] stim_packet_bytes, int num_stim_pac
                 stim_data_dict[well_idx][0].append(time_index)
                 stim_data_dict[well_idx][1].append(subprotocol_idx)
 
-    for well_idx,stim_statuses in stim_data_dict.items():
+    for well_idx, stim_statuses in stim_data_dict.items():
         stim_data_dict[well_idx] = np.array(stim_statuses, dtype=np.int64)  # Tanner (10/18/21): using int64 here since top bit will never be used and these values can be negative
 
     return stim_data_dict

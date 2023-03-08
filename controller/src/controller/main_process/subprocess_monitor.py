@@ -92,26 +92,26 @@ class SubprocessMonitor:
         #     self._system_state["latest_software_version"] = communication["version"]
         #     # send message to FE if an update is available
         #     try:
-        #         softwareUpdateAvailable = _compare_semver(
+        #         software_update_available = _compare_semver(
         #             communication["version"], CURRENT_SOFTWARE_VERSION
         #         )
         #     except ValueError:
-        #         softwareUpdateAvailable = False
+        #         software_update_available = False
         #     self._queue_websocket_message(
         #         {
         #             "data_type": "sw_update",
-        #             "data_json": json.dumps({"softwareUpdateAvailable": softwareUpdateAvailable}),
+        #             "data_json": json.dumps({"software_update_available": software_update_available}),
         #         }
         #     )
         # elif communication_type == "firmware_update_confirmation":
         #     self._system_state["firmware_update_accepted"] = communication["update_accepted"]
         # elif communication_type == "stimulation":
         #     command = communication["command"]
-        #     if command == "setstim_status":
+        #     if command == "set_stim_status":
         #         self._queues["to"]["instrument_comm"].put_nowait(
         #             {
         #                 "communication_type": communication_type,
-        #                 "command": "start_stimulation" if communication["status"] else "stopStimulation",
+        #                 "command": "start_stimulation" if communication["status"] else "stop_stimulation",
         #             }
         #         )
         #     elif command == "set_protocols":
@@ -120,7 +120,7 @@ class SubprocessMonitor:
         #         self._queues["to"]["file_writer"].put_nowait(communication)
         #     elif command == "start_stim_checks":
         #         self._system_state["stimulator_circuit_statuses"] = {
-        #             well_idx: stimulator_circuit_statuses.CALCULATING.name.lower()
+        #             well_idx: StimulatorCircuitStatuses.CALCULATING.name.lower()
         #             for well_idx in communication["well_indices"]
         #         }
         #         self._queues["to"]["instrument_comm"].put_nowait(communication)
@@ -329,14 +329,14 @@ class SubprocessMonitor:
     #     elif communication_type == "stimulation":
     #         if command == "start_stimulation":
     #             stim_running_list = [False] * 24
-    #             protocolAssignments = self._system_state["stimulation_info"]["protocolAssignments"]
-    #             for well_name, assignment in protocolAssignments.items():
+    #             protocol_assignments = self._system_state["stimulation_info"]["protocol_assignments"]
+    #             for well_name, assignment in protocol_assignments.items():
     #                 if not assignment:
     #                     continue
     #                 well_idx = GENERIC_24_WELL_DEFINITION.get_well_index_from_well_name(well_name)
     #                 stim_running_list[well_idx] = True
     #             self._system_state["stimulation_running"] = stim_running_list
-    #         elif command == "stopStimulation":
+    #         elif command == "stop_stimulation":
     #             self._system_state["stimulation_running"] = [False] * 24
     #         elif command == "status_update":
     #             # ignore stim status updates if stim was already stopped manually
@@ -409,7 +409,7 @@ class SubprocessMonitor:
     #                             "data_type": "fw_update",
     #                             "data_json": json.dumps(
     #                                 {
-    #                                     "firmwareUpdateAvailable": True,
+    #                                     "firmware_update_available": True,
     #                                     "channel_fw_update": channel_fw_update_needed,
     #                                 }
     #                             ),

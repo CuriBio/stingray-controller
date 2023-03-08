@@ -187,7 +187,7 @@ VALID_SUBPROTOCOL_TYPES = frozenset(["delay", "monophasic", "biphasic"])
 
 
 # Stim Checks
-class stimulator_circuit_statuses(IntEnum):
+class StimulatorCircuitStatuses(IntEnum):
     CALCULATING = -1
     MEDIA = 0
     OPEN = 1
