@@ -35,7 +35,7 @@
           box-shadow: none;
           pointer-events: all;
         "
-      ></div>
+      />
       <div
         id="Da8b3f2b0d2d765e9e828addbe2451ca1"
         unselectable="on"
@@ -72,7 +72,7 @@
             top: 0px;
             left: 0px;
           "
-        ></div>
+        />
       </div>
       <span
         id="cmpD24ff6b3120ced14b13a9d7926ae44f18"
@@ -136,7 +136,7 @@
             top: 0px;
             left: 0px;
           "
-        ></div>
+        />
       </div>
       <span
         id="cmpD55a22039f232e968ad3af730513910f1"
@@ -163,7 +163,7 @@
           text-align: center;
         "
       >
-        SIMULATION&nbsp;<wbr />MODE:&nbsp;<wbr />Not&nbsp;<wbr />Connected&nbsp;<wbr />to&nbsp;<wbr />Mantarray</span
+        SIMULATION&nbsp;<wbr />MODE:&nbsp;<wbr />Not&nbsp;<wbr />Connected&nbsp;<wbr />to&nbsp;<wbr />Stingray</span
       >
       <div
         id="D38e122d9d8d294fa97a320550b2a0a9e"
@@ -201,7 +201,7 @@
             top: 0px;
             left: 0px;
           "
-        ></div>
+        />
       </div>
     </div>
   </div>
@@ -210,14 +210,12 @@
 import { mapState } from "vuex";
 /**
  * @vue-data     {Boolean} mode - Contains a true or false based on if its in simulation mode or not
- * @vue-computed {Boolean} simulation_mode_id - Contains a true or false based based on the value set in Vuex store.
- * @vue-event    {Event} simulation_mode_id - A function which is invoked when siumlation mode is modified.
  */
 export default {
   name: "SimulationMode",
   computed: {
-    ...mapState("flask", {
-      mode: "simulation_mode",
+    ...mapState("system", {
+      mode: "simulationMode",
     }),
   },
 };

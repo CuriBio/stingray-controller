@@ -93,7 +93,7 @@ export default class BrowserWinHandler {
     this.browserWindow.on("close", async (e) => {
       if (!close) {
         e.preventDefault();
-        this.browserWindow.webContents.send("confirmation_request");
+        this.browserWindow.webContents.send("confirmationRequest");
       }
     });
 
@@ -110,8 +110,8 @@ export default class BrowserWinHandler {
 
     this._eventEmitter.emit("created");
 
-    ipcMain.once("beta_2_mode_request", (event) => {
-      event.reply("beta_2_mode_response", store.get("beta_2_mode"));
+    ipcMain.once("beta2Mode_request", (event) => {
+      event.reply("beta2Mode_response", store.get("beta2Mode"));
     });
     ipcMain.once("stored_accounts_request", (event) => {
       event.reply("stored_accounts_response", {

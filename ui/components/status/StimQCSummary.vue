@@ -1,32 +1,32 @@
 <template>
   <div>
     <div class="div__stimqc-background">
-      <span class="span__stimqc-label">{{ modal_labels.header }}</span>
-      <div ref="message_area" class="span__stimqc-message">
-        <p>{{ modal_labels.msg_one }}</p>
-        <p>{{ modal_labels.msg_two }}</p>
+      <span class="span__stimqc-label">{{ modalLabels.header }}</span>
+      <div ref="messageArea" class="span__stimqc-message">
+        <p>{{ modalLabels.msgOne }}</p>
+        <p>{{ modalLabels.msgTwo }}</p>
         <div style="margin: 65px 0px 0px 65px">
           <StimulationStudioWidget :disable="true" />
         </div>
       </div>
       <div class="div__stimqc-button-container">
         <ButtonWidget
-          :button_widget_width="600"
-          :button_widget_height="50"
-          :button_widget_top="0"
-          :button_widget_left="0"
-          :button_names="modal_labels.button_names"
-          :enabled_color="'#B7B7B7'"
-          :hover_color="['#19ac8a']"
-          @btn-click="handle_click"
+          :buttonWidgetWidth="600"
+          :buttonWidgetHeight="50"
+          :buttonWidgetTop="0"
+          :buttonWidgetLeft="0"
+          :buttonNames="modalLabels.buttonNames"
+          :enabledColor="'#B7B7B7'"
+          :hoverColor="['#19ac8a']"
+          @btn-click="handleClick"
         />
       </div>
     </div>
   </div>
 </template>
 <script>
-import ButtonWidget from "@/components/basic_widgets/ButtonWidget.vue";
-import StimulationStudioWidget from "@/components/plate_based_widgets/stimulationstudio/StimulationStudioWidget.vue";
+import ButtonWidget from "@/components/basic-widgets/ButtonWidget.vue";
+import StimulationStudioWidget from "@/components/stimulation/StimulationStudioWidget.vue";
 
 export default {
   name: "StimQCSummary",
@@ -35,22 +35,22 @@ export default {
     StimulationStudioWidget,
   },
   props: {
-    modal_labels: {
+    modalLabels: {
       type: Object,
       default() {
         return {
           header: "Configuration Check Summary!",
-          msg_one:
+          msgOne:
             "An open circuit was detected in the assigned wells shown below. This will prevent you from being able to start a stimulation.",
-          msg_two: "Please unassign these wells before proceeding.",
-          button_names: ["Okay"],
+          msgTwo: "Please unassign these wells before proceeding.",
+          buttonNames: ["Okay"],
         };
       },
     },
   },
   methods: {
-    handle_click: function (idx) {
-      this.$emit("handle_confirmation", idx);
+    handleClick: function (idx) {
+      this.$emit("handle-confirmation", idx);
     },
   },
 };

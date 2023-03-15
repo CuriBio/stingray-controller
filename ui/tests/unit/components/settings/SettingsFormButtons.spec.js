@@ -1,11 +1,10 @@
 import { mount } from "@vue/test-utils";
 import ComponentToTest from "@/components/settings/SettingsForm.vue";
-import ToggleWidget from "@/components/basic_widgets/ToggleWidget.vue";
 import Vuex from "vuex";
 import { createLocalVue } from "@vue/test-utils";
 import BootstrapVue from "bootstrap-vue";
 import "bootstrap/dist/css/bootstrap.min.css";
-import { array_of_user_accounts } from "./SettingsFormUserData.js";
+import { arrayOfUserAccounts } from "./SettingsFormUserData.js";
 
 let wrapper = null;
 
@@ -22,65 +21,65 @@ describe("SettingsForm.vue", () => {
    * @param {Object} wrap - Component reference
    * @return {Object} buttons - An Object
    */
-  function get_buttons(wrap) {
+  function getButtons(wrap) {
     const buttons = {
-      add_user_btn: wrap.find(".span__settingsform-user-add-btn_txt"),
-      edit_user_btn: wrap.find(".span__settingsform-user-edit-btn-txt"),
+      addUserBtn: wrap.find(".span__settingsform-user-add-btn_txt"),
+      editUserBtn: wrap.find(".span__settingsform-user-edit-btn-txt"),
     };
     return buttons;
   }
   /**
    * Returns an object of DOM span id's
    * @param {Object} wrap - Component reference
-   * @return {Object} valid_buttons - An Object
+   * @return {Object} validButtons - An Object
    */
-  function get_settings_button_enabled(wrap) {
-    const valid_buttons = {
-      reset_btn: wrap.find(".span__settings-tool-tip-reset-btn-txt-enable"),
-      save_btn: wrap.find(".span__settings-tool-tip-save-btn-txt-enable"),
-      save_btn_container: wrap.find(".div__settings-tool-tip-save-btn-enable"),
-      cancel_btn: wrap.find(".div__settings-tool-tip-cancel-btn"),
+  function getSettingsButtonEnabled(wrap) {
+    const validButtons = {
+      resetBtn: wrap.find(".span__settings-tool-tip-reset-btn-txt-enable"),
+      saveBtn: wrap.find(".span__settings-tool-tip-save-btn-txt-enable"),
+      saveBtnContainer: wrap.find(".div__settings-tool-tip-save-btn-enable"),
+      cancelBtn: wrap.find(".div__settings-tool-tip-cancel-btn"),
     };
-    return valid_buttons;
+    return validButtons;
   }
   /**
    * Returns an object of DOM span id's
    * @param {Object} wrap - Component reference
-   * @return {Object} valid_buttons - An Object
+   * @return {Object} validButtons - An Object
    */
-  function get_settings_button_disable(wrap) {
-    const valid_buttons = {
-      reset_btn: wrap.find(".span__settings-tool-tip-reset-btn-txt-disable"),
-      save_btn: wrap.find(".span__settings-tool-tip-save-btn-txt-disable"),
-      save_btn_container: wrap.find(".div__settings-tool-tip-save-btn-disable"),
+  function getSettingsButtonDisable(wrap) {
+    const validButtons = {
+      resetBtn: wrap.find(".span__settings-tool-tip-reset-btn-txt-disable"),
+      saveBtn: wrap.find(".span__settings-tool-tip-save-btn-txt-disable"),
+      saveBtnContainer: wrap.find(".div__settings-tool-tip-save-btn-disable"),
     };
-    return valid_buttons;
+    return validButtons;
   }
   /**
    * Returns an object of DOM div id's
    * @param {Object} wrap - Component reference
-   * @return {Object} invalid_boxes - An Object
+   * @return {Object} invalidBoxes - An Object
    */
-  function get_invalid_boxes(wrap) {
+  function getInvalidBoxes(wrap) {
     const boxes = wrap.findAll(".div__input-dropdown-controls-content-widget--invalid");
-    const invalid_boxes = {
+    const invalidBoxes = {
       customer: boxes.at(0),
       // user: boxes.at(1),
     };
-    return invalid_boxes;
+    return invalidBoxes;
   }
   /**
    * Returns an object of DOM div id's
    * @param {Object} wrap - Component reference
-   * @return {Object} valid_boxes - An Object
+   * @return {Object} validBoxes - An Object
    */
-  function get_valid_boxes(wrap) {
+  function getValidBoxes(wrap) {
     const boxes = wrapper.findAll(".div__input-dropdown-controls-content-widget--valid");
-    const valid_boxes = {
+    const validBoxes = {
       customer: boxes.at(0),
       // user: boxes.at(1),
     };
-    return valid_boxes;
+    return validBoxes;
   }
   beforeAll(async () => {
     // note the store will mutate across tests, so make sure to re-create it in beforeEach
@@ -98,7 +97,7 @@ describe("SettingsForm.vue", () => {
   describe("Given Vuex has a valid user account of 'User account -1' but no user index selected", () => {
     beforeEach(() => {
       // commit a deep copy of the template object to the Vuex store using JSON stringify/parse, as it may be modified during tests. https://www.javascripttutorial.net/object/3-ways-to-copy-objects-in-javascript/
-      store.commit("settings/set_user_accounts", JSON.parse(JSON.stringify(array_of_user_accounts)));
+      store.commit("settings/setUserAccounts", JSON.parse(JSON.stringify(arrayOfUserAccounts)));
     });
     describe("Given the component is mounted", () => {
       beforeEach(() => {
@@ -112,10 +111,10 @@ describe("SettingsForm.vue", () => {
         await wrapper.find("#input-dropdown-widget-user-account-").setValue("User account -1");
         await wrapper.vm.$nextTick(); // wait for update
 
-        const all_buttons = get_buttons(wrapper);
+        const allButtons = getButtons(wrapper);
         await wrapper.vm.$nextTick(); // wait for update
-        expect(all_buttons.add_user_btn.isVisible()).toBe(true);
-        expect(all_buttons.edit_user_btn.isVisible()).toBe(true);
+        expect(allButtons.addUserBtn.isVisible()).toBe(true);
+        expect(allButtons.editUserBtn.isVisible()).toBe(true);
       });
     });
 
@@ -125,10 +124,10 @@ describe("SettingsForm.vue", () => {
         localVue,
       });
       await wrapper.vm.$nextTick(); // wait for update
-      const all_buttons = get_buttons(wrapper);
+      const allButtons = getButtons(wrapper);
       await wrapper.vm.$nextTick(); // wait for update
-      expect(all_buttons.add_user_btn.isVisible()).toBe(true);
-      expect(all_buttons.edit_user_btn.isVisible()).toBe(false);
+      expect(allButtons.addUserBtn.isVisible()).toBe(true);
+      expect(allButtons.editUserBtn.isVisible()).toBe(false);
     });
     test("When the component is mounted, Then visually the Reset and Save Buttons are disabled", async () => {
       wrapper = mount(ComponentToTest, {
@@ -136,76 +135,76 @@ describe("SettingsForm.vue", () => {
         localVue,
       });
 
-      const settings_buttons = get_settings_button_disable(wrapper);
-      expect(settings_buttons.reset_btn.isVisible()).toBe(true);
-      expect(settings_buttons.save_btn.isVisible()).toBe(true);
-      expect(settings_buttons.save_btn_container.isVisible()).toBe(true);
+      const settingsButtons = getSettingsButtonDisable(wrapper);
+      expect(settingsButtons.resetBtn.isVisible()).toBe(true);
+      expect(settingsButtons.saveBtn.isVisible()).toBe(true);
+      expect(settingsButtons.saveBtnContainer.isVisible()).toBe(true);
     });
     test("Given the SettingsForm has a valid customer account set as 'User account -1', When the Vuex Store data specifies a valid Customer ID, Then visually the Reset and Save Buttons are enabled", async () => {
-      store.commit("settings/set_active_user_index", 0);
+      store.commit("settings/setActiveUserIndex", 0);
 
       wrapper = mount(ComponentToTest, {
         store,
         localVue,
       });
-      const settings_buttons = get_settings_button_enabled(wrapper);
-      expect(settings_buttons.reset_btn.isVisible()).toBe(true);
-      expect(settings_buttons.save_btn.isVisible()).toBe(true);
-      expect(settings_buttons.save_btn_container.isVisible()).toBe(true);
+      const settingsButtons = getSettingsButtonEnabled(wrapper);
+      expect(settingsButtons.resetBtn.isVisible()).toBe(true);
+      expect(settingsButtons.saveBtn.isVisible()).toBe(true);
+      expect(settingsButtons.saveBtnContainer.isVisible()).toBe(true);
     });
     test("Given the SettingsForm has Vuex data is an empty array, When the value Customer ID is <empty>, Then visually the RED Box is enabled around the Customer ID", async () => {
-      const array_of_empty_user_accounts = [];
-      store.commit("settings/set_user_accounts", array_of_empty_user_accounts);
+      const arrayOfEmptyUserAccounts = [];
+      store.commit("settings/setUserAccounts", arrayOfEmptyUserAccounts);
       wrapper = mount(ComponentToTest, {
         store,
         localVue,
       });
-      const invalid_box = get_invalid_boxes(wrapper);
-      expect(invalid_box.customer.isVisible()).toBe(true);
+      const invalidBox = getInvalidBoxes(wrapper);
+      expect(invalidBox.customer.isVisible()).toBe(true);
     });
     test("Given the SettingsForm has a valid customer account set as 'User account -1', When the 'User account -1' is in focus, Then the GREEN Box is enabled around the Customer ID", async () => {
-      store.commit("settings/set_active_user_index", 0);
+      store.commit("settings/setActiveUserIndex", 0);
 
       wrapper = mount(ComponentToTest, {
         store,
         localVue,
       });
-      const valid_boxes = get_valid_boxes(wrapper);
-      expect(valid_boxes.customer.isVisible()).toBe(true);
+      const validBoxes = getValidBoxes(wrapper);
+      expect(validBoxes.customer.isVisible()).toBe(true);
     });
     test("Given the SettingsForm has a valid customer account set as 'User account -1', When the user now modifies to non-existent customer say 'User account -', Then validate that Red Boxes are visible around Customer ID 'Add New Customer Button' is enabled", async () => {
-      store.commit("settings/set_active_user_index", 0);
+      store.commit("settings/setActiveUserIndex", 0);
 
       wrapper = mount(ComponentToTest, {
         store,
         localVue,
       });
 
-      const valid_boxes = get_valid_boxes(wrapper);
-      expect(valid_boxes.customer.isVisible()).toBe(true);
+      const validBoxes = getValidBoxes(wrapper);
+      expect(validBoxes.customer.isVisible()).toBe(true);
 
       await wrapper.find("#input-dropdown-widget-user-account-").setValue("User account -"); // customer with this doesn't exist.
 
       await wrapper.vm.$nextTick(); // wait for update
 
-      const invalid_box = get_invalid_boxes(wrapper);
-      expect(invalid_box.customer.isVisible()).toBe(true);
-      const all_buttons = get_buttons(wrapper);
+      const invalidBox = getInvalidBoxes(wrapper);
+      expect(invalidBox.customer.isVisible()).toBe(true);
+      const allButtons = getButtons(wrapper);
       await wrapper.vm.$nextTick(); // wait for update
-      expect(all_buttons.add_user_btn.isVisible()).toBe(true);
-      expect(all_buttons.edit_user_btn.isVisible()).toBe(false);
+      expect(allButtons.addUserBtn.isVisible()).toBe(true);
+      expect(allButtons.editUserBtn.isVisible()).toBe(false);
     });
 
     test("Given the SettingsForm has a valid customer account set as 'User account -1', When the user sets the value on input with same default value 'User account -1' , Then validate that Green Box is around the input, and based on rules relevant buttons are enabled", async () => {
-      store.commit("settings/set_active_user_index", 0);
-      // store.commit("settings/set_active_user_index", 0);
+      store.commit("settings/setActiveUserIndex", 0);
+      // store.commit("settings/setActiveUserIndex", 0);
 
       wrapper = mount(ComponentToTest, {
         store,
         localVue,
         data() {
           return {
-            disable_edit_user: true,
+            disableEditUser: true,
           };
         },
       });
@@ -215,12 +214,12 @@ describe("SettingsForm.vue", () => {
       await wrapper.find("#input-dropdown-widget-user-account-").setValue("User account -1");
       await wrapper.vm.$nextTick(); // wait for update
 
-      const valid_boxes = get_valid_boxes(wrapper);
-      expect(valid_boxes.customer.isVisible()).toBe(true);
-      const all_buttons = get_buttons(wrapper);
+      const validBoxes = getValidBoxes(wrapper);
+      expect(validBoxes.customer.isVisible()).toBe(true);
+      const allButtons = getButtons(wrapper);
       await wrapper.vm.$nextTick(); // wait for update
-      expect(all_buttons.add_user_btn.isVisible()).toBe(true);
-      expect(all_buttons.edit_user_btn.isVisible()).toBe(true);
+      expect(allButtons.addUserBtn.isVisible()).toBe(true);
+      expect(allButtons.editUserBtn.isVisible()).toBe(true);
     });
 
     test("When the component is mounted and User account is/is not selected, Then the cancel button is visible and will close modal on click", async () => {
@@ -228,53 +227,27 @@ describe("SettingsForm.vue", () => {
         store,
         localVue,
       });
-      const settings_buttons = await get_settings_button_enabled(wrapper);
+      const settingsButtons = await getSettingsButtonEnabled(wrapper);
 
-      expect(settings_buttons.cancel_btn.isVisible()).toBe(true);
-      await settings_buttons.cancel_btn.trigger("click");
+      expect(settingsButtons.cancelBtn.isVisible()).toBe(true);
+      await settingsButtons.cancelBtn.trigger("click");
 
-      const close_event = wrapper.emitted("close_modal");
-      expect(close_event[0]).toStrictEqual([false]);
+      const closeEvent = wrapper.emitted("close-modal");
+      expect(closeEvent[0]).toStrictEqual([false]);
     });
 
     test("When the component is mounted and User account is/is not selected, Then clicking the save button will be disabled", async () => {
-      const commit_spy = jest.spyOn(store, "commit");
+      const commitSpy = jest.spyOn(store, "commit");
       wrapper = mount(ComponentToTest, {
         store,
         localVue,
       });
-      const settings_buttons = await get_settings_button_disable(wrapper);
+      const settingsButtons = await getSettingsButtonDisable(wrapper);
 
-      expect(settings_buttons.save_btn.isVisible()).toBe(true);
-      await settings_buttons.save_btn.trigger("click");
+      expect(settingsButtons.saveBtn.isVisible()).toBe(true);
+      await settingsButtons.saveBtn.trigger("click");
 
-      expect(commit_spy).toHaveBeenCalledTimes(0);
-    });
-
-    test("When the component is mounted and a user toggles the auto upload and auto delete switches, Then the new state will be handled in component state", async () => {
-      const toggle_spy = jest.spyOn(ComponentToTest.methods, "handle_toggle_state");
-      wrapper = mount(ComponentToTest, {
-        store,
-        localVue,
-      });
-      const default_state = {
-        auto_delete: false,
-        auto_upload: false,
-      };
-      const expected_state = {
-        auto_delete: true,
-        auto_upload: true,
-      };
-      expect(wrapper.vm.auto_delete).toBe(default_state.auto_delete);
-      expect(wrapper.vm.auto_upload).toBe(default_state.auto_upload);
-
-      await wrapper.find(ToggleWidget).vm.$emit("handle_toggle_state", true, "auto_upload");
-      await wrapper.find(ToggleWidget).vm.$emit("handle_toggle_state", true, "auto_delete");
-
-      expect(toggle_spy).toHaveBeenCalledTimes(2);
-
-      expect(wrapper.vm.auto_delete).toBe(expected_state.auto_delete);
-      expect(wrapper.vm.auto_upload).toBe(expected_state.auto_upload);
+      expect(commitSpy).toHaveBeenCalledTimes(0);
     });
   });
 });

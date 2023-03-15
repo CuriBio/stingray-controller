@@ -1,57 +1,56 @@
 <template>
   <div>
-    <div class="div__edituser-form-controls"></div>
+    <div class="div__edituser-form-controls" />
     <span class="span__edituser-form-controls-content-title">
       Edit&nbsp;<wbr />User&nbsp;<wbr />Credentials
     </span>
-    <div id="customer_id" style="top: 50px; left: 50px; position: absolute; z-index: 24">
+    <div id="customerId" style="top: 50px; left: 50px; position: absolute; z-index: 24">
       <InputWidget
-        :title_label="'Customer ID'"
+        :titleLabel="'Customer ID'"
         :placeholder="'ba86b8f0-6fdf-4944-87a0-8a491a19490e'"
-        :invalid_text="error_text_id"
-        :initial_value="customer_id"
+        :invalidText="errorTextId"
+        :initialValue="customerId"
         :spellcheck="false"
-        :input_width="400"
-        :dom_id_suffix="'customer-id'"
-        @update:value="on_update_id($event)"
-      ></InputWidget>
+        :inputWidth="400"
+        :domIdSuffix="'customer-id'"
+        @update:value="onUpdateId($event)"
+      />
     </div>
-    <div id="user_name" style="top: 145px; left: 50px; position: absolute; z-index: 23">
+    <div id="userName" style="top: 145px; left: 50px; position: absolute; z-index: 23">
       <InputWidget
-        :title_label="'Username'"
+        :titleLabel="'Username'"
         :placeholder="'Curi Bio User'"
-        :invalid_text="error_text_user_name"
-        :initial_value="user_name"
-        :input_width="400"
-        :dom_id_suffix="'username'"
-        @update:value="on_update_user_name($event)"
-      ></InputWidget>
+        :invalidText="errorTextUserName"
+        :initialValue="userName"
+        :inputWidth="400"
+        :domIdSuffix="'username'"
+        @update:value="onUpdateUserName($event)"
+      />
     </div>
     <div id="passkey" style="top: 241px; left: 50px; position: absolute; z-index: 22">
       <InputWidget
-        :title_label="'Password'"
+        :titleLabel="'Password'"
         :placeholder="'2VSckkBYr2An3dqHEyfRRE'"
-        :invalid_text="error_text_pass"
-        :initial_value="user_password"
+        :invalidText="errorTextPass"
+        :initialValue="userPassword"
         :type="'password'"
         :spellcheck="false"
-        :input_width="400"
-        :dom_id_suffix="'passkey-id'"
-        @update:value="on_update_pass($event)"
-      ></InputWidget>
+        :inputWidth="400"
+        :domIdSuffix="'passkey-id'"
+        @update:value="onUpdatePass($event)"
+      />
     </div>
     <div style="top: 350px; left: 0px; position: absolute">
       <ButtonWidget
-        :button_widget_width="500"
-        :button_widget_height="50"
-        :button_widget_top="0"
-        :button_widget_left="0"
-        :button_names="['Cancel', 'Delete ID', 'Save ID']"
-        :hover_color="['#bd4932', '#bd4932', '#19ac8a']"
-        :is_enabled="enablelist_edit_user"
-        @btn-click="clicked_button"
-      >
-      </ButtonWidget>
+        :buttonWidgetWidth="500"
+        :buttonWidgetHeight="50"
+        :buttonWidgetTop="0"
+        :buttonWidgetLeft="0"
+        :buttonNames="['Cancel', 'Delete ID', 'Save ID']"
+        :hoverColor="['#bd4932', '#bd4932', '#19ac8a']"
+        :isEnabled="enablelistEditUser"
+        @btn-click="clickedButton"
+      />
     </div>
   </div>
 </template>
@@ -60,14 +59,14 @@ import Vue from "vue";
 import BootstrapVue from "bootstrap-vue";
 import { BButton } from "bootstrap-vue";
 import { BFormInput } from "bootstrap-vue";
-import InputWidget from "@/components/basic_widgets/InputWidget.vue";
-import ButtonWidget from "@/components/basic_widgets/ButtonWidget.vue";
-import { TextValidation } from "@/js_utils/text_validation.js";
+import InputWidget from "@/components/basic-widgets/InputWidget.vue";
+import ButtonWidget from "@/components/basic-widgets/ButtonWidget.vue";
+import { TextValidation } from "@/js-utils/TextValidation.js";
 Vue.use(BootstrapVue);
 Vue.component("BFormInput", BFormInput);
 Vue.component("BButton", BButton);
 import "bootstrap/dist/css/bootstrap.min.css";
-const TextValidation_User = new TextValidation("user_account_input");
+const TextValidation_User = new TextValidation("userAccountInput");
 
 export default {
   name: "EditUser",
@@ -77,92 +76,92 @@ export default {
   },
   props: {
     dialogdata: { type: Object, default: null },
-    open_for_invalid_creds: { type: Boolean, default: false },
+    openForInvalidCreds: { type: Boolean, default: false },
   },
   data() {
     return {
-      customer_id: this.dialogdata.customer_id,
-      user_name: this.dialogdata.user_name,
-      user_password: this.dialogdata.user_password,
-      error_text_id: "",
-      error_text_pass: "",
-      error_text_user_name: "",
-      enablelist_edit_user: [true, true, true],
+      customerId: this.dialogdata.customerId,
+      userName: this.dialogdata.userName,
+      userPassword: this.dialogdata.userPassword,
+      errorTextId: "",
+      errorTextPass: "",
+      errorTextUserName: "",
+      enablelistEditUser: [true, true, true],
     };
   },
   created() {
-    if (this.open_for_invalid_creds) {
-      this.error_text_id = "Invalid Customer ID, Username, or Password";
-      this.error_text_pass = "Invalid Customer ID, Username, or Password";
-      this.error_text_user_name = "Invalid Customer ID, Username, or Password";
-      this.enablelist_edit_user = [true, true, false];
+    if (this.openForInvalidCreds) {
+      this.errorTextId = "Invalid Customer ID, Username, or Password";
+      this.errorTextPass = "Invalid Customer ID, Username, or Password";
+      this.errorTextUserName = "Invalid Customer ID, Username, or Password";
+      this.enablelistEditUser = [true, true, false];
     }
   },
   methods: {
-    on_update_id: function (new_value) {
-      this.error_text_id = TextValidation_User.validate(new_value, "ID");
-      if (this.open_for_invalid_creds && this.error_text_id.length === 0) {
-        this.error_text_pass = "";
-        this.error_text_user_name = "";
+    onUpdateId: function (newValue) {
+      this.errorTextId = TextValidation_User.validate(newValue, "ID");
+      if (this.openForInvalidCreds && this.errorTextId.length === 0) {
+        this.errorTextPass = "";
+        this.errorTextUserName = "";
       }
-      this.customer_id = new_value;
-      this.enable_save_button();
+      this.customerId = newValue;
+      this.enableSaveButton();
     },
-    on_update_pass: function (new_value) {
-      this.error_text_pass = TextValidation_User.validate(new_value, "passkey");
-      if (this.open_for_invalid_creds && this.error_text_pass.length === 0) {
-        this.error_text_id = "";
-        this.error_text_user_name = "";
+    onUpdatePass: function (newValue) {
+      this.errorTextPass = TextValidation_User.validate(newValue, "passkey");
+      if (this.openForInvalidCreds && this.errorTextPass.length === 0) {
+        this.errorTextId = "";
+        this.errorTextUserName = "";
       }
-      this.user_password = new_value;
-      this.enable_save_button();
+      this.userPassword = newValue;
+      this.enableSaveButton();
     },
-    on_update_user_name: function (new_value) {
-      this.error_text_user_name = TextValidation_User.validate(new_value, "user_name");
-      if (this.open_for_invalid_creds && this.error_text_user_name.length === 0) {
-        this.error_text_id = "";
-        this.error_text_pass = "";
+    onUpdateUserName: function (newValue) {
+      this.errorTextUserName = TextValidation_User.validate(newValue, "userName");
+      if (this.openForInvalidCreds && this.errorTextUserName.length === 0) {
+        this.errorTextId = "";
+        this.errorTextPass = "";
       }
-      this.user_name = new_value;
-      this.enable_save_button();
+      this.userName = newValue;
+      this.enableSaveButton();
     },
-    clicked_button: function (choice) {
+    clickedButton: function (choice) {
       switch (choice) {
         case 0:
-          this.cancel_edituser();
+          this.cancelEdituser();
           break;
         case 1:
-          this.delete_user();
+          this.deleteUser();
           break;
         case 2:
-          this.save_user();
+          this.saveUser();
           break;
       }
     },
-    cancel_edituser() {
+    cancelEdituser() {
       this.$emit("cancel-id");
     },
-    delete_user() {
+    deleteUser() {
       this.$emit("delete-id");
     },
-    save_user() {
-      const edit_user = {
-        customer_id: this.customer_id,
-        user_password: this.user_password,
-        user_name: this.user_name,
+    saveUser() {
+      const editUser = {
+        customerId: this.customerId,
+        userPassword: this.userPassword,
+        userName: this.userName,
       };
-      this.$emit("save-id", edit_user);
+      this.$emit("save-id", editUser);
     },
-    enable_save_button() {
-      if (this.error_text_id === "") {
-        if (this.error_text_pass === "") {
-          if (this.error_text_user_name === "") {
-            this.enablelist_edit_user = [true, true, true];
+    enableSaveButton() {
+      if (this.errorTextId === "") {
+        if (this.errorTextPass === "") {
+          if (this.errorTextUserName === "") {
+            this.enablelistEditUser = [true, true, true];
             return;
           }
         }
       }
-      this.enablelist_edit_user = [true, true, false];
+      this.enablelistEditUser = [true, true, false];
     },
   },
 };

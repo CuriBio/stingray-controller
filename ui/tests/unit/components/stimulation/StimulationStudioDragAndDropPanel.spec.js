@@ -6,50 +6,50 @@ const localVue = createLocalVue();
 localVue.use(Vuex);
 let NuxtStore;
 let store;
-const test_protocol_order = [
+const testProtocolOrder = [
   {
     type: "Biphasic",
     src: "placeholder",
-    run_until_stopped: false,
+    runUntilStopped: false,
     color: "hsla(15, 100%, 50%, 1)",
-    pulse_settings: {
-      phase_one_duration: 20,
-      phase_one_charge: 2,
-      interphase_interval: 10,
-      phase_two_duration: 20,
-      phase_two_charge: -5,
-      postphase_interval: 0,
-      total_active_duration: {
+    pulseSettings: {
+      phaseOneDuration: 20,
+      phaseOneCharge: 2,
+      interphaseInterval: 10,
+      phaseTwoDuration: 20,
+      phaseTwoCharge: -5,
+      postphaseInterval: 0,
+      totalActiveDuration: {
         duration: 1000,
         unit: "milliseconds",
       },
-      num_cycles: 1,
+      numCycles: 1,
       frequency: 3,
     },
   },
   {
     type: "Monophasic",
     src: "placeholder",
-    run_until_stopped: false,
+    runUntilStopped: false,
     color: "hsla(205, 100%, 50%, 1)",
-    pulse_settings: {
-      phase_one_duration: 20,
-      phase_one_charge: 3,
-      postphase_interval: 0,
-      total_active_duration: {
+    pulseSettings: {
+      phaseOneDuration: 20,
+      phaseOneCharge: 3,
+      postphaseInterval: 0,
+      totalActiveDuration: {
         duration: 2000,
         unit: "milliseconds",
       },
-      num_cycles: 2,
+      numCycles: 2,
       frequency: 1,
     },
   },
   {
     type: "Delay",
     src: "placeholder",
-    run_until_stopped: false,
+    runUntilStopped: false,
     color: "hsla(5, 100%, 50%, 1)",
-    pulse_settings: {
+    pulseSettings: {
       duration: 300,
       unit: "seconds",
     },
@@ -57,23 +57,23 @@ const test_protocol_order = [
   {
     type: "Monophasic",
     src: "placeholder",
-    run_until_stopped: false,
+    runUntilStopped: false,
     color: "hsla(190, 100%, 50%, 1)",
-    pulse_settings: {
-      phase_one_duration: 10,
-      phase_one_charge: 2,
-      postphase_interval: 0,
-      total_active_duration: {
+    pulseSettings: {
+      phaseOneDuration: 10,
+      phaseOneCharge: 2,
+      postphaseInterval: 0,
+      totalActiveDuration: {
         duration: 4000,
         unit: "milliseconds",
       },
-      num_cycles: 4,
+      numCycles: 4,
       frequency: 5,
     },
   },
 ];
 
-const test_protocol_list = [
+const testProtocolList = [
   { letter: "", color: "", label: "Create New" },
   {
     letter: "A",
@@ -81,10 +81,10 @@ const test_protocol_list = [
     label: "Tester",
     protocol: {
       name: "Tester",
-      stimulation_type: "V",
-      run_until_stopped: false,
-      rest_duration: 20,
-      time_unit: "milliseconds",
+      stimulationType: "V",
+      runUntilStopped: false,
+      restDuration: 20,
+      timeUnit: "milliseconds",
       subprotocols: [
         {
           type: "Delay",
@@ -97,13 +97,13 @@ const test_protocol_list = [
           unit: "seconds",
         },
       ],
-      detailed_subprotocols: [
+      detailedSubprotocols: [
         {
           type: "Delay",
           src: "/delay-tile.png",
-          run_until_stopped: false,
+          runUntilStopped: false,
           color: "hsla(65, 100%, 50%, 1)",
-          pulse_settings: {
+          pulseSettings: {
             pduration: 15000,
             unit: "milliseconds",
           },
@@ -112,36 +112,36 @@ const test_protocol_list = [
     },
   },
 ];
-const new_mono_test_element = {
+const newMonoTestElement = {
   type: "Monophasic",
   color: "",
-  pulse_settings: {
-    phase_one_duration: "",
-    phase_one_charge: "",
-    postphase_interval: "",
-    total_active_duration: {
+  pulseSettings: {
+    phaseOneDuration: "",
+    phaseOneCharge: "",
+    postphaseInterval: "",
+    totalActiveDuration: {
       duration: "",
       unit: "milliseconds",
     },
-    num_cycles: 0,
+    numCycles: 0,
     frequency: "",
   },
 };
-const new_bi_test_element = {
+const newBiTestElement = {
   type: "Biphasic",
   color: "",
-  pulse_settings: {
-    phase_one_duration: "",
-    phase_one_charge: "",
-    interphase_interval: "",
-    phase_two_duration: "",
-    phase_two_charge: "",
-    postphase_interval: "",
-    total_active_duration: {
+  pulseSettings: {
+    phaseOneDuration: "",
+    phaseOneCharge: "",
+    interphaseInterval: "",
+    phaseTwoDuration: "",
+    phaseTwoCharge: "",
+    postphaseInterval: "",
+    totalActiveDuration: {
       duration: "",
       unit: "milliseconds",
     },
-    num_cycles: 0,
+    numCycles: 0,
     frequency: "",
   },
 };
@@ -155,7 +155,7 @@ describe("StimulationStudioDragAndDropPanel.vue", () => {
 
   beforeEach(async () => {
     store = await NuxtStore.createStore();
-    store.state.stimulation.protocol_list = JSON.parse(JSON.stringify(test_protocol_list));
+    store.state.stimulation.protocolList = JSON.parse(JSON.stringify(testProtocolList));
   });
 
   afterEach(() => {
@@ -167,8 +167,8 @@ describe("StimulationStudioDragAndDropPanel.vue", () => {
       store,
       localVue,
     });
-    const protocol_list = wrapper.vm.protocol_order;
-    expect(protocol_list).toStrictEqual([]);
+    const protocolList = wrapper.vm.protocolOrder;
+    expect(protocolList).toStrictEqual([]);
   });
 
   test("When a user clicks on trash icons to delete protocol, Then the protocol order in StimulationStudioDragAndDropPanel should empty from the mutation in state", async () => {
@@ -176,9 +176,9 @@ describe("StimulationStudioDragAndDropPanel.vue", () => {
       store,
       localVue,
     });
-    wrapper.vm.protocol_order = ["Biphasic", "Monophasic", "Monophasic"];
-    await store.commit("stimulation/reset_state");
-    expect(wrapper.vm.protocol_order).toStrictEqual([]);
+    wrapper.vm.protocolOrder = ["Biphasic", "Monophasic", "Monophasic"];
+    await store.commit("stimulation/resetState");
+    expect(wrapper.vm.protocolOrder).toStrictEqual([]);
   });
 
   test("When a user drops a waveform to the block editor, Then the corresponding modal to should pop up", async () => {
@@ -188,40 +188,40 @@ describe("StimulationStudioDragAndDropPanel.vue", () => {
     });
 
     await wrapper.vm.clone({ type: "Monophasic", src: "test" });
-    await wrapper.vm.check_type({
+    await wrapper.vm.checkType({
       added: {
-        element: new_mono_test_element,
+        element: newMonoTestElement,
         newIndex: 4,
       },
     });
-    expect(wrapper.vm.modal_type).toBe("Monophasic");
+    expect(wrapper.vm.modalType).toBe("Monophasic");
 
-    const modal_container = wrapper.find(".modal-container");
-    expect(modal_container.isVisible()).toBeTruthy();
+    const modalContainer = wrapper.find(".modal-container");
+    expect(modalContainer.isVisible()).toBeTruthy();
 
-    await wrapper.vm.on_modal_close("Cancel");
-    expect(wrapper.vm.modal_type).toBeNull();
+    await wrapper.vm.onModalClose("Cancel");
+    expect(wrapper.vm.modalType).toBeNull();
 
     await wrapper.vm.clone({ type: "Delay", src: "test" });
-    await wrapper.vm.check_type({
+    await wrapper.vm.checkType({
       added: {
         element: {
           type: "Delay",
           color: "hsla(45, 100%, 50%, 1)",
-          pulse_settings: { duration: "", unit: "milliseconds" },
+          pulseSettings: { duration: "", unit: "milliseconds" },
         },
         newIndex: 4,
       },
     });
 
-    expect(wrapper.vm.selected_pulse_settings).toStrictEqual({ duration: "", unit: "milliseconds" });
-    expect(wrapper.vm.open_delay_modal).toBe(true);
+    expect(wrapper.vm.selectedPulseSettings).toStrictEqual({ duration: "", unit: "milliseconds" });
+    expect(wrapper.vm.openDelayModal).toBe(true);
 
-    const delay_container = wrapper.find(".delay-container");
-    expect(delay_container.isVisible()).toBeTruthy();
+    const delayContainer = wrapper.find(".delay-container");
+    expect(delayContainer.isVisible()).toBeTruthy();
 
-    await wrapper.vm.on_modal_close("Cancel");
-    expect(wrapper.vm.modal_type).toBeNull();
+    await wrapper.vm.onModalClose("Cancel");
+    expect(wrapper.vm.modalType).toBeNull();
   });
 
   test("When a user opens a modal to delete waveform, Then when delete is clicked, it will delete", async () => {
@@ -230,42 +230,31 @@ describe("StimulationStudioDragAndDropPanel.vue", () => {
       localVue,
     });
 
-    await wrapper.setData({ protocol_order: JSON.parse(JSON.stringify(test_protocol_order)) });
-    await wrapper.vm.open_modal_for_edit("Biphasic", 0);
-    expect(wrapper.vm.modal_type).toBe("Biphasic");
-    expect(wrapper.vm.shift_click_img_idx).toBe(0);
-    expect(wrapper.find(".modal_overlay")).toBeTruthy();
+    await wrapper.setData({ protocolOrder: JSON.parse(JSON.stringify(testProtocolOrder)) });
+    await wrapper.vm.openModalForEdit("Biphasic", 0);
+    expect(wrapper.vm.modalType).toBe("Biphasic");
+    expect(wrapper.vm.shiftClickImgIdx).toBe(0);
+    expect(wrapper.find(".modalOverlay")).toBeTruthy();
 
-    const modal_buttons = wrapper.findAll(".span__button_label");
-    await modal_buttons.at(3).trigger("click");
+    const modalButtons = wrapper.findAll(".span__button-label");
+    await modalButtons.at(3).trigger("click");
 
-    expect(wrapper.vm.protocol_order).toHaveLength(3);
-    expect(wrapper.vm.modal_type).toBeNull();
+    expect(wrapper.vm.protocolOrder).toHaveLength(3);
+    expect(wrapper.vm.modalType).toBeNull();
   });
-
-  test("When exiting instance, Then instance is effectively destroyed", async () => {
-    const destroyed_spy = jest.spyOn(StimulationStudioDragAndDropPanel, "beforeDestroy");
-    wrapper = mount(StimulationStudioDragAndDropPanel, {
-      store,
-      localVue,
-    });
-    wrapper.destroy();
-    expect(destroyed_spy).toHaveBeenCalledWith();
-  });
-
   test("When a user selects a protocol to edit, Then the DragAndDropPanel component should get the selected pulse order and unit of time to display for edit", async () => {
     wrapper = mount(StimulationStudioDragAndDropPanel, {
       store,
       localVue,
     });
 
-    const expected_idx = 0;
-    const selected_protocol = store.state.stimulation.protocol_list[1];
-    const expected_pulse_order = store.state.stimulation.protocol_list[1].protocol.detailed_subprotocols;
-    await store.dispatch("stimulation/edit_selected_protocol", selected_protocol);
+    const expectedIdx = 0;
+    const selectedProtocol = store.state.stimulation.protocolList[1];
+    const expectedPulseOrder = store.state.stimulation.protocolList[1].protocol.detailedSubprotocols;
+    await store.dispatch("stimulation/editSelectedProtocol", selectedProtocol);
 
-    expect(wrapper.vm.time_units_idx).toBe(expected_idx);
-    expect(wrapper.vm.protocol_order).toStrictEqual(expected_pulse_order);
+    expect(wrapper.vm.timeUnitsIdx).toBe(expectedIdx);
+    expect(wrapper.vm.protocolOrder).toStrictEqual(expectedPulseOrder);
   });
 
   test("When a user adds a new waveform to the protocol editor and cancels the addition, Then the modal should only appear when it's been cloned and should remove new waveform when cancelled", async () => {
@@ -273,48 +262,48 @@ describe("StimulationStudioDragAndDropPanel.vue", () => {
       store,
       localVue,
     });
-    await wrapper.setData({ protocol_order: JSON.parse(JSON.stringify(test_protocol_order)) });
-    expect(wrapper.vm.protocol_order).toHaveLength(4);
+    await wrapper.setData({ protocolOrder: JSON.parse(JSON.stringify(testProtocolOrder)) });
+    expect(wrapper.vm.protocolOrder).toHaveLength(4);
 
     await wrapper.vm.clone({ type: "Biphasic", src: "test" });
     expect(wrapper.vm.cloned).toBe(true);
-    await wrapper.vm.check_type({
+    await wrapper.vm.checkType({
       added: {
-        element: new_bi_test_element,
+        element: newBiTestElement,
         newIndex: 4,
       },
     });
 
-    expect(wrapper.vm.modal_type).toBe("Biphasic");
+    expect(wrapper.vm.modalType).toBe("Biphasic");
 
-    const cancel_button = wrapper.findAll(".span__button_label").at(1);
-    await cancel_button.trigger("click");
+    const cancelButton = wrapper.findAll(".span__button-label").at(1);
+    await cancelButton.trigger("click");
 
-    expect(wrapper.vm.protocol_order).toHaveLength(4);
+    expect(wrapper.vm.protocolOrder).toHaveLength(4);
   });
   test("When changes the order of waveform tiles in scrollable component, Then no modal should appear", async () => {
     wrapper = mount(StimulationStudioDragAndDropPanel, {
       store,
       localVue,
     });
-    await wrapper.setData({ protocol_order: JSON.parse(JSON.stringify(test_protocol_order)) });
-    expect(wrapper.vm.protocol_order).toHaveLength(4);
+    await wrapper.setData({ protocolOrder: JSON.parse(JSON.stringify(testProtocolOrder)) });
+    expect(wrapper.vm.protocolOrder).toHaveLength(4);
 
-    await wrapper.vm.check_type({
+    await wrapper.vm.checkType({
       moved: {
         element: {},
         newIndex: 2,
       },
     });
 
-    expect(wrapper.vm.modal_type).toBeNull();
+    expect(wrapper.vm.modalType).toBeNull();
   });
 
   test("When a user clicks save on the settings for a waveform, Then the setting should save to the corresponding index depending on if it is a new waveform or an edited", async () => {
-    const test_settings = "test";
-    const test_stim_settings = {
-      postphase_interval: "",
-      total_active_duration: {
+    const testSettings = "test";
+    const testStimSettings = {
+      postphaseInterval: "",
+      totalActiveDuration: {
         duration: "",
         unit: "milliseconds",
       },
@@ -323,30 +312,19 @@ describe("StimulationStudioDragAndDropPanel.vue", () => {
       store,
       localVue,
     });
-    wrapper.vm.protocol_order = [
+    wrapper.vm.protocolOrder = [
       {
         type: "Biphasic",
         src: "test",
         color: "b7b7b7",
-        nested_protocols: [],
+        nestedProtocols: [],
       },
     ];
-    wrapper.vm.new_cloned_idx = 0;
-    wrapper.vm.modal_type = "Biphasic";
+    wrapper.vm.newClonedIdx = 0;
+    wrapper.vm.modalType = "Biphasic";
 
-    await wrapper.vm.on_modal_close("Save", test_settings, test_stim_settings);
-    expect(wrapper.vm.protocol_order[0].pulse_settings).toBe(test_settings);
-  });
-
-  test("When a user switch time unit in drop down, Then the x-axis scale should change accordingly", async () => {
-    const wrapper = mount(StimulationStudioDragAndDropPanel, {
-      store,
-      localVue,
-    });
-
-    await wrapper.findAll("li").at(1).trigger("click");
-
-    expect(wrapper.vm.time_units_idx).toBe(1);
+    await wrapper.vm.onModalClose("Save", testSettings, testStimSettings);
+    expect(wrapper.vm.protocolOrder[0].pulseSettings).toBe(testSettings);
   });
 
   test("When a user hovers over a waveform tile, Then the pulse settings will be added to state", async () => {
@@ -355,17 +333,17 @@ describe("StimulationStudioDragAndDropPanel.vue", () => {
       localVue,
     });
 
-    expect(store.state.stimulation.hovered_pulse).toStrictEqual({
+    expect(store.state.stimulation.hoveredPulse).toStrictEqual({
       idx: null,
       indices: [],
       color: null,
     });
 
-    await wrapper.setData({ protocol_order: JSON.parse(JSON.stringify(test_protocol_order)) });
-    await store.dispatch("stimulation/handle_protocol_order", test_protocol_order);
-    await wrapper.vm.on_pulse_enter(1);
+    await wrapper.setData({ protocolOrder: JSON.parse(JSON.stringify(testProtocolOrder)) });
+    await store.dispatch("stimulation/handleProtocolOrder", testProtocolOrder);
+    await wrapper.vm.onPulseEnter(1);
 
-    expect(store.state.stimulation.hovered_pulse).toStrictEqual({
+    expect(store.state.stimulation.hoveredPulse).toStrictEqual({
       idx: 1,
       indices: [9, 20],
       color: "hsla(205, 100%, 50%, 1)",
@@ -377,21 +355,21 @@ describe("StimulationStudioDragAndDropPanel.vue", () => {
       store,
       localVue,
     });
-    const default_state = {
+    const defaultState = {
       idx: null,
       indices: [],
       color: null,
     };
-    expect(store.state.stimulation.hovered_pulse).toStrictEqual(default_state);
+    expect(store.state.stimulation.hoveredPulse).toStrictEqual(defaultState);
 
     await wrapper.setData({
-      protocol_order: JSON.parse(JSON.stringify(test_protocol_order)),
-      is_dragging: true,
+      protocolOrder: JSON.parse(JSON.stringify(testProtocolOrder)),
+      isDragging: true,
     });
-    await store.dispatch("stimulation/handle_protocol_order", test_protocol_order);
-    await wrapper.vm.on_pulse_enter(1);
+    await store.dispatch("stimulation/handleProtocolOrder", testProtocolOrder);
+    await wrapper.vm.onPulseEnter(1);
 
-    expect(store.state.stimulation.hovered_pulse).toStrictEqual(default_state);
+    expect(store.state.stimulation.hoveredPulse).toStrictEqual(defaultState);
   });
 
   test("When a user leaves hover over a waveform tile, Then the pulse settings will be reset", async () => {
@@ -400,16 +378,16 @@ describe("StimulationStudioDragAndDropPanel.vue", () => {
       localVue,
     });
 
-    await store.dispatch("stimulation/handle_protocol_order", test_protocol_order);
-    await wrapper.vm.on_pulse_enter(1);
-    expect(store.state.stimulation.hovered_pulse).toStrictEqual({
+    await store.dispatch("stimulation/handleProtocolOrder", testProtocolOrder);
+    await wrapper.vm.onPulseEnter(1);
+    expect(store.state.stimulation.hoveredPulse).toStrictEqual({
       idx: 1,
       indices: [9, 20],
       color: "hsla(205, 100%, 50%, 1)",
     });
 
-    await wrapper.vm.on_pulse_leave();
-    expect(store.state.stimulation.hovered_pulse).toStrictEqual({
+    await wrapper.vm.onPulseLeave();
+    expect(store.state.stimulation.hoveredPulse).toStrictEqual({
       idx: null,
       indices: [],
       color: null,
@@ -422,18 +400,18 @@ describe("StimulationStudioDragAndDropPanel.vue", () => {
       localVue,
     });
 
-    await wrapper.setData({ protocol_order: JSON.parse(JSON.stringify(test_protocol_order)) });
-    expect(wrapper.vm.protocol_order).toHaveLength(4);
-    await wrapper.vm.open_modal_for_edit("Monophasic", 3);
+    await wrapper.setData({ protocolOrder: JSON.parse(JSON.stringify(testProtocolOrder)) });
+    expect(wrapper.vm.protocolOrder).toHaveLength(4);
+    await wrapper.vm.openModalForEdit("Monophasic", 3);
 
-    const duplicate_button = wrapper.findAll(".span__button_label").at(2);
-    await duplicate_button.trigger("click");
+    const duplicateButton = wrapper.findAll(".span__button-label").at(2);
+    await duplicateButton.trigger("click");
 
-    expect(wrapper.vm.protocol_order).toHaveLength(5);
+    expect(wrapper.vm.protocolOrder).toHaveLength(5);
   });
 
   test("When a selects the Stimulate Until Complete option in the protocol editor, Then the time unit dropdown should become disabled", async () => {
-    const test_settings = {
+    const testSettings = {
       complete: false,
       stopped: true,
     };
@@ -442,10 +420,10 @@ describe("StimulationStudioDragAndDropPanel.vue", () => {
       localVue,
     });
 
-    await store.commit("stimulation/set_stop_setting", test_settings.complete);
-    expect(wrapper.vm.disable_dropdown).toBe(true);
-    await store.commit("stimulation/set_stop_setting", test_settings.stopped);
-    expect(wrapper.vm.disable_dropdown).toBe(false);
+    await store.commit("stimulation/setStopSetting", testSettings.complete);
+    expect(wrapper.vm.disableDropdown).toBe(true);
+    await store.commit("stimulation/setStopSetting", testSettings.stopped);
+    expect(wrapper.vm.disableDropdown).toBe(false);
   });
 
   test("When a user double clicks a delay block to edit duration, Then the new value should be saved upon close", async () => {
@@ -456,16 +434,16 @@ describe("StimulationStudioDragAndDropPanel.vue", () => {
 
     const idx = 2;
 
-    const delay_settings = {
+    const delaySettings = {
       duration: 5,
       unit: "seconds",
     };
 
-    await wrapper.setData({ protocol_order: test_protocol_order });
-    await wrapper.vm.open_modal_for_edit("Delay", idx);
-    expect(wrapper.vm.open_delay_modal).toBe(true);
+    await wrapper.setData({ protocolOrder: testProtocolOrder });
+    await wrapper.vm.openModalForEdit("Delay", idx);
+    expect(wrapper.vm.openDelayModal).toBe(true);
 
-    await wrapper.vm.on_modal_close("Save", delay_settings);
-    expect(wrapper.vm.protocol_order[idx].pulse_settings.duration).toBe(delay_settings.duration);
+    await wrapper.vm.onModalClose("Save", delaySettings);
+    expect(wrapper.vm.protocolOrder[idx].pulseSettings.duration).toBe(delaySettings.duration);
   });
 });

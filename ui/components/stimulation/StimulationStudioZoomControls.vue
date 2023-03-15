@@ -1,10 +1,10 @@
 <template>
   <div class="div__axis-controls">
-    <span class="span__axis-controls-zoom-out-button" @click="zoom_out">
+    <span class="span__axis-controls-zoom-out-button" @click="zoomOut">
       <FontAwesomeIcon :icon="['fa', 'minus-circle']" />
     </span>
 
-    <span class="span__axis-controls-zoom-in-button" @click="zoom_in">
+    <span class="span__axis-controls-zoom-in-button" @click="zoomIn">
       <FontAwesomeIcon :icon="['fa', 'plus-circle']" />
     </span>
   </div>
@@ -13,14 +13,15 @@
 import { library } from "@fortawesome/fontawesome-svg-core";
 import { faMinusCircle, faPlusCircle } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
+
 library.add(faMinusCircle, faPlusCircle);
 
 /**
  * @vue-props {String} axis - Determines which axis scale the controls change
- * @vue-data {String} zoom_in_message - Popover on hover for zoom in button
- * @vue-data {String} zoom_out_message - Popover on hover for zoom out button
- * @vue-method {event} zoom_in - Commits the zoom-in to change corresponding scale
- * @vue-method {event} zoom_out - Commits the zoom-out to change corresponding scale
+ * @vue-data {String} zoomInMessage - Popover on hover for zoom in button
+ * @vue-data {String} zoomOutMessage - Popover on hover for zoom out button
+ * @vue-method {event} zoomIn - Commits the zoom-in to change corresponding scale
+ * @vue-method {event} zoomOut - Commits the zoom-out to change corresponding scale
  */
 
 export default {
@@ -31,16 +32,18 @@ export default {
   },
   data: function () {
     return {
-      zoom_in_message: "Zoom-In",
-      zoom_out_message: "Zoom-Out",
+      zoomInMessage: "Zoom-In",
+      zoomOutMessage: "Zoom-Out",
     };
   },
   methods: {
-    zoom_in() {
-      this.$store.commit("stimulation/set_zoom_in", this.axis);
+    zoomIn() {
+      if (this.axis === "y-axis") this.$store.commit("stimulation/setZoomIn", this.axis);
+      else this.$emit("zoom-in");
     },
-    zoom_out() {
-      this.$store.commit("stimulation/set_zoom_out", this.axis);
+    zoomOut() {
+      if (this.axis === "y-axis") this.$store.commit("stimulation/setZoomOut", this.axis);
+      else this.$emit("zoom-out");
     },
   },
 };
