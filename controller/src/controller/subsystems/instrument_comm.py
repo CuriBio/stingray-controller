@@ -30,8 +30,6 @@ from ..constants import StimulatorCircuitStatuses
 from ..constants import STM_VID
 from ..exceptions import FirmwareGoingDormantError
 from ..exceptions import FirmwareUpdateCommandFailedError
-from ..exceptions import InstrumentDataStreamingAlreadyStartedError
-from ..exceptions import InstrumentDataStreamingAlreadyStoppedError
 from ..exceptions import InstrumentFirmwareError
 from ..exceptions import NoInstrumentDetectedError
 from ..exceptions import SerialCommCommandProcessingError
@@ -186,7 +184,7 @@ class InstrumentComm:
             seconds_remaining -= 1
             await asyncio.sleep(1)
         if len(magic_word_test_bytes) != magic_word_len:
-            # if the entire period has passed and no more bytes are available an error has occurred with the Mantarray that is considered fatal
+            # if the entire period has passed and no more bytes are available an error has occurred with the instrument that is considered fatal
             raise SerialCommPacketRegistrationTimeoutError(magic_word_test_bytes)
 
         # read more bytes until the magic word is registered, the timeout value is reached, or the maximum number of bytes are read
@@ -201,7 +199,7 @@ class InstrumentComm:
                     # only want to run this append expression if a byte was read
                     magic_word_test_bytes = magic_word_test_bytes[1:] + next_byte
                 if num_bytes_checked > SERIAL_COMM_MAX_FULL_PACKET_LENGTH_BYTES:
-                    # A magic word should be encountered if this many bytes are read. If not, we can assume there is a problem with the mantarray
+                    # A magic word should be encountered if this many bytes are read. If not, we can assume there is a problem with the instrument
                     raise SerialCommPacketRegistrationSearchExhaustedError()
 
         try:
@@ -224,6 +222,7 @@ class InstrumentComm:
 
     async def _catch_expired_command(self) -> None:
         expired_command = await self._command_tracker.wait_for_expired_command()
+        # TODO raise FirmwareUpdateTimeoutError when necessary
         raise SerialCommCommandResponseTimeoutError(expired_command["command"])
 
     # INFINITE TASKS
@@ -322,10 +321,7 @@ class InstrumentComm:
                 except (
                     InstrumentFirmwareError,
                     FirmwareGoingDormantError,
-                    SerialCommUntrackedCommandResponseError,
                     SerialCommIncorrectChecksumFromPCError,
-                    InstrumentDataStreamingAlreadyStartedError,
-                    InstrumentDataStreamingAlreadyStoppedError,
                     StimulationProtocolUpdateFailedError,
                     StimulationStatusUpdateFailedError,
                     FirmwareUpdateCommandFailedError,
@@ -364,6 +360,8 @@ class InstrumentComm:
 
     async def _wait_for_reboot(self) -> None:
         self._is_waiting_for_reboot = True
+
+        # TODO raise InstrumentRebootTimeoutError() if this times out
 
         await self._status_beacon_received_event.wait()
         logger.info("Instrument completed reboot")

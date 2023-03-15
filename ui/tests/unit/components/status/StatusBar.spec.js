@@ -103,7 +103,7 @@ describe("StatusWidget.vue", () => {
     });
 
     test.each([
-      "InstrumentCreateConnectionError",
+      "InstrumentConnectionCreationError",
       "InstrumentConnectionLostError",
       "InstrumentBadDataError",
       "InstrumentFirmwareError",
@@ -176,7 +176,7 @@ describe("StatusWidget.vue", () => {
       });
 
       await store.commit("settings/set_shutdown_error_status", {
-        error_type: "InstrumentCreateConnectionError",
+        error_type: "InstrumentConnectionCreationError",
       });
       store.commit("flask/set_status_uuid", STATUS.MESSAGE.ERROR);
       expect(wrapper.find(text_selector).text()).toBe(`System status: Error Occurred`);

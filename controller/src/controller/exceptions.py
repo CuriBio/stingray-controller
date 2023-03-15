@@ -1,91 +1,21 @@
 # -*- coding: utf-8 -*-
 """Exceptions for the Stingray Controller."""
-from typing import Union
 
 
-# TODO clean up this file
-
-
-class MultiprocessingNotSetToSpawnError(Exception):
-    def __init__(self, start_method: Union[str, None]):
-        super().__init__(
-            f"The multiprocessing start type has not been set to spawn, which is the only option on Windows. It is current set as '{start_method}'"
-        )
-
-
-class InvalidCommandFromMainError(Exception):
-    pass
-
-
-class UnrecognizedDebugConsoleCommandError(Exception):
-    pass
-
-
-class UnableToUploadLogFilesToS3(Exception):
-    pass
-
-
-class UnrecognizedCommandFromServerToMainError(Exception):
-    pass
-
-
-class UnrecognizedCommandFromMainToFileWriterError(Exception):
-    pass
-
-
-class UnrecognizedCommandFromMainToMcCommError(Exception):
-    pass
-
-
-class UnrecognizedCommandFromMainToDataAnalyzerError(Exception):
-    pass
+# Server
 
 
 class LocalServerPortAlreadyInUseError(Exception):
     pass
 
 
-class SystemStartUpError(Exception):
-    pass
-
-
-class InvalidBeta2FlagOptionError(Exception):
-    pass
-
-
-class UnrecognizedNamingCommandError(Exception):
-    pass
-
-
-class UnrecognizedRecordingCommandError(Exception):
-    pass
-
-
-class UnrecognizedSimulatorTestCommandError(Exception):
-    pass
-
-
-class RecordingFolderDoesNotExistError(Exception):
-    pass
-
-
-class InvalidStopRecordingTimepointError(Exception):
-    pass
-
-
-class CalibrationFilesMissingError(Exception):
-    pass
-
-
-class RecordingUploadMissingPulse3dVersionError(Exception):
-    pass
-
-
-class StartManagedAcquisitionWithoutBarcodeError(Exception):
+class WebsocketCommandError(Exception):
     pass
 
 
 # Instrument related errors
+
+
 class NoInstrumentDetectedError(Exception):
     pass
 
@@ -94,19 +24,19 @@ class InstrumentError(Exception):
     """Generic exception for errors with instrument interaction."""
 
 
-class InstrumentCreateConnectionError(InstrumentError):
+class InstrumentConnectionCreationError(InstrumentError):
     """Generic exception for errors caused by connection failures."""
 
 
-class SerialCommPacketRegistrationTimeoutError(InstrumentCreateConnectionError):
+class SerialCommPacketRegistrationTimeoutError(InstrumentConnectionCreationError):
     pass
 
 
-class SerialCommPacketRegistrationReadEmptyError(InstrumentCreateConnectionError):
+class SerialCommPacketRegistrationReadEmptyError(InstrumentConnectionCreationError):
     pass
 
 
-class SerialCommPacketRegistrationSearchExhaustedError(InstrumentCreateConnectionError):
+class SerialCommPacketRegistrationSearchExhaustedError(InstrumentConnectionCreationError):
     pass
 
 
@@ -134,7 +64,7 @@ class SerialCommIncorrectChecksumFromInstrumentError(InstrumentBadDataError):
     pass
 
 
-# TODO might need to make this a subclass of a different error
+# TODO might need to make this a subclass of a different error (Tanner: not sure why anymore)
 class SerialCommCommandProcessingError(InstrumentBadDataError):
     pass
 
@@ -144,15 +74,7 @@ class InstrumentFirmwareError(InstrumentError):
 
 
 # Misc Instrument comm related errors
-class UnrecognizedSerialCommPacketTypeError(Exception):
-    pass
-
-
 class SerialCommIncorrectChecksumFromPCError(Exception):
-    pass
-
-
-class SerialCommMetadataValueTooLargeError(Exception):
     pass
 
 
@@ -164,23 +86,12 @@ class SerialCommUntrackedCommandResponseError(Exception):
     pass
 
 
-class SerialCommInvalidSamplingPeriodError(Exception):
-    pass
-
-
-class SamplingPeriodUpdateWhileDataStreamingError(Exception):
-    pass
+# this is only used in the simulator, so not sure if it's necessary here
+# class SerialCommUntrackedCommandResponseError(Exception):
+#     pass
 
 
 class InstrumentRebootTimeoutError(Exception):
-    pass
-
-
-class InstrumentDataStreamingAlreadyStartedError(Exception):
-    pass
-
-
-class InstrumentDataStreamingAlreadyStoppedError(Exception):
     pass
 
 
@@ -204,6 +115,7 @@ class FirmwareUpdateTimeoutError(Exception):
     pass
 
 
+# TODO add this in
 class FirmwareDownloadError(Exception):
     pass
 
@@ -217,6 +129,9 @@ class FirmwareGoingDormantError(Exception):
 
 
 # Cloud
+# TODO remove any of these below if they become unnecessary
+
+
 class PresignedUploadFailedError(Exception):
     pass
 

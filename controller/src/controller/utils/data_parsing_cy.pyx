@@ -2,7 +2,7 @@
 # cython: language_level=3
 # Tanner (9/1/20): Make sure to set `linetrace=False` except when profiling cython code or creating annotation file. All performance tests should be timed without line tracing enabled. Cython files in this package can easily be recompiled with `pip install -e .`
 # cython: linetrace=False
-"""Parsing data from Mantarray Hardware."""
+"""Parsing data from instrument firmware."""
 # TODO clean up this file
 from ..constants import SERIAL_COMM_PAYLOAD_INDEX
 from ..constants import SERIAL_COMM_CHECKSUM_LENGTH_BYTES
@@ -17,7 +17,7 @@ from ..constants import SERIAL_COMM_TIME_OFFSET_LENGTH_BYTES
 from ..constants import STIM_MODULE_ID_TO_WELL_IDX
 from ..constants import StimProtocolStatuses
 from ..exceptions import SerialCommIncorrectChecksumFromInstrumentError
-from ..exceptions import SerialCommIncorrectMagicWordFromMantarrayError
+from ..exceptions import SerialCommIncorrectMagicWordFromInstrumentError
 
 from libc.stdint cimport int64_t
 from libc.stdint cimport uint8_t
@@ -148,7 +148,7 @@ cpdef dict sort_serial_packets(unsigned char [:] read_bytes):
         # check that magic word is correct
         strncpy(magic_word, p.magic, MAGIC_WORD_LEN)
         if strncmp(magic_word, MAGIC_WORD, MAGIC_WORD_LEN) != 0:
-            raise SerialCommIncorrectMagicWordFromMantarrayError(
+            raise SerialCommIncorrectMagicWordFromInstrumentError(
                 str(bytes(read_bytes[bytes_idx : bytes_idx + MAGIC_WORD_LEN]))
             )
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import copy
 import hashlib
 import logging
 import platform
@@ -64,11 +65,6 @@ async def main(command_line_args: list[str]) -> None:
         if is_port_in_use(DEFAULT_SERVER_PORT_NUMBER):
             raise LocalServerPortAlreadyInUseError(DEFAULT_SERVER_PORT_NUMBER)
 
-        # TODO
-        # multiprocessing_start_method = multiprocessing.get_start_method(allow_none=True)
-        # if mp_start_method != "spawn":
-        #     raise MultiprocessingNotSetToSpawnError(mp_start_method)
-
         # TODO move this into SystemMonitor?
         # logger.info("Spawning subsystems")
 
@@ -85,10 +81,13 @@ async def main(command_line_args: list[str]) -> None:
 
         system_state = _initialize_system_state(parsed_args, log_file_id)
 
+        def get_system_state_copy() -> dict[str, Any]:
+            return copy.deepcopy(system_state)
+
         queues = create_system_queues()
 
         system_monitor = SystemMonitor(system_state, queues)
-        server = Server(system_state, queues["to"]["server"], queues["from"]["server"])
+        server = Server(get_system_state_copy, queues["to"]["server"], queues["from"]["server"])
 
         tasks = {asyncio.create_task(system_monitor.run()), asyncio.create_task(server.run())}
 
@@ -107,17 +106,8 @@ async def main(command_line_args: list[str]) -> None:
 # TODO consider moving this to a different file
 def create_system_queues() -> dict[str, Any]:
     return {
-        "to": {
-            "server": asyncio.Queue()
-            # TODO
-            # "instrument_comm": MPQueueAsyncWrapper(process_manager.queue_container.from_instrument_comm),
-        },
-        "from": {
-            "server": asyncio.Queue()
-            # "instrument_comm": MPQueueAsyncWrapper(
-            #     self._process_manager.queue_container.to_instrument_comm(0)
-            # ),
-        },
+        "to": {"server": asyncio.Queue(), "instrument_comm": asyncio.Queue()},
+        "from": {"server": asyncio.Queue(), "instrument_comm": asyncio.Queue()},
     }
 
 

@@ -1,8 +1,8 @@
 <template>
   <div>
     <ComponentToTest log_filepath="C:\Users\Mantarray\AppData\Roaming\MantarrayController\logs_flask" />
-    <button class="update-button" @click="commit_error({ error_type: 'InstrumentCreateConnectionError' })">
-      InstrumentCreateConnectionError
+    <button class="update-button" @click="commit_error({ error_type: 'InstrumentConnectionCreationError' })">
+      InstrumentConnectionCreationError
     </button>
     <button
       class="update-button"

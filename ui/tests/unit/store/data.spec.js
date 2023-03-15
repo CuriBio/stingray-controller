@@ -833,7 +833,7 @@ describe("store/data", () => {
       }
     );
     test.each([
-      "InstrumentCreateConnectionError",
+      "InstrumentConnectionCreationError",
       "InstrumentConnectionLostError",
       "InstrumentBadDataError",
       "InstrumentFirmwareError",
