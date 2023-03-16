@@ -234,6 +234,7 @@ class InstrumentComm:
             bytes_to_send = bytes(0)
             packet_type: int | None = None
 
+            # TODO refactor this to work the same way as system monitor
             match comm_from_monitor["communication_type"], comm_from_monitor["command"]:
                 case ("stimulation", "start_stim_checks"):
                     packet_type = SerialCommPacketTypes.STIM_IMPEDANCE_CHECK
@@ -244,7 +245,7 @@ class InstrumentComm:
                             for module_id in range(1, NUM_WELLS + 1)
                         ],
                     )
-                case ("stimulation", "start_stim_checks"):
+                case ("stimulation", "set_stim_protocols"):
                     packet_type = SerialCommPacketTypes.SET_STIM_PROTOCOL
                     bytes_to_send = convert_stim_dict_to_bytes(comm_from_monitor["stim_info"])
                     if self._is_stimulating and not self._hardware_test_mode:

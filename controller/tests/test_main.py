@@ -11,8 +11,8 @@ from controller.constants import COMPILED_EXE_BUILD_TIMESTAMP
 from controller.constants import CURRENT_SOFTWARE_VERSION
 from controller.constants import DEFAULT_SERVER_PORT_NUMBER
 from controller.constants import NUM_WELLS
-from controller.constants import SERVER_INITIALIZING_STATE
 from controller.constants import SOFTWARE_RELEASE_CHANNEL
+from controller.constants import SystemStatuses
 from controller.exceptions import LocalServerPortAlreadyInUseError
 from controller.main_systems.server import Server
 from controller.main_systems.system_monitor import SystemMonitor
@@ -181,9 +181,10 @@ async def test_main__initializes_system_state_correctly(
     await main.main(cmd_line_args)
 
     expected_system_state = {
-        "system_status": SERVER_INITIALIZING_STATE,
+        "system_status": SystemStatuses.SERVER_INITIALIZING_STATE,
         "stimulation_running": [False] * NUM_WELLS,
         "config_settings": {"log_directory": log_file_dir},
+        "user_creds": {},
         "stimulator_circuit_statuses": {},
         "stimulation_info": None,
         # "latest_software_version": None,

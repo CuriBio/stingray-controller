@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Constants for the Stingray Controller."""
 import datetime
+from enum import Enum
 from enum import IntEnum
 import uuid
 
@@ -27,50 +28,21 @@ ALL_VALID_BARCODE_HEADERS = frozenset(BARCODE_HEADERS.values())
 MICROS_PER_MILLIS = int(1e3)
 MICRO_TO_BASE_CONVERSION = int(1e6)
 
-# boot up states
-SERVER_INITIALIZING_STATE = "server_initializing"
-SERVER_READY_STATE = "server_ready"
-INSTRUMENT_INITIALIZING_STATE = "instrument_initializing"
-CHECKING_FOR_UPDATES_STATE = "checking_for_updates"
-# normal operation states
-IDLE_READY_STATE = "idle_ready"
-# updating states
-UPDATES_NEEDED_STATE = "updates_needed"
-DOWNLOADING_UPDATES_STATE = "downloading_updates"
-INSTALLING_UPDATES_STATE = "installing_updates"
-UPDATES_COMPLETE_STATE = "updates_complete"
-UPDATE_ERROR_STATE = "update_error"
 
-SYSTEM_STATUS_UUIDS: immutabledict[str, uuid.UUID] = immutabledict(
-    {
-        SERVER_INITIALIZING_STATE: uuid.UUID("04471bcf-1a00-4a0d-83c8-4160622f9a25"),
-        SERVER_READY_STATE: uuid.UUID("8e24ef4d-2353-4e9d-aa32-4346126e73e3"),
-        INSTRUMENT_INITIALIZING_STATE: uuid.UUID("d2e3d386-b760-4c9a-8b2d-410362ff11c4"),
-        CHECKING_FOR_UPDATES_STATE: uuid.UUID("04fd6f6b-ee9e-4656-aae4-0b9584791f36"),
-        IDLE_READY_STATE: uuid.UUID("009301eb-625c-4dc4-9e92-1a4d0762465f"),
-        UPDATES_NEEDED_STATE: uuid.UUID("d6dcf2a9-b6ea-4d4e-9423-500f91a82a2f"),
-        DOWNLOADING_UPDATES_STATE: uuid.UUID("b623c5fa-af01-46d3-9282-748e19fe374c"),
-        INSTALLING_UPDATES_STATE: uuid.UUID("19c9c2d6-0de4-4334-8cb3-a4c7ab0eab00"),
-        UPDATES_COMPLETE_STATE: uuid.UUID("31f8fbc9-9b41-4191-8598-6462b7490789"),
-        UPDATE_ERROR_STATE: uuid.UUID("33742bfc-d354-4ae5-88b6-2b3cee23aff8"),
-    }
-)
-
-# TODO
-# class SystemStatuses(Enum):
-#     SERVER_INITIALIZING_STATE = uuid.UUID("04471bcf-1a00-4a0d-83c8-4160622f9a25")
-#     SERVER_READY_STATE = uuid.UUID("8e24ef4d-2353-4e9d-aa32-4346126e73e3")
-#     INSTRUMENT_INITIALIZING_STATE = uuid.UUID("d2e3d386-b760-4c9a-8b2d-410362ff11c4")
-#     CHECKING_FOR_UPDATES_STATE = uuid.UUID("04fd6f6b-ee9e-4656-aae4-0b9584791f36")
-#     IDLE_READY_STATE = uuid.UUID("009301eb-625c-4dc4-9e92-1a4d0762465f")
-#     UPDATES_NEEDED_STATE = uuid.UUID("d6dcf2a9-b6ea-4d4e-9423-500f91a82a2f")
-#     DOWNLOADING_UPDATES_STATE = uuid.UUID("b623c5fa-af01-46d3-9282-748e19fe374c")
-#     INSTALLING_UPDATES_STATE = uuid.UUID("19c9c2d6-0de4-4334-8cb3-a4c7ab0eab00")
-#     UPDATES_COMPLETE_STATE = uuid.UUID("31f8fbc9-9b41-4191-8598-6462b7490789")
-#     UPDATE_ERROR_STATE = uuid.UUID("33742bfc-d354-4ae5-88b6-2b3cee23aff8")
-
-
-MPQUEUE_POLL_PERIOD = 0.01
+class SystemStatuses(Enum):
+    # boot up states
+    SERVER_INITIALIZING_STATE = uuid.UUID("04471bcf-1a00-4a0d-83c8-4160622f9a25")
+    SERVER_READY_STATE = uuid.UUID("8e24ef4d-2353-4e9d-aa32-4346126e73e3")
+    INSTRUMENT_INITIALIZING_STATE = uuid.UUID("d2e3d386-b760-4c9a-8b2d-410362ff11c4")
+    CHECKING_FOR_UPDATES_STATE = uuid.UUID("04fd6f6b-ee9e-4656-aae4-0b9584791f36")
+    # normal operation states
+    IDLE_READY_STATE = uuid.UUID("009301eb-625c-4dc4-9e92-1a4d0762465f")
+    # updating states
+    UPDATES_NEEDED_STATE = uuid.UUID("d6dcf2a9-b6ea-4d4e-9423-500f91a82a2f")
+    DOWNLOADING_UPDATES_STATE = uuid.UUID("b623c5fa-af01-46d3-9282-748e19fe374c")
+    INSTALLING_UPDATES_STATE = uuid.UUID("19c9c2d6-0de4-4334-8cb3-a4c7ab0eab00")
+    UPDATES_COMPLETE_STATE = uuid.UUID("31f8fbc9-9b41-4191-8598-6462b7490789")
+    UPDATE_ERROR_STATE = uuid.UUID("33742bfc-d354-4ae5-88b6-2b3cee23aff8")
 
 
 # Serial Communication Values

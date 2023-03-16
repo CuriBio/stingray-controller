@@ -6,6 +6,7 @@ from typing import Any
 from typing import Awaitable
 from typing import Callable
 
+from controller.utils.state_management import ReadOnlyDict
 from semver import VersionInfo
 import websockets
 from websockets import serve
@@ -13,7 +14,6 @@ from websockets.server import WebSocketServerProtocol
 
 from ..constants import DEFAULT_SERVER_PORT_NUMBER
 from ..constants import GENERIC_24_WELL_DEFINITION
-from ..constants import IDLE_READY_STATE
 from ..constants import STIM_MAX_ABSOLUTE_CURRENT_MICROAMPS
 from ..constants import STIM_MAX_ABSOLUTE_VOLTAGE_MILLIVOLTS
 from ..constants import STIM_MAX_DUTY_CYCLE_DURATION_MICROSECONDS
@@ -21,6 +21,7 @@ from ..constants import STIM_MAX_DUTY_CYCLE_PERCENTAGE
 from ..constants import STIM_MAX_SUBPROTOCOL_DURATION_MICROSECONDS
 from ..constants import STIM_MIN_SUBPROTOCOL_DURATION_MICROSECONDS
 from ..constants import StimulatorCircuitStatuses
+from ..constants import SystemStatuses
 from ..constants import VALID_CONFIG_SETTINGS
 from ..constants import VALID_STIMULATION_TYPES
 from ..constants import VALID_SUBPROTOCOL_TYPES
@@ -61,14 +62,15 @@ class Server:
 
     def __init__(
         self,
-        get_system_state_copy: Callable[..., dict[str, Any]],
+        get_system_state_ro: Callable[..., ReadOnlyDict],
         from_monitor_queue: asyncio.Queue[dict[str, Any]],
         to_monitor_queue: asyncio.Queue[dict[str, Any]],
     ) -> None:
         self._connected = False
         self._serve_task: asyncio.Task[None] | None = None
 
-        self._get_system_state_copy: Callable[..., dict[str, Any]] = get_system_state_copy
+        # TODO consider just passing in the read only version of the dict instead
+        self._get_system_state_ro = get_system_state_ro
 
         self._from_monitor_queue = from_monitor_queue
         self._to_monitor_queue = to_monitor_queue
@@ -205,7 +207,7 @@ class Server:
     #     #         "error": f"Versions of Electron and Flask EXEs do not match. Expected: {expected_software_version}"
     #     #     }
 
-    #     system_state = self._get_system_state_copy()
+    #     system_state = self._get_system_state_ro()
 
     #     return {
     #         "ui_status_code": str(SYSTEM_STATUS_UUIDS[system_state["system_status"]]),
@@ -254,12 +256,12 @@ class Server:
     async def _set_stim_protocols(self, comm: dict[str, Any]) -> None:
         """Set stimulation protocols in program memory and send to
         instrument."""
-        system_status = self._get_system_state_copy()["system_status"]
+        system_status = self._get_system_state_ro()["system_status"]
 
         if _is_stimulating_on_any_well(system_status):
             raise WebsocketCommandError("Cannot change protocols while stimulation is running")
-        if system_status != IDLE_READY_STATE:
-            raise WebsocketCommandError(f"Cannot change protocols while {system_status}")
+        if system_status != SystemStatuses.IDLE_READY_STATE:
+            raise WebsocketCommandError(f"Cannot change protocols while in {system_status.name}")
 
         protocol_list = comm["protocols"]
         # make sure at least one protocol is given
@@ -374,9 +376,11 @@ class Server:
     @mark_handler
     async def _start_stim_checks(self, comm: dict[str, Any]) -> None:
         """Start the stimulator impedence checks on the instrument."""
-        system_state = self._get_system_state_copy()
-        if system_state["system_status"] != IDLE_READY_STATE:
-            raise WebsocketCommandError(f"Cannot start stim check unless in {IDLE_READY_STATE} state")
+        system_state = self._get_system_state_ro()
+        if system_state["system_status"] != SystemStatuses.IDLE_READY_STATE:
+            raise WebsocketCommandError(
+                f"Cannot start stim check unless in {SystemStatuses.IDLE_READY_STATE.name}"
+            )
         if _is_stimulating_on_any_well(system_state):
             raise WebsocketCommandError("Cannot perform stimulator checks while stimulation is running")
         if _are_stimulator_checks_running(system_state):
@@ -401,14 +405,14 @@ class Server:
         except KeyError:
             raise WebsocketCommandError("Missing 'running' parameter")
 
-        system_state = self._get_system_state_copy()
+        system_state = self._get_system_state_ro()
 
         if system_state["stimulation_info"] is None:
             raise WebsocketCommandError("406 Protocols have not been set")
 
         if stim_status:
-            if (system_status := system_state["system_status"]) != IDLE_READY_STATE:
-                raise WebsocketCommandError(f"Cannot start stimulation while {system_status}")
+            if (system_status := system_state["system_status"]) != SystemStatuses.IDLE_READY_STATE:
+                raise WebsocketCommandError(f"Cannot start stimulation while in {system_status.name}")
             if not _are_initial_stimulator_checks_complete(system_state):
                 raise WebsocketCommandError(
                     "Cannot start stimulation before initial stimulator circuit checks complete"
@@ -426,22 +430,22 @@ class Server:
         await self._to_monitor_queue.put(comm)
 
 
-def _is_stimulating_on_any_well(system_state: dict[str, Any]) -> bool:
+def _is_stimulating_on_any_well(system_state: ReadOnlyDict) -> bool:
     return any(system_state["stimulation_running"])
 
 
-def _are_stimulator_checks_running(system_state: dict[str, Any]) -> bool:
+def _are_stimulator_checks_running(system_state: ReadOnlyDict) -> bool:
     return any(
         status == StimulatorCircuitStatuses.CALCULATING.name.lower()
         for status in system_state["stimulator_circuit_statuses"].values()
     )
 
 
-def _are_initial_stimulator_checks_complete(system_state: dict[str, Any]) -> bool:
+def _are_initial_stimulator_checks_complete(system_state: ReadOnlyDict) -> bool:
     return bool(system_state["stimulator_circuit_statuses"])
 
 
-def _are_any_stimulator_circuits_short(system_state: dict[str, Any]) -> bool:
+def _are_any_stimulator_circuits_short(system_state: ReadOnlyDict) -> bool:
     return any(
         status == StimulatorCircuitStatuses.SHORT.name.lower()
         for status in system_state["stimulator_circuit_statuses"].values()

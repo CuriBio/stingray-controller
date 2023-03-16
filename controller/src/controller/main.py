@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-import copy
 import hashlib
 import logging
 import platform
@@ -13,6 +12,7 @@ import sys
 from typing import Any
 import uuid
 
+from controller.utils.state_management import SystemStateManager
 from stdlib_utils import configure_logging
 from stdlib_utils import is_port_in_use
 
@@ -20,8 +20,8 @@ from .constants import COMPILED_EXE_BUILD_TIMESTAMP
 from .constants import CURRENT_SOFTWARE_VERSION
 from .constants import DEFAULT_SERVER_PORT_NUMBER
 from .constants import NUM_WELLS
-from .constants import SERVER_INITIALIZING_STATE
 from .constants import SOFTWARE_RELEASE_CHANNEL
+from .constants import SystemStatuses
 from .exceptions import LocalServerPortAlreadyInUseError
 from .main_systems.server import Server
 from .main_systems.system_monitor import SystemMonitor
@@ -79,15 +79,15 @@ async def main(command_line_args: list[str]) -> None:
         #     for subprocess_name, pid in subprocess_id_dict.items():
         #         logger.info(f"{subprocess_name} PID: {pid}")
 
-        system_state = _initialize_system_state(parsed_args, log_file_id)
-
-        def get_system_state_copy() -> dict[str, Any]:
-            return copy.deepcopy(system_state)
+        system_state_manager = SystemStateManager()
+        await system_state_manager.update(_initialize_system_state(parsed_args, log_file_id))
 
         queues = create_system_queues()
 
-        system_monitor = SystemMonitor(system_state, queues)
-        server = Server(get_system_state_copy, queues["to"]["server"], queues["from"]["server"])
+        system_monitor = SystemMonitor(system_state_manager, queues)
+        server = Server(
+            system_state_manager.get_read_only_copy, queues["to"]["server"], queues["from"]["server"]
+        )
 
         tasks = {asyncio.create_task(system_monitor.run()), asyncio.create_task(server.run())}
 
@@ -155,12 +155,13 @@ def _log_cmd_line_args(parsed_args: dict[str, Any]) -> None:
 
 def _initialize_system_state(parsed_args: dict[str, Any], log_file_id: uuid.UUID) -> dict[str, Any]:
     system_state = {
-        "system_status": SERVER_INITIALIZING_STATE,
+        "system_status": SystemStatuses.SERVER_INITIALIZING_STATE,
         "stimulation_running": [False] * NUM_WELLS,
         "config_settings": {"log_directory": parsed_args["log_file_dir"]},
+        "user_creds": {},
         "stimulator_circuit_statuses": {},
         "stimulation_info": None,
-        # "latest_software_version": None,  # TODO get this value here instead of in electron
+        # "latest_software_version": None,
         "log_file_id": log_file_id,
     }
 

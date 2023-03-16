@@ -9,6 +9,8 @@ import traceback
 from typing import Any
 from typing import Optional
 
+from semver import VersionInfo
+
 logger = logging.getLogger(__name__)
 
 
@@ -30,6 +32,14 @@ def redact_sensitive_info_from_path(file_path: Optional[str]) -> Optional[str]:
 
 def get_redacted_string(length: int) -> str:
     return "*" * length
+
+
+def compare_semver(version_a: str, version_b: str) -> bool:
+    """Determine if Version A is greater than Version B."""
+    return VersionInfo.parse(version_a) > VersionInfo.parse(version_b)  # type: ignore
+
+
+# TODO move these to an async utils file
 
 
 async def wait_tasks_clean(tasks: set[GenericTask], return_when: str = asyncio.FIRST_COMPLETED) -> None:
