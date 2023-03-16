@@ -256,6 +256,8 @@ class Server:
     async def _set_stim_protocols(self, comm: dict[str, Any]) -> None:
         """Set stimulation protocols in program memory and send to
         instrument."""
+        # TODO make sure a stim barcode is present
+
         system_status = self._get_system_state_ro()["system_status"]
 
         if _is_stimulating_on_any_well(system_status):
@@ -376,6 +378,8 @@ class Server:
     @mark_handler
     async def _start_stim_checks(self, comm: dict[str, Any]) -> None:
         """Start the stimulator impedence checks on the instrument."""
+        # TODO make sure a stim barcode is present
+
         system_state = self._get_system_state_ro()
         if system_state["system_status"] != SystemStatuses.IDLE_READY_STATE:
             raise WebsocketCommandError(
@@ -400,6 +404,8 @@ class Server:
     @mark_handler
     async def _set_stim_status(self, comm: dict[str, Any]) -> None:
         """Start or stop stimulation on the instrument."""
+        # TODO make sure a stim barcode is present
+
         try:
             stim_status = comm["running"]
         except KeyError:
@@ -407,7 +413,7 @@ class Server:
 
         system_state = self._get_system_state_ro()
 
-        if system_state["stimulation_info"] is None:
+        if system_state["stim_info"] is None:
             raise WebsocketCommandError("406 Protocols have not been set")
 
         if stim_status:

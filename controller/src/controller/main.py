@@ -160,7 +160,10 @@ def _initialize_system_state(parsed_args: dict[str, Any], log_file_id: uuid.UUID
         "config_settings": {"log_directory": parsed_args["log_file_dir"]},
         "user_creds": {},
         "stimulator_circuit_statuses": {},
-        "stimulation_info": None,
+        "stim_info": None,
+        "instrument_metadata": {},
+        "main_firmware_update_needed": {},
+        "channel_firmware_update_needed": {},
         # "latest_software_version": None,
         "log_file_id": log_file_id,
     }

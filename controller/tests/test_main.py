@@ -186,7 +186,7 @@ async def test_main__initializes_system_state_correctly(
         "config_settings": {"log_directory": log_file_dir},
         "user_creds": {},
         "stimulator_circuit_statuses": {},
-        "stimulation_info": None,
+        "stim_info": None,
         # "latest_software_version": None,
         "log_file_id": spied_uuid4.spy_return,
     }
