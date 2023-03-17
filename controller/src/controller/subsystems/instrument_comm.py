@@ -93,7 +93,7 @@ class InstrumentComm:
 
         # TODO try making some kind of container for all this data
         # instrument
-        self._instrument: AioSerial | None = None
+        self._instrument: AioSerial | VirtualInstrumentConnection | None = None
         self._hardware_test_mode = hardware_test_mode
         # instrument comm
         self._serial_packet_cache = bytes(0)
@@ -132,7 +132,7 @@ class InstrumentComm:
     # ONE-SHOT TASKS
 
     async def run(self) -> None:
-        self._create_connection_to_instrument()
+        await self._create_connection_to_instrument()
 
         tasks = {
             asyncio.create_task(self._handle_comm_from_monitor()),
@@ -153,7 +153,10 @@ class InstrumentComm:
         # TODO! error handling, etc.
         await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
 
-    def _create_connection_to_instrument(self) -> None:
+    async def _create_connection_to_instrument(self) -> None:
+        # TODO could eventually allow the user to specify in a config file whether or not they want to connect to a real or virtual instrument
+
+        # first, check for a real instrument on the serial COM ports
         for port_info in list_ports.comports():
             # Tanner (6/14/21): attempt to connect to any device with the STM vendor ID
             if port_info.vid == STM_VID:
@@ -165,10 +168,17 @@ class InstrumentComm:
                     timeout=0,
                     stopbits=serial.STOPBITS_ONE,
                 )
-                break
+                return
 
-        if not self._instrument:
+        # if a real instrument is not found, check for a virtual instrument
+        virtual_instrument = VirtualInstrumentConnection()
+
+        try:
+            await virtual_instrument.connect()
+        except Exception:  # TODO make this a specific exception?
             raise NoInstrumentDetectedError()
+
+        self._instrument = virtual_instrument
 
     async def _register_magic_word(self) -> None:
         if not self._instrument:
@@ -178,9 +188,9 @@ class InstrumentComm:
         # Tanner (3/16/21): issue seen with simulator taking slightly longer than status beacon period to send next data packet
         magic_word_len = len(SERIAL_COMM_MAGIC_WORD_BYTES)
         seconds_remaining = SERIAL_COMM_STATUS_BEACON_PERIOD_SECONDS + 4
-        magic_word_test_bytes = await self._instrument.read(size=magic_word_len)
+        magic_word_test_bytes = await self._instrument.read_async(magic_word_len)
         while (num_bytes_remaining := magic_word_len - len(magic_word_test_bytes)) and seconds_remaining:
-            magic_word_test_bytes += await self._instrument.read(size=num_bytes_remaining)
+            magic_word_test_bytes += await self._instrument.read_async(num_bytes_remaining)
             seconds_remaining -= 1
             await asyncio.sleep(1)
         if len(magic_word_test_bytes) != magic_word_len:
@@ -189,11 +199,14 @@ class InstrumentComm:
 
         # read more bytes until the magic word is registered, the timeout value is reached, or the maximum number of bytes are read
         async def search_for_magic_word() -> None:
+            if not self._instrument:
+                raise NotImplementedError("_instrument should never be None here")
+
             num_bytes_checked = 0
             magic_word_test_bytes = bytes(0)
             while magic_word_test_bytes != SERIAL_COMM_MAGIC_WORD_BYTES:
                 # read 0 or 1 bytes, depending on what is available in serial port
-                next_byte = await self._instrument.read(size=1)  # type: ignore
+                next_byte = await self._instrument.read_async(1)
                 num_bytes_checked += len(next_byte)
                 if next_byte:
                     # only want to run this append expression if a byte was read
@@ -301,7 +314,7 @@ class InstrumentComm:
 
         while True:
             # read all available bytes from serial buffer
-            data_read_bytes = await self._instrument.read(self._instrument.in_waiting)
+            data_read_bytes = await self._instrument.read_async(self._instrument.in_waiting)
 
             # append all bytes to cache
             self._serial_packet_cache += data_read_bytes
@@ -589,3 +602,22 @@ class FirmwareUpdateManager:
             }
 
         return packet_type, bytes_to_send, command
+
+
+class VirtualInstrumentConnection:
+    def __init__(self) -> None:
+        self.reader: asyncio.StreamReader
+        self.writer: asyncio.StreamWriter
+
+        # arbitrary number, this is used by InstrumentComm when connected to a real serial device, so need to have this present on this virtual device
+        self.in_waiting = 10000
+
+    async def connect(self) -> None:
+        self.reader, self.writer = await asyncio.open_connection("", 56575)
+
+    async def read_async(self, size: int = 1) -> bytes:
+        return await self.reader.read(size)
+
+    async def write_async(self, data: bytearray | bytes | memoryview) -> None:
+        self.writer.write(data)
+        await self.writer.drain()
