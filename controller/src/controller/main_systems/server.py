@@ -33,14 +33,6 @@ from ..utils.stimulation import get_pulse_duty_cycle_dur_us
 logger = logging.getLogger(__name__)
 
 
-# ------------- TODOs -------------
-# - start adding in process monitor
-#    - send msgs back and forth
-#    - handle server initiated shutdown gracefully
-#    - handle pm initiated shutdown gracefully
-#    - more ?
-
-
 def mark_handler(fn: Callable[..., Any]) -> Callable[..., Any]:
     fn._is_handler = True  # type: ignore
     return fn
@@ -58,7 +50,7 @@ def register_handlers(cls: Any) -> Any:
 @register_handlers
 class Server:
     # set by class decorator
-    _handlers: dict[str, Callable[[Any], Awaitable[dict[str, Any] | None]]]
+    _handlers: dict[str, Callable[["Server", dict[str, Any]], Awaitable[dict[str, Any] | None]]]
 
     def __init__(
         self,
@@ -136,12 +128,15 @@ class Server:
             handler = self._handlers[command]
 
             try:
-                handler_res = await handler(self, **msg)
-            except WebsocketCommandError:
-                # TODO
-                error_res = {}  # type: ignore
-                await websocket.send(json.dumps(error_res))
+                handler_res = await handler(self, msg)
+            except WebsocketCommandError as e:
+                logger.error(f"Command {command} failed with error: {e.args[0]}")
+                raise
+                # TODO ?
+                # error_res = {"communication_type": "command_error", "command": command, "error": e.args[0]}  # type: ignore
+                # await websocket.send(json.dumps(error_res))
             else:
+                # TODO remove this
                 if handler_res:
                     res = {"communication_type": "command_response", "command": command, **handler_res}
                     await websocket.send(json.dumps(res))
@@ -178,8 +173,12 @@ class Server:
         await self._to_monitor_queue.put(msg)
 
     @mark_handler
-    async def _err(self) -> None:
+    async def _err(self, comm: Any) -> None:
         raise Exception()
+
+    @mark_handler
+    async def _ws_err(self, comm: Any) -> None:
+        raise WebsocketCommandError("my test msg")
 
     # MESSAGE HANDLERS
 

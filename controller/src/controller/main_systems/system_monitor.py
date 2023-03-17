@@ -266,7 +266,8 @@ class SystemMonitor:
                     #     self._system_state["system_status"] = SystemStatuses.UPDATES_COMPLETE_STATE
 
     async def _handle_comm_from_cloud_comm(self) -> None:
-        pass  # TODO
+        # TODO
+        await asyncio.Future()
 
         # case {"command": "check_versions", "error": _}:
         #             pass  # TODO set something in the system state that can trigger a switch to IDLE_READY_STATE
