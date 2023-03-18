@@ -61,9 +61,9 @@ SERIAL_COMM_STATUS_BEACON_PERIOD_SECONDS = 5
 SERIAL_COMM_HANDSHAKE_PERIOD_SECONDS = 5
 SERIAL_COMM_REGISTRATION_TIMEOUT_SECONDS = 8
 # Tanner (3/22/22): The following values are probably much larger than they need to be, not sure best duration of time to use now that a command might be sent right before or during a FW reboot initiated automatically by a FW error
-SERIAL_COMM_RESPONSE_TIMEOUT_SECONDS = 10
-SERIAL_COMM_HANDSHAKE_TIMEOUT_SECONDS = 10
-SERIAL_COMM_STATUS_BEACON_TIMEOUT_SECONDS = 10
+SERIAL_COMM_STATUS_BEACON_TIMEOUT_SECONDS = SERIAL_COMM_STATUS_BEACON_PERIOD_SECONDS * 2
+SERIAL_COMM_HANDSHAKE_TIMEOUT_SECONDS = SERIAL_COMM_HANDSHAKE_PERIOD_SECONDS * 2
+SERIAL_COMM_RESPONSE_TIMEOUT_SECONDS = SERIAL_COMM_STATUS_BEACON_PERIOD_SECONDS * 2
 
 # general packet components
 SERIAL_COMM_MAGIC_WORD_BYTES = b"CURI BIO"
@@ -194,9 +194,8 @@ class StimulatorCircuitStatuses(IntEnum):
 class StimProtocolStatuses(IntEnum):
     ACTIVE = 0
     NULL = 1
-    RESTARTING = 2
-    FINISHED = 3
-    ERROR = 4
+    FINISHED = 2
+    ERROR = 3
 
 
 # Metadata

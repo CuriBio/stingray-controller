@@ -12,6 +12,7 @@ import sys
 from typing import Any
 import uuid
 
+from controller.subsystems.instrument_comm import InstrumentComm
 from controller.utils.state_management import SystemStateManager
 from stdlib_utils import configure_logging
 from stdlib_utils import is_port_in_use
@@ -79,6 +80,8 @@ async def main(command_line_args: list[str]) -> None:
         #     for subprocess_name, pid in subprocess_id_dict.items():
         #         logger.info(f"{subprocess_name} PID: {pid}")
 
+        # TODO wrap all this in a function?
+
         system_state_manager = SystemStateManager()
         await system_state_manager.update(_initialize_system_state(parsed_args, log_file_id))
 
@@ -89,7 +92,15 @@ async def main(command_line_args: list[str]) -> None:
             system_state_manager.get_read_only_copy, queues["to"]["server"], queues["from"]["server"]
         )
 
-        tasks = {asyncio.create_task(system_monitor.run()), asyncio.create_task(server.run())}
+        instrument_comm_subsystem = InstrumentComm(
+            queues["to"]["instrument_comm"], queues["from"]["instrument_comm"]
+        )
+
+        tasks = {
+            asyncio.create_task(system_monitor.run()),
+            asyncio.create_task(server.run()),
+            asyncio.create_task(instrument_comm_subsystem.run()),
+        }
 
         await wait_tasks_clean(tasks)
 

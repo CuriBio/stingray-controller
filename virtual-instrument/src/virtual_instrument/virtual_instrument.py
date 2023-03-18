@@ -119,7 +119,7 @@ def _get_secs_since_reboot_command(command_time: float) -> float:
     return perf_counter() - command_time
 
 
-def _get_secs_since_last_comm_from_pc(last_time: float) -> float:
+def _get_secs_since_last_comm_from_controller(last_time: float) -> float:
     return perf_counter() - last_time
 
 
@@ -134,8 +134,9 @@ def _get_us_since_subprotocol_start(start_time_us: int) -> int:
 class MantarrayMcSimulator(InfiniteProcess):
     """Simulate a running Instrument with Microcontroller.
 
-    If a command from the PC triggers an update to the status code, the
-    updated status beacon will be sent after the command response
+    If a command from the Controller triggers an update to the status
+    code, the updated status beacon will be sent after the command
+    response
     """
 
     # values for V1 instrument as of 6/17/22
@@ -188,7 +189,7 @@ class MantarrayMcSimulator(InfiniteProcess):
         # self._setup_data_interpolator()
         # simulator values (set in _handle_boot_up_config)
         self._time_of_last_handshake_secs: Optional[float] = None
-        self._time_of_last_comm_from_pc_secs: Optional[float] = None
+        self._time_of_last_comm_from_controller_secs: Optional[float] = None
         self._reboot_again = False
         self._reboot_time_secs: Optional[float]
         self._boot_up_time_secs: Optional[float] = None
@@ -275,7 +276,7 @@ class MantarrayMcSimulator(InfiniteProcess):
 
     def _handle_boot_up_config(self, reboot: bool = False) -> None:
         self._time_of_last_handshake_secs = None
-        self._time_of_last_comm_from_pc_secs = None
+        self._time_of_last_comm_from_controller_secs = None
         self._reset_start_time()
         self._reboot_time_secs = None
         self._status_codes = [SERIAL_COMM_OKAY_CODE] * (self._num_wells + 2)
@@ -344,23 +345,25 @@ class MantarrayMcSimulator(InfiniteProcess):
                 0, len(data_packet) - 1
             )
             data_packet = data_packet[trunc_index:]
-        # TODO  self._output_queue.put_nowait(data_packet)
+        print(f"SEND: {data_packet}")  # type: ignore  # allow-print
+
+        self.conn.sendall(data_packet)
 
     def _commands_for_each_run_iteration(self) -> None:
         """Ordered actions to perform each iteration.
 
         1. Handle any test communication. This must be done first since test comm may cause the simulator to enter a certain state or send a data packet. Test communication should also be processed regardless of the internal state of the simulator.
-        2. Check if rebooting. The simulator should not be responsive to any commands from the PC while it is rebooting.
-        3. Handle communication from the PC.
+        2. Check if rebooting. The simulator should not be responsive to any commands from the Controller while it is rebooting.
+        3. Handle communication from the Controller.
         4. Send a status beacon if enough time has passed since the previous one was sent.
         5. If streaming is on, check to see how many data packets are ready to be sent and send them if necessary.
         6. If stimulating, send any stimulation data packets that need to be sent.
-        7. Check if the handshake from the PC is overdue. This should be done after checking for data sent from the PC since the next packet might be a handshake.
+        7. Check if the handshake from the Controller is overdue. This should be done after checking for data sent from the Controller since the next packet might be a handshake.
         8. Check if the barcode is ready to send. This is currently the lowest priority.
         """
         if self.is_rebooting():  # Tanner (1/24/22): currently checks if self._reboot_time_secs is not None
             secs_since_reboot = _get_secs_since_reboot_command(self._reboot_time_secs)  # type: ignore
-            # if secs_since_reboot is less than the reboot duration, simulator is still in the 'reboot' phase. Commands from PC will be ignored and status beacons will not be sent
+            # if secs_since_reboot is less than the reboot duration, simulator is still in the 'reboot' phase. Commands from Controller will be ignored and status beacons will not be sent
             if (
                 secs_since_reboot < AVERAGE_MC_REBOOT_DURATION_SECONDS
             ):  # Tanner (3/31/21): rebooting should be much faster than the maximum allowed time for rebooting, so arbitrarily picking a simulated reboot duration
@@ -369,7 +372,7 @@ class MantarrayMcSimulator(InfiniteProcess):
             if self._reboot_again:
                 self._reboot_time_secs = perf_counter()
             self._reboot_again = False
-        self._handle_comm_from_pc()
+        self._handle_comm_from_controller()
         self._handle_status_beacon()
         if self._is_streaming_data:
             self._handle_magnetometer_data_packet()
@@ -378,7 +381,7 @@ class MantarrayMcSimulator(InfiniteProcess):
         self._check_handshake()
         self._handle_barcode()
 
-    def _handle_comm_from_pc(self) -> None:
+    def _handle_comm_from_controller(self) -> None:
         try:
             magic_word = self.conn.recv(8)
         except BlockingIOError:
@@ -389,42 +392,44 @@ class MantarrayMcSimulator(InfiniteProcess):
             raise Exception(f"Incorrect magic word from controller: {list(magic_word)}")
 
         packet_remainder_size_bytes = self.conn.recv(2)
-        comm_from_pc = (
+        comm_from_controller = (
             magic_word
             + packet_remainder_size_bytes
             + self.conn.recv(int.from_bytes(packet_remainder_size_bytes, "little"))
         )
-        print("!!!", comm_from_pc)  # allow-print
+        print("RECV:", comm_from_controller)  # allow-print
 
-        self._time_of_last_comm_from_pc_secs = perf_counter()
+        self._time_of_last_comm_from_controller_secs = perf_counter()
 
         # validate checksum before handling the communication
-        checksum_is_valid = validate_checksum(comm_from_pc)
+        checksum_is_valid = validate_checksum(comm_from_controller)
         if not checksum_is_valid:
-            # remove magic word before returning message to PC
-            trimmed_comm_from_pc = comm_from_pc[MAGIC_WORD_LEN:]
-            self._send_data_packet(SERIAL_COMM_CHECKSUM_FAILURE_PACKET_TYPE, trimmed_comm_from_pc)
+            # remove magic word before returning message to Controller
+            trimmed_comm_from_controller = comm_from_controller[MAGIC_WORD_LEN:]
+            self._send_data_packet(SERIAL_COMM_CHECKSUM_FAILURE_PACKET_TYPE, trimmed_comm_from_controller)
             return
-        self._process_main_module_command(comm_from_pc)
+        self._process_main_module_command(comm_from_controller)
 
     def _check_handshake_timeout(self) -> None:
-        if self._time_of_last_comm_from_pc_secs is None:
+        if self._time_of_last_comm_from_controller_secs is None:
             return
-        secs_since_last_comm_from_pc = _get_secs_since_last_comm_from_pc(self._time_of_last_comm_from_pc_secs)
-        if secs_since_last_comm_from_pc >= SERIAL_COMM_HANDSHAKE_TIMEOUT_SECONDS:
-            self._time_of_last_comm_from_pc_secs = None
+        secs_since_last_comm_from_controller = _get_secs_since_last_comm_from_controller(
+            self._time_of_last_comm_from_controller_secs
+        )
+        if secs_since_last_comm_from_controller >= SERIAL_COMM_HANDSHAKE_TIMEOUT_SECONDS:
+            self._time_of_last_comm_from_controller_secs = None
             # Tanner (3/23/22): real board will also stop stimulation and magnetometer data streaming here, but adding this to the simulator is not entirely necessary as there is no risk to leaving these processes on
             self._send_data_packet(
                 SERIAL_COMM_GOING_DORMANT_PACKET_TYPE, bytes([GOING_DORMANT_HANDSHAKE_TIMEOUT_CODE])
             )
 
-    def _process_main_module_command(self, comm_from_pc: bytes) -> None:
+    def _process_main_module_command(self, comm_from_controller: bytes) -> None:
         # Tanner (11/15/21): many branches needed here to handle all types of communication. Could try refactoring int smaller methods for similar packet types
         send_response = True
 
         response_body = bytes(0)
 
-        packet_type = comm_from_pc[SERIAL_COMM_PACKET_TYPE_INDEX]
+        packet_type = comm_from_controller[SERIAL_COMM_PACKET_TYPE_INDEX]
         if packet_type == SERIAL_COMM_REBOOT_PACKET_TYPE:
             self._reboot_time_secs = perf_counter()
         elif packet_type == SERIAL_COMM_HANDSHAKE_PACKET_TYPE:
@@ -433,7 +438,7 @@ class MantarrayMcSimulator(InfiniteProcess):
         elif packet_type == SERIAL_COMM_SET_STIM_PROTOCOL_PACKET_TYPE:
             # command fails if > 24 unique protocols given, the length of the array of protocol IDs != 24, or if > 50 subprotocols are in a single protocol
             stim_info_dict = convert_stim_bytes_to_dict(
-                comm_from_pc[SERIAL_COMM_PAYLOAD_INDEX:-SERIAL_COMM_CHECKSUM_LENGTH_BYTES]
+                comm_from_controller[SERIAL_COMM_PAYLOAD_INDEX:-SERIAL_COMM_CHECKSUM_LENGTH_BYTES]
             )
             # TODO handle too many subprotocols?
             command_failed = self._is_stimulating or len(stim_info_dict["protocols"]) > self._num_wells
@@ -459,7 +464,7 @@ class MantarrayMcSimulator(InfiniteProcess):
                 status = convert_adc_readings_to_circuit_status(*module_readings)
                 response_body += struct.pack("<HHB", *module_readings, status)
         elif packet_type == SERIAL_COMM_SET_SAMPLING_PERIOD_PACKET_TYPE:
-            response_body += self._update_sampling_period(comm_from_pc)
+            response_body += self._update_sampling_period(comm_from_controller)
         elif packet_type == SERIAL_COMM_START_DATA_STREAMING_PACKET_TYPE:
             is_data_already_streaming = self._is_streaming_data
             response_body += bytes([is_data_already_streaming])
@@ -477,12 +482,12 @@ class MantarrayMcSimulator(InfiniteProcess):
         elif packet_type == SERIAL_COMM_SET_NICKNAME_PACKET_TYPE:
             send_response = False
             start_idx = SERIAL_COMM_PAYLOAD_INDEX
-            nickname_bytes = comm_from_pc[start_idx : start_idx + SERIAL_COMM_NICKNAME_BYTES_LENGTH]
+            nickname_bytes = comm_from_controller[start_idx : start_idx + SERIAL_COMM_NICKNAME_BYTES_LENGTH]
             self._new_nickname = nickname_bytes.decode("utf-8")
             self._reboot_time_secs = perf_counter()
             self._reboot_again = True
         elif packet_type == SERIAL_COMM_BEGIN_FIRMWARE_UPDATE_PACKET_TYPE:
-            firmware_type = comm_from_pc[SERIAL_COMM_PAYLOAD_INDEX]
+            firmware_type = comm_from_controller[SERIAL_COMM_PAYLOAD_INDEX]
             command_failed = firmware_type not in (0, 1) or self._firmware_update_type is not None
             # TODO store new FW version and number of bytes in FW
             self._firmware_update_idx = 0
@@ -496,8 +501,8 @@ class MantarrayMcSimulator(InfiniteProcess):
             if self._firmware_update_idx is None:
                 # Tanner (11/10/21): currently unsure how real board would handle receiving this packet before the previous two firmware packet types
                 raise NotImplementedError("_firmware_update_idx should never be None here")
-            packet_idx = comm_from_pc[SERIAL_COMM_PAYLOAD_INDEX]
-            new_firmware_bytes = comm_from_pc[
+            packet_idx = comm_from_controller[SERIAL_COMM_PAYLOAD_INDEX]
+            new_firmware_bytes = comm_from_controller[
                 SERIAL_COMM_PAYLOAD_INDEX + 1 : -SERIAL_COMM_CHECKSUM_LENGTH_BYTES
             ]
             command_failed = (
@@ -515,7 +520,7 @@ class MantarrayMcSimulator(InfiniteProcess):
                 # Tanner (11/10/21): currently unsure how real board would handle receiving this packet before the previous two firmware packet types
                 raise NotImplementedError("_firmware_update_bytes should never be None here")
             received_checksum = int.from_bytes(
-                comm_from_pc[SERIAL_COMM_PAYLOAD_INDEX : SERIAL_COMM_PAYLOAD_INDEX + 4],
+                comm_from_controller[SERIAL_COMM_PAYLOAD_INDEX : SERIAL_COMM_PAYLOAD_INDEX + 4],
                 byteorder="little",
             )
             calculated_checksum = crc32(self._firmware_update_bytes)
@@ -532,14 +537,15 @@ class MantarrayMcSimulator(InfiniteProcess):
         if send_response:
             self._send_data_packet(packet_type, response_body)
 
-    def _update_sampling_period(self, comm_from_pc: bytes) -> bytes:
+    def _update_sampling_period(self, comm_from_controller: bytes) -> bytes:
         update_status_byte = bytes([self._is_streaming_data])
         if self._is_streaming_data:
             # cannot change configuration while data is streaming, so return here
             return update_status_byte
         # check and set sampling period
         sampling_period = int.from_bytes(
-            comm_from_pc[SERIAL_COMM_PAYLOAD_INDEX : SERIAL_COMM_PAYLOAD_INDEX + 2], byteorder="little"
+            comm_from_controller[SERIAL_COMM_PAYLOAD_INDEX : SERIAL_COMM_PAYLOAD_INDEX + 2],
+            byteorder="little",
         )
         if sampling_period % MICROS_PER_MILLI != 0:
             raise SerialCommInvalidSamplingPeriodError(sampling_period)
@@ -548,7 +554,7 @@ class MantarrayMcSimulator(InfiniteProcess):
 
     def _handle_status_beacon(self) -> None:
         if self._time_of_last_status_beacon_secs is None:
-            self._send_status_beacon(truncate=True)
+            self._send_status_beacon(truncate=self._time_of_last_handshake_secs is None)
             return
         seconds_elapsed = _get_secs_since_last_status_beacon(self._time_of_last_status_beacon_secs)
         if seconds_elapsed >= SERIAL_COMM_STATUS_BEACON_PERIOD_SECONDS:

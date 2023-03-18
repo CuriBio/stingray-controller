@@ -24,6 +24,7 @@ extensions = [
 
 # Tanner (2/24/22): cythonizing data_parsing_cy.pyx with kwarg annotate=True will help when optimizing the code by enabling generation of the html annotation file
 ext_modules = cythonize(extensions, annotate=False)
+
 dist = Distribution({"ext_modules": ext_modules, "include_dirs": [numpy.get_include()]})
 cmd = build_ext(dist)
 cmd.ensure_finalized()
@@ -31,4 +32,5 @@ cmd.run()
 
 for output in cmd.get_outputs():
     relative_extension = os.path.relpath(output, cmd.build_lib)
+    # TODO delete the .so file it if already exists
     shutil.copyfile(output, os.path.join("src", relative_extension))

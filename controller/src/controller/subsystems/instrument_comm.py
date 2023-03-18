@@ -7,6 +7,7 @@ from typing import Any
 from zlib import crc32
 
 from aioserial import AioSerial
+from controller.utils.generic import wait_tasks_clean
 import serial
 import serial.tools.list_ports as list_ports
 
@@ -17,10 +18,8 @@ from ..constants import SERIAL_COMM_HANDSHAKE_PERIOD_SECONDS
 from ..constants import SERIAL_COMM_MAGIC_WORD_BYTES
 from ..constants import SERIAL_COMM_MAX_FULL_PACKET_LENGTH_BYTES
 from ..constants import SERIAL_COMM_MAX_PAYLOAD_LENGTH_BYTES
-from ..constants import SERIAL_COMM_OKAY_CODE
 from ..constants import SERIAL_COMM_PACKET_METADATA_LENGTH_BYTES
 from ..constants import SERIAL_COMM_REGISTRATION_TIMEOUT_SECONDS
-from ..constants import SERIAL_COMM_STATUS_BEACON_PERIOD_SECONDS
 from ..constants import SERIAL_COMM_STATUS_BEACON_TIMEOUT_SECONDS
 from ..constants import SERIAL_COMM_STATUS_CODE_LENGTH_BYTES
 from ..constants import SerialCommPacketTypes
@@ -37,7 +36,6 @@ from ..exceptions import SerialCommCommandResponseTimeoutError
 from ..exceptions import SerialCommIncorrectChecksumFromPCError
 from ..exceptions import SerialCommPacketRegistrationReadEmptyError
 from ..exceptions import SerialCommPacketRegistrationSearchExhaustedError
-from ..exceptions import SerialCommPacketRegistrationTimeoutError
 from ..exceptions import SerialCommStatusBeaconTimeoutError
 from ..exceptions import SerialCommUntrackedCommandResponseError
 from ..exceptions import StimulationProtocolUpdateFailedError
@@ -101,7 +99,6 @@ class InstrumentComm:
         # instrument status
         self._is_waiting_for_reboot = False
         self._status_beacon_received_event = asyncio.Event()
-        self._device_connection_ready_event = asyncio.Event()
         # stimulation values
         self._wells_assigned_a_protocol: frozenset[int] = frozenset()
         self._wells_actively_stimulating: set[int] = set()
@@ -132,26 +129,37 @@ class InstrumentComm:
     # ONE-SHOT TASKS
 
     async def run(self) -> None:
+        # TODO ADD MORE LOGGING
+        try:
+            await self._setup()
+
+            tasks = {
+                asyncio.create_task(self._handle_comm_from_monitor()),
+                asyncio.create_task(self._handle_sending_handshakes()),
+                asyncio.create_task(self._handle_data_stream()),
+                asyncio.create_task(self._catch_expired_command()),
+                asyncio.create_task(self._handle_beacon_tracking()),
+            }
+
+            await wait_tasks_clean(tasks)
+        except asyncio.CancelledError:
+            logger.info("InstrumentComm cancelled")
+            raise
+        finally:
+            logger.info("InstrumentComm shut down")
+
+    async def _setup(self) -> None:
+        # attempt to connect to a real or virtual instrument
         await self._create_connection_to_instrument()
-
-        tasks = {
-            asyncio.create_task(self._handle_comm_from_monitor()),
-            asyncio.create_task(self._handle_handshake()),
-        }
-
-        # register magic word before starting any other tasks
+        # send a single handshake to speed up the magic word registration since it will prompt a response from the instrument immediately
+        await self._send_data_packet(SerialCommPacketTypes.HANDSHAKE)
+        # register magic word to sync with data stream before starting other tasks
         await self._register_magic_word()
+        # now that the magic word is registered,
+        await self._prompt_instrument_for_metadata()
 
-        tasks |= {
-            asyncio.create_task(self._handle_data_stream()),
-            asyncio.create_task(self._catch_expired_command()),
-            asyncio.create_task(self._handle_beacon_tracking()),
-        }
-
-        await self._get_device_metadata()
-
-        # TODO! error handling, etc.
-        await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+        # TODO remove this when better logging is added?
+        logger.info("Instrument ready")
 
     async def _create_connection_to_instrument(self) -> None:
         # TODO could eventually allow the user to specify in a config file whether or not they want to connect to a real or virtual instrument
@@ -165,45 +173,51 @@ class InstrumentComm:
                     port=port_info.name,
                     baudrate=SERIAL_COMM_BAUD_RATE,
                     bytesize=8,
-                    timeout=0,
+                    timeout=0.01,
                     stopbits=serial.STOPBITS_ONE,
                 )
                 return
 
         # if a real instrument is not found, check for a virtual instrument
         virtual_instrument = VirtualInstrumentConnection()
-
         try:
             await virtual_instrument.connect()
-        except Exception:  # TODO make this a specific exception?
-            raise NoInstrumentDetectedError()
+        except Exception as e:  # TODO make this a specific exception?
+            raise NoInstrumentDetectedError() from e
 
         self._instrument = virtual_instrument
 
     async def _register_magic_word(self) -> None:
-        if not self._instrument:
-            raise NotImplementedError("_instrument should never be None here")
+        magic_word_test_bytes = bytearray()
 
-        # read bytes once every second until enough bytes have been read or timeout occurs
-        # Tanner (3/16/21): issue seen with simulator taking slightly longer than status beacon period to send next data packet
-        magic_word_len = len(SERIAL_COMM_MAGIC_WORD_BYTES)
-        seconds_remaining = SERIAL_COMM_STATUS_BEACON_PERIOD_SECONDS + 4
-        magic_word_test_bytes = await self._instrument.read_async(magic_word_len)
-        while (num_bytes_remaining := magic_word_len - len(magic_word_test_bytes)) and seconds_remaining:
-            magic_word_test_bytes += await self._instrument.read_async(num_bytes_remaining)
-            seconds_remaining -= 1
-            await asyncio.sleep(1)
-        if len(magic_word_test_bytes) != magic_word_len:
-            # if the entire period has passed and no more bytes are available an error has occurred with the instrument that is considered fatal
-            raise SerialCommPacketRegistrationTimeoutError(magic_word_test_bytes)
+        async def read_initial_bytes(magic_word_test_bytes: bytearray) -> None:
+            if not self._instrument:
+                raise NotImplementedError("_instrument should never be None here")
+
+            magic_word_len = len(SERIAL_COMM_MAGIC_WORD_BYTES)
+
+            # read bytes until enough bytes have been read
+            while num_bytes_remaining := magic_word_len - len(magic_word_test_bytes):
+                magic_word_test_bytes += await self._instrument.read_async(num_bytes_remaining)
+                # wait 1 second between reads
+                await asyncio.sleep(1)
+
+        try:
+            # Tanner (3/16/21): issue seen with simulator taking slightly longer than status beacon period to send next data packet
+            await asyncio.wait_for(
+                read_initial_bytes(magic_word_test_bytes), SERIAL_COMM_STATUS_BEACON_TIMEOUT_SECONDS
+            )
+        except asyncio.TimeoutError as e:
+            print("RAISING ERROR")  # allow-print
+            # after the timeout, not having read enough bytes means that a fatal error has occurred on the instrument
+            raise SerialCommPacketRegistrationReadEmptyError(list(magic_word_test_bytes)) from e
 
         # read more bytes until the magic word is registered, the timeout value is reached, or the maximum number of bytes are read
-        async def search_for_magic_word() -> None:
+        async def search_for_magic_word(magic_word_test_bytes: bytes) -> None:
             if not self._instrument:
                 raise NotImplementedError("_instrument should never be None here")
 
             num_bytes_checked = 0
-            magic_word_test_bytes = bytes(0)
             while magic_word_test_bytes != SERIAL_COMM_MAGIC_WORD_BYTES:
                 # read 0 or 1 bytes, depending on what is available in serial port
                 next_byte = await self._instrument.read_async(1)
@@ -216,17 +230,17 @@ class InstrumentComm:
                     raise SerialCommPacketRegistrationSearchExhaustedError()
 
         try:
-            await asyncio.wait_for(search_for_magic_word(), SERIAL_COMM_REGISTRATION_TIMEOUT_SECONDS)
-        except asyncio.TimeoutError:
+            await asyncio.wait_for(
+                search_for_magic_word(magic_word_test_bytes), SERIAL_COMM_REGISTRATION_TIMEOUT_SECONDS
+            )
+        except asyncio.TimeoutError as e:
             # if this point is reach it's most likely that at some point no additional bytes were being read
-            raise SerialCommPacketRegistrationReadEmptyError()
+            raise SerialCommPacketRegistrationReadEmptyError() from e
 
         # put the magic word bytes into the cache so the next data packet can be read properly
         self._serial_packet_cache = SERIAL_COMM_MAGIC_WORD_BYTES
 
-    async def _get_device_metadata(self) -> None:
-        await self._device_connection_ready_event.wait()
-
+    async def _prompt_instrument_for_metadata(self) -> None:
         await self._send_data_packet(SerialCommPacketTypes.GET_METADATA)
         await self._command_tracker.add(
             SerialCommPacketTypes.GET_METADATA,
@@ -287,7 +301,8 @@ class InstrumentComm:
                 await self._send_data_packet(packet_type, bytes_to_send)
                 await self._command_tracker.add(packet_type, comm_from_monitor)
 
-    async def _handle_handshake(self) -> None:
+    async def _handle_sending_handshakes(self) -> None:
+        # Tanner (3/17/23): handshakes are not tracked as commands
         while True:
             await self._send_data_packet(SerialCommPacketTypes.HANDSHAKE)
             await asyncio.sleep(SERIAL_COMM_HANDSHAKE_PERIOD_SECONDS)
@@ -320,12 +335,14 @@ class InstrumentComm:
             self._serial_packet_cache += data_read_bytes
             # return if not at least 1 complete packet available
             if len(self._serial_packet_cache) < SERIAL_COMM_PACKET_METADATA_LENGTH_BYTES:
-                return
+                # wait a little bit before reading again
+                await asyncio.sleep(0.01)
+                continue
 
             # sort packets by into packet type groups: magnetometer data, stim status, other
             sorted_packet_dict = sort_serial_packets(bytearray(self._serial_packet_cache))
             # update unsorted bytes
-            self._serial_packet_cache = sorted_packet_dict["unread_bytes"]
+            self._serial_packet_cache = bytes(sorted_packet_dict["unread_bytes"])
 
             # process any other packets
             for other_packet_info in sorted_packet_dict["other_packet_info"]:
@@ -505,12 +522,6 @@ class InstrumentComm:
         await self._process_status_codes(status_codes_dict, "Status Beacon")
 
     async def _process_status_codes(self, status_codes_dict: dict[str, int], comm_type: str) -> None:
-        if (
-            status_codes_dict["main_status"] == SERIAL_COMM_OKAY_CODE
-            and not self._device_connection_ready_event.is_set()
-        ):
-            self._device_connection_ready_event.set()
-
         # placing this here so that handshake responses also set the event
         self._status_beacon_received_event.set()
 
@@ -616,8 +627,13 @@ class VirtualInstrumentConnection:
         self.reader, self.writer = await asyncio.open_connection("", 56575)
 
     async def read_async(self, size: int = 1) -> bytes:
-        return await self.reader.read(size)
+        # Tanner (3/17/23): asyncio.StreamReader does not have configurable timeouts on reads, so if trying to
+        # read a specific number of bytes it will block until at least one is available
+        a = await self.reader.read(size)
+        print(f"RECV: {a}")  # type: ignore  # allow-print
+        return a
 
     async def write_async(self, data: bytearray | bytes | memoryview) -> None:
+        print(f"SEND: {data}")  # type: ignore  # allow-print
         self.writer.write(data)
         await self.writer.drain()

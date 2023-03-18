@@ -8,12 +8,10 @@ from ..constants import SERIAL_COMM_PAYLOAD_INDEX
 from ..constants import SERIAL_COMM_CHECKSUM_LENGTH_BYTES
 from ..constants import SERIAL_COMM_DATA_SAMPLE_LENGTH_BYTES
 from ..constants import SERIAL_COMM_MAGIC_WORD_BYTES
-from ..constants import SERIAL_COMM_MAGNETOMETER_DATA_PACKET_TYPE
 from ..constants import SERIAL_COMM_PACKET_METADATA_LENGTH_BYTES
 from ..constants import SERIAL_COMM_PACKET_REMAINDER_SIZE_LENGTH_BYTES
-from ..constants import SERIAL_COMM_NUM_SENSORS_PER_WELL
-from ..constants import SERIAL_COMM_STIM_STATUS_PACKET_TYPE
 from ..constants import SERIAL_COMM_TIME_OFFSET_LENGTH_BYTES
+from ..constants import SerialCommPacketTypes
 from ..constants import STIM_MODULE_ID_TO_WELL_IDX
 from ..constants import StimProtocolStatuses
 from ..exceptions import SerialCommIncorrectChecksumFromInstrumentError
@@ -60,15 +58,12 @@ cdef int MIN_PACKET_SIZE = SERIAL_COMM_PACKET_METADATA_LENGTH_BYTES
 cdef int SERIAL_COMM_TIME_OFFSET_LENGTH_BYTES_C_INT = SERIAL_COMM_TIME_OFFSET_LENGTH_BYTES
 cdef int SERIAL_COMM_DATA_SAMPLE_LENGTH_BYTES_C_INT = SERIAL_COMM_DATA_SAMPLE_LENGTH_BYTES
 cdef int SERIAL_COMM_NUM_CHANNELS_PER_SENSOR_C_INT = NUM_CHANNELS_PER_SENSOR
-cdef int SERIAL_COMM_NUM_SENSORS_PER_WELL_C_INT = SERIAL_COMM_NUM_SENSORS_PER_WELL
 
-cdef int SERIAL_COMM_MAGNETOMETER_DATA_PACKET_TYPE_C_INT = SERIAL_COMM_MAGNETOMETER_DATA_PACKET_TYPE
 cdef int SERIAL_COMM_PAYLOAD_INDEX_C_INT = SERIAL_COMM_PAYLOAD_INDEX
-cdef int SERIAL_COMM_STIM_STATUS_PACKET_TYPE_C_INT = SERIAL_COMM_STIM_STATUS_PACKET_TYPE
+cdef int SERIAL_COMM_STIM_STATUS_PACKET_TYPE_C_INT = SerialCommPacketTypes.STIM_STATUS
 
 
 cdef int TOTAL_NUM_WELLS_C_INT = 24
-cdef int TOTAL_NUM_SENSORS_C_INT = TOTAL_NUM_WELLS_C_INT * SERIAL_COMM_NUM_SENSORS_PER_WELL_C_INT
 
 
 cdef packed struct Packet:
@@ -149,7 +144,7 @@ cpdef dict sort_serial_packets(unsigned char [:] read_bytes):
         strncpy(magic_word, p.magic, MAGIC_WORD_LEN)
         if strncmp(magic_word, MAGIC_WORD, MAGIC_WORD_LEN) != 0:
             raise SerialCommIncorrectMagicWordFromInstrumentError(
-                str(bytes(read_bytes[bytes_idx : bytes_idx + MAGIC_WORD_LEN]))
+                f"At byte idx: {bytes_idx} of {num_bytes}: {list(bytes(read_bytes[bytes_idx : bytes_idx + MAGIC_WORD_LEN]))}"
             )
 
         relative_checksum_idx = get_checksum_index(p.packet_len)
@@ -165,7 +160,7 @@ cpdef dict sort_serial_packets(unsigned char [:] read_bytes):
             packet_end_idx = bytes_idx + PACKET_HEADER_LEN + p.packet_len
             full_data_packet = bytearray(read_bytes[bytes_idx : packet_end_idx])
             raise SerialCommIncorrectChecksumFromInstrumentError(
-                f"Checksum Received: {original_crc}, Checksum Calculated: {crc}, Full Data Packet (bytes {bytes_idx} to {packet_end_idx}): {str(full_data_packet)}"
+                f"Checksum Received: {original_crc}, Checksum Calculated: {crc}, Full Data Packet (bytes {bytes_idx} to {packet_end_idx}): {list(full_data_packet)}"
             )
 
         payload_start_idx = bytes_idx + SERIAL_COMM_PAYLOAD_INDEX_C_INT
@@ -174,13 +169,7 @@ cpdef dict sort_serial_packets(unsigned char [:] read_bytes):
         packet_payload = read_bytes[payload_start_idx : checksum_start_idx]
         payload_len = checksum_start_idx - payload_start_idx
 
-        if p.packet_type == SERIAL_COMM_MAGNETOMETER_DATA_PACKET_TYPE_C_INT:
-            mag_data_packet_bytes[
-                mag_data_packet_byte_idx : mag_data_packet_byte_idx + payload_len
-            ] = packet_payload
-            mag_data_packet_byte_idx += payload_len
-            num_mag_data_packets += 1
-        elif p.packet_type == SERIAL_COMM_STIM_STATUS_PACKET_TYPE_C_INT:
+        if p.packet_type == SERIAL_COMM_STIM_STATUS_PACKET_TYPE_C_INT:
             stim_packet_bytes[
                 stim_packet_byte_idx : stim_packet_byte_idx + payload_len
             ] = packet_payload
@@ -208,63 +197,6 @@ cpdef dict sort_serial_packets(unsigned char [:] read_bytes):
     }
 
 
-cpdef dict parse_magnetometer_data(
-    unsigned char [:] mag_data_packet_bytes,
-    int num_mag_data_packets,
-    uint64_t base_global_time,
-):
-    mag_data_packet_bytes = mag_data_packet_bytes.copy()  # make sure data is C contiguous
-    cdef int magnetometer_data_packet_len = len(mag_data_packet_bytes) // num_mag_data_packets
-
-    cdef int num_time_offsets = TOTAL_NUM_SENSORS_C_INT
-    cdef int num_data_channels = TOTAL_NUM_SENSORS_C_INT * SERIAL_COMM_NUM_CHANNELS_PER_SENSOR_C_INT
-
-    # arrays for storing parsed data
-    time_indices = np.empty(num_mag_data_packets, dtype=np.uint64, order="C")
-    time_offsets = np.empty((num_time_offsets, num_mag_data_packets), dtype=np.uint16, order="C")
-    data = np.empty((num_data_channels, num_mag_data_packets), dtype=np.uint16, order="C")
-    # get memory views of numpy arrays for faster operations
-    cdef uint64_t [::1] time_indices_view = time_indices
-    cdef uint16_t [:, ::1] time_offsets_view = time_offsets
-    cdef uint16_t [:, ::1] data_view = data
-
-    # loop vars
-    cdef int bytes_idx = 0
-    cdef int data_packet_idx
-    cdef int time_offset_arr_idx, channel_arr_idx
-    cdef MagnetometerData * data_packet_ptr
-    cdef SensorData * sensor_data_ptr
-    cdef int sensor, channel
-
-    for data_packet_idx in range(num_mag_data_packets):
-        data_packet_ptr = <MagnetometerData *> &mag_data_packet_bytes[bytes_idx]
-        # add to time index array
-        time_indices_view[data_packet_idx] = (<uint64_t *> &data_packet_ptr.time_index)[0]
-        # add next data points to data array
-        sensor_data_ptr = &data_packet_ptr.sensor_data
-        channel_arr_idx = 0
-        time_offset_arr_idx = 0
-        for sensor in range(TOTAL_NUM_SENSORS_C_INT):
-            time_offsets_view[time_offset_arr_idx, data_packet_idx] = sensor_data_ptr.time_offset
-            time_offset_arr_idx += 1
-            for channel in range(SERIAL_COMM_NUM_CHANNELS_PER_SENSOR_C_INT):
-                data_view[channel_arr_idx, data_packet_idx] = sensor_data_ptr.data_points[channel]
-                channel_arr_idx += 1
-            # shift SensorData ptr by appropriate amount
-            sensor_data_ptr = <SensorData *> (
-                (<uint8_t *> sensor_data_ptr)
-                + SERIAL_COMM_TIME_OFFSET_LENGTH_BYTES_C_INT
-                + (SERIAL_COMM_NUM_CHANNELS_PER_SENSOR_C_INT * SERIAL_COMM_DATA_SAMPLE_LENGTH_BYTES_C_INT)
-            )
-        # increment idxs
-        bytes_idx += magnetometer_data_packet_len
-        data_packet_idx += 1
-
-    time_indices -= base_global_time
-
-    return {"time_indices": time_indices, "time_offsets": time_offsets, "data": data}
-
-
 cpdef dict parse_stim_data(unsigned char [:] stim_packet_bytes, int num_stim_packets):
     cdef dict stim_data_dict = {}  # dict for storing stim statuses
 
@@ -283,8 +215,6 @@ cpdef dict parse_stim_data(unsigned char [:] stim_packet_bytes, int num_stim_pac
             time_index = (<uint64_t *> &stim_packet_bytes[bytes_idx + 2])[0]
             subprotocol_idx = stim_packet_bytes[bytes_idx + 2 + TIME_INDEX_LEN]
             bytes_idx += 2 + TIME_INDEX_LEN + 1
-            if stim_status == StimProtocolStatuses.RESTARTING:
-                continue
             if well_idx not in stim_data_dict:
                 stim_data_dict[well_idx] = [[time_index], [subprotocol_idx]]
             else:
