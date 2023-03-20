@@ -51,7 +51,7 @@ def register_handlers(cls: Any) -> Any:
 @register_handlers
 class Server:
     # set by class decorator
-    _handlers: dict[str, Callable[..., Awaitable[dict[str, Any] | None]]]
+    _handlers: dict[str, Callable[["Server", dict[str, Any]], Awaitable[dict[str, Any] | None]]]
 
     def __init__(
         self,
@@ -129,7 +129,7 @@ class Server:
             handler = self._handlers[command]
 
             try:
-                handler_res = await handler(self, **msg)
+                handler_res = await handler(self, msg)
             except WebsocketCommandError as e:
                 logger.error(f"Command {command} failed with error: {e.args[0]}")
                 raise
@@ -144,34 +144,19 @@ class Server:
 
     def _log_incoming_message(self, msg: dict[str, Any]) -> None:
         # TODO
-        # if "instrument_nickname" in msg:
-        #     # Tanner (1/20/21): items in communication dict are used after this log message is generated, so need to create a copy of the dict when redacting info
-        #     comm_copy = copy.deepcopy(msg)
-        #     comm_copy["instrument_nickname"] = get_redacted_string(len(comm_copy["instrument_nickname"]))
-        #     comm_str = str(comm_copy)
-        # elif communication_type == "update_user_settings":
+        # if command == "update_user_settings":
         #     comm_copy = copy.deepcopy(communication)
         #     comm_copy["content"]["user_password"] = get_redacted_string(4)
         #     comm_str = str(comm_copy)
-        # elif communication_type == "mag_finding_analysis":
-        #     comm_copy = copy.deepcopy(communication)
-        #     comm_copy["recordings"] = [
-        #         redact_sensitive_info_from_path(recording_path) for recording_path in comm_copy["recordings"]
-        #     ]
-        #     comm_str = str(comm_copy)
         # else:
         #     comm_str = str(communication)
-        logger.info(f"Comm from UI: {msg}")  # TODO
+        logger.info(f"Comm from UI: {msg}")
 
     # TEST MESSAGE HANDLERS
 
     @mark_handler
-    async def _test(self, msg: str) -> dict[str, Any]:
-        return {"test msg": msg}
-
-    @mark_handler
-    async def _monitor_test(self, comm: dict[str, str]) -> None:
-        await self._to_monitor_queue.put(comm)
+    async def _test(self, comm: dict[str, str]) -> dict[str, Any]:
+        return {"test msg": comm["msg"]}
 
     @mark_handler
     async def _err(self, *args: Any) -> None:
@@ -219,7 +204,7 @@ class Server:
     #     }
 
     @mark_handler
-    async def _update_settings(self, comm: dict[str, str]) -> None:
+    async def _update_user_settings(self, comm: dict[str, str]) -> None:
         """Update the customer/user settings."""
         for setting in comm:
             if setting not in (*VALID_CONFIG_SETTINGS, "command"):

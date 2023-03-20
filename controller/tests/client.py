@@ -14,14 +14,12 @@ def _get_command(command):
         # TEST COMMANDS
         case "test":
             comm |= {"msg": "test_msg"}
-        case "monitor_test":
-            comm |= {"msg": "monitor_test_msg"}
         case "err" | "ws_err":
             pass
         # REAL COMMANDS
         case "shutdown":
             pass
-        case "update_settings":
+        case "update_user_settings":
             comm |= {
                 "customer_id": "test_customer_id",
                 "user_name": "test_user_name",
@@ -39,14 +37,17 @@ def _get_command(command):
         case "set_stim_status":
             comm |= {"running": True}
         case _:
-            pass  # TODO
+            print("invalid_command")  # allow-print
+            return None
+
+    return comm
 
 
 async def client(uri):
     async with connect(uri) as websocket:
         await asyncio.wait(
             {asyncio.create_task(producer(websocket)), asyncio.create_task(consumer(websocket))},
-            asyncio.FIRST_COMPLETED,
+            return_when=asyncio.FIRST_COMPLETED,
         )
     print("EXIT")  # allow-print
 
@@ -54,8 +55,8 @@ async def client(uri):
 async def producer(websocket):
     while websocket.open:
         command = await aioconsole.ainput("send: ")
-        command_details = _get_command(command)
-        await websocket.send(json.dumps(command_details))
+        if command_details := _get_command(command):
+            await websocket.send(json.dumps(command_details))
 
 
 async def consumer(websocket):

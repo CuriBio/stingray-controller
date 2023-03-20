@@ -27,12 +27,18 @@ class ReadOnlyDict(collections.abc.Mapping):  # type: ignore  # Tanner (3/16/23)
     def __len__(self) -> int:
         return len(self._data)
 
+    def __str__(self) -> str:  # pragma: no cover
+        return str(self._data)
+
 
 class SystemStateManager:
     def __init__(self) -> None:
         self._data: dict[str, Any] = {}
 
         self.previous_update_queue: asyncio.Queue[ReadOnlyDict] = asyncio.Queue()
+
+    def __str__(self) -> str:  # pragma: no cover
+        return str(self._data)
 
     @property
     def data(self) -> ReadOnlyDict:

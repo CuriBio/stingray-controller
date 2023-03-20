@@ -56,7 +56,6 @@ async def clean_up_tasks(tasks: set[GenericTask]) -> None:
     for task in tasks:
         if task.done():
             if not task.cancelled() and (exc := task.exception()):
-                print("$$$", task)  # allow-print
                 logger.error("".join(traceback.format_exception(exc)))
         else:
             task.cancel()

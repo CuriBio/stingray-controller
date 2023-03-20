@@ -11,13 +11,13 @@ from pulse3D.constants import MAIN_FIRMWARE_VERSION_UUID
 from pulse3D.constants import MANTARRAY_SERIAL_NUMBER_UUID as INSTRUMENT_SERIAL_NUMBER_UUID
 
 from ..constants import CURRENT_SOFTWARE_VERSION
-from ..constants import FirmwareUpdateStatuses
 from ..constants import GENERIC_24_WELL_DEFINITION
 from ..constants import NUM_WELLS
 from ..constants import StimulatorCircuitStatuses
 from ..constants import SystemStatuses
 from ..utils.generic import semver_gt
 from ..utils.generic import wait_tasks_clean
+from ..utils.state_management import ReadOnlyDict
 from ..utils.state_management import SystemStateManager
 
 
@@ -43,7 +43,7 @@ class SystemMonitor:
             asyncio.create_task(self._handle_comm_from_server()),
             asyncio.create_task(self._handle_comm_from_instrument_comm()),
             asyncio.create_task(self._handle_comm_from_cloud_comm()),
-            asyncio.create_task(self._handle_system_state_update()),
+            asyncio.create_task(self._handle_system_state_updates()),
         }
         try:
             await wait_tasks_clean(tasks)
@@ -56,23 +56,11 @@ class SystemMonitor:
 
     # STATE HANDLING
 
-    async def _handle_system_state_update(self) -> None:
-        update_details = await self._system_state_manager.previous_update_queue.get()
-
-        await self._update_system_status_special_cases()
-
-        status_update_details = {}
-        if new_system_status := update_details.get("system_status"):
-            status_update_details["system_status"] = new_system_status
-        if stim_running_updates := update_details.get("stimulation_running"):
-            status_update_details["is_stimulating"] = any(stim_running_updates)
-        if in_simulation_mode := update_details.get("in_simulation_mode"):
-            status_update_details["in_simulation_mode"] = in_simulation_mode
-
-        if status_update_details:
-            await self._queues["to"]["server"].put(
-                {"communication_type": "status_update", **status_update_details}
-            )
+    async def _handle_system_state_updates(self) -> None:
+        while True:
+            update_details = await self._system_state_manager.previous_update_queue.get()
+            await self._update_system_status_special_cases()
+            await self._push_system_status_update(update_details)
 
     async def _update_system_status_special_cases(self) -> None:
         """Update system status in special cases.
@@ -139,16 +127,30 @@ class SystemMonitor:
             system_status_dict = {"system_status": new_system_status}
             await self._system_state_manager.update(system_status_dict)
 
-    # COMM HANDLERS"system_status"
+    async def _push_system_status_update(self, update_details: ReadOnlyDict) -> None:
+        status_update_details = {}
+        if new_system_status := update_details.get("system_status"):
+            status_update_details["system_status"] = new_system_status
+        if stim_running_updates := update_details.get("stimulation_running"):
+            status_update_details["is_stimulating"] = any(stim_running_updates)
+        if in_simulation_mode := update_details.get("in_simulation_mode"):
+            status_update_details["in_simulation_mode"] = in_simulation_mode
+
+        if status_update_details:
+            logger.info(f"System status update: {status_update_details}")
+            # want to have system_status logged as an enum, so afterwards need to convert it to a string so it can be json serialized later
+            if system_status := status_update_details.get("system_status"):
+                status_update_details["system_status"] = str(system_status.value)
+
+            await self._queues["to"]["server"].put(
+                {"communication_type": "status_update", **status_update_details}
+            )
+
+    # COMM HANDLERS
 
     async def _handle_comm_from_server(self) -> None:
         while True:
             communication = await self._queues["from"]["server"].get()
-
-            # TODO remove this when done testing
-            if communication == "err":  # type: ignore
-                raise Exception("raising from monitor")
-            await self._queues["to"]["server"].put({"echoing from monitor": communication})
 
             system_state_updates: dict[str, Any] = {}
 
@@ -213,6 +215,7 @@ class SystemMonitor:
 
             system_state_updates: dict[str, Any] = {}
 
+            # TODO for all these comm handlers, raise error for unrecognized comm. Do this in subsystems as well
             match communication:
                 case {"command": "start_stimulation"}:
                     stim_running_list = [False] * NUM_WELLS
@@ -240,7 +243,7 @@ class SystemMonitor:
                     )
                 case {"command": "set_board_connection_status", "in_simulation_mode": in_simulation_mode}:
                     system_state_updates["in_simulation_mode"] = in_simulation_mode
-                case {"command": "set_barcode", "barcode": barcode}:
+                case {"command": "get_barcode", "barcode": barcode}:
                     barcode_type = "stim_barcode" if barcode.startswith("MS") else "plate_barcode"
                     # if barcode didn't change, then no need to create an update
                     if system_state[barcode_type] != barcode:
@@ -251,13 +254,7 @@ class SystemMonitor:
                             "new_barcode": barcode,
                         }
                         await self._queues["to"]["server"].put(barcode_update_message)
-                case {"command": "set_metadata", **metadata}:
-                    # TODO is this necessary?
-                    # remove keys that aren't UUIDs as these don't need to be stored. They are only included in the comm so that the values are logged
-                    # for key in list(communication["metadata"].keys()):
-                    #     if not isinstance(key, uuid.UUID):  # type: ignore # queue is defined containing dicts with str keys, but sometimes has UUIDs
-                    #         communication["metadata"].pop(key)
-
+                case {"command": "get_metadata", **metadata}:
                     system_state_updates["instrument_metadata"] = metadata
                 case {"command": "firmware_update_completed", "firmware_type": firmware_type}:
                     system_state_updates[f"{firmware_type}_firmware_update"] = None
@@ -296,7 +293,7 @@ class SystemMonitor:
 
                     # FW updates are only available if the required SW can be downloaded
                     if (main_fw_update_needed or channel_fw_update_needed) and min_sw_version_available:
-                        system_state_updates["firmware_update_status"] = FirmwareUpdateStatuses.FOUND
+                        system_state_updates["fsystem_status"] = SystemStatuses.UPDATES_NEEDED_STATE
                         system_state_updates["main_firmware_update"] = (
                             latest_main_fw if main_fw_update_needed else None
                         )
@@ -311,7 +308,7 @@ class SystemMonitor:
                             }
                         )
                     else:
-                        system_state_updates["firmware_update_status"] = FirmwareUpdateStatuses.NOT_FOUND
+                        system_state_updates["system_status"] = SystemStatuses.IDLE_READY_STATE
                         # since no updates available, also enable auto install of SW update
                         await self._send_enable_sw_auto_install_message()
                 case {"error": _}:

@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """Constants for the Stingray Controller."""
 import datetime
-from enum import auto
 from enum import Enum
 from enum import IntEnum
 import uuid
@@ -44,24 +43,6 @@ class SystemStatuses(Enum):
     INSTALLING_UPDATES_STATE = uuid.UUID("19c9c2d6-0de4-4334-8cb3-a4c7ab0eab00")
     UPDATES_COMPLETE_STATE = uuid.UUID("31f8fbc9-9b41-4191-8598-6462b7490789")
     UPDATE_ERROR_STATE = uuid.UUID("33742bfc-d354-4ae5-88b6-2b3cee23aff8")
-
-
-# TODO remove all of these that don't end up getting used
-class FirmwareUpdateStatuses(Enum):
-    NOT_READY = auto()
-    CHECKING = auto()
-    CHECK_ERROR = auto()
-    NOT_FOUND = auto()
-    FOUND = auto()
-    ACCEPTED = auto()
-    DECLINED = auto()
-    DOWNLOADING = auto()
-    DOWNLOAD_ERROR = auto()
-    INSTALLING = auto()
-    INSTALL_ERROR = auto()
-    COMPLETE = auto()
-
-    ERROR = auto()
 
 
 # Serial Communication Values

@@ -442,7 +442,7 @@ class InstrumentComm:
         match prev_command_info["command"]:
             # TODO make an enum for all these commands?
             case "get_metadata":
-                prev_command_info["metadata"] = parse_metadata_bytes(response_data)
+                prev_command_info.update(parse_metadata_bytes(response_data))  # type: ignore [arg-type]  # mypy doesn't like that the keys are UUIDs here
             case "start_stim_checks":
                 stimulator_check_dict = convert_stimulator_check_bytes_to_dict(response_data)
 
@@ -616,11 +616,11 @@ class VirtualInstrumentConnection:
     async def read_async(self, size: int = 1) -> bytes:
         # Tanner (3/17/23): asyncio.StreamReader does not have configurable timeouts on reads, so if trying to
         # read a specific number of bytes it will block until at least one is available
-        a = await self.reader.read(size)
-        print(f"RECV: {a}")  # type: ignore  # allow-print
-        return a
+        data = await self.reader.read(size)
+        logger.debug(f"RECV: {data}")  # type: ignore
+        return data
 
     async def write_async(self, data: bytearray | bytes | memoryview) -> None:
-        print(f"SEND: {data}")  # type: ignore  # allow-print
+        logger.debug(f"SEND: {data}")  # type: ignore
         self.writer.write(data)
         await self.writer.drain()

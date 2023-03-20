@@ -53,30 +53,30 @@ class CloudComm:
     # INFINITE TASKS
 
     async def _manage_subtasks(self) -> None:
-        tasks = {
-            asyncio.create_task(self._get_comm_from_monitor(), name=self._get_comm_from_monitor.__name__)
-        }
+        main_task_name = self._get_comm_from_monitor.__name__
+
+        pending = {asyncio.create_task(self._get_comm_from_monitor(), name=main_task_name)}
 
         while True:
-            done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+            done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
 
             for task in done:
                 res = task.result()
-                if task.get_name() == self._get_comm_from_monitor.__name__:
+                task_name = task.get_name()
+                if task_name == main_task_name:
                     subtask_fn = getattr(self, f"_{res['command']}")
                     pending |= {
-                        asyncio.create_task(
-                            self._get_comm_from_monitor(), name=self._get_comm_from_monitor.__name__
-                        ),
-                        asyncio.create_task(subtask_fn()),
+                        asyncio.create_task(self._get_comm_from_monitor(), name=main_task_name),
+                        asyncio.create_task(subtask_fn(), name=subtask_fn.__name__),
                     }
                 else:
-                    await self._to_monitor_queue.put(res)
+                    await self._to_monitor_queue.put({"command": task_name[1:], **res})
 
     # SUBTASKS
 
-    # async def _check_versions(self):
-    #     pass  # TODO
+    async def _check_versions(self) -> dict[str, str]:
+        # TODO
+        return {"error": "some error"}
 
     # async def _download_firmware_updates(self):
     #     pass  # TODO
