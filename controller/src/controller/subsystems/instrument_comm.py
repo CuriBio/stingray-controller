@@ -7,7 +7,6 @@ from typing import Any
 from zlib import crc32
 
 from aioserial import AioSerial
-from controller.utils.generic import wait_tasks_clean
 import serial
 import serial.tools.list_ports as list_ports
 
@@ -44,6 +43,7 @@ from ..exceptions import StimulationStatusUpdateFailedError
 from ..utils.command_tracking import CommandTracker
 from ..utils.data_parsing_cy import parse_stim_data
 from ..utils.data_parsing_cy import sort_serial_packets
+from ..utils.generic import wait_tasks_clean
 from ..utils.serial_comm import convert_semver_str_to_bytes
 from ..utils.serial_comm import convert_status_code_bytes_to_dict
 from ..utils.serial_comm import convert_stim_dict_to_bytes
@@ -54,8 +54,6 @@ from ..utils.serial_comm import parse_metadata_bytes
 
 
 logger = logging.getLogger(__name__)
-
-# TODO! make sure all logging is taking place correctly (everything that should be logged is actually getting logged)
 
 
 COMMAND_PACKET_TYPES = frozenset(
@@ -89,7 +87,7 @@ class InstrumentComm:
         self._from_monitor_queue = from_monitor_queue
         self._to_monitor_queue = to_monitor_queue
 
-        # TODO try making some kind of container for all this data
+        # TODO try making some kind of container for all this data?
         # instrument
         self._instrument: AioSerial | VirtualInstrumentConnection | None = None
         self._hardware_test_mode = hardware_test_mode
@@ -137,10 +135,9 @@ class InstrumentComm:
                 asyncio.create_task(self._handle_comm_from_monitor()),
                 asyncio.create_task(self._handle_sending_handshakes()),
                 asyncio.create_task(self._handle_data_stream()),
-                asyncio.create_task(self._catch_expired_command()),
                 asyncio.create_task(self._handle_beacon_tracking()),
+                asyncio.create_task(self._catch_expired_command()),
             }
-
             await wait_tasks_clean(tasks)
         except asyncio.CancelledError:
             logger.info("InstrumentComm cancelled")
@@ -242,10 +239,7 @@ class InstrumentComm:
 
     async def _prompt_instrument_for_metadata(self) -> None:
         await self._send_data_packet(SerialCommPacketTypes.GET_METADATA)
-        await self._command_tracker.add(
-            SerialCommPacketTypes.GET_METADATA,
-            {"communication_type": "metadata_comm", "command": "get_metadata"},
-        )
+        await self._command_tracker.add(SerialCommPacketTypes.GET_METADATA, {"command": "get_metadata"})
 
     async def _catch_expired_command(self) -> None:
         expired_command = await self._command_tracker.wait_for_expired_command()
@@ -261,37 +255,39 @@ class InstrumentComm:
             bytes_to_send = bytes(0)
             packet_type: int | None = None
 
-            # TODO refactor this to work the same way as system monitor
-            match comm_from_monitor["communication_type"], comm_from_monitor["command"]:
-                case ("stimulation", "start_stim_checks"):
+            match comm_from_monitor:
+                case {"command": "start_stim_checks", "well_indices": well_indices}:
                     packet_type = SerialCommPacketTypes.STIM_IMPEDANCE_CHECK
                     bytes_to_send = struct.pack(
                         f"<{NUM_WELLS}?",
                         *[
-                            STIM_MODULE_ID_TO_WELL_IDX[module_id] in comm_from_monitor["well_indices"]
+                            STIM_MODULE_ID_TO_WELL_IDX[module_id] in well_indices
                             for module_id in range(1, NUM_WELLS + 1)
                         ],
                     )
-                case ("stimulation", "set_stim_protocols"):
+                case {"command": "set_stim_protocols", "stim_info": stim_info}:
                     packet_type = SerialCommPacketTypes.SET_STIM_PROTOCOL
-                    bytes_to_send = convert_stim_dict_to_bytes(comm_from_monitor["stim_info"])
+                    bytes_to_send = convert_stim_dict_to_bytes(stim_info)
                     if self._is_stimulating and not self._hardware_test_mode:
                         raise StimulationProtocolUpdateWhileStimulatingError()
-                    protocol_assignments = comm_from_monitor["stim_info"]["protocol_assignments"]
+                    protocol_assignments = stim_info["protocol_assignments"]
                     self._wells_assigned_a_protocol = frozenset(
                         GENERIC_24_WELL_DEFINITION.get_well_index_from_well_name(well_name)
                         for well_name, protocol_id in protocol_assignments.items()
                         if protocol_id is not None
                     )
-                case ("stimulation", "start_stimulation"):
+                case {"command": "start_stimulation"}:
                     packet_type = SerialCommPacketTypes.START_STIM
-                case ("stimulation", "stop_stimulation"):
+                case {"command": "stop_stimulation"}:
                     packet_type = SerialCommPacketTypes.STOP_STIM
-                case ("firmware_update", "start_firmware_update"):
+                case {"command": "start_firmware_update"}:
                     await self._handle_firmware_update(comm_from_monitor)
-                case ("test", "trigger_firmware_error"):  # pragma: no cover
+                case {
+                    "command": "trigger_firmware_error",
+                    "first_two_status_codes": first_two_status_codes,
+                }:  # pragma: no cover
                     packet_type = SerialCommPacketTypes.TRIGGER_ERROR
-                    bytes_to_send = bytes(comm_from_monitor["first_two_status_codes"])
+                    bytes_to_send = bytes(first_two_status_codes)
                 case _:
                     raise NotImplementedError(
                         f"InstrumentComm received invalid comm from SystemMonitor: {comm_from_monitor}"
@@ -383,8 +379,7 @@ class InstrumentComm:
 
         await self._to_monitor_queue.put(
             {
-                "communication_type": "firmware_update",
-                "status": "complete",
+                "command": "firmware_update_complete",
                 "firmware_type": comm_from_monitor["firmware_type"],
             }
         )
@@ -431,7 +426,7 @@ class InstrumentComm:
                 await self._firmware_update_manager.complete()
             case SerialCommPacketTypes.BARCODE_FOUND:
                 barcode = packet_payload.decode("ascii")
-                barcode_comm = {"communication_type": "barcode_comm", "barcode": barcode}
+                barcode_comm = {"command": "set_barcode", "barcode": barcode}
                 await self._to_monitor_queue.put(barcode_comm)
             case _:
                 raise NotImplementedError(f"Packet Type: {packet_type} is not defined")
@@ -469,6 +464,7 @@ class InstrumentComm:
                     if not self._hardware_test_mode:
                         raise StimulationProtocolUpdateFailedError()
                     prev_command_info["hardware_test_message"] = "Command failed"  # pragma: no cover
+                # TODO is this necessary now?
                 # remove stim info so it is not logged again
                 prev_command_info.pop("stim_info")
             case "start_stimulation":
@@ -508,11 +504,7 @@ class InstrumentComm:
         if wells_done_stimulating:
             self._wells_actively_stimulating -= set(wells_done_stimulating)
             await self._to_monitor_queue.put(
-                {
-                    "communication_type": "stimulation",
-                    "command": "status_update",
-                    "wells_done_stimulating": wells_done_stimulating,
-                }
+                {"command": "stim_status_update", "wells_done_stimulating": wells_done_stimulating}
             )
 
     async def _process_status_beacon(self, packet_payload: bytes) -> None:
@@ -597,7 +589,6 @@ class FirmwareUpdateManager:
                 bytes([self._packet_idx]) + self._file_contents[: SERIAL_COMM_MAX_PAYLOAD_LENGTH_BYTES - 1]
             )
             command = {
-                "communication_type": "firmware_update",
                 "command": "send_firmware_data",
                 "firmware_type": self._update_type,
                 "packet_index": self._packet_idx,
@@ -606,11 +597,7 @@ class FirmwareUpdateManager:
         else:
             packet_type = SerialCommPacketTypes.END_FIRMWARE_UPDATE
             bytes_to_send = self._file_checksum.to_bytes(4, byteorder="little")
-            command = {
-                "communication_type": "firmware_update",
-                "command": "end_of_firmware_update",
-                "firmware_type": self._update_type,
-            }
+            command = {"command": "end_of_firmware_update", "firmware_type": self._update_type}
 
         return packet_type, bytes_to_send, command
 

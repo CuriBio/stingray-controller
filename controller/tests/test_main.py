@@ -184,7 +184,7 @@ async def test_main__initializes_system_state_correctly(
         "system_status": SystemStatuses.SERVER_INITIALIZING_STATE,
         "stimulation_running": [False] * NUM_WELLS,
         "config_settings": {"log_directory": log_file_dir},
-        "user_creds": {},
+        "is_user_logged_in": False,
         "stimulator_circuit_statuses": {},
         "stim_info": None,
         # "latest_software_version": None,

@@ -4,6 +4,7 @@
 # cython: linetrace=False
 """Parsing data from instrument firmware."""
 # TODO clean up this file
+from ..constants import NUM_WELLS
 from ..constants import SERIAL_COMM_PAYLOAD_INDEX
 from ..constants import SERIAL_COMM_CHECKSUM_LENGTH_BYTES
 from ..constants import SERIAL_COMM_DATA_SAMPLE_LENGTH_BYTES
@@ -63,7 +64,7 @@ cdef int SERIAL_COMM_PAYLOAD_INDEX_C_INT = SERIAL_COMM_PAYLOAD_INDEX
 cdef int SERIAL_COMM_STIM_STATUS_PACKET_TYPE_C_INT = SerialCommPacketTypes.STIM_STATUS
 
 
-cdef int TOTAL_NUM_WELLS_C_INT = 24
+cdef int TOTAL_NUM_WELLS_C_INT = NUM_WELLS
 
 
 cdef packed struct Packet:

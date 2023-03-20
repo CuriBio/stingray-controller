@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Constants for the Stingray Controller."""
 import datetime
+from enum import auto
 from enum import Enum
 from enum import IntEnum
 import uuid
@@ -33,7 +34,7 @@ class SystemStatuses(Enum):
     # boot up states
     SERVER_INITIALIZING_STATE = uuid.UUID("04471bcf-1a00-4a0d-83c8-4160622f9a25")
     SERVER_READY_STATE = uuid.UUID("8e24ef4d-2353-4e9d-aa32-4346126e73e3")
-    INSTRUMENT_INITIALIZING_STATE = uuid.UUID("d2e3d386-b760-4c9a-8b2d-410362ff11c4")
+    SYSTEM_INITIALIZING_STATE = uuid.UUID("d2e3d386-b760-4c9a-8b2d-410362ff11c4")
     CHECKING_FOR_UPDATES_STATE = uuid.UUID("04fd6f6b-ee9e-4656-aae4-0b9584791f36")
     # normal operation states
     IDLE_READY_STATE = uuid.UUID("009301eb-625c-4dc4-9e92-1a4d0762465f")
@@ -43,6 +44,24 @@ class SystemStatuses(Enum):
     INSTALLING_UPDATES_STATE = uuid.UUID("19c9c2d6-0de4-4334-8cb3-a4c7ab0eab00")
     UPDATES_COMPLETE_STATE = uuid.UUID("31f8fbc9-9b41-4191-8598-6462b7490789")
     UPDATE_ERROR_STATE = uuid.UUID("33742bfc-d354-4ae5-88b6-2b3cee23aff8")
+
+
+# TODO remove all of these that don't end up getting used
+class FirmwareUpdateStatuses(Enum):
+    NOT_READY = auto()
+    CHECKING = auto()
+    CHECK_ERROR = auto()
+    NOT_FOUND = auto()
+    FOUND = auto()
+    ACCEPTED = auto()
+    DECLINED = auto()
+    DOWNLOADING = auto()
+    DOWNLOAD_ERROR = auto()
+    INSTALLING = auto()
+    INSTALL_ERROR = auto()
+    COMPLETE = auto()
+
+    ERROR = auto()
 
 
 # Serial Communication Values
@@ -90,7 +109,7 @@ SERIAL_COMM_MAX_FULL_PACKET_LENGTH_BYTES = (
     SERIAL_COMM_PACKET_METADATA_LENGTH_BYTES + SERIAL_COMM_MAX_PAYLOAD_LENGTH_BYTES
 )
 
-SERIAL_COMM_STATUS_CODE_LENGTH_BYTES = 2 + 24  # main micro, idx of thread with error, 24 wells
+SERIAL_COMM_STATUS_CODE_LENGTH_BYTES = 2 + NUM_WELLS  # main micro, idx of thread with error, 24 wells
 # data stream components
 SERIAL_COMM_TIME_INDEX_LENGTH_BYTES = 8
 SERIAL_COMM_TIME_OFFSET_LENGTH_BYTES = 2

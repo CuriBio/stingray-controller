@@ -27,6 +27,7 @@ from pulse3D.constants import TOTAL_WORKING_HOURS_UUID
 
 from ..constants import GENERIC_24_WELL_DEFINITION
 from ..constants import MICROS_PER_MILLIS
+from ..constants import NUM_WELLS
 from ..constants import SERIAL_COMM_CHECKSUM_LENGTH_BYTES
 from ..constants import SERIAL_COMM_MAGIC_WORD_BYTES
 from ..constants import SERIAL_COMM_MODULE_ID_TO_WELL_IDX
@@ -120,7 +121,6 @@ def parse_metadata_bytes(metadata_bytes: bytes) -> Dict[Any, Any]:
 
 
 def convert_metadata_to_bytes(metadata_dict: Dict[UUID, Any]) -> bytes:
-    num_wells = 24
     metadata_bytes = (
         bytes([metadata_dict[BOOT_FLAGS_UUID]])
         + bytes(metadata_dict[MANTARRAY_NICKNAME_UUID], encoding="utf-8")
@@ -128,7 +128,7 @@ def convert_metadata_to_bytes(metadata_dict: Dict[UUID, Any]) -> bytes:
         + convert_semver_str_to_bytes(metadata_dict[MAIN_FIRMWARE_VERSION_UUID])
         + convert_semver_str_to_bytes(metadata_dict[CHANNEL_FIRMWARE_VERSION_UUID])
         # this function is only used in the simulator, so always send default status code
-        + bytes([SERIAL_COMM_OKAY_CODE] * (num_wells + 2))
+        + bytes([SERIAL_COMM_OKAY_CODE] * (NUM_WELLS + 2))
         + metadata_dict[INITIAL_MAGNET_FINDING_PARAMS_UUID]["X"].to_bytes(1, byteorder="little", signed=True)
         + metadata_dict[INITIAL_MAGNET_FINDING_PARAMS_UUID]["Y"].to_bytes(1, byteorder="little", signed=True)
         + metadata_dict[INITIAL_MAGNET_FINDING_PARAMS_UUID]["Z"].to_bytes(1, byteorder="little", signed=True)
@@ -174,7 +174,7 @@ def get_serial_comm_timestamp() -> int:
 
 
 def convert_stimulator_check_bytes_to_dict(stimulator_check_bytes: bytes) -> Dict[str, List[int]]:
-    stimulator_checks_as_ints = struct.unpack("<" + "HHB" * 24, stimulator_check_bytes)
+    stimulator_checks_as_ints = struct.unpack("<" + "HHB" * NUM_WELLS, stimulator_check_bytes)
     # convert to lists of adc8, adc9, and status where the index of each list is the module id. Only creating an array here to reshape easily
     stimulator_checks_list = (
         np.array(stimulator_checks_as_ints, copy=False)
@@ -225,9 +225,10 @@ def convert_subprotocol_dict_to_bytes(
     subprotocol_components: Dict[str, int] = {k: v for k, v in subprotocol_dict.items() if isinstance(v, int)}
 
     if is_null:
-        subprotocol_bytes = bytes(24) + (subprotocol_components["duration"] // MICROS_PER_MILLIS).to_bytes(
-            4, byteorder="little"
-        )
+        num_unused_bytes = 24
+        subprotocol_bytes = bytes(num_unused_bytes) + (
+            subprotocol_components["duration"] // MICROS_PER_MILLIS
+        ).to_bytes(4, byteorder="little")
     else:
         subprotocol_bytes = subprotocol_components["phase_one_duration"].to_bytes(4, byteorder="little") + (
             subprotocol_components["phase_one_charge"] // conversion_factor
@@ -341,7 +342,7 @@ def convert_stim_dict_to_bytes(stim_dict: Dict[str, Any]) -> bytes:
             [is_voltage_controlled, protocol_dict["run_until_stopped"], 0]
         )
     # add bytes for module ID / protocol ID pairs
-    protocol_assignment_list = [-1] * 24
+    protocol_assignment_list = [-1] * NUM_WELLS
     for well_name, protocol_id in stim_dict["protocol_assignments"].items():
         module_id = convert_well_name_to_module_id(well_name, use_stim_mapping=True)
         protocol_assignment_list[module_id - 1] = (
@@ -393,7 +394,7 @@ def convert_stim_bytes_to_dict(stim_bytes: bytes) -> Dict[str, Any]:
     num_assignments = len(stim_bytes[curr_byte_idx:])
     for module_id in range(1, num_assignments + 1):
         well_name = (
-            convert_module_id_to_well_name(module_id, use_stim_mapping=True) if module_id <= 24 else ""
+            convert_module_id_to_well_name(module_id, use_stim_mapping=True) if module_id <= NUM_WELLS else ""
         )
         protocol_id_idx = (
             None if stim_bytes[curr_byte_idx] == STIM_NO_PROTOCOL_ASSIGNED else stim_bytes[curr_byte_idx]

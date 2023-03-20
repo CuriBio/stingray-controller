@@ -6,7 +6,6 @@ from typing import Any
 from typing import Awaitable
 from typing import Callable
 
-from controller.utils.state_management import ReadOnlyDict
 from semver import VersionInfo
 import websockets
 from websockets import serve
@@ -14,6 +13,7 @@ from websockets.server import WebSocketServerProtocol
 
 from ..constants import DEFAULT_SERVER_PORT_NUMBER
 from ..constants import GENERIC_24_WELL_DEFINITION
+from ..constants import NUM_WELLS
 from ..constants import STIM_MAX_ABSOLUTE_CURRENT_MICROAMPS
 from ..constants import STIM_MAX_ABSOLUTE_VOLTAGE_MILLIVOLTS
 from ..constants import STIM_MAX_DUTY_CYCLE_DURATION_MICROSECONDS
@@ -27,6 +27,7 @@ from ..constants import VALID_STIMULATION_TYPES
 from ..constants import VALID_SUBPROTOCOL_TYPES
 from ..exceptions import WebsocketCommandError
 from ..utils.generic import wait_tasks_clean
+from ..utils.state_management import ReadOnlyDict
 from ..utils.stimulation import get_pulse_dur_us
 from ..utils.stimulation import get_pulse_duty_cycle_dur_us
 
@@ -50,7 +51,7 @@ def register_handlers(cls: Any) -> Any:
 @register_handlers
 class Server:
     # set by class decorator
-    _handlers: dict[str, Callable[["Server", dict[str, Any]], Awaitable[dict[str, Any] | None]]]
+    _handlers: dict[str, Callable[..., Awaitable[dict[str, Any] | None]]]
 
     def __init__(
         self,
@@ -128,7 +129,7 @@ class Server:
             handler = self._handlers[command]
 
             try:
-                handler_res = await handler(self, msg)
+                handler_res = await handler(self, **msg)
             except WebsocketCommandError as e:
                 logger.error(f"Command {command} failed with error: {e.args[0]}")
                 raise
@@ -165,25 +166,25 @@ class Server:
     # TEST MESSAGE HANDLERS
 
     @mark_handler
-    async def _test(self, msg: dict[str, Any]) -> dict[str, Any]:
+    async def _test(self, msg: str) -> dict[str, Any]:
         return {"test msg": msg}
 
     @mark_handler
-    async def _monitor_test(self, msg: dict[str, Any]) -> None:
-        await self._to_monitor_queue.put(msg)
+    async def _monitor_test(self, comm: dict[str, str]) -> None:
+        await self._to_monitor_queue.put(comm)
 
     @mark_handler
-    async def _err(self, comm: Any) -> None:
+    async def _err(self, *args: Any) -> None:
         raise Exception()
 
     @mark_handler
-    async def _ws_err(self, comm: Any) -> None:
+    async def _ws_err(self, *args: Any) -> None:
         raise WebsocketCommandError("my test msg")
 
     # MESSAGE HANDLERS
 
     @mark_handler
-    async def _shutdown(self) -> dict[str, Any]:
+    async def _shutdown(self, *args: Any) -> dict[str, Any]:
         self.fe_initiated_shutdown = True
         # TODO remove this return when done testing
         return {"msg": "beginning_shutdown"}
@@ -221,9 +222,7 @@ class Server:
     async def _update_settings(self, comm: dict[str, str]) -> None:
         """Update the customer/user settings."""
         for setting in comm:
-            if setting in ("communication_type", "command"):
-                continue
-            if setting not in VALID_CONFIG_SETTINGS:
+            if setting not in (*VALID_CONFIG_SETTINGS, "command"):
                 raise WebsocketCommandError(f"Invalid setting given: {setting}")
 
         await self._to_monitor_queue.put(comm)
@@ -251,6 +250,7 @@ class Server:
 
         await self._to_monitor_queue.put(comm)
 
+    # TODO consider changing this to "set_stim_info"
     @mark_handler
     async def _set_stim_protocols(self, comm: dict[str, Any]) -> None:
         """Set stimulation protocols in program memory and send to
@@ -264,7 +264,9 @@ class Server:
         if system_status != SystemStatuses.IDLE_READY_STATE:
             raise WebsocketCommandError(f"Cannot change protocols while in {system_status.name}")
 
-        protocol_list = comm["protocols"]
+        stim_info = comm["stim_info"]
+
+        protocol_list = stim_info["protocols"]
         # make sure at least one protocol is given
         if not protocol_list:
             raise WebsocketCommandError("Protocol list empty")
@@ -353,10 +355,11 @@ class Server:
                         f"Protocol {protocol_id}, Subprotocol {idx}, Subprotocol duration too long"
                     )
 
-        protocol_assignments_dict = comm["protocol_assignments"]
+        protocol_assignments_dict = stim_info["protocol_assignments"]
         # make sure protocol assignments are not missing any wells and do not contain any invalid wells
         all_well_names = set(
-            GENERIC_24_WELL_DEFINITION.get_well_name_from_well_index(well_idx) for well_idx in range(24)
+            GENERIC_24_WELL_DEFINITION.get_well_name_from_well_index(well_idx)
+            for well_idx in range(NUM_WELLS)
         )
         given_well_names = set(protocol_assignments_dict.keys())
         if missing_wells := all_well_names - given_well_names:
@@ -412,7 +415,7 @@ class Server:
 
         system_state = self._get_system_state_ro()
 
-        if system_state["stim_info"] is None:
+        if not system_state["stim_info"]:
             raise WebsocketCommandError("406 Protocols have not been set")
 
         if stim_status:

@@ -12,8 +12,6 @@ import sys
 from typing import Any
 import uuid
 
-from controller.subsystems.instrument_comm import InstrumentComm
-from controller.utils.state_management import SystemStateManager
 from stdlib_utils import configure_logging
 from stdlib_utils import is_port_in_use
 
@@ -26,8 +24,11 @@ from .constants import SystemStatuses
 from .exceptions import LocalServerPortAlreadyInUseError
 from .main_systems.server import Server
 from .main_systems.system_monitor import SystemMonitor
+from .subsystems.cloud_comm import CloudComm
+from .subsystems.instrument_comm import InstrumentComm
 from .utils.generic import redact_sensitive_info_from_path
 from .utils.generic import wait_tasks_clean
+from .utils.state_management import SystemStateManager
 
 
 logger = logging.getLogger(__name__)
@@ -96,16 +97,16 @@ async def main(command_line_args: list[str]) -> None:
             queues["to"]["instrument_comm"], queues["from"]["instrument_comm"]
         )
 
+        cloud_comm_subsystem = CloudComm(queues["to"]["cloud_comm"], queues["from"]["cloud_comm"])
+
         tasks = {
             asyncio.create_task(system_monitor.run()),
             asyncio.create_task(server.run()),
             asyncio.create_task(instrument_comm_subsystem.run()),
+            asyncio.create_task(cloud_comm_subsystem.run()),
         }
 
         await wait_tasks_clean(tasks)
-
-        # TODO
-        # upload_log_files_to_s3(system_state["config_settings"])
 
     except Exception as e:
         logger.error(f"ERROR IN MAIN: {repr(e)}")
@@ -117,8 +118,8 @@ async def main(command_line_args: list[str]) -> None:
 # TODO consider moving this to a different file
 def create_system_queues() -> dict[str, Any]:
     return {
-        "to": {"server": asyncio.Queue(), "instrument_comm": asyncio.Queue()},
-        "from": {"server": asyncio.Queue(), "instrument_comm": asyncio.Queue()},
+        direction: {subsystem: asyncio.Queue() for subsystem in ("server", "instrument_comm", "cloud_comm")}
+        for direction in ("to", "from")
     }
 
 
@@ -164,18 +165,29 @@ def _log_cmd_line_args(parsed_args: dict[str, Any]) -> None:
     logger.info(f"Command Line Args: {parsed_args_copy}".replace(r"\\", "\\"))
 
 
+# TODO make this function reusable in tests
 def _initialize_system_state(parsed_args: dict[str, Any], log_file_id: uuid.UUID) -> dict[str, Any]:
     system_state = {
+        # main
         "system_status": SystemStatuses.SERVER_INITIALIZING_STATE,
+        "in_simulation_mode": False,
         "stimulation_running": [False] * NUM_WELLS,
-        "config_settings": {"log_directory": parsed_args["log_file_dir"]},
-        "user_creds": {},
-        "stimulator_circuit_statuses": {},
-        "stim_info": None,
+        # updating
+        "main_firmware_update": None,
+        "channel_firmware_update": None,
+        "latest_software_version": None,
+        # user options
+        "config_settings": {
+            "log_directory": parsed_args["log_file_dir"]
+        },  # TODO consider not storing this in a dict
+        "is_user_logged_in": False,
+        # instrument
         "instrument_metadata": {},
-        "main_firmware_update_needed": {},
-        "channel_firmware_update_needed": {},
-        # "latest_software_version": None,
+        "stim_info": {},
+        "stimulator_circuit_statuses": {},
+        "stim_barcode": None,
+        "plate_barcode": None,
+        # misc
         "log_file_id": log_file_id,
     }
 

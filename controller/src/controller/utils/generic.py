@@ -34,7 +34,7 @@ def get_redacted_string(length: int) -> str:
     return "*" * length
 
 
-def compare_semver(version_a: str, version_b: str) -> bool:
+def semver_gt(version_a: str, version_b: str) -> bool:
     """Determine if Version A is greater than Version B."""
     return VersionInfo.parse(version_a) > VersionInfo.parse(version_b)  # type: ignore
 
