@@ -272,20 +272,16 @@ export default {
       }
     }
 
-    const wsMessage = JSON.stringify({ command: "set_stim_protocols", content: message });
-    socket.send(wsMessage);
+    const wsProtocolMessage = JSON.stringify({ command: "set_stim_protocols", content: message });
+    socket.send(wsProtocolMessage);
 
-    // TODO handle stim status updates from response
-    // const status_url = `/set_stim_status?running=${status}`;
-    // await call_axios_post_from_vuex(status_url);
-    // commit("set_stim_status", STIM_STATUS.STIM_ACTIVE);
+    const wsMessage = JSON.stringify({ command: "set_stim_status", running: true });
+    socket.send(wsMessage);
   },
 
   async stopStimulation() {
-    const wsMessage = JSON.stringify({ command: "stop_stimulation" });
+    const wsMessage = JSON.stringify({ command: "set_stim_status", running: false });
     socket.send(wsMessage);
-    // TODO move this to response to is_stimulating being false
-    // commit("set_stim_status", STIM_STATUS.READY);
   },
 
   async editSelectedProtocol({ commit, dispatch, state }, protocol) {
@@ -339,7 +335,7 @@ export default {
         });
     }
   },
-  async startStimConfiguration({ state }) {
+  async startStimConfiguration({ state, commit }) {
     const wellIndices = Object.keys(state.protocol_assignments);
     const wsMessage = JSON.stringify({
       command: "start_stim_checks",
@@ -349,13 +345,7 @@ export default {
     });
 
     socket.send(wsMessage);
-
-    // TODO handle this response
-    // if (res && res.status !== 200) {
-    //   commit("set_stim_status", STIM_STATUS.ERROR);
-    // } else {
-    //   commit("set_stim_status", STIM_STATUS.CONFIG_CHECK_IN_PROGRESS);
-    // }
+    commit("set_stim_status", STIM_STATUS.CONFIG_CHECK_IN_PROGRESS);
   },
   async onPulseMouseenter({ state }, idx) {
     const hoveredPulse = state.repeatColors[idx];

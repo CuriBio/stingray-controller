@@ -24,6 +24,7 @@ export default {
   async sendFirmwareUpdateConfirmation(_, updateAccepted) {
     const status = updateAccepted ? "accepted" : "declined";
     console.log(`User ${status} firmware update`); // allow-log
+
     const wsMessage = JSON.stringify({
       command: "firmware_update_confirmation",
       update_accepted: updateAccepted,

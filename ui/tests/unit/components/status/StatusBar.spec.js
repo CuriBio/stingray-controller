@@ -152,8 +152,8 @@ describe("StatusWidget.vue", () => {
         attachToDocument: true,
       });
 
-      await store.commit("settings/set_shutdown_error_status", {
-        error_type: "InstrumentConnectionCreationError",
+      await store.commit("settings/setShutdownErrorStatus", {
+        errorType: "InstrumentConnectionCreationError",
       });
       store.commit("system/setStatusUuid", STATUS.ERROR_STATE);
       expect(wrapper.find(textSelector).text()).toBe(`Status: Error Occurred`);

@@ -1,4 +1,4 @@
-import { socket } from "@/js-utils/axiosHelpers.js";
+import { socket } from "@/store/plugins/websocket";
 
 export default {
   async updateSettings() {

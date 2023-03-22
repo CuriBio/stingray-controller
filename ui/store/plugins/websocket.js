@@ -24,7 +24,6 @@ export default function createWebSocketPlugin(socket) {
     socket.onmessage = function (e) {
       if (typeof e.data === "string") {
         const wsMessage = JSON.parse(e.data);
-        const { content } = wsMessage;
         console.log("WS Received: '" + e.data + "'"); // allow-log
 
         switch (wsMessage.communication_type) {
@@ -39,36 +38,43 @@ export default function createWebSocketPlugin(socket) {
             }
             break;
           case "stimulator_circuit_statuses":
-            store.dispatch("stimulation/checkStimulatorCircuitStatuses", content);
+            store.dispatch(
+              "stimulation/checkStimulatorCircuitStatuses",
+              wsMessage.stimulator_circuit_statuses
+            );
             break;
-          case "barcodes":
+          case "barcode_update":
             for (const barcodeType in store.state.system.barcodes) {
-              if (content[barcodeType])
+              if (wsMessage.new_barcodes[barcodeType])
                 store.dispatch("system/validateBarcode", {
                   type: barcodeType,
-                  newValue: content[barcodeType],
+                  newValue: wsMessage.new_barcodes[barcodeType],
                 });
             }
             break;
           case "sw_update":
-            if (content.allow_software_update !== undefined) {
-              store.commit("system/setAllowSwUpdateInstall", content.allow_software_update);
+            if (wsMessage.allow_software_update !== undefined) {
+              store.commit("system/setAllowSwUpdateInstall", wsMessage.allow_software_update);
             }
-            if (content.softwareUpdateAvailable !== undefined) {
-              const status = content.softwareUpdateAvailable ? "found" : "not found";
+            if (wsMessage.software_update_available !== undefined) {
+              const status = wsMessage.software_update_available ? "found" : "not found";
               console.log("Software update " + status); // allow-log
-              store.commit("system/setSoftwareUpdateAvailable", content.softwareUpdateAvailable);
+              store.commit("system/setSoftwareUpdateAvailable", wsMessage.software_update_available);
             }
             break;
-          case "fw_update":
-            if (content.firmwareUpdateAvailable) {
+          case "user_input_needed":
+            store.commit("settings/userInputNeeded", true);
+            break;
+          case "firmware_update_available":
+            if (wsMessage.channel_fw_update) {
               console.log("Firmware update found"); // allow-log
-              store.commit("system/setFirmwareUpdateAvailable", content);
+              // TODO this isn't being handled properly in the mutation
+              store.commit("system/setFirmwareUpdateAvailable", wsMessage);
             }
             break;
           case "error":
             // TODO might be different or need to change
-            store.commit("system/setShutdownErrorStatus", content);
+            store.commit("system/setShutdownErrorStatus");
             break;
           case "command_response":
             console.log("Response received."); // allow-log
