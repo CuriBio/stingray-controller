@@ -4,7 +4,7 @@ import { ERRORS } from "./enums";
 
 export default {
   setStatusUuid(state, newId) {
-    if (state.statusUuid !== STATUS.ERROR) {
+    if (state.statusUuid !== STATUS.ERROR_STATE) {
       state.statusUuid = newId;
     }
   },
@@ -40,6 +40,7 @@ export default {
     state.softwareUpdateAvailable = bool;
   },
   setFirmwareUpdateAvailable(state, updateInfo) {
+    // TODO check that this works after ws messages are finalized
     state.firmwareUpdateAvailable = updateInfo.firmwareUpdateAvailable;
     state.firmwareUpdateDurMins = updateInfo.channelFwUpdate ? 5 : 1;
   },

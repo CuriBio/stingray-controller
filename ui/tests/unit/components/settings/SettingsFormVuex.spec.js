@@ -1,7 +1,7 @@
 import { mount } from "@vue/test-utils";
 import ComponentToTest from "@/components/settings/SettingsForm.vue";
 import { SettingsForm as DistComponentToTest } from "@/dist/stingray.common";
-
+import { socket } from "@/store/plugins/websocket";
 import Vuex from "vuex";
 import { createLocalVue } from "@vue/test-utils";
 import BootstrapVue from "bootstrap-vue";
@@ -159,6 +159,8 @@ describe("SettingsForm.vue", () => {
     });
 
     test("Given a customer and user account selected in Vuex and the textbox for Customer Account is changed to an account different than the one in Vuex and a user account is selected in thet textbox, When the Save Changes button is clicked, Then the selected indices in Vuex for Customer and User accounts are updated to reflect the chosen options in the textboxes", async () => {
+      jest.spyOn(socket, "send").mockImplementation(() => {});
+
       store.commit("settings/setActiveUserIndex", 0);
       wrapper = mount(ComponentToTest, {
         store,

@@ -308,16 +308,6 @@ export default {
           this.$store.commit("system/setShutdownErrorMessage", "Error during firmware update.");
           this.$bvModal.show("error-catch");
           break;
-        case STATUS.ERROR_STATE:
-          this.closeModalsById([
-            "fw-updates-in-progress-message",
-            "fw-closure-warning",
-            "ops-closure-warning",
-          ]);
-
-          this.alertTxt = "Error Occurred";
-          this.$bvModal.show("error-catch");
-          break;
         default:
           this.alertTxt = status;
           break;

@@ -48,7 +48,6 @@ describe("StatusWidget.vue", () => {
       ["DOWNLOADING_UPDATES_STATE", "Status: Downloading Firmware Updates..."],
       ["INSTALLING_UPDATES_STATE", "Status: Installing Firmware Updates..."],
       ["UPDATES_COMPLETE_STATE", "Status: Firmware Updates Complete"],
-      ["ERROR_STATE", "Status: Error Occurred"],
       ["UPDATE_ERROR_STATE", "Status: Error During Firmware Update"],
     ])(
       "Given that /shutdown is mocked to return status 200, When Vuex is mutated to the state %s, Then the status text should update to be: %s",
@@ -122,42 +121,7 @@ describe("StatusWidget.vue", () => {
       await wrapper.vm.$nextTick(); // wait for update
       expect(wrapper.find(textSelector).text()).toBe("Status: 3dbb8814-09f1-44db-b7d5-7a9f702beac4");
     });
-    test("Given that the http response is 404 for api request /shutdown, When Vuex is mutated to an ERROR_STATE UUID, Then the status text should update as 'Error Occurred' and the the dialog of ErrorCatchWidget is visible", async () => {
-      const shutdownUrl = "http://localhost:4567/shutdown";
-      mockedAxios.onGet(shutdownUrl).reply(404);
-      const propsData = {};
-      wrapper = mount(StatusWidget, {
-        propsData,
-        store,
-        localVue,
-        attachToDocument: true,
-      });
 
-      expect(wrapper.contains("#error-catch")).toBe(true);
-      const modal = wrapper.find("#error-catch");
-      expect(modal.isVisible()).toBe(false);
-      store.commit("system/setStatusUuid", STATUS.ERROR_STATE);
-      await wrapper.vm.$nextTick(); // wait for update
-      expect(wrapper.find(textSelector).text()).toBe("Status: Error Occurred");
-      Vue.nextTick(() => {
-        expect(modal.isVisible()).toBe(true);
-      });
-    });
-    test("When Vuex is mutated to an ERROR_STATE UUID and shutdown status was set to known error, Then the status text should not update to 'Error Occurred'", async () => {
-      const propsData = {};
-      wrapper = mount(StatusWidget, {
-        propsData,
-        store,
-        localVue,
-        attachToDocument: true,
-      });
-
-      await store.commit("settings/setShutdownErrorStatus", {
-        errorType: "InstrumentConnectionCreationError",
-      });
-      store.commit("system/setStatusUuid", STATUS.ERROR_STATE);
-      expect(wrapper.find(textSelector).text()).toBe(`Status: Error Occurred`);
-    });
     test("When Vuex is mutated to an UPDATE ERROR UUID, Then the status text should update as 'Error During Firmware Update' and the the dialog of ErrorCatchWidget is visible", async () => {
       const propsData = {};
       wrapper = mount(StatusWidget, {
@@ -286,14 +250,13 @@ describe("StatusWidget.vue", () => {
       ["IDLE_READY_STATE", "STIM_ACTIVE", "Status: Stimulating...", { 1: {} }],
       ["IDLE_READY_STATE", "SHORT_CIRCUIT_ERROR", "Status: Short Circuit Error", {}],
       ["IDLE_READY_STATE", "ERROR", "Status: Error Occurred", {}],
-      ["ERROR_STATE", "NO_PROTOCOLS_ASSIGNED", "Status: Error Occurred", {}],
       ["SERVER_INITIALIZING_STATE", "CONFIG_CHECK_NEEDED", "Status: Booting Up...", { 1: {} }],
       ["INSTRUMENT_INITIALIZING_STATE", "CONFIG_CHECK_IN_PROGRESS", "Status: Initializing...", { 1: {} }],
       ["SERVER_READY_STATE", "CONFIG_CHECK_COMPLETE", "Status: Connecting...", { 1: {} }],
       ["UPDATES_NEEDED_STATE", "READY", "Status: Firmware Updates Required", { 1: {} }],
       ["INSTALLING_UPDATES_STATE", "STIM_ACTIVE", "Status: Installing Firmware Updates...", { 1: {} }],
       ["UPDATES_COMPLETE_STATE", "SHORT_CIRCUIT_ERROR", "Status: Firmware Updates Complete", {}],
-      ["CHECKING_FOR_UPDATES_STATE", "ERROR_STATE", "Status: Checking for Firmware Updates...", {}],
+      ["CHECKING_FOR_UPDATES_STATE", "STIM_ACTIVE", "Status: Checking for Firmware Updates...", {}],
     ])(
       "When system status is %s and stim's stimStatus gets mutated to %s, Then the status text should update to be %s if system Uuid is IDLE_READY_STATE",
       async (systemVuexState, vuexState, expectedText, assignments) => {
