@@ -272,7 +272,7 @@ export default {
       }
     }
 
-    const wsProtocolMessage = JSON.stringify({ command: "set_stim_protocols", content: message });
+    const wsProtocolMessage = JSON.stringify({ command: "set_stim_protocols", ...message });
     socket.send(wsProtocolMessage);
 
     const wsMessage = JSON.stringify({ command: "set_stim_status", running: true });

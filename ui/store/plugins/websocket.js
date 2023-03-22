@@ -16,7 +16,6 @@ export default function createWebSocketPlugin(socket) {
     socket.onopen = function () {
       console.log("WS Client Connected");
     };
-
     socket.onclose = function () {
       console.log("WS Client Closed");
     };

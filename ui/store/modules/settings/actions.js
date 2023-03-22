@@ -6,14 +6,12 @@ export default {
     const { customerId, userPassword, userName } = userAccounts[activeUserIndex];
     const params = {
       command: "update_user_settings",
-      content: {
-        customer_id: customerId,
-        user_name: userName,
-        user_password: userPassword,
-      },
+      customer_id: customerId,
+      user_name: userName,
+      user_password: userPassword,
     };
 
-    socket.send(params);
+    socket.send(JSON.stringify(params));
     // TODO remove response here and update from WS response message
     return 200;
   },
