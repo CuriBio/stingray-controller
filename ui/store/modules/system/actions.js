@@ -1,5 +1,7 @@
 import { STIM_STATUS } from "../stimulation/enums";
 import { TextValidation } from "@/js-utils/TextValidation.js";
+import { socket } from "@/store/plugins/websocket";
+
 const TextValidationPlateBarcode = new TextValidation("plateBarcode");
 
 export default {
@@ -22,7 +24,11 @@ export default {
   async sendFirmwareUpdateConfirmation(_, updateAccepted) {
     const status = updateAccepted ? "accepted" : "declined";
     console.log(`User ${status} firmware update`); // allow-log
+    const wsMessage = JSON.stringify({
+      command: "firmware_update_confirmation",
+      update_accepted: updateAccepted,
+    });
 
-    // TODO send ws message
+    socket.send(wsMessage);
   },
 };

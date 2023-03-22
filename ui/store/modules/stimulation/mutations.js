@@ -1,5 +1,4 @@
 import { STIM_STATUS } from "./enums";
-
 import { getDefaultProtocolEditorState } from "./getters";
 
 export default {

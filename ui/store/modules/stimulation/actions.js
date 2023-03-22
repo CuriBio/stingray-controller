@@ -1,6 +1,6 @@
 import { WellTitle as LabwareDefinition } from "@/js-utils/LabwareCalculations.js";
 const twentyFourWellPlateDefinition = new LabwareDefinition(4, 6);
-// import { callAxiosPostFromVuex } from "../../../js-utils/axiosHelpers";
+import { socket } from "@/store/plugins/websocket";
 import { STIM_STATUS, TIME_CONVERSION_TO_MILLIS } from "./enums";
 
 export default {
@@ -272,11 +272,20 @@ export default {
       }
     }
 
-    // TODO
+    const wsMessage = JSON.stringify({ command: "set_stim_protocols", content: message });
+    socket.send(wsMessage);
+
+    // TODO handle stim status updates from response
+    // const status_url = `/set_stim_status?running=${status}`;
+    // await call_axios_post_from_vuex(status_url);
+    // commit("set_stim_status", STIM_STATUS.STIM_ACTIVE);
   },
 
-  async stopStimulation({ commit }) {
-    // TODO
+  async stopStimulation() {
+    const wsMessage = JSON.stringify({ command: "stop_stimulation" });
+    socket.send(wsMessage);
+    // TODO move this to response to is_stimulating being false
+    // commit("set_stim_status", STIM_STATUS.READY);
   },
 
   async editSelectedProtocol({ commit, dispatch, state }, protocol) {
@@ -330,8 +339,23 @@ export default {
         });
     }
   },
-  async startStimConfiguration({ commit, state }) {
-    // TODO
+  async startStimConfiguration({ state }) {
+    const wellIndices = Object.keys(state.protocol_assignments);
+    const wsMessage = JSON.stringify({
+      command: "start_stim_checks",
+      content: {
+        well_indices: wellIndices,
+      },
+    });
+
+    socket.send(wsMessage);
+
+    // TODO handle this response
+    // if (res && res.status !== 200) {
+    //   commit("set_stim_status", STIM_STATUS.ERROR);
+    // } else {
+    //   commit("set_stim_status", STIM_STATUS.CONFIG_CHECK_IN_PROGRESS);
+    // }
   },
   async onPulseMouseenter({ state }, idx) {
     const hoveredPulse = state.repeatColors[idx];
