@@ -129,11 +129,11 @@ class SystemMonitor:
 
     async def _push_system_status_update(self, update_details: ReadOnlyDict) -> None:
         status_update_details = {}
-        if new_system_status := update_details.get("system_status"):
+        if (new_system_status := update_details.get("system_status")) is not None:
             status_update_details["system_status"] = new_system_status
-        if stim_running_updates := update_details.get("stimulation_running"):
+        if (stim_running_updates := update_details.get("stimulation_running")) is not None:
             status_update_details["is_stimulating"] = any(stim_running_updates)
-        if in_simulation_mode := update_details.get("in_simulation_mode"):
+        if (in_simulation_mode := update_details.get("in_simulation_mode")) is not None:
             status_update_details["in_simulation_mode"] = in_simulation_mode
 
         if status_update_details:
@@ -241,7 +241,7 @@ class SystemMonitor:
                     await self._queues["to"]["server"].put(
                         {"communication_type": "stimulator_circuit_statuses", **update}
                     )
-                case {"command": "set_board_connection_status", "in_simulation_mode": in_simulation_mode}:
+                case {"command": "get_board_connection_status", "in_simulation_mode": in_simulation_mode}:
                     system_state_updates["in_simulation_mode"] = in_simulation_mode
                 case {"command": "get_barcode", "barcode": barcode}:
                     barcode_type = "stim_barcode" if barcode.startswith("MS") else "plate_barcode"

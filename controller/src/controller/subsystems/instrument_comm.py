@@ -173,14 +173,22 @@ class InstrumentComm:
                     timeout=0.01,
                     stopbits=serial.STOPBITS_ONE,
                 )
-                return
+                break
 
         # if a real instrument is not found, check for a virtual instrument
-        virtual_instrument = VirtualInstrumentConnection()
-        try:
-            await virtual_instrument.connect()
-        except Exception as e:  # TODO make this a specific exception?
-            raise NoInstrumentDetectedError() from e
+        if not self._instrument:
+            virtual_instrument = VirtualInstrumentConnection()
+            try:
+                await virtual_instrument.connect()
+            except Exception as e:  # TODO make this a specific exception?
+                raise NoInstrumentDetectedError() from e
+
+        await self._to_monitor_queue.put(
+            {
+                "command": "get_board_connection_status",
+                "in_simulation_mode": isinstance(self._instrument, VirtualInstrumentConnection),
+            }
+        )
 
         self._instrument = virtual_instrument
 
@@ -426,7 +434,7 @@ class InstrumentComm:
                 await self._firmware_update_manager.complete()
             case SerialCommPacketTypes.BARCODE_FOUND:
                 barcode = packet_payload.decode("ascii")
-                barcode_comm = {"command": "set_barcode", "barcode": barcode}
+                barcode_comm = {"command": "get_barcode", "barcode": barcode}
                 await self._to_monitor_queue.put(barcode_comm)
             case _:
                 raise NotImplementedError(f"Packet Type: {packet_type} is not defined")

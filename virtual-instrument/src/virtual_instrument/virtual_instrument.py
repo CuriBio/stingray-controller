@@ -475,10 +475,11 @@ class MantarrayMcSimulator(InfiniteProcess):
             response_body += bytes([not self._is_streaming_data])
             if self._is_streaming_data and self._is_first_data_stream:
                 self._is_first_data_stream = False
-                self._ready_to_send_barcode = True
             self._is_streaming_data = False
         elif packet_type == SERIAL_COMM_GET_METADATA_PACKET_TYPE:
             response_body += convert_metadata_to_bytes(self._metadata_dict)
+            # wait until this command is received and then start sending barcodes
+            self._ready_to_send_barcode = True
         elif packet_type == SERIAL_COMM_SET_NICKNAME_PACKET_TYPE:
             send_response = False
             start_idx = SERIAL_COMM_PAYLOAD_INDEX
