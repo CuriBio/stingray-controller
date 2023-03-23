@@ -251,6 +251,7 @@ class SystemMonitor:
                         # send message to FE
                         barcode_update_message = {
                             "communication_type": "barcode_update",
+                            "barcode_type": barcode_type,
                             "new_barcode": barcode,
                         }
                         await self._queues["to"]["server"].put(barcode_update_message)

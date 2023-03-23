@@ -106,10 +106,13 @@ async def main(command_line_args: list[str]) -> None:
             asyncio.create_task(cloud_comm_subsystem.run()),
         }
 
+        # TODO make sure that errors in subprocesses get raised all the way up to the top here
+        # TODO have server send a "shutting down" or "error" msg or something when it gets cancelled
         await wait_tasks_clean(tasks)
 
     except Exception as e:
         logger.error(f"ERROR IN MAIN: {repr(e)}")
+        # TODO raise error here ?
 
     finally:
         logger.info("Program exiting")

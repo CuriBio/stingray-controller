@@ -43,12 +43,13 @@ export default function createWebSocketPlugin(socket) {
             );
             break;
           case "barcode_update":
-            for (const barcodeType in store.state.system.barcodes) {
-              if (wsMessage.new_barcodes[barcodeType])
-                store.dispatch("system/validateBarcode", {
-                  type: barcodeType,
-                  newValue: wsMessage.new_barcodes[barcodeType],
-                });
+            // eslint complains without this if condition wrapper for some reason
+            if (wsMessage) {
+              const barcodeType = wsMessage.barcode_type.split("_")[0] + "Barcode";
+              store.dispatch("system/validateBarcode", {
+                type: barcodeType,
+                newValue: wsMessage.new_barcode,
+              });
             }
             break;
           case "sw_update":
