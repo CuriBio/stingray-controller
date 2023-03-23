@@ -249,12 +249,13 @@ class SystemMonitor:
                     if system_state[barcode_type] != barcode:
                         system_state_updates[barcode_type] = barcode
                         # send message to FE
-                        barcode_update_message = {
-                            "communication_type": "barcode_update",
-                            "barcode_type": barcode_type,
-                            "new_barcode": barcode,
-                        }
-                        await self._queues["to"]["server"].put(barcode_update_message)
+                        await self._queues["to"]["server"].put(
+                            {
+                                "communication_type": "barcode_update",
+                                "barcode_type": barcode_type,
+                                "new_barcode": barcode,
+                            }
+                        )
                 case {"command": "get_metadata", **metadata}:
                     system_state_updates["instrument_metadata"] = metadata
                 case {"command": "firmware_update_completed", "firmware_type": firmware_type}:

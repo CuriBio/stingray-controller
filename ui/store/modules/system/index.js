@@ -10,7 +10,7 @@ const defaultState = {
   statusUuid: STATUS.SERVER_INITIALIZING_STATE,
   simulationMode: false,
   barcodeManualMode: false,
-  xTimeIndex: 0, // milliseconds
+  isConnectedToController: false,
   barcodes: {
     plateBarcode: {
       value: null,

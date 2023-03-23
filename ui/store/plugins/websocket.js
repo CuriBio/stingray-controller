@@ -15,9 +15,11 @@ export default function createWebSocketPlugin(socket) {
 
     socket.onopen = function () {
       console.log("WS Client Connected");
+      store.commit("system/setIsConnectedToController", true);
     };
     socket.onclose = function () {
       console.log("WS Client Closed");
+      store.commit("system/setIsConnectedToController", false);
     };
 
     socket.onmessage = function (e) {
@@ -29,11 +31,11 @@ export default function createWebSocketPlugin(socket) {
           case "status_update":
             if ("system_status" in wsMessage) store.commit("system/setStatusUuid", wsMessage.system_status);
             if ("is_stimulating" in wsMessage) {
-              store.commit("stimulation/setStimStatus");
               store.commit(
-                "stimulation/setStimPlayState",
+                "stimulation/setStimStatus",
                 wsMessage.is_stimulating ? STIM_STATUS.STIM_ACTIVE : STIM_STATUS.READY
               );
+              store.commit("stimulation/setStimPlayState", wsMessage.is_stimulating);
             }
             break;
           case "stimulator_circuit_statuses":

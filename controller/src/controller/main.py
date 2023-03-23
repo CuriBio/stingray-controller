@@ -70,17 +70,6 @@ async def main(command_line_args: list[str]) -> None:
         # TODO move this into SystemMonitor?
         # logger.info("Spawning subsystems")
 
-        # process_manager = ProcessesManager(system_state=system_state, logging_level=log_level)
-        # object_access_for_testing["process_manager"] = process_manager
-        # object_access_for_testing["system_state"] = system_state
-
-        # process_manager.create_processes()
-        # if start_subprocesses:
-        #     logger.info(f"Main Process PID: {getpid()}")
-        #     subprocess_id_dict = process_manager.start_processes()
-        #     for subprocess_name, pid in subprocess_id_dict.items():
-        #         logger.info(f"{subprocess_name} PID: {pid}")
-
         # TODO wrap all this in a function?
 
         system_state_manager = SystemStateManager()

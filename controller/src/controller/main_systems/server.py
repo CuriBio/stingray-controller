@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import asyncio
+import copy
 import json
 import logging
 from typing import Any
@@ -26,6 +27,7 @@ from ..constants import VALID_CONFIG_SETTINGS
 from ..constants import VALID_STIMULATION_TYPES
 from ..constants import VALID_SUBPROTOCOL_TYPES
 from ..exceptions import WebsocketCommandError
+from ..utils.generic import get_redacted_string
 from ..utils.generic import wait_tasks_clean
 from ..utils.state_management import ReadOnlyDict
 from ..utils.stimulation import get_pulse_dur_us
@@ -126,6 +128,7 @@ class Server:
             command = msg["command"]
 
             # TODO handle KeyError here or make default method to handle unrecognized comm
+            # TODO try using pydantic to define message schema + some other message schema generator (nano message, ask Jason)
             handler = self._handlers[command]
 
             try:
@@ -143,14 +146,13 @@ class Server:
                     await websocket.send(json.dumps(res))
 
     def _log_incoming_message(self, msg: dict[str, Any]) -> None:
-        # TODO
-        # if command == "update_user_settings":
-        #     comm_copy = copy.deepcopy(communication)
-        #     comm_copy["content"]["user_password"] = get_redacted_string(4)
-        #     comm_str = str(comm_copy)
-        # else:
-        #     comm_str = str(communication)
-        logger.info(f"Comm from UI: {msg}")
+        if msg["command"] == "update_user_settings":
+            comm_copy = copy.deepcopy(msg)
+            comm_copy["user_password"] = get_redacted_string(4)
+            comm_str = str(comm_copy)
+        else:
+            comm_str = str(msg)
+        logger.info(f"Comm from UI: {comm_str}")
 
     # TEST MESSAGE HANDLERS
 
@@ -173,35 +175,6 @@ class Server:
         self.fe_initiated_shutdown = True
         # TODO remove this return when done testing
         return {"msg": "beginning_shutdown"}
-
-    # TODO figure out if this is even needed anymore, can probably just push updates whenever part of the system status changes instead
-    # @mark_handler
-    # async def _get_system_status(self) -> dict[str, Any]:
-    #     """Get the system status and other information.
-
-    #     in_simulation_mode is only accurate if ui_status_code is '009301eb-625c-4dc4-9e92-1a4d0762465f'
-
-    #     instrument_serial_number and instrument_nickname are only accurate if ui_status_code is '8e24ef4d-2353-4e9d-aa32-4346126e73e3'
-    #     """
-    #     # TODO probably want to move this out and handle differently
-    #     # system_state = _get_values_from_process_monitor()
-    #     # current_software_version = get_current_software_version()
-    #     # expected_software_version = server.system_state.get("expected_software_version", current_software_version)
-    #     # if expected_software_version != current_software_version:
-    #     #     return {
-    #     #         "error": f"Versions of Electron and Flask EXEs do not match. Expected: {expected_software_version}"
-    #     #     }
-
-    #     system_state = self._get_system_state_ro()
-
-    #     return {
-    #         "ui_status_code": str(SYSTEM_STATUS_UUIDS[system_state["system_status"]]),
-    #         "is_stimulating": _is_stimulating_on_any_well(system_state),
-    #         # TODO is this still true? Tanner (7/1/20): this route may be called before process_monitor adds the following values to system_state, so default values are needed
-    #         "in_simulation_mode": system_state.get("in_simulation_mode", False),
-    #         "instrument_serial_number": system_state.get("instrument_serial_number", ""),
-    #         "instrument_nickname": system_state.get("instrument_nickname", ""),
-    #     }
 
     @mark_handler
     async def _update_user_settings(self, comm: dict[str, str]) -> None:
@@ -379,9 +352,9 @@ class Server:
 
         try:
             if not comm["well_indices"]:
-                raise WebsocketCommandError("400 No well indices given")
+                raise WebsocketCommandError("No well indices given")
         except KeyError:
-            raise WebsocketCommandError("400 Request body missing 'well_indices'")
+            raise WebsocketCommandError("Request body missing 'well_indices'")
 
         # TODO figure out if the well idxs are still strings
         comm["well_indices"] = [int(idx) for idx in comm["well_indices"]]
@@ -401,7 +374,7 @@ class Server:
         system_state = self._get_system_state_ro()
 
         if not system_state["stim_info"]:
-            raise WebsocketCommandError("406 Protocols have not been set")
+            raise WebsocketCommandError("Protocols have not been set")
 
         if stim_status:
             if (system_status := system_state["system_status"]) != SystemStatuses.IDLE_READY_STATE:
@@ -421,6 +394,9 @@ class Server:
             raise WebsocketCommandError("Stim status not updated")
 
         await self._to_monitor_queue.put(comm)
+
+
+# HELPERS
 
 
 def _is_stimulating_on_any_well(system_state: ReadOnlyDict) -> bool:

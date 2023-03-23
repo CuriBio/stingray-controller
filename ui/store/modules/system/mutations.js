@@ -11,6 +11,9 @@ export default {
   setSimulationStatus(state, newId) {
     state.simulationMode = newId;
   },
+  setIsConnectedToController(state, isConnected) {
+    state.isConnectedToController = isConnected;
+  },
   setBarcodeManualMode(state, newValue) {
     state.barcodeManualMode = newValue;
   },

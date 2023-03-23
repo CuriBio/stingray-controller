@@ -185,24 +185,17 @@ ipcMain.once("sw_version_request", (event) => {
   event.reply("sw_version_response", get_current_app_version());
 });
 
-const post_latest_software_version = (version) => {
-  let awaiting_response = false;
-  const post_interval_id = setInterval(() => {
-    if (!awaiting_response) {
-      awaiting_response = true;
-      axios
-        .post(`http://localhost:${flask_port}/latest_software_version?version=${version}`)
-        .then((response) => {
-          console.log(`/latest_software_version response: ${response.status} ${response.statusText}`); // allow-log;
-          if (response.status === 200) clearInterval(post_interval_id);
-          awaiting_response = false;
-        })
-        .catch((response) => {
-          awaiting_response = false;
-        });
-    }
-  }, 1000);
-};
+let setLatestSwVersion;
+
+const waitForLatestSwVersion = new Promise((resolve) => {
+  setLatestSwVersion = resolve;
+});
+
+ipcMain.once("latest_sw_version_request", (event) => {
+  waitForLatestSwVersion.then((latest_version) => {
+    event.reply("latest_sw_version_response", latest_version);
+  });
+});
 
 let sw_update_available = false;
 
@@ -216,7 +209,7 @@ const set_up_auto_updater = () => {
     const new_version = update_info.version;
     sw_update_available = true;
     console.log("update-available " + new_version); // allow-log
-    post_latest_software_version(new_version);
+    setLatestSwVersion(new_version);
     // remove listeners for update-not-available since this event occured instead
     autoUpdater.removeAllListeners("update-not-available");
   });
@@ -225,7 +218,7 @@ const set_up_auto_updater = () => {
   autoUpdater.once("update-not-available", () => {
     const current_version = get_current_app_version();
     console.log("update-not-available " + current_version); // allow-log
-    post_latest_software_version(current_version);
+    setLatestSwVersion(current_version);
     // remove listeners for update-available since this event occured instead
     autoUpdater.removeAllListeners("update-available");
   });
@@ -234,7 +227,7 @@ const set_up_auto_updater = () => {
   autoUpdater.checkForUpdates().catch((response) => {
     console.log("Error while checking for updates: " + JSON.stringify(response)); // allow-log
     const current_version = get_current_app_version();
-    post_latest_software_version(current_version);
+    setLatestSwVersion(current_version);
   });
 };
 
@@ -246,7 +239,7 @@ app.on("ready", () => {
     } else {
       console.log("Autoupdate feature disabled"); // allow-log
       const current_version = get_current_app_version();
-      post_latest_software_version(current_version);
+      setLatestSwVersion(current_version);
     }
   }
 });
