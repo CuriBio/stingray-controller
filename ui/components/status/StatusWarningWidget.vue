@@ -86,7 +86,7 @@ export default {
 
   methods: {
     handleClick: function (idx) {
-      this.$emit("handleConfirmation", idx);
+      this.$emit("handle-confirmation", idx);
     },
   },
 };

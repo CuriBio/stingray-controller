@@ -1,11 +1,11 @@
 const path = require("path");
-import ElectronStore from "./electron_store.js";
+import ElectronStore from "./electronStore.js";
 const yaml = require("js-yaml");
 
 const now = new Date();
-const utc_month = (now.getUTCMonth() + 1).toString().padStart(2, "0"); // Eli (3/29/21) for some reason getUTCMonth returns a zero-based number, while everything else is a month, so adjusting here
+const utcMonth = (now.getUTCMonth() + 1).toString().padStart(2, "0"); // Eli (3/29/21) for some reason getUTCMonth returns a zero-based number, while everything else is a month, so adjusting here
 
-const FILENAME_PREFIX = `stingray_log__${now.getUTCFullYear()}_${utc_month}_${now
+const FILENAME_PREFIX = `stingray_log__${now.getUTCFullYear()}_${utcMonth}_${now
   .getUTCDate()
   .toString()
   .padStart(2, "0")}_${now
@@ -21,8 +21,8 @@ const FILENAME_PREFIX = `stingray_log__${now.getUTCFullYear()}_${utc_month}_${no
  *
  * @return {string} the semantic version
  */
-const get_current_app_version = function () {
-  // Eli (3/30/21): Do NOT use `process.env.npm_package_version` to try and do this. It works in CI using the test runner, but does not actually work when running on a standalone machine--it just evaluates to undefined.
+const getCurrentAppVersion = function () {
+  // Eli (3/30/21): Do NOT use `process.env.npmPackageVersion` to try and do this. It works in CI using the test runner, but does not actually work when running on a standalone machine--it just evaluates to undefined.
   // adapted from https://github.com/electron/electron/issues/7085
   if (process.env.NODE_ENV !== "production") {
     return require("../package.json").version;
@@ -33,15 +33,15 @@ const get_current_app_version = function () {
 /**
  * Creates an ElectronStore. This is a wrapper function to help optionally define file paths for easier testing
  *
- * @param {string} file_path - where to create the store (this will default to somewhere in the User folder if left undefined)
- * @param {string} file_name - what to use as the file name
+ * @param {string} filePath - where to create the store (this will default to somewhere in the User folder if left undefined)
+ * @param {string} fileName - what to use as the file name
  *
  * @return {Object} the ElectronStore object
  */
-const create_store = function ({ file_path = undefined, file_name = "stingray_controller_config" } = {}) {
+const createStore = function ({ filePath = undefined, fileName = "stingray_controller_config" } = {}) {
   const store = new ElectronStore({
-    cwd: file_path,
-    name: file_name,
+    cwd: filePath,
+    name: fileName,
     fileExtension: "yaml",
     serialize: yaml.dump,
     deserialize: yaml.load,
@@ -54,42 +54,42 @@ const create_store = function ({ file_path = undefined, file_name = "stingray_co
   return store;
 };
 
-const redact_username_from_logs = (dir_path) => {
-  const username = dir_path.includes("\\") ? dir_path.split("\\")[2] : dir_path.split("/")[2];
-  return dir_path.replace(username, "****");
+const redactUsernameFromLogs = (dirPath) => {
+  const username = dirPath.includes("\\") ? dirPath.split("\\")[2] : dirPath.split("/")[2];
+  return dirPath.replace(username, "****");
 };
 
-const get_flask_logs_full_path = function (electron_store) {
-  const electron_store_dir = path.dirname(electron_store.path);
-  return path.join(electron_store_dir, "logs_flask", FILENAME_PREFIX);
+const getFlaskLogsFullPath = function (electronStore) {
+  const electronStoreDir = path.dirname(electronStore.path);
+  return path.join(electronStoreDir, "stingray_logs", FILENAME_PREFIX);
 };
 
 /**
  * Generate the command line arguments to pass to the local server as it is initialized. This also creates the necessary directories if they don't exist to hold the log files and recordings...although (Eli 1/15/21) unclear why the server doesn't do that itself...
  *
- * @param {Object} electron_store - the ElectronStore object
+ * @param {Object} electronStore - the ElectronStore object
  *
  * @return {Array} a list of command line arguments
  */
-const generate_flask_command_line_args = function (electron_store) {
+const generateFlaskCommandLineArgs = function (electronStore) {
   console.log("node env: " + process.env.NODE_ENV); // allow-log
-  const flask_logs_full_path = get_flask_logs_full_path(electron_store);
+  const flaskLogsFullPath = getFlaskLogsFullPath(electronStore);
 
   const args = [];
-  args.push("--log-file-dir=" + flask_logs_full_path);
-  args.push("--expected-software-version=" + export_functions.get_current_app_version());
+  args.push("--log-file-dir=" + flaskLogsFullPath);
+  args.push("--expected-software-version=" + exportFunctions.getCurrentAppVersion());
 
   return args;
 };
 
 // Eli (1/15/21): making spying/mocking with Jest easier. https://medium.com/@DavideRama/mock-spy-exported-functions-within-a-single-module-in-jest-cdf2b61af642
-const export_functions = {
-  get_flask_logs_full_path,
-  generate_flask_command_line_args,
-  create_store,
-  get_current_app_version,
+const exportFunctions = {
+  getFlaskLogsFullPath,
+  generateFlaskCommandLineArgs,
+  createStore,
+  getCurrentAppVersion,
   FILENAME_PREFIX,
-  redact_username_from_logs,
+  redactUsernameFromLogs,
 };
 
-export default export_functions;
+export default exportFunctions;

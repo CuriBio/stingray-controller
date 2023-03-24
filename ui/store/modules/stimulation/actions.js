@@ -199,24 +199,27 @@ export default {
       await commit("setEditModeOff");
       const { color, letter } = await getters["getNextProtocol"];
       const importedProtocol = { color, letter, label: protocol.name, protocol };
-      await commit("setImportedProtocol", importedProtocol);
+      await commit("setNewProtocol", importedProtocol);
     }
   },
   async addSavedPotocol({ commit, state, dispatch }) {
     const { protocolEditor, editMode, protocolList } = state;
     const { letter, color } = state.currentAssignment;
+
+    const protocolListCopy = JSON.parse(JSON.stringify(protocolList));
     const updatedProtocol = { color, letter, label: protocolEditor.name, protocol: protocolEditor };
     if (!editMode.status) {
       commit("setNewProtocol", updatedProtocol);
     } else if (editMode.status) {
-      protocolList.map((protocol, idx) => {
+      protocolListCopy.map((protocol, idx) => {
         if (protocol.letter === editMode.letter)
-          protocolList[idx] = {
+          protocolListCopy[idx] = {
             ...protocol,
             label: protocolEditor.name,
             protocol: protocolEditor,
           };
       });
+      await commit("setProtocolList", protocolListCopy);
       await commit("setEditModeOff");
       await dispatch("updateProtocolAssignments", updatedProtocol);
     }
@@ -232,16 +235,15 @@ export default {
     }
   },
 
-  async createProtocolMessage({ commit, state }) {
+  async createProtocolMessage({ state }) {
     // const status = true;
-    const message = { protocols: [], protocolAssignments: {} };
+    const message = { protocols: [], protocol_assignments: {} };
 
-    const { protocolAssignments } = state;
-    const { stimulatorCircuitStatuses } = this.state.data;
+    const { protocolAssignments, stimulatorCircuitStatuses } = state;
 
     for (let wellIdx = 0; wellIdx < 24; wellIdx++) {
       const wellName = twentyFourWellPlateDefinition.getWellNameFromWellIndex(wellIdx, false);
-      message.protocolAssignments[wellName] = null;
+      message.protocol_assignments[wellName] = null;
     }
 
     const uniqueProtocolIds = new Set();
@@ -268,11 +270,11 @@ export default {
         }
         // assign letter to well number
         const wellNumber = twentyFourWellPlateDefinition.getWellNameFromWellIndex(well, false);
-        message.protocolAssignments[wellNumber] = letter;
+        message.protocol_assignments[wellNumber] = letter;
       }
     }
 
-    const wsProtocolMessage = JSON.stringify({ command: "set_stim_protocols", ...message });
+    const wsProtocolMessage = JSON.stringify({ command: "set_stim_protocols", stim_info: message });
     socket.send(wsProtocolMessage);
 
     const wsMessage = JSON.stringify({ command: "set_stim_status", running: true });
@@ -343,7 +345,7 @@ export default {
     });
 
     socket.send(wsMessage);
-    commit("set_stim_status", STIM_STATUS.CONFIG_CHECK_IN_PROGRESS);
+    commit("setStimStatus", STIM_STATUS.CONFIG_CHECK_IN_PROGRESS);
   },
   async onPulseMouseenter({ state }, idx) {
     const hoveredPulse = state.repeatColors[idx];

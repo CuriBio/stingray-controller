@@ -35,11 +35,12 @@ import Vue from "vue";
 
 import { BarcodeViewer, StatusBar, SimulationMode, StimulationStudioControls } from "@curi-bio/ui";
 
-import { ipcRenderer } from "electron";
-
 import { mapState } from "vuex";
 import { VBPopover, VBToggle } from "bootstrap-vue";
+import { ipcRenderer } from "electron";
+import path from "path";
 
+const log = require("electron-log");
 // Note: Vue automatically prefixes the directive name with 'v-'
 Vue.directive("b-popover", VBPopover);
 Vue.directive("b-toggle", VBToggle);
@@ -55,6 +56,8 @@ export default {
     return {
       packageVersion: "",
       latestSwVersionAvailable: null,
+      logDirName: null,
+      requestStoredAccounts: true,
       currentYear: "2023", // TODO look into better ways of handling this. Not sure if just using the system's current year is the best approach
     };
   },
@@ -64,7 +67,7 @@ export default {
   },
   watch: {
     allowSwUpdateInstall: function () {
-      ipcRenderer.send("set_sw_update_auto_install", this.allowSWUpdateInstall);
+      ipcRenderer.send("setSwUpdateAutoInstall", this.allowSWUpdateInstall);
     },
     latestSwVersionAvailable: function () {
       this.setLatestSwVersion();
@@ -73,65 +76,65 @@ export default {
       this.setLatestSwVersion();
     },
   },
+
   created: async function () {
-    // ipcRenderer.on("logs_flask_dir_response", (e, log_dir_name) => {
-    //   this.$store.commit("settings/set_log_path", log_dir_name);
-    //   this.log_dir_name = log_dir_name;
-    //   const filename_prefix = path.basename(log_dir_name);
+    ipcRenderer.on("logsFlaskDirResponse", (e, logDirName) => {
+      this.$store.commit("settings/setLogPath", logDirName);
+      this.logDirName = logDirName;
+      const filenamePrefix = path.basename(logDirName);
 
-    //   // Only way to create a custom file path for the renderer process logs
-    //   log.transports.file.resolvePath = () => {
-    //     const filename = filename_prefix + "_renderer.txt";
-    //     return path.join(this.log_dir_name, filename);
-    //   };
-    //   // set to UTC, not local time
-    //   process.env.TZ = "UTC";
-    //   console.log = log.log;
-    //   console.error = log.error;
-    //   console.log("Initial view has been rendered"); // allow-log
-    // });
+      // Only way to create a custom file path for the renderer process logs
+      log.transports.file.resolvePath = () => {
+        const filename = filenamePrefix + "_renderer.txt";
+        return path.join(this.logDirName, filename);
+      };
+      // set to UTC, not local time
+      process.env.TZ = "UTC";
+      console.log = log.log;
+      console.error = log.error;
+      console.log("Initial view has been rendered"); // allow-log
+    });
 
-    // if (this.log_dir_name === undefined) {
-    //   ipcRenderer.send("logs_flask_dir_request");
-    // }
-
-    // TODO make all these event names camelCase
+    if (this.logDirName === null) {
+      ipcRenderer.send("logsFlaskDirRequest");
+    }
 
     // the version of the running (current) software is stored in the main process of electron, so request it to be sent over to this process
-    ipcRenderer.on("sw_version_response", (_, packageVersion) => {
+    ipcRenderer.on("swVersionResponse", (_, packageVersion) => {
       this.packageVersion = packageVersion;
     });
     if (this.packageVersion === "") {
-      ipcRenderer.send("sw_version_request");
+      ipcRenderer.send("swVersionRequest");
     }
 
     // the electron auto-updater runs in the main process of electron, so request it to be sent over to this process
-    ipcRenderer.on("latest_sw_version_response", (_, latestSwVersionAvailable) => {
+    ipcRenderer.on("latestSwVersionResponse", (_, latestSwVersionAvailable) => {
       this.latestSwVersionAvailable = latestSwVersionAvailable;
     });
     if (this.latestSwVersionAvailable === null) {
-      ipcRenderer.send("latest_sw_version_request");
+      ipcRenderer.send("latestSwVersionRequest");
     }
 
     // TODO
-    // ipcRenderer.on("confirmation_request", () => {
-    //   this.$store.commit("settings/setConfirmationRequest", true);
-    // });
+    ipcRenderer.on("confirmationRequest", () => {
+      this.$store.commit("system/setConfirmationRequest", true);
+    });
 
-    // TODO ?
-    // ipcRenderer.on("stored_accounts_response", (_, stored_accounts) => {
-    //   // stored_accounts will contain both customer_id and usernames
-    //   this.request_stored_accounts = false;
-    //   this.stored_accounts = stored_accounts;
-    //   this.$store.commit("settings/set_stored_accounts", stored_accounts);
-    // });
-    // if (this.request_stored_accounts) {
-    //   ipcRenderer.send("stored_accounts_request");
-    // }
+    ipcRenderer.on("storedAccountsResponse", (_, storedAccounts) => {
+      // storedAccounts will contain both customerId and usernames
+      this.requestStoredAccounts = false;
+      this.storedAccounts = storedAccounts;
+      this.$store.commit("settings/setStoredAccounts", storedAccounts);
+    });
+
+    if (this.requestStoredAccounts) {
+      ipcRenderer.send("storedAccountsRequest");
+    }
   },
   methods: {
-    sendConfirmation: function () {
-      this.$store.commit("settings/setConfirmationRequest", false);
+    sendConfirmation: function (idx) {
+      ipcRenderer.send("confirmationResponse", idx);
+      this.$store.commit("system/setConfirmationRequest", false);
     },
     setLatestSwVersion: function () {
       if (this.latestSwVersionAvailable && this.isConnectedToController) {

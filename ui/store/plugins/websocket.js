@@ -68,11 +68,8 @@ export default function createWebSocketPlugin(socket) {
             store.commit("settings/userInputNeeded", true);
             break;
           case "firmware_update_available":
-            if (wsMessage.channel_fw_update) {
-              console.log("Firmware update found"); // allow-log
-              // TODO this isn't being handled properly in the mutation
-              store.commit("system/setFirmwareUpdateAvailable", wsMessage);
-            }
+            console.log("Firmware update found"); // allow-log
+            store.commit("system/setFirmwareUpdateAvailable", wsMessage.channel_fw_update);
             break;
           case "error":
             // TODO might be different or need to change

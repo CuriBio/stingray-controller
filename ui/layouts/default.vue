@@ -65,7 +65,7 @@ export default {
 
   methods: {
     sendConfirmation: function (idx) {
-      this.$store.commit("settings/setConfirmationRequest", false);
+      this.$store.commit("system/setConfirmationRequest", false);
     },
   },
 };

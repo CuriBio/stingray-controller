@@ -216,7 +216,6 @@ class Server:
         # TODO make sure a stim barcode is present
 
         system_status = self._get_system_state_ro()["system_status"]
-
         if _is_stimulating_on_any_well(system_status):
             raise WebsocketCommandError("Cannot change protocols while stimulation is running")
         if system_status != SystemStatuses.IDLE_READY_STATE:

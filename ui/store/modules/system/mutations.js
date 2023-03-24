@@ -42,10 +42,9 @@ export default {
   setSoftwareUpdateAvailable(state, bool) {
     state.softwareUpdateAvailable = bool;
   },
-  setFirmwareUpdateAvailable(state, updateInfo) {
-    // TODO check that this works after ws messages are finalized
-    state.firmwareUpdateAvailable = updateInfo.firmwareUpdateAvailable;
-    state.firmwareUpdateDurMins = updateInfo.channelFwUpdate ? 5 : 1;
+  setFirmwareUpdateAvailable(state, channelFwUpdate) {
+    state.firmwareUpdateAvailable = true;
+    state.firmwareUpdateDurMins = channelFwUpdate ? 5 : 1;
   },
   setAllowSWUpdateInstall(state, bool) {
     state.allowSWUpdateInstall = bool;
