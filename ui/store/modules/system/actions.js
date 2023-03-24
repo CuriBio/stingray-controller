@@ -32,7 +32,7 @@ export default {
 
     socket.send(wsMessage);
   },
-  async sendSetLatestSwVersion(latestSwVersionAvailable) {
+  async sendSetLatestSwVersion(_, latestSwVersionAvailable) {
     const wsMessage = JSON.stringify({
       command: "set_latest_software_version",
       version: latestSwVersionAvailable,
