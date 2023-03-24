@@ -41,6 +41,8 @@ DEFAULT_SERVER_PORT_NUMBER = 4567
 
 MAX_POSSIBLE_CONNECTED_BOARDS = 4
 
+NUM_WELLS = 24
+
 GENERIC_24_WELL_DEFINITION = LabwareDefinition(row_count=4, column_count=6)
 
 DEFAULT_USER_CONFIG: immutabledict[str, str] = immutabledict({"customer_id": "", "user_name": ""})
@@ -61,7 +63,7 @@ ALL_VALID_BARCODE_HEADERS = frozenset(BARCODE_HEADERS.values())
 
 MICROSECONDS_PER_CENTIMILLISECOND = 10
 
-MICROS_PER_MILLI = int(1e3)
+MICROS_PER_MILLIS = int(1e3)
 MICRO_TO_BASE_CONVERSION = int(1e6)
 
 

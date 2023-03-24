@@ -38,7 +38,7 @@ from .constants import DEFAULT_SAMPLING_PERIOD
 from .constants import GOING_DORMANT_HANDSHAKE_TIMEOUT_CODE
 from .constants import MAX_MC_REBOOT_DURATION_SECONDS
 from .constants import MICRO_TO_BASE_CONVERSION
-from .constants import MICROS_PER_MILLI
+from .constants import MICROS_PER_MILLIS
 from .constants import MICROSECONDS_PER_CENTIMILLISECOND
 from .constants import SERIAL_COMM_BARCODE_FOUND_PACKET_TYPE
 from .constants import SERIAL_COMM_BEGIN_FIRMWARE_UPDATE_PACKET_TYPE
@@ -548,7 +548,7 @@ class MantarrayMcSimulator(InfiniteProcess):
             comm_from_controller[SERIAL_COMM_PAYLOAD_INDEX : SERIAL_COMM_PAYLOAD_INDEX + 2],
             byteorder="little",
         )
-        if sampling_period % MICROS_PER_MILLI != 0:
+        if sampling_period % MICROS_PER_MILLIS != 0:
             raise SerialCommInvalidSamplingPeriodError(sampling_period)
         self._sampling_period_us = sampling_period
         return update_status_byte

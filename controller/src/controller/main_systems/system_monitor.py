@@ -188,7 +188,7 @@ class SystemMonitor:
                         if update_accepted
                         else SystemStatuses.IDLE_READY_STATE
                     )
-                case {"command": "set_stim_status", "status": status}:
+                case {"command": "set_stim_status", "running": status}:
                     await self._queues["to"]["instrument_comm"].put(
                         {"command": "start_stimulation" if status else "stop_stimulation"}
                     )
@@ -206,6 +206,9 @@ class SystemMonitor:
 
             if system_state_updates:
                 await self._system_state_manager.update(system_state_updates)
+
+            if e := communication.get("command_processed_event"):
+                e.set()
 
     async def _handle_comm_from_instrument_comm(self) -> None:
         while True:

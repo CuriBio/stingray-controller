@@ -215,12 +215,10 @@ class Server:
         instrument."""
         # TODO make sure a stim barcode is present
 
-        system_status = self._get_system_state_ro()["system_status"]
-
         system_state = self._get_system_state_ro()
         system_status = system_state["system_status"]
 
-        if _is_stimulating_on_any_well(system_status):
+        if _is_stimulating_on_any_well(system_state):
             raise WebsocketCommandError("Cannot change protocols while stimulation is running")
         if system_status != SystemStatuses.IDLE_READY_STATE:
             raise WebsocketCommandError(f"Cannot change protocols while in {system_status.name}")
@@ -248,8 +246,7 @@ class Server:
 
             # validate subprotocol dictionaries
             for idx, subprotocol in enumerate(protocol["subprotocols"]):
-                subprotocol["type"] = subprotocol["type"].lower()
-                subprotocol_type = subprotocol["type"]
+                subprotocol["type"] = subprotocol_type = subprotocol["type"].lower()
                 # validate subprotocol type
                 if subprotocol_type not in VALID_SUBPROTOCOL_TYPES:
                     raise WebsocketCommandError(
@@ -336,7 +333,11 @@ class Server:
                 f"Protocol assignments contain invalid protocol IDs: {invalid_protocol_ids}"
             )
 
+        comm["command_processed_event"] = asyncio.Event()
+
         await self._to_monitor_queue.put(comm)
+
+        await comm["command_processed_event"].wait()
 
     @mark_handler
     async def _start_stim_checks(self, comm: dict[str, Any]) -> None:

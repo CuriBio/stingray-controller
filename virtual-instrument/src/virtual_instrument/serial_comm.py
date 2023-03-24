@@ -6,9 +6,6 @@ import datetime
 import math
 import struct
 from typing import Any
-from typing import Dict
-from typing import List
-from typing import Tuple
 from typing import Union
 from uuid import UUID
 from zlib import crc32
@@ -27,7 +24,8 @@ from pulse3D.constants import TAMPER_FLAG_UUID
 from pulse3D.constants import TOTAL_WORKING_HOURS_UUID
 
 from .constants import GENERIC_24_WELL_DEFINITION
-from .constants import MICROS_PER_MILLI
+from .constants import MICROS_PER_MILLIS
+from .constants import NUM_WELLS
 from .constants import SERIAL_COMM_CHECKSUM_LENGTH_BYTES
 from .constants import SERIAL_COMM_MAGIC_WORD_BYTES
 from .constants import SERIAL_COMM_MODULE_ID_TO_WELL_IDX
@@ -111,8 +109,8 @@ def validate_checksum(comm_from_pc: bytes) -> bool:
     return actual_checksum == expected_checksum
 
 
-def parse_metadata_bytes(metadata_bytes: bytes) -> Dict[Any, Any]:
-    """Parse bytes containing metadata and return as Dict."""
+def parse_metadata_bytes(metadata_bytes: bytes) -> dict[Any, Any]:
+    """Parse bytes containing metadata and return as dict."""
     return {
         BOOT_FLAGS_UUID: metadata_bytes[0],
         MANTARRAY_NICKNAME_UUID: metadata_bytes[1:14].decode("utf-8"),
@@ -129,8 +127,7 @@ def parse_metadata_bytes(metadata_bytes: bytes) -> Dict[Any, Any]:
     }
 
 
-def convert_metadata_to_bytes(metadata_dict: Dict[UUID, Any]) -> bytes:
-    num_wells = 24
+def convert_metadata_to_bytes(metadata_dict: dict[UUID, Any]) -> bytes:
     metadata_bytes = (
         bytes([metadata_dict[BOOT_FLAGS_UUID]])
         + bytes(metadata_dict[MANTARRAY_NICKNAME_UUID], encoding="utf-8")
@@ -138,7 +135,7 @@ def convert_metadata_to_bytes(metadata_dict: Dict[UUID, Any]) -> bytes:
         + convert_semver_str_to_bytes(metadata_dict[MAIN_FIRMWARE_VERSION_UUID])
         + convert_semver_str_to_bytes(metadata_dict[CHANNEL_FIRMWARE_VERSION_UUID])
         # this function is only used in the simulator, so always send default status code
-        + bytes([SERIAL_COMM_OKAY_CODE] * (num_wells + 2))
+        + bytes([SERIAL_COMM_OKAY_CODE] * (NUM_WELLS + 2))
         + metadata_dict[INITIAL_MAGNET_FINDING_PARAMS_UUID]["X"].to_bytes(1, byteorder="little", signed=True)
         + metadata_dict[INITIAL_MAGNET_FINDING_PARAMS_UUID]["Y"].to_bytes(1, byteorder="little", signed=True)
         + metadata_dict[INITIAL_MAGNET_FINDING_PARAMS_UUID]["Z"].to_bytes(1, byteorder="little", signed=True)
@@ -159,7 +156,7 @@ def convert_semver_str_to_bytes(semver_str: str) -> bytes:
     return bytes([int(num) for num in semver_str.split(".")])
 
 
-def convert_status_code_bytes_to_dict(status_code_bytes: bytes) -> Dict[str, int]:
+def convert_status_code_bytes_to_dict(status_code_bytes: bytes) -> dict[str, int]:
     if len(status_code_bytes) != SERIAL_COMM_STATUS_CODE_LENGTH_BYTES:
         raise ValueError(
             f"Status code bytes must have len of {SERIAL_COMM_STATUS_CODE_LENGTH_BYTES}, {len(status_code_bytes)} bytes given: {str(status_code_bytes)}"
@@ -183,8 +180,8 @@ def get_serial_comm_timestamp() -> int:
     ) // datetime.timedelta(microseconds=1)
 
 
-def convert_stimulator_check_bytes_to_dict(stimulator_check_bytes: bytes) -> Dict[str, List[int]]:
-    stimulator_checks_as_ints = struct.unpack("<" + "HHB" * 24, stimulator_check_bytes)
+def convert_stimulator_check_bytes_to_dict(stimulator_check_bytes: bytes) -> dict[str, list[int]]:
+    stimulator_checks_as_ints = struct.unpack("<" + "HHB" * NUM_WELLS, stimulator_check_bytes)
     # convert to lists of adc8, adc9, and status where the index of each list is the module id. Only creating an array here to reshape easily
     stimulator_checks_list = (
         np.array(stimulator_checks_as_ints, copy=False)
@@ -221,23 +218,24 @@ def convert_adc_readings_to_impedance(adc8: int, adc9: int) -> float:
     return impedance
 
 
-def is_null_subprotocol(subprotocol_dict: Dict[str, Union[int, str]]) -> bool:
+def is_null_subprotocol(subprotocol_dict: dict[str, Union[int, str]]) -> bool:
     return subprotocol_dict["type"] == "delay"
 
 
 def convert_subprotocol_pulse_dict_to_bytes(
-    subprotocol_dict: Dict[str, Union[int, str]], is_voltage: bool = False
+    subprotocol_dict: dict[str, Union[int, str]], is_voltage: bool = False
 ) -> bytes:
     conversion_factor = 1 if is_voltage else 10
     is_null = is_null_subprotocol(subprotocol_dict)
 
     # for mypy
-    subprotocol_components: Dict[str, int] = {k: v for k, v in subprotocol_dict.items() if isinstance(v, int)}
+    subprotocol_components: dict[str, int] = {k: v for k, v in subprotocol_dict.items() if isinstance(v, int)}
 
     if is_null:
-        subprotocol_bytes = bytes(24) + (subprotocol_components["duration"] // MICROS_PER_MILLI).to_bytes(
-            4, byteorder="little"
-        )
+        num_unused_bytes = 24
+        subprotocol_bytes = bytes(num_unused_bytes) + (
+            subprotocol_components["duration"] // MICROS_PER_MILLIS
+        ).to_bytes(4, byteorder="little")
     else:
         subprotocol_bytes = subprotocol_components["phase_one_duration"].to_bytes(4, byteorder="little") + (
             subprotocol_components["phase_one_charge"] // conversion_factor
@@ -267,17 +265,17 @@ def convert_subprotocol_pulse_dict_to_bytes(
 
 def convert_subprotocol_pulse_bytes_to_dict(
     subprotocol_bytes: bytes, is_voltage: bool = False
-) -> Dict[str, Union[int, str]]:
+) -> dict[str, Union[int, str]]:
     # duration_ms if subprotocols is a delay (null subprotocol), num_cycles o/w
     num_cycles_or_duration_ms = int.from_bytes(subprotocol_bytes[24:28], byteorder="little")
 
     # the final byte is a flag indicating whether or not this subprotocol is a delay
     if subprotocol_bytes[-1]:
-        duration_us = num_cycles_or_duration_ms * MICROS_PER_MILLI
+        duration_us = num_cycles_or_duration_ms * MICROS_PER_MILLIS
         return {"type": "delay", "duration": duration_us}
 
     conversion_factor = 1 if is_voltage else 10
-    subprotocol_dict: Dict[str, Union[int, str]] = {
+    subprotocol_dict: dict[str, Union[int, str]] = {
         "type": "biphasic",  # assume biphasic to start
         "phase_one_duration": int.from_bytes(subprotocol_bytes[:4], byteorder="little"),
         "phase_one_charge": int.from_bytes(subprotocol_bytes[4:6], byteorder="little", signed=True)
@@ -301,8 +299,8 @@ def convert_subprotocol_pulse_bytes_to_dict(
 
 
 def convert_subprotocol_node_dict_to_bytes(
-    subprotocol_node_dict: Dict[str, Any], start_idx: int, is_voltage: bool = False
-) -> Tuple[bytes, int]:
+    subprotocol_node_dict: dict[str, Any], start_idx: int, is_voltage: bool = False
+) -> tuple[bytes, int]:
     is_loop = subprotocol_node_dict["type"] == "loop"
 
     subprotocol_node_bytes = bytes([is_loop])
@@ -327,7 +325,7 @@ def convert_subprotocol_node_dict_to_bytes(
 
 def _convert_subprotocol_node_bytes_to_dict(
     subprotocol_node_bytes: bytes, is_voltage: bool = False
-) -> Tuple[Dict[str, Any], int]:
+) -> tuple[dict[str, Any], int]:
     is_loop = bool(subprotocol_node_bytes[0])
 
     if not is_loop:
@@ -355,7 +353,7 @@ def _convert_subprotocol_node_bytes_to_dict(
     return loop_dict, curr_idx
 
 
-def convert_stim_dict_to_bytes(stim_dict: Dict[str, Any]) -> bytes:
+def convert_stim_dict_to_bytes(stim_dict: dict[str, Any]) -> bytes:
     """Convert a stimulation info dictionary to bytes.
 
     Assumes the stimulation dictionary given does not have any issues.
@@ -387,9 +385,9 @@ def convert_stim_dict_to_bytes(stim_dict: Dict[str, Any]) -> bytes:
     return stim_bytes
 
 
-def convert_stim_bytes_to_dict(stim_bytes: bytes) -> Dict[str, Any]:
+def convert_stim_bytes_to_dict(stim_bytes: bytes) -> dict[str, Any]:
     """Convert a stimulation info bytes to dictionary."""
-    stim_info_dict: Dict[str, Any] = {
+    stim_info_dict: dict[str, Any] = {
         "protocols": [],
         "protocol_assignments": {
             GENERIC_24_WELL_DEFINITION.get_well_name_from_well_index(well_idx): None for well_idx in range(24)

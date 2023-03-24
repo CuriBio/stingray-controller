@@ -260,6 +260,9 @@ class InstrumentComm:
         while True:
             comm_from_monitor = await self._from_monitor_queue.get()
 
+            # TODO remove this
+            logger.info(f"!!!!!!!!!!!!!!!! {comm_from_monitor}")
+
             bytes_to_send = bytes(0)
             packet_type: int | None = None
 
@@ -270,7 +273,7 @@ class InstrumentComm:
                         f"<{NUM_WELLS}?",
                         *[
                             STIM_MODULE_ID_TO_WELL_IDX[module_id] in well_indices
-                            for module_id in range(1, NUM_WELLS + 1)
+                            for module_id in range(NUM_WELLS)
                         ],
                     )
                 case {"command": "set_stim_protocols", "stim_info": stim_info}:
@@ -457,7 +460,7 @@ class InstrumentComm:
                 stimulator_circuit_statuses: dict[int, str] = {}
                 adc_readings: dict[int, tuple[int, int]] = {}
 
-                for module_id, (adc8, adc9, status_int) in enumerate(zip(*stimulator_check_dict.values()), 1):
+                for module_id, (adc8, adc9, status_int) in enumerate(zip(*stimulator_check_dict.values())):
                     well_idx = STIM_MODULE_ID_TO_WELL_IDX[module_id]
                     if well_idx not in prev_command_info["well_indices"]:
                         continue

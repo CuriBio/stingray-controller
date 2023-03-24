@@ -393,7 +393,7 @@ const _getConvertedSettings = async (subprotocols, stimType) => {
         num_cycles: pulse.numCycles,
         postphase_interval: Math.round(pulse.postphaseInterval * milliToMicro), // sent in µs, also needs to be an integer value
         phase_one_duration: pulse.phaseOneDuration * milliToMicro, // sent in µs
-        phase_cne_charge: pulse.phaseOneCharge * conversion, // sent in mV
+        phase_one_charge: pulse.phaseOneCharge * conversion, // sent in mV
       };
 
     if (pulse.type === "Biphasic")

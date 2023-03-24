@@ -24,7 +24,10 @@ class ReadOnlyDict(collections.abc.Mapping):  # type: ignore  # Tanner (3/16/23)
         # TODO see if this is really what we want
         return iter(self._data)
 
-    # TODO implement keys() and values()
+    # TODO implement keys() and values()? need to see if it's fine since this is what gets called
+    # def __iter__(self):
+    #     for key in self._mapping:
+    #         yield self._mapping[key]
 
     def __len__(self) -> int:
         return len(self._data)
