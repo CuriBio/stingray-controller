@@ -93,6 +93,21 @@
         <StimQCSummary @handle-confirmation="closeModalsById(['failed-qc-check'])" />
       </b-modal>
       <b-modal
+        id="fw-update-available-message"
+        size="sm"
+        hide-footer
+        hide-header
+        hide-header-close
+        :static="true"
+        :no-close-on-backdrop="true"
+      >
+        <StatusWarningWidget
+          id="fw-update-available"
+          :modal_labels="fwUpdateAvailableLabels"
+          @handle-confirmation="closeFwUpdateAvailableModal"
+        />
+      </b-modal>
+      <b-modal
         id="success-qc-check"
         size="sm"
         hide-footer
@@ -190,6 +205,7 @@ export default {
       "firmwareUpdateDurMins",
       "confirmationRequest",
       "statusUuid",
+      "firmwareUpdateAvailable",
     ]),
     fwUpdateInProgressLabels: function () {
       let duration = `${this.firmwareUpdateDurMins} minute`;
@@ -200,7 +216,17 @@ export default {
         msgTwo: "Do not close the Stingray software or power off the Stingray instrument.",
       };
     },
-
+    fwUpdateAvailableLabels: function () {
+      let duration = `${this.firmwareUpdateDurMins} minute`;
+      if (this.firmwareUpdateDurMins !== 1) duration += "s";
+      return {
+        header: "Important!",
+        msgOne: `A firmware update is required for this Mantarray instrument. It will take about ${duration} to complete. Declining it will prevent automatic software updating.`,
+        msgTwo:
+          "If you accept, please make sure there is no stim lid connected to the instrument. Would you like to download and install the update?",
+        buttonNames: ["No", "Yes"],
+      };
+    },
     assignedOpenCircuits: function () {
       // filter for matching indices
       return this.stimulatorCircuitStatuses.filter((well) =>
@@ -258,6 +284,9 @@ export default {
         this.$bvModal.show("error-catch");
       }
     },
+    firmwareUpdateAvailable(available) {
+      if (available) this.$bvModal.show("fw-update-available-message");
+    },
   },
   created() {
     this.setSystemSpecificStatus(this.statusUuid);
@@ -304,18 +333,7 @@ export default {
         case STATUS.UPDATE_ERROR_STATE:
           this.alertTxt = `Error During Firmware Update`;
           this.closeModalsById(["fw-updates-in-progress-message", "fw-closure-warning"]);
-          this.$store.commit("system/stopStatusPinging");
           this.$store.commit("system/setShutdownErrorMessage", "Error during firmware update.");
-          this.$bvModal.show("error-catch");
-          break;
-        case STATUS.ERROR_STATE:
-          this.closeModalsById([
-            "fw-updates-in-progress-message",
-            "fw-closure-warning",
-            "ops-closure-warning",
-          ]);
-
-          this.alertTxt = "Error Occurred";
           this.$bvModal.show("error-catch");
           break;
         default:
@@ -359,6 +377,10 @@ export default {
     closeSwUpdateModal: function () {
       this.$bvModal.hide("sw-update-message");
       this.$emit("send-confirmation", 1);
+    },
+    closeFwUpdateAvailableModal(idx) {
+      this.$bvModal.hide("fw-update-available-message");
+      this.$store.dispatch("settings/sendFirmwareUpdateConfirmation", idx === 1);
     },
     shutdownRequest: async function () {
       const shutdownUrl = "http://localhost:4567/shutdown";
@@ -422,6 +444,7 @@ export default {
 #edit-user,
 #add-user,
 #edit-user,
+#fw-update-available-message,
 #active-processes-warning,
 #initializing-warning,
 #short-circuit-err,

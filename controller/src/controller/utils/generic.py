@@ -9,6 +9,8 @@ import traceback
 from typing import Any
 from typing import Optional
 
+from semver import VersionInfo
+
 logger = logging.getLogger(__name__)
 
 
@@ -32,22 +34,32 @@ def get_redacted_string(length: int) -> str:
     return "*" * length
 
 
+def semver_gt(version_a: str, version_b: str) -> bool:
+    """Determine if Version A is greater than Version B."""
+    return VersionInfo.parse(version_a) > VersionInfo.parse(version_b)  # type: ignore
+
+
+# TODO move these to an async utils file
+
+
 async def wait_tasks_clean(tasks: set[GenericTask], return_when: str = asyncio.FIRST_COMPLETED) -> None:
-    done: set[GenericTask] = set()
-    pending: set[GenericTask] = set()
+    if not tasks:
+        return
+
     try:
-        done, pending = await asyncio.wait(tasks, return_when=return_when)
+        await asyncio.wait(tasks, return_when=return_when)
     finally:
-        await clean_up_tasks(done, pending)
+        await clean_up_tasks(tasks)
 
 
-async def clean_up_tasks(done: set[GenericTask], pending: set[GenericTask]) -> None:
-    for task in done:
-        if not task.cancelled() and (exc := task.exception()):
-            logger.error("".join(traceback.format_exception(exc)))
-    for task in pending:
-        task.cancel()
-        try:
-            await task
-        except asyncio.CancelledError:
-            pass
+async def clean_up_tasks(tasks: set[GenericTask]) -> None:
+    for task in tasks:
+        if task.done():
+            if not task.cancelled() and (exc := task.exception()):
+                logger.error("".join(traceback.format_exception(exc)))
+        else:
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass

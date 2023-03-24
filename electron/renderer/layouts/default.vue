@@ -13,7 +13,7 @@
           <StatusBar :stimSpecific="true" @send-confirmation="sendConfirmation" />
         </div>
         <div class="div__stimulation-controls-icon-container">
-          <StimulationStudioControls />
+          <StimulationStudioControls @save-account-info="saveAccountInfo" />
         </div>
         <div class="div__simulation-mode-container">
           <SimulationMode />
@@ -37,7 +37,10 @@ import { BarcodeViewer, StatusBar, SimulationMode, StimulationStudioControls } f
 
 import { mapState } from "vuex";
 import { VBPopover, VBToggle } from "bootstrap-vue";
+import { ipcRenderer } from "electron";
+import path from "path";
 
+const log = require("electron-log");
 // Note: Vue automatically prefixes the directive name with 'v-'
 Vue.directive("b-popover", VBPopover);
 Vue.directive("b-toggle", VBToggle);
@@ -52,16 +55,100 @@ export default {
   data: function () {
     return {
       packageVersion: "",
+      latestSwVersionAvailable: null,
+      logDirName: null,
+      requestStoredAccounts: true,
       currentYear: "2023", // TODO look into better ways of handling this. Not sure if just using the system's current year is the best approach
     };
   },
   computed: {
     ...mapState("stimulation", ["stimPlayState"]),
-    ...mapState("system", ["statusUuid", "allowSWUpdateInstall"]),
+    ...mapState("system", ["statusUuid", "allowSWUpdateInstall", "isConnectedToController"]),
+    ...mapState("settings", ["userAccounts", "activeUserIndex"]),
+  },
+  watch: {
+    allowSwUpdateInstall: function () {
+      ipcRenderer.send("setSwUpdateAutoInstall", this.allowSWUpdateInstall);
+    },
+    latestSwVersionAvailable: function () {
+      this.setLatestSwVersion();
+    },
+    isConnectedToController: function () {
+      this.setLatestSwVersion();
+    },
+  },
+
+  created: async function () {
+    ipcRenderer.on("logsFlaskDirResponse", (e, logDirName) => {
+      this.$store.commit("settings/setLogPath", logDirName);
+      this.logDirName = logDirName;
+      const filenamePrefix = path.basename(logDirName);
+
+      // Only way to create a custom file path for the renderer process logs
+      log.transports.file.resolvePath = () => {
+        const filename = filenamePrefix + "_renderer.txt";
+        return path.join(this.logDirName, filename);
+      };
+      // set to UTC, not local time
+      process.env.TZ = "UTC";
+      console.log = log.log;
+      console.error = log.error;
+      console.log("Initial view has been rendered"); // allow-log
+    });
+
+    if (this.logDirName === null) {
+      ipcRenderer.send("logsFlaskDirRequest");
+    }
+
+    // the version of the running (current) software is stored in the main process of electron, so request it to be sent over to this process
+    ipcRenderer.on("swVersionResponse", (_, packageVersion) => {
+      this.packageVersion = packageVersion;
+    });
+    if (this.packageVersion === "") {
+      ipcRenderer.send("swVersionRequest");
+    }
+
+    // the electron auto-updater runs in the main process of electron, so request it to be sent over to this process
+    ipcRenderer.on("latestSwVersionResponse", (_, latestSwVersionAvailable) => {
+      this.latestSwVersionAvailable = latestSwVersionAvailable;
+    });
+    if (this.latestSwVersionAvailable === null) {
+      ipcRenderer.send("latestSwVersionRequest");
+    }
+
+    // TODO
+    ipcRenderer.on("confirmationRequest", () => {
+      this.$store.commit("system/setConfirmationRequest", true);
+    });
+
+    ipcRenderer.on("storedAccountsResponse", (_, storedAccounts) => {
+      // storedAccounts will contain both customerId and usernames
+      this.requestStoredAccounts = false;
+      this.storedAccounts = storedAccounts;
+      this.$store.commit("settings/setStoredAccounts", storedAccounts);
+    });
+
+    if (this.requestStoredAccounts) {
+      ipcRenderer.send("storedAccountsRequest");
+    }
   },
   methods: {
-    sendConfirmation: function () {
-      this.$store.commit("settings/setConfirmationRequest", false);
+    sendConfirmation: function (idx) {
+      ipcRenderer.send("confirmationResponse", idx);
+      this.$store.commit("system/setConfirmationRequest", false);
+    },
+    setLatestSwVersion: function () {
+      if (this.latestSwVersionAvailable && this.isConnectedToController) {
+        this.$store.dispatch("system/sendSetLatestSwVersion", this.latestSwVersionAvailable);
+      }
+    },
+    saveAccountInfo: function () {
+      // this gets called before any vuex actions/muts to store account details so logic to username is in electron main process
+      const { customerId, user_name } = this.userAccounts[this.activeUserIndex];
+
+      ipcRenderer.invoke("saveAccountInfoRequest", { customerId, username: user_name }).then((response) => {
+        this.$store.commit("settings/setStoredAccounts", response);
+      });
     },
   },
 };

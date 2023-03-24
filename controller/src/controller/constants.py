@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Constants for the Stingray Controller."""
 import datetime
+from enum import Enum
 from enum import IntEnum
 import uuid
 
@@ -18,48 +19,30 @@ DEFAULT_SERVER_PORT_NUMBER = 4567
 NUM_WELLS = 24
 GENERIC_24_WELL_DEFINITION = LabwareDefinition(row_count=4, column_count=6)
 
+VALID_CONFIG_SETTINGS = frozenset(["customer_id", "user_name", "user_password"])
+
+# TODO try replacing all immutabledicts with enums
 BARCODE_HEADERS: immutabledict[str, str] = immutabledict({"plate_barcode": "ML", "stim_barcode": "MS"})
 ALL_VALID_BARCODE_HEADERS = frozenset(BARCODE_HEADERS.values())
-
-MICROSECONDS_PER_CENTIMILLISECOND = 10
 
 MICROS_PER_MILLIS = int(1e3)
 MICRO_TO_BASE_CONVERSION = int(1e6)
 
-# boot up states
-SERVER_INITIALIZING_STATE = "server_initializing"
-SERVER_READY_STATE = "server_ready"
-INSTRUMENT_INITIALIZING_STATE = "instrument_initializing"
-CHECKING_FOR_UPDATES_STATE = "checking_for_updates"
-# normal operation states
-IDLE_READY_STATE = "idle_ready"
-# updating states
-UPDATES_NEEDED_STATE = "updates_needed"
-DOWNLOADING_UPDATES_STATE = "downloading_updates"
-INSTALLING_UPDATES_STATE = "installing_updates"
-UPDATES_COMPLETE_STATE = "updates_complete"
-UPDATE_ERROR_STATE = "update_error"
 
-SYSTEM_STATUS_UUIDS: immutabledict[str, uuid.UUID] = immutabledict(
-    {
-        SERVER_INITIALIZING_STATE: uuid.UUID("04471bcf-1a00-4a0d-83c8-4160622f9a25"),
-        SERVER_READY_STATE: uuid.UUID("8e24ef4d-2353-4e9d-aa32-4346126e73e3"),
-        INSTRUMENT_INITIALIZING_STATE: uuid.UUID("d2e3d386-b760-4c9a-8b2d-410362ff11c4"),
-        CHECKING_FOR_UPDATES_STATE: uuid.UUID("04fd6f6b-ee9e-4656-aae4-0b9584791f36"),
-        IDLE_READY_STATE: uuid.UUID("009301eb-625c-4dc4-9e92-1a4d0762465f"),
-        UPDATES_NEEDED_STATE: uuid.UUID("d6dcf2a9-b6ea-4d4e-9423-500f91a82a2f"),
-        DOWNLOADING_UPDATES_STATE: uuid.UUID("b623c5fa-af01-46d3-9282-748e19fe374c"),
-        INSTALLING_UPDATES_STATE: uuid.UUID("19c9c2d6-0de4-4334-8cb3-a4c7ab0eab00"),
-        UPDATES_COMPLETE_STATE: uuid.UUID("31f8fbc9-9b41-4191-8598-6462b7490789"),
-        UPDATE_ERROR_STATE: uuid.UUID("33742bfc-d354-4ae5-88b6-2b3cee23aff8"),
-    }
-)
-
-SUBPROCESS_JOIN_TIMEOUT_SECONDS = 3
-SUBPROCESS_SHUTDOWN_TIMEOUT_SECONDS = 1
-SUBPROCESS_POLL_DELAY_SECONDS = 0.025
-
-MPQUEUE_POLL_PERIOD = 0.01
+class SystemStatuses(Enum):
+    # boot up states
+    SERVER_INITIALIZING_STATE = uuid.UUID("04471bcf-1a00-4a0d-83c8-4160622f9a25")
+    SERVER_READY_STATE = uuid.UUID("8e24ef4d-2353-4e9d-aa32-4346126e73e3")
+    SYSTEM_INITIALIZING_STATE = uuid.UUID("d2e3d386-b760-4c9a-8b2d-410362ff11c4")
+    CHECKING_FOR_UPDATES_STATE = uuid.UUID("04fd6f6b-ee9e-4656-aae4-0b9584791f36")
+    # normal operation states
+    IDLE_READY_STATE = uuid.UUID("009301eb-625c-4dc4-9e92-1a4d0762465f")
+    # updating states
+    UPDATES_NEEDED_STATE = uuid.UUID("d6dcf2a9-b6ea-4d4e-9423-500f91a82a2f")
+    DOWNLOADING_UPDATES_STATE = uuid.UUID("b623c5fa-af01-46d3-9282-748e19fe374c")
+    INSTALLING_UPDATES_STATE = uuid.UUID("19c9c2d6-0de4-4334-8cb3-a4c7ab0eab00")
+    UPDATES_COMPLETE_STATE = uuid.UUID("31f8fbc9-9b41-4191-8598-6462b7490789")
+    UPDATE_ERROR_STATE = uuid.UUID("33742bfc-d354-4ae5-88b6-2b3cee23aff8")
 
 
 # Serial Communication Values
@@ -78,9 +61,9 @@ SERIAL_COMM_STATUS_BEACON_PERIOD_SECONDS = 5
 SERIAL_COMM_HANDSHAKE_PERIOD_SECONDS = 5
 SERIAL_COMM_REGISTRATION_TIMEOUT_SECONDS = 8
 # Tanner (3/22/22): The following values are probably much larger than they need to be, not sure best duration of time to use now that a command might be sent right before or during a FW reboot initiated automatically by a FW error
-SERIAL_COMM_RESPONSE_TIMEOUT_SECONDS = 10
-SERIAL_COMM_HANDSHAKE_TIMEOUT_SECONDS = 10
-SERIAL_COMM_STATUS_BEACON_TIMEOUT_SECONDS = 10
+SERIAL_COMM_STATUS_BEACON_TIMEOUT_SECONDS = SERIAL_COMM_STATUS_BEACON_PERIOD_SECONDS * 2
+SERIAL_COMM_HANDSHAKE_TIMEOUT_SECONDS = SERIAL_COMM_HANDSHAKE_PERIOD_SECONDS * 2
+SERIAL_COMM_RESPONSE_TIMEOUT_SECONDS = SERIAL_COMM_STATUS_BEACON_PERIOD_SECONDS * 2
 
 # general packet components
 SERIAL_COMM_MAGIC_WORD_BYTES = b"CURI BIO"
@@ -107,7 +90,7 @@ SERIAL_COMM_MAX_FULL_PACKET_LENGTH_BYTES = (
     SERIAL_COMM_PACKET_METADATA_LENGTH_BYTES + SERIAL_COMM_MAX_PAYLOAD_LENGTH_BYTES
 )
 
-SERIAL_COMM_STATUS_CODE_LENGTH_BYTES = 2 + 24  # main micro, idx of thread with error, 24 wells
+SERIAL_COMM_STATUS_CODE_LENGTH_BYTES = 2 + NUM_WELLS  # main micro, idx of thread with error, 24 wells
 # data stream components
 SERIAL_COMM_TIME_INDEX_LENGTH_BYTES = 8
 SERIAL_COMM_TIME_OFFSET_LENGTH_BYTES = 2
@@ -121,38 +104,42 @@ SERIAL_COMM_TIMESTAMP_BYTES_INDEX = (
 SERIAL_COMM_PACKET_TYPE_INDEX = SERIAL_COMM_TIMESTAMP_BYTES_INDEX + SERIAL_COMM_TIMESTAMP_LENGTH_BYTES
 SERIAL_COMM_PAYLOAD_INDEX = SERIAL_COMM_PACKET_TYPE_INDEX + 1
 
-# Packet Types
-# General
-SERIAL_COMM_STATUS_BEACON_PACKET_TYPE = 0
-SERIAL_COMM_MAGNETOMETER_DATA_PACKET_TYPE = 1
-SERIAL_COMM_REBOOT_PACKET_TYPE = 2
-SERIAL_COMM_HANDSHAKE_PACKET_TYPE = 4
-SERIAL_COMM_PLATE_EVENT_PACKET_TYPE = 6
-SERIAL_COMM_GOING_DORMANT_PACKET_TYPE = 10
-# Stimulation
-SERIAL_COMM_SET_STIM_PROTOCOL_PACKET_TYPE = 20
-SERIAL_COMM_START_STIM_PACKET_TYPE = 21
-SERIAL_COMM_STOP_STIM_PACKET_TYPE = 22
-SERIAL_COMM_STIM_STATUS_PACKET_TYPE = 23
-SERIAL_COMM_STIM_IMPEDANCE_CHECK_PACKET_TYPE = 27
-# Magnetometer
-SERIAL_COMM_SET_SAMPLING_PERIOD_PACKET_TYPE = 50
-SERIAL_COMM_START_DATA_STREAMING_PACKET_TYPE = 52
-SERIAL_COMM_STOP_DATA_STREAMING_PACKET_TYPE = 53
-# Metadata
-SERIAL_COMM_GET_METADATA_PACKET_TYPE = 60
-SERIAL_COMM_SET_NICKNAME_PACKET_TYPE = 62
-# Firmware Updating
-SERIAL_COMM_BEGIN_FIRMWARE_UPDATE_PACKET_TYPE = 70
-SERIAL_COMM_FIRMWARE_UPDATE_PACKET_TYPE = 71
-SERIAL_COMM_END_FIRMWARE_UPDATE_PACKET_TYPE = 72
-SERIAL_COMM_CF_UPDATE_COMPLETE_PACKET_TYPE = 73
-SERIAL_COMM_MF_UPDATE_COMPLETE_PACKET_TYPE = 74
-# Barcode
-SERIAL_COMM_BARCODE_FOUND_PACKET_TYPE = 90
-# Errors
-SERIAL_COMM_ERROR_ACK_PACKET_TYPE = 254
-SERIAL_COMM_CHECKSUM_FAILURE_PACKET_TYPE = 255
+
+class SerialCommPacketTypes(IntEnum):
+    # General
+    STATUS_BEACON = 0
+    MAGNETOMETER_DATA = 1
+    REBOOT = 2
+    HANDSHAKE = 4
+    PLATE_EVENT = 6
+    GOING_DORMANT = 10
+    # Stimulation
+    SET_STIM_PROTOCOL = 20
+    START_STIM = 21
+    STOP_STIM = 22
+    STIM_STATUS = 23
+    STIM_IMPEDANCE_CHECK = 27
+    # Magnetometer
+    SET_SAMPLING_PERIOD = 50
+    START_DATA_STREAMING = 52
+    STOP_DATA_STREAMING = 53
+    # Metadata
+    GET_METADATA = 60
+    SET_NICKNAME = 62
+    # Firmware Updating
+    BEGIN_FIRMWARE_UPDATE = 70
+    FIRMWARE_UPDATE = 71
+    END_FIRMWARE_UPDATE = 72
+    CF_UPDATE_COMPLETE = 73
+    MF_UPDATE_COMPLETE = 74
+    # Barcode
+    BARCODE_FOUND = 90
+    # Misc?
+    TRIGGER_ERROR = 103
+    # Errors
+    ERROR_ACK = 254
+    CHECKSUM_FAILURE = 255
+
 
 # Instrument Status Codes
 SERIAL_COMM_OKAY_CODE = 0
@@ -167,9 +154,18 @@ GOING_DORMANT_HANDSHAKE_TIMEOUT_CODE = 0
 STIM_MAX_ABSOLUTE_CURRENT_MICROAMPS = int(100e3)
 STIM_MAX_ABSOLUTE_VOLTAGE_MILLIVOLTS = int(1.2e3)
 
+STIM_MAX_DUTY_CYCLE_PERCENTAGE = 0.8
+STIM_MAX_DUTY_CYCLE_DURATION_MICROSECONDS = int(50e3)
+
 STIM_MAX_PULSE_DURATION_MICROSECONDS = int(50e3)
 STIM_MIN_SUBPROTOCOL_DURATION_MICROSECONDS = int(100e3)
 STIM_MAX_SUBPROTOCOL_DURATION_MICROSECONDS = 24 * 60 * 60 * MICRO_TO_BASE_CONVERSION  # 24hrs
+
+# Protocol Chunking
+STIM_MAX_CHUNKED_SUBPROTOCOL_DUR_MINS = 1
+STIM_MAX_CHUNKED_SUBPROTOCOL_DUR_MICROSECONDS = (
+    STIM_MAX_CHUNKED_SUBPROTOCOL_DUR_MINS * 60 * MICRO_TO_BASE_CONVERSION
+)
 
 STIM_MAX_NUM_SUBPROTOCOLS_PER_PROTOCOL = 50
 
@@ -185,6 +181,9 @@ STIM_SHORT_CIRCUIT_THRESHOLD_OHMS = 10
 VALID_STIMULATION_TYPES = frozenset(["C", "V"])
 VALID_SUBPROTOCOL_TYPES = frozenset(["delay", "monophasic", "biphasic"])
 
+# does not include subprotocol idx
+STIM_PULSE_BYTES_LEN = 29
+
 
 # Stim Checks
 class StimulatorCircuitStatuses(IntEnum):
@@ -198,9 +197,8 @@ class StimulatorCircuitStatuses(IntEnum):
 class StimProtocolStatuses(IntEnum):
     ACTIVE = 0
     NULL = 1
-    RESTARTING = 2
-    FINISHED = 3
-    ERROR = 4
+    FINISHED = 2
+    ERROR = 3
 
 
 # Metadata
@@ -217,12 +215,12 @@ SERIAL_COMM_WELL_IDX_TO_MODULE_ID: immutabledict[int, int] = immutabledict(
         well_idx: module_id
         for well_idx, module_id in enumerate(
             [
-                4, 3, 2, 1,      # A1 - D1
-                8, 7, 6, 5,      # A2 - D2
-                12, 11, 10, 9,   # A3 - D3
-                16, 15, 14, 13,  # A4 - D4
-                20, 19, 18, 17,  # A5 - D5
-                24, 23, 22, 21   # A6 - D6
+                3, 2, 1, 0,  # A1 - D1
+                7, 6, 5, 4,  # A2 - D2
+                11, 10, 9, 8,  # A3 - D3
+                15, 14, 13, 12,  # A4 - D4
+                19, 18, 17, 16,  # A5 - D5
+                23, 22, 21, 20   # A6 - D6
             ]
         )
     }
@@ -243,7 +241,6 @@ STIM_MODULE_ID_TO_WELL_IDX: immutabledict[int, int] = immutabledict(
                 1, 5, 9, 13, 17, 21,   # B wells
                 0, 4, 8, 12, 16, 20    # A wells
             ],
-            1  # module ID numbering starts at 1
         )
     }
 )

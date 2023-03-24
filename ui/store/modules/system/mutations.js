@@ -4,12 +4,15 @@ import { ERRORS } from "./enums";
 
 export default {
   setStatusUuid(state, newId) {
-    if (state.statusUuid !== STATUS.ERROR) {
+    if (state.statusUuid !== STATUS.ERROR_STATE) {
       state.statusUuid = newId;
     }
   },
   setSimulationStatus(state, newId) {
     state.simulationMode = newId;
+  },
+  setIsConnectedToController(state, isConnected) {
+    state.isConnectedToController = isConnected;
   },
   setBarcodeManualMode(state, newValue) {
     state.barcodeManualMode = newValue;
@@ -39,9 +42,9 @@ export default {
   setSoftwareUpdateAvailable(state, bool) {
     state.softwareUpdateAvailable = bool;
   },
-  setFirmwareUpdateAvailable(state, updateInfo) {
-    state.firmwareUpdateAvailable = updateInfo.firmwareUpdateAvailable;
-    state.firmwareUpdateDurMins = updateInfo.channelFwUpdate ? 5 : 1;
+  setFirmwareUpdateAvailable(state, channelFwUpdate) {
+    state.firmwareUpdateAvailable = true;
+    state.firmwareUpdateDurMins = channelFwUpdate ? 5 : 1;
   },
   setAllowSWUpdateInstall(state, bool) {
     state.allowSWUpdateInstall = bool;

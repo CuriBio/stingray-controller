@@ -11,11 +11,11 @@ from controller.constants import COMPILED_EXE_BUILD_TIMESTAMP
 from controller.constants import CURRENT_SOFTWARE_VERSION
 from controller.constants import DEFAULT_SERVER_PORT_NUMBER
 from controller.constants import NUM_WELLS
-from controller.constants import SERVER_INITIALIZING_STATE
 from controller.constants import SOFTWARE_RELEASE_CHANNEL
+from controller.constants import SystemStatuses
 from controller.exceptions import LocalServerPortAlreadyInUseError
-from controller.main_process.server import Server
-from controller.main_process.subprocess_monitor import SubprocessMonitor
+from controller.main_systems.server import Server
+from controller.main_systems.system_monitor import SystemMonitor
 from controller.utils.generic import redact_sensitive_info_from_path
 import pytest
 
@@ -23,7 +23,7 @@ import pytest
 @pytest.fixture(scope="function", name="patch_run_tasks")
 def fixture_patch_run_tasks(mocker):
     mocks = {
-        "subprocess_monitor": mocker.patch.object(main.SubprocessMonitor, "run", autospec=True),
+        "system_monitor": mocker.patch.object(main.SystemMonitor, "run", autospec=True),
         "server": mocker.patch.object(main.Server, "run", autospec=True),
     }
     yield mocks
@@ -181,11 +181,12 @@ async def test_main__initializes_system_state_correctly(
     await main.main(cmd_line_args)
 
     expected_system_state = {
-        "system_status": SERVER_INITIALIZING_STATE,
+        "system_status": SystemStatuses.SERVER_INITIALIZING_STATE,
         "stimulation_running": [False] * NUM_WELLS,
         "config_settings": {"log_directory": log_file_dir},
+        "is_user_logged_in": False,
         "stimulator_circuit_statuses": {},
-        "stimulation_info": None,
+        "stim_info": None,
         # "latest_software_version": None,
         "log_file_id": spied_uuid4.spy_return,
     }
@@ -197,11 +198,11 @@ async def test_main__initializes_system_state_correctly(
 
 
 @pytest.mark.asyncio
-async def test_main__creates_SubprocessMonitor_correctly(patch_run_tasks, mocker):
+async def test_main__creates_SystemMonitor_correctly(patch_run_tasks, mocker):
     spied_init_state = mocker.spy(main, "_initialize_system_state")
     spied_create_queues = mocker.spy(main, "create_system_queues")
 
-    spied_spm_init = mocker.spy(SubprocessMonitor, "__init__")
+    spied_spm_init = mocker.spy(SystemMonitor, "__init__")
 
     await main.main([])
 
@@ -232,7 +233,7 @@ async def test_main__creates_Server_correctly(patch_run_tasks, mocker):
 @pytest.mark.asyncio
 async def test_main__runs_tasks_correctly(mocker):
     mocked_server = mocker.patch.object(main, "Server")
-    mocked_spm = mocker.patch.object(main, "SubprocessMonitor")
+    mocked_spm = mocker.patch.object(main, "SystemMonitor")
 
     expected_tasks = []
 

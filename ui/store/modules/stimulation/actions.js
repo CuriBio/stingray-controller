@@ -1,6 +1,6 @@
 import { WellTitle as LabwareDefinition } from "@/js-utils/LabwareCalculations.js";
 const twentyFourWellPlateDefinition = new LabwareDefinition(4, 6);
-// import { callAxiosPostFromVuex } from "../../../js-utils/axiosHelpers";
+import { socket } from "@/store/plugins/websocket";
 import { STIM_STATUS, TIME_CONVERSION_TO_MILLIS } from "./enums";
 
 export default {
@@ -199,24 +199,27 @@ export default {
       await commit("setEditModeOff");
       const { color, letter } = await getters["getNextProtocol"];
       const importedProtocol = { color, letter, label: protocol.name, protocol };
-      await commit("setImportedProtocol", importedProtocol);
+      await commit("setNewProtocol", importedProtocol);
     }
   },
   async addSavedPotocol({ commit, state, dispatch }) {
     const { protocolEditor, editMode, protocolList } = state;
     const { letter, color } = state.currentAssignment;
+
+    const protocolListCopy = JSON.parse(JSON.stringify(protocolList));
     const updatedProtocol = { color, letter, label: protocolEditor.name, protocol: protocolEditor };
     if (!editMode.status) {
       commit("setNewProtocol", updatedProtocol);
     } else if (editMode.status) {
-      protocolList.map((protocol, idx) => {
+      protocolListCopy.map((protocol, idx) => {
         if (protocol.letter === editMode.letter)
-          protocolList[idx] = {
+          protocolListCopy[idx] = {
             ...protocol,
             label: protocolEditor.name,
             protocol: protocolEditor,
           };
       });
+      await commit("setProtocolList", protocolListCopy);
       await commit("setEditModeOff");
       await dispatch("updateProtocolAssignments", updatedProtocol);
     }
@@ -232,16 +235,15 @@ export default {
     }
   },
 
-  async createProtocolMessage({ commit, state }) {
+  async createProtocolMessage({ state }) {
     // const status = true;
-    const message = { protocols: [], protocolAssignments: {} };
+    const message = { protocols: [], protocol_assignments: {} };
 
-    const { protocolAssignments } = state;
-    const { stimulatorCircuitStatuses } = this.state.data;
+    const { protocolAssignments, stimulatorCircuitStatuses } = state;
 
     for (let wellIdx = 0; wellIdx < 24; wellIdx++) {
       const wellName = twentyFourWellPlateDefinition.getWellNameFromWellIndex(wellIdx, false);
-      message.protocolAssignments[wellName] = null;
+      message.protocol_assignments[wellName] = null;
     }
 
     const uniqueProtocolIds = new Set();
@@ -268,15 +270,20 @@ export default {
         }
         // assign letter to well number
         const wellNumber = twentyFourWellPlateDefinition.getWellNameFromWellIndex(well, false);
-        message.protocolAssignments[wellNumber] = letter;
+        message.protocol_assignments[wellNumber] = letter;
       }
     }
 
-    // TODO
+    const wsProtocolMessage = JSON.stringify({ command: "set_stim_protocols", stim_info: message });
+    socket.send(wsProtocolMessage);
+
+    const wsMessage = JSON.stringify({ command: "set_stim_status", running: true });
+    socket.send(wsMessage);
   },
 
-  async stopStimulation({ commit }) {
-    // TODO
+  async stopStimulation() {
+    const wsMessage = JSON.stringify({ command: "set_stim_status", running: false });
+    socket.send(wsMessage);
   },
 
   async editSelectedProtocol({ commit, dispatch, state }, protocol) {
@@ -330,8 +337,15 @@ export default {
         });
     }
   },
-  async startStimConfiguration({ commit, state }) {
-    // TODO
+  async startStimConfiguration({ state, commit }) {
+    const wellIndices = Object.keys(state.protocolAssignments);
+    const wsMessage = JSON.stringify({
+      command: "start_stim_checks",
+      well_indices: wellIndices,
+    });
+
+    socket.send(wsMessage);
+    commit("setStimStatus", STIM_STATUS.CONFIG_CHECK_IN_PROGRESS);
   },
   async onPulseMouseenter({ state }, idx) {
     const hoveredPulse = state.repeatColors[idx];
@@ -379,7 +393,7 @@ const _getConvertedSettings = async (subprotocols, stimType) => {
         num_cycles: pulse.numCycles,
         postphase_interval: Math.round(pulse.postphaseInterval * milliToMicro), // sent in µs, also needs to be an integer value
         phase_one_duration: pulse.phaseOneDuration * milliToMicro, // sent in µs
-        phase_cne_charge: pulse.phaseOneCharge * conversion, // sent in mV
+        phase_one_charge: pulse.phaseOneCharge * conversion, // sent in mV
       };
 
     if (pulse.type === "Biphasic")

@@ -18,7 +18,7 @@ export { default as settingsStoreModule } from "./store/modules/settings";
 export { default as systemStoreModule } from "./store/modules/system";
 export { default as stimulationStoreModule } from "./store/modules/stimulation";
 export {
-  stimStatus,
+  STIM_STATUS,
   MAX_SUBPROTOCOL_DURATION_MS,
   MIN_SUBPROTOCOL_DURATION_MS,
   MIN_CHARGE_MA,

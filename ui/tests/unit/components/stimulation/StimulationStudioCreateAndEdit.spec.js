@@ -219,7 +219,7 @@ describe("StimulationStudioCreateAndEdit.vue", () => {
     });
     expect(store.state.stimulation.protocolList).toHaveLength(2);
 
-    await store.commit("stimulation/setImportedProtocol", mockProtocol);
+    await store.commit("stimulation/setNewProtocol", mockProtocol);
 
     expect(wrapper.vm.selectedProtocolIdx).toBe(0);
     expect(store.state.stimulation.protocolList).toHaveLength(3);

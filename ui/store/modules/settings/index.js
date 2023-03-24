@@ -4,7 +4,7 @@ import mutations from "./mutations";
 import { ERRORS } from "./enums";
 
 const defaultState = {
-  logPath: "C:\\Users\\username\\AppData\\Roaming\\StingrayController\\logslask",
+  logPath: "C:\\Users\\username\\AppData\\Roaming\\StingrayController\\stingray_logs",
   rootDownloadsPath: "C:\\Users\\username\\Downloads",
   userCredInputNeeded: false,
   userAccounts: [],

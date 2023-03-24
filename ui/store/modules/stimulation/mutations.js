@@ -1,5 +1,4 @@
 import { STIM_STATUS } from "./enums";
-
 import { getDefaultProtocolEditorState } from "./getters";
 
 export default {
@@ -26,8 +25,8 @@ export default {
     if (Object.keys(state.protocolAssignments).length === 0)
       state.stimStatus = STIM_STATUS.NO_PROTOCOLS_ASSIGNED;
   },
-  setProtocolName({ protocolEditor }, name) {
-    protocolEditor.name = name;
+  setProtocolName(state, name) {
+    state.protocolEditor.name = name;
   },
   setStimulationType({ protocolEditor }, type) {
     if (type[0] === "C") protocolEditor.stimulationType = "C";
@@ -93,14 +92,14 @@ export default {
     protocolEditor.subprotocols = subprotocols;
     protocolEditor.detailedSubprotocols = newSubprotocolOrder;
   },
+  setProtocolList(state, list) {
+    state.protocolList = [...list];
+  },
   setAxisValues(state, { xValues, yValues }) {
     state.xAxisValues = xValues;
     state.yAxisValues = yValues;
   },
   setNewProtocol({ protocolList }, protocol) {
-    protocolList.push(protocol);
-  },
-  setImportedProtocol({ protocolList }, protocol) {
     protocolList.push(protocol);
   },
   setStimPlayState(state, bool) {

@@ -19,13 +19,16 @@ from .constants import COMPILED_EXE_BUILD_TIMESTAMP
 from .constants import CURRENT_SOFTWARE_VERSION
 from .constants import DEFAULT_SERVER_PORT_NUMBER
 from .constants import NUM_WELLS
-from .constants import SERVER_INITIALIZING_STATE
 from .constants import SOFTWARE_RELEASE_CHANNEL
+from .constants import SystemStatuses
 from .exceptions import LocalServerPortAlreadyInUseError
-from .main_process.server import Server
-from .main_process.subprocess_monitor import SubprocessMonitor
+from .main_systems.server import Server
+from .main_systems.system_monitor import SystemMonitor
+from .subsystems.cloud_comm import CloudComm
+from .subsystems.instrument_comm import InstrumentComm
 from .utils.generic import redact_sensitive_info_from_path
 from .utils.generic import wait_tasks_clean
+from .utils.state_management import SystemStateManager
 
 
 logger = logging.getLogger(__name__)
@@ -64,41 +67,41 @@ async def main(command_line_args: list[str]) -> None:
         if is_port_in_use(DEFAULT_SERVER_PORT_NUMBER):
             raise LocalServerPortAlreadyInUseError(DEFAULT_SERVER_PORT_NUMBER)
 
-        # TODO
-        # multiprocessing_start_method = multiprocessing.get_start_method(allow_none=True)
-        # if mp_start_method != "spawn":
-        #     raise MultiprocessingNotSetToSpawnError(mp_start_method)
+        # TODO move this into SystemMonitor?
+        # logger.info("Spawning subsystems")
 
-        # TODO move this into SubprocessMonitor?
-        # logger.info("Spawning subprocesses")
+        # TODO wrap all this in a function?
 
-        # process_manager = ProcessesManager(system_state=system_state, logging_level=log_level)
-        # object_access_for_testing["process_manager"] = process_manager
-        # object_access_for_testing["system_state"] = system_state
-
-        # process_manager.create_processes()
-        # if start_subprocesses:
-        #     logger.info(f"Main Process PID: {getpid()}")
-        #     subprocess_id_dict = process_manager.start_processes()
-        #     for subprocess_name, pid in subprocess_id_dict.items():
-        #         logger.info(f"{subprocess_name} PID: {pid}")
-
-        system_state = _initialize_system_state(parsed_args, log_file_id)
+        system_state_manager = SystemStateManager()
+        await system_state_manager.update(_initialize_system_state(parsed_args, log_file_id))
 
         queues = create_system_queues()
 
-        subprocess_monitor = SubprocessMonitor(system_state, queues)
-        server = Server(system_state, queues["to"]["server"], queues["from"]["server"])
+        system_monitor = SystemMonitor(system_state_manager, queues)
+        server = Server(
+            system_state_manager.get_read_only_copy, queues["to"]["server"], queues["from"]["server"]
+        )
 
-        tasks = {asyncio.create_task(subprocess_monitor.run()), asyncio.create_task(server.run())}
+        instrument_comm_subsystem = InstrumentComm(
+            queues["to"]["instrument_comm"], queues["from"]["instrument_comm"]
+        )
 
+        cloud_comm_subsystem = CloudComm(queues["to"]["cloud_comm"], queues["from"]["cloud_comm"])
+
+        tasks = {
+            asyncio.create_task(system_monitor.run()),
+            asyncio.create_task(server.run()),
+            asyncio.create_task(instrument_comm_subsystem.run()),
+            asyncio.create_task(cloud_comm_subsystem.run()),
+        }
+
+        # TODO make sure that errors in subprocesses get raised all the way up to the top here
+        # TODO have server send a "shutting down" or "error" msg or something when it gets cancelled
         await wait_tasks_clean(tasks)
-
-        # TODO
-        # upload_log_files_to_s3(system_state["config_settings"])
 
     except Exception as e:
         logger.error(f"ERROR IN MAIN: {repr(e)}")
+        # TODO raise error here ?
 
     finally:
         logger.info("Program exiting")
@@ -107,17 +110,8 @@ async def main(command_line_args: list[str]) -> None:
 # TODO consider moving this to a different file
 def create_system_queues() -> dict[str, Any]:
     return {
-        "to": {
-            "server": asyncio.Queue()
-            # TODO
-            # "instrument_comm": MPQueueAsyncWrapper(process_manager.queue_container.from_instrument_comm),
-        },
-        "from": {
-            "server": asyncio.Queue()
-            # "instrument_comm": MPQueueAsyncWrapper(
-            #     self._process_manager.queue_container.to_instrument_comm(0)
-            # ),
-        },
+        direction: {subsystem: asyncio.Queue() for subsystem in ("server", "instrument_comm", "cloud_comm")}
+        for direction in ("to", "from")
     }
 
 
@@ -163,14 +157,29 @@ def _log_cmd_line_args(parsed_args: dict[str, Any]) -> None:
     logger.info(f"Command Line Args: {parsed_args_copy}".replace(r"\\", "\\"))
 
 
+# TODO make this function reusable in tests
 def _initialize_system_state(parsed_args: dict[str, Any], log_file_id: uuid.UUID) -> dict[str, Any]:
     system_state = {
-        "system_status": SERVER_INITIALIZING_STATE,
+        # main
+        "system_status": SystemStatuses.SERVER_INITIALIZING_STATE,
+        "in_simulation_mode": False,
         "stimulation_running": [False] * NUM_WELLS,
-        "config_settings": {"log_directory": parsed_args["log_file_dir"]},
+        # updating
+        "main_firmware_update": None,
+        "channel_firmware_update": None,
+        "latest_software_version": None,
+        # user options
+        "config_settings": {
+            "log_directory": parsed_args["log_file_dir"]
+        },  # TODO consider not storing this in a dict
+        "is_user_logged_in": False,
+        # instrument
+        "instrument_metadata": {},
+        "stim_info": {},
         "stimulator_circuit_statuses": {},
-        "stimulation_info": None,
-        # "latest_software_version": None,  # TODO get this value here instead of in electron
+        "stim_barcode": None,
+        "plate_barcode": None,
+        # misc
         "log_file_id": log_file_id,
     }
 
