@@ -13,7 +13,7 @@
           <StatusBar :stimSpecific="true" @send-confirmation="sendConfirmation" />
         </div>
         <div class="div__stimulation-controls-icon-container">
-          <StimulationStudioControls />
+          <StimulationStudioControls @save-account-info="saveAccountInfo" />
         </div>
         <div class="div__simulation-mode-container">
           <SimulationMode />
@@ -64,6 +64,7 @@ export default {
   computed: {
     ...mapState("stimulation", ["stimPlayState"]),
     ...mapState("system", ["statusUuid", "allowSWUpdateInstall", "isConnectedToController"]),
+    ...mapState("settings", ["userAccounts", "activeUserIndex"]),
   },
   watch: {
     allowSwUpdateInstall: function () {
@@ -140,6 +141,14 @@ export default {
       if (this.latestSwVersionAvailable && this.isConnectedToController) {
         this.$store.dispatch("system/sendSetLatestSwVersion", this.latestSwVersionAvailable);
       }
+    },
+    saveAccountInfo: function () {
+      // this gets called before any vuex actions/muts to store account details so logic to username is in electron main process
+      const { customerId, user_name } = this.userAccounts[this.activeUserIndex];
+
+      ipcRenderer.invoke("saveAccountInfoRequest", { customerId, username: user_name }).then((response) => {
+        this.$store.commit("settings/setStoredAccounts", response);
+      });
     },
   },
 };

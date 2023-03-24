@@ -132,7 +132,7 @@
       :no-close-on-backdrop="true"
       :static="true"
     >
-      <SettingsForm @close-modal="$bvModal.hide('settings-form')" />
+      <SettingsForm @close-modal="closeSettingsModal" />
     </b-modal>
     <b-modal
       id="user-input-prompt-message"
@@ -372,6 +372,14 @@ export default {
     closeUserInputPromptModal() {
       this.$bvModal.hide("user-input-prompt-message");
       this.$bvModal.show("settings-form");
+    },
+    closeSettingsModal: function (save) {
+      this.$bvModal.hide("settings-form");
+
+      if (save) {
+        // this event is used in electron
+        this.$emit("save-account-info");
+      }
     },
   },
 };

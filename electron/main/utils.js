@@ -48,7 +48,6 @@ const createStore = function ({ filePath = undefined, fileName = "stingray_contr
     defaults: {
       customer_id: null,
       usernames: [],
-      beta_2_mode: true,
     },
   });
   return store;

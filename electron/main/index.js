@@ -157,7 +157,7 @@ ipcMain.once("pulse3dVersionsRequest", (event) => {
 });
 
 // save customer id after it's verified by /users/login
-ipcMain.handle("saveAccountInfo", (_, { customerId, username }) => {
+ipcMain.handle("saveAccountInfoRequest", (_, { customerId, username }) => {
   store.set("customer_id", customerId);
   const storedUsernames = store.get("usernames");
 
