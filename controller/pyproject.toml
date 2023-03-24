@@ -75,5 +75,5 @@ markers = [
 ]
 
 [tool.poetry.build]
-script = "build2.py"
+script = "build.py"
 generate-setup-file = false
