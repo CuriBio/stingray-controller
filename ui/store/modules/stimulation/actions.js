@@ -336,12 +336,10 @@ export default {
     }
   },
   async startStimConfiguration({ state, commit }) {
-    const wellIndices = Object.keys(state.protocol_assignments);
+    const wellIndices = Object.keys(state.protocolAssignments);
     const wsMessage = JSON.stringify({
       command: "start_stim_checks",
-      content: {
-        well_indices: wellIndices,
-      },
+      well_indices: wellIndices,
     });
 
     socket.send(wsMessage);

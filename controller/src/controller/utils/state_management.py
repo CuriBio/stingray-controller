@@ -21,8 +21,10 @@ class ReadOnlyDict(collections.abc.Mapping):  # type: ignore  # Tanner (3/16/23)
         return item
 
     def __iter__(self) -> Iterator[Any]:
-        # Tanner (3/16/23): abc requires this function to be implemented, but it's not necessary right now
-        raise NotImplementedError()
+        # TODO see if this is really what we want
+        return iter(self._data)
+
+    # TODO implement keys() and values()
 
     def __len__(self) -> int:
         return len(self._data)
