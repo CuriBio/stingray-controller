@@ -165,15 +165,15 @@ jobs:
           restore-keys: |
             ${{ matrix.os }}-${{ matrix.node-version }}-build-${{ env.cache-name }}-
 
-      - name: Cache Python modules
-        uses: actions/cache@v3
-        env:
-          cache-name: cache-python-modules
-        with:
-          path: ./.pipenv_cache
-          key: ${{ matrix.os }}-${{ matrix.python-version }}-build-${{ env.cache-name }}-${{ hashFiles('**/Pipfile.lock') }}
-          restore-keys: |
-            ${{ matrix.os }}-${{ matrix.python-version }}-build-${{ env.cache-name }}-
+      # - name: Cache Python modules
+      #   uses: actions/cache@v3
+      #   env:
+      #     cache-name: cache-python-modules
+      #   with:
+      #     path: ./TODO
+      #     key: ${{ matrix.os }}-${{ matrix.python-version }}-build-${{ env.cache-name }}-${{ hashFiles('**/Pipfile.lock') }}
+      #     restore-keys: |
+      #       ${{ matrix.os }}-${{ matrix.python-version }}-build-${{ env.cache-name }}-
 
       - name: Display Chrome version (Windows)
         if: runner.os == 'Windows'
@@ -184,33 +184,35 @@ jobs:
           echo ${{steps.software-version.outputs.prop}}
           echo ${{steps.product-name.outputs.prop}}
 
-      - name: Install pipenv # no known reason for this specific version of pipenv, just pinning it for good practice
-        run: pip install pipenv==2020.11.15
-
-      - name: Setup Pipenv
-        env:
-          PIPENV_VENV_IN_PROJECT: 1
-        # Eli (10/28/20): in the windows environments, just saying `pipenv --three` defaults to the highest installed version of Python on the image...not the actual one specified in the matrix. So need to specify
-        run: |
-          pipenv --python ${{ matrix.python-version }}
-          pipenv run pip freeze
-      - name: Install Python Dependencies
-        env:
-          PIPENV_CACHE_DIR: ./.pipenv_cache
-        # Eli (10/28/20): The --sequential flag was found to be necessary on windows due to issues where scipy wouldn't recognize that it had been installed. Also, when this was part of a set of multiple run commands using the pipe, when it errored it didn't cause the whole step to fail, so separating it out into its own step
-        run: pipenv install --dev --deploy --sequential
-
       - name: Download zlib Library
-        run: pipenv run python .github/workflows/run_zlib_download.py
+        run: |
+          pip install requests
+          python .github/workflows/run_zlib_download.py
 
-      - name: Install Local Package in editable mode for testing
-        run: pipenv run pip install -e .
+      - name: Install Poetry
+        run: (Invoke-WebRequest -Uri https://install.python-poetry.org -UseBasicParsing).Content | python -
 
-      - name: Log full installed Python packages
-        run: pipenv run pip freeze
+      - name: Setup Poetry alias
+        run: Set-Alias -Name poetry -Value %APPDATA%\pypoetry\venv\Scripts\poetry
 
-      - name: Install NPM Dependencies
-        run: pipenv run npm ci --cache .npm_cache/
+      - name: Setup Controller
+        run: |
+          cd controller/
+          poetry install
+          poetry show
+          cd ..
+
+      - name: Setup UI
+        run: |
+          cd ui/
+          npm ci --cache .npm_cache/
+          cd ..
+
+      - name: Setup Electron
+        run: |
+          cd electron/
+          npm ci --cache .npm_cache/
+          cd ..
 
       - name: Insert the Build Number and Software Version into the code (Windows)
         if: runner.os == 'Windows'
@@ -225,14 +227,19 @@ jobs:
           ((Get-Content -path src\controllertroller\constants.py -Raw) -replace 'REPLACETHISWITHRELEASECHANNELDURINGBUILD',"${{env.RELEASE_CHANNEL}}") | Set-Content -Path src\controllertroller\constants.py
 
       - name: Compile the Python Executable
-        run: pipenv run pyinstaller pyinstaller.spec --log-level=DEBUG --distpath=dist-python --workpath=build-python
+        run: |
+          cd controller/
+          poetry run pyinstaller pyinstaller.spec --log-level=DEBUG --distpath=dist-python --workpath=build-python
+          cd ..
 
       - name: Build Full Electron App
-        run: pipenv run npm run build-${{env.RELEASE_CHANNEL}}
+        run: |
+          cd electron/
+          npm run build-${{env.RELEASE_CHANNEL}}
 
       - name: S3 Publisher
         if: matrix.IS_DEPLOYMENT_CONFIG == true
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.CI_IAM_GIT_PUBLISH_ACCESS_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.CI_IAM_GIT_PUBLISH_SECRET_KEY }}
-        run: pipenv run node .github/workflows/s3_publish.js --file="${{steps.product-name.outputs.prop}}-Setup-${{env.RELEASE_CHANNEL}}-${{steps.software-version.outputs.prop}}.exe" --buildDir=./dist --channel=${{env.RELEASE_CHANNEL}}
+        run: node .github/workflows/s3_publish.js --file="${{steps.product-name.outputs.prop}}-Setup-${{env.RELEASE_CHANNEL}}-${{steps.software-version.outputs.prop}}.exe" --buildDir=./dist --channel=${{env.RELEASE_CHANNEL}}
