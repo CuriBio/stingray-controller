@@ -27,7 +27,9 @@ from ..constants import VALID_CONFIG_SETTINGS
 from ..constants import VALID_STIMULATION_TYPES
 from ..constants import VALID_SUBPROTOCOL_TYPES
 from ..exceptions import WebsocketCommandError
+from ..utils.generic import clean_up_tasks
 from ..utils.generic import get_redacted_string
+from ..utils.generic import handle_system_error
 from ..utils.generic import wait_tasks_clean
 from ..utils.state_management import ReadOnlyDict
 from ..utils.stimulation import get_pulse_dur_us
@@ -61,8 +63,9 @@ class Server:
         from_monitor_queue: asyncio.Queue[dict[str, Any]],
         to_monitor_queue: asyncio.Queue[dict[str, Any]],
     ) -> None:
-        self._connected = False
         self._serve_task: asyncio.Task[None] | None = None
+        # this is only used in _handle_system_error
+        self._websocket: WebSocketServerProtocol | None = None
 
         # TODO consider just passing in the read only version of the dict instead
         self._get_system_state_ro = get_system_state_ro
@@ -70,41 +73,63 @@ class Server:
         self._from_monitor_queue = from_monitor_queue
         self._to_monitor_queue = to_monitor_queue
 
-        self.fe_initiated_shutdown = False
+        self._has_ui_connected: asyncio.Future[bool] = asyncio.Future()
+        self.user_initiated_shutdown = False
 
-    async def run(self) -> None:
+    async def run(self, system_error_future: asyncio.Future[int]) -> None:
         logger.info("Starting Server")
 
         ws_server = await serve(self._run, "localhost", DEFAULT_SERVER_PORT_NUMBER)
         self._serve_task = asyncio.create_task(ws_server.serve_forever())
         try:
-            await self._serve_task
+            await asyncio.shield(self._serve_task)
         except asyncio.CancelledError:
             logger.info("Server cancelled")
+            await self._handle_system_error(system_error_future)
+
             ws_server.close()
             await ws_server.wait_closed()
+
+            raise
+        except Exception as e:
+            handle_system_error(e, system_error_future)
+            await self._handle_system_error(system_error_future)
+
             raise
         finally:
+            await clean_up_tasks({self._serve_task})
             logger.info("Server shut down")
 
     async def _run(self, websocket: WebSocketServerProtocol) -> None:
         if not self._serve_task:
             raise NotImplementedError("_serve_task must be not be None here")
 
-        if self._connected:
+        if self._websocket:
             logger.exception("ERROR - SECOND CONNECTION MADE")
             # TODO figure out a good way to handle this
             return
 
-        self._connected = True
+        self._has_ui_connected.set_result(True)
+        self._websocket = websocket
         logger.info("CONNECTED")
 
         await self._handle_comm(websocket)
 
-        self._connected = False
+        self._websocket = None
         logger.info("DISCONNECTED")
 
         self._serve_task.cancel()
+
+    async def _handle_system_error(self, system_error_future: asyncio.Future[int]) -> None:
+        # if the error occured before the UI even connected, wait 3 seconds for it to connect
+        try:
+            await asyncio.wait_for(self._has_ui_connected, 3)
+        except asyncio.TimeoutError:
+            return
+
+        if self._websocket and system_error_future.done():
+            msg = {"communication_type": "error", "error_code": system_error_future.result()}
+            await self._websocket.send(json.dumps(msg))
 
     async def _handle_comm(self, websocket: WebSocketServerProtocol) -> None:
         producer = asyncio.create_task(self._producer(websocket))
@@ -117,7 +142,7 @@ class Server:
             await websocket.send(json.dumps(msg))
 
     async def _consumer(self, websocket: WebSocketServerProtocol) -> None:
-        while not self.fe_initiated_shutdown:
+        while not self.user_initiated_shutdown:
             try:
                 msg = json.loads(await websocket.recv())
             except websockets.ConnectionClosed:
@@ -172,7 +197,7 @@ class Server:
 
     @mark_handler
     async def _shutdown(self, *args: Any) -> dict[str, Any]:
-        self.fe_initiated_shutdown = True
+        self.user_initiated_shutdown = True
         # TODO remove this return when done testing
         return {"msg": "beginning_shutdown"}
 

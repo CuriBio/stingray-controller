@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """Misc utility functions."""
-from __future__ import annotations
+
 
 import asyncio
 import logging
@@ -10,6 +10,9 @@ from typing import Any
 from typing import Optional
 
 from semver import VersionInfo
+
+from .. import exceptions
+from ..constants import ErrorCodes
 
 logger = logging.getLogger(__name__)
 
@@ -42,24 +45,60 @@ def semver_gt(version_a: str, version_b: str) -> bool:
 # TODO move these to an async utils file
 
 
-async def wait_tasks_clean(tasks: set[GenericTask], return_when: str = asyncio.FIRST_COMPLETED) -> None:
+async def wait_tasks_clean(
+    tasks: set[GenericTask], return_when: str = asyncio.FIRST_COMPLETED
+) -> Exception | None:
     if not tasks:
-        return
+        return None
 
     try:
         await asyncio.wait(tasks, return_when=return_when)
     finally:
-        await clean_up_tasks(tasks)
+        return await clean_up_tasks(tasks)
 
 
-async def clean_up_tasks(tasks: set[GenericTask]) -> None:
+async def clean_up_tasks(tasks: set[GenericTask]) -> Exception | None:
+    # Tanner (): assuming there will only be one exception per set of tasks
+    exc = None
+
     for task in tasks:
         if task.done():
-            if not task.cancelled() and (exc := task.exception()):
-                logger.error("".join(traceback.format_exception(exc)))
+            if not task.cancelled() and (e := task.exception()):
+                if not exc:
+                    exc = e
+                logger.error("".join(traceback.format_exception(e)))
         else:
             task.cancel()
             try:
                 await task
             except asyncio.CancelledError:
                 pass
+
+    return exc  # type: ignore
+
+
+def handle_system_error(exc: Exception, system_error_future: asyncio.Future[int]) -> None:
+    if system_error_future.done():
+        return
+
+    logger.exception(f"############: {type(exc)}, {isinstance(exc, exceptions.NoInstrumentDetectedError)}")
+
+    match type(exc):
+        case exceptions.NoInstrumentDetectedError:
+            error_code = ErrorCodes.INSTRUMENT_NOT_FOUND
+        case exceptions.InstrumentConnectionCreationError:
+            error_code = ErrorCodes.INSTRUMENT_CONNECTION_CREATION
+        case exceptions.InstrumentConnectionLostError:
+            error_code = ErrorCodes.INSTRUMENT_CONNECTION_LOST
+        case exceptions.InstrumentBadDataError:
+            error_code = ErrorCodes.INSTRUMENT_SENT_BAD_DATA
+        case exceptions.InstrumentFirmwareError:
+            error_code = ErrorCodes.INSTRUMENT_STATUS_CODE
+        case exceptions.FirmwareAndSoftwareNotCompatibleError:
+            error_code = ErrorCodes.INSTRUMENT_FW_INCOMPATIBLE_WITH_SW
+        # case
+        #     error_code = ErrorCodes.UI_SENT_BAD_DATA
+        case _:
+            error_code = ErrorCodes.UNSPECIFIED
+
+    system_error_future.set_result(error_code)

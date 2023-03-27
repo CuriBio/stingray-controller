@@ -43,6 +43,7 @@ from ..exceptions import StimulationStatusUpdateFailedError
 from ..utils.command_tracking import CommandTracker
 from ..utils.data_parsing_cy import parse_stim_data
 from ..utils.data_parsing_cy import sort_serial_packets
+from ..utils.generic import handle_system_error
 from ..utils.generic import wait_tasks_clean
 from ..utils.serial_comm import convert_semver_str_to_bytes
 from ..utils.serial_comm import convert_status_code_bytes_to_dict
@@ -126,7 +127,7 @@ class InstrumentComm:
 
     # ONE-SHOT TASKS
 
-    async def run(self) -> None:
+    async def run(self, system_error_future: asyncio.Future[int]) -> None:
         # TODO ADD MORE LOGGING
         try:
             await self._setup()
@@ -138,7 +139,9 @@ class InstrumentComm:
                 asyncio.create_task(self._handle_beacon_tracking()),
                 asyncio.create_task(self._catch_expired_command()),
             }
-            await wait_tasks_clean(tasks)
+            exc = await wait_tasks_clean(tasks)
+            if exc:
+                handle_system_error(exc, system_error_future)
         except asyncio.CancelledError:
             logger.info("InstrumentComm cancelled")
             raise

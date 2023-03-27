@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """Handling communication between subsystems and server."""
-from __future__ import annotations
+
 
 import asyncio
 import logging
@@ -15,6 +15,7 @@ from ..constants import GENERIC_24_WELL_DEFINITION
 from ..constants import NUM_WELLS
 from ..constants import StimulatorCircuitStatuses
 from ..constants import SystemStatuses
+from ..utils.generic import handle_system_error
 from ..utils.generic import semver_gt
 from ..utils.generic import wait_tasks_clean
 from ..utils.state_management import ReadOnlyDict
@@ -36,7 +37,7 @@ class SystemMonitor:
         self._system_state_manager = system_state_manager
         self._queues = queues
 
-    async def run(self) -> None:
+    async def run(self, system_error_future: asyncio.Future[int]) -> None:
         logger.info("Starting SystemMonitor")
 
         tasks = {
@@ -46,7 +47,9 @@ class SystemMonitor:
             asyncio.create_task(self._handle_system_state_updates()),
         }
         try:
-            await wait_tasks_clean(tasks)
+            exc = await wait_tasks_clean(tasks)
+            if exc:
+                handle_system_error(exc, system_error_future)
         except asyncio.CancelledError:
             logger.info("SystemMonitor cancelled")
             # TODO ?

@@ -5,6 +5,7 @@ import asyncio
 import logging
 from typing import Any
 
+from ..utils.generic import handle_system_error
 from ..utils.generic import wait_tasks_clean
 
 
@@ -32,14 +33,16 @@ class CloudComm:
 
     # ONE-SHOT TASKS
 
-    async def run(self) -> None:
+    async def run(self, system_error_future: asyncio.Future[int]) -> None:
         # TODO ADD MORE LOGGING
         try:
             tasks = {
                 asyncio.create_task(self._manage_subtasks()),
                 # TODO add other tasks
             }
-            await wait_tasks_clean(tasks)
+            exc = await wait_tasks_clean(tasks)
+            if exc:
+                handle_system_error(exc, system_error_future)
         except asyncio.CancelledError:
             logger.info("CloudComm cancelled")
             # TODO await self._attempt_to_upload_log_files_to_s3()

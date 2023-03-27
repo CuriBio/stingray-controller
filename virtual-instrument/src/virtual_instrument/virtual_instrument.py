@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """Mantarray Microcontroller Simulator."""
-from __future__ import annotations
+
 
 import csv
 import logging

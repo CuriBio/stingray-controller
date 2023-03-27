@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """Utility functions for Serial Communication."""
-from __future__ import annotations
+
 
 import datetime
 import math
