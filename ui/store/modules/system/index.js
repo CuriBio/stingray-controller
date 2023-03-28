@@ -21,6 +21,7 @@ const defaultState = {
       valid: false,
     },
   },
+  shutdownStatus: false,
   shutdownErrorMessage: "Stingray software is about to shut down.",
   shutdownErrorStatus: "",
   installerLink: null,

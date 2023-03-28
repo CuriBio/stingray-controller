@@ -21,6 +21,9 @@ export default {
     state.barcodes[type].value = newValue;
     state.barcodes[type].valid = isValid;
   },
+  setShutdownStatus(state, bool) {
+    state.shutdownStatus = bool;
+  },
   setBarcodeWarning(state, bool) {
     state.barcodeWarning = bool;
   },

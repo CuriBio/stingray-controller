@@ -30,6 +30,7 @@ from ..exceptions import WebsocketCommandError
 from ..utils.generic import clean_up_tasks
 from ..utils.generic import get_redacted_string
 from ..utils.generic import handle_system_error
+from ..utils.generic import log_error
 from ..utils.generic import wait_tasks_clean
 from ..utils.state_management import ReadOnlyDict
 from ..utils.stimulation import get_pulse_dur_us
@@ -92,6 +93,7 @@ class Server:
 
             raise
         except Exception as e:
+            log_error(e)
             handle_system_error(e, system_error_future)
             await self._report_system_error(system_error_future)
 
@@ -146,6 +148,8 @@ class Server:
             try:
                 msg = json.loads(await websocket.recv())
             except websockets.ConnectionClosed:
+                # TODO is this working correctly?
+                logger.error("UI disconnected")
                 break
 
             self._log_incoming_message(msg)
@@ -196,10 +200,9 @@ class Server:
     # MESSAGE HANDLERS
 
     @mark_handler
-    async def _shutdown(self, *args: Any) -> dict[str, Any]:
+    async def _shutdown(self, *args: Any) -> None:
+        logger.info("User initiated shutdown")
         self.user_initiated_shutdown = True
-        # TODO remove this return when done testing
-        return {"msg": "beginning_shutdown"}
 
     @mark_handler
     async def _update_user_settings(self, comm: dict[str, str]) -> None:

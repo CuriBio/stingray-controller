@@ -11,8 +11,13 @@ from typing import Optional
 
 from semver import VersionInfo
 
-from .. import exceptions
 from ..constants import ErrorCodes
+from ..exceptions import FirmwareAndSoftwareNotCompatibleError
+from ..exceptions import InstrumentBadDataError
+from ..exceptions import InstrumentConnectionCreationError
+from ..exceptions import InstrumentConnectionLostError
+from ..exceptions import InstrumentFirmwareError
+from ..exceptions import NoInstrumentDetectedError
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +47,10 @@ def semver_gt(version_a: str, version_b: str) -> bool:
     return VersionInfo.parse(version_a) > VersionInfo.parse(version_b)  # type: ignore
 
 
+def log_error(exc: BaseException) -> None:
+    logger.error("".join(traceback.format_exception(exc)))
+
+
 # TODO move these to an async utils file
 
 
@@ -66,7 +75,7 @@ async def clean_up_tasks(tasks: set[GenericTask]) -> Exception | None:
             if not task.cancelled() and (e := task.exception()):
                 if not exc:
                     exc = e
-                logger.error("".join(traceback.format_exception(e)))
+                log_error(e)
         else:
             task.cancel()
             try:
@@ -81,20 +90,18 @@ def handle_system_error(exc: Exception, system_error_future: asyncio.Future[int]
     if system_error_future.done():
         return
 
-    logger.exception(f"############: {type(exc)}, {isinstance(exc, exceptions.NoInstrumentDetectedError)}")
-
-    match type(exc):
-        case exceptions.NoInstrumentDetectedError:
+    match exc:
+        case NoInstrumentDetectedError():
             error_code = ErrorCodes.INSTRUMENT_NOT_FOUND
-        case exceptions.InstrumentConnectionCreationError:
+        case InstrumentConnectionCreationError():
             error_code = ErrorCodes.INSTRUMENT_CONNECTION_CREATION
-        case exceptions.InstrumentConnectionLostError:
+        case InstrumentConnectionLostError():
             error_code = ErrorCodes.INSTRUMENT_CONNECTION_LOST
-        case exceptions.InstrumentBadDataError:
+        case InstrumentBadDataError():
             error_code = ErrorCodes.INSTRUMENT_SENT_BAD_DATA
-        case exceptions.InstrumentFirmwareError:
+        case InstrumentFirmwareError():
             error_code = ErrorCodes.INSTRUMENT_STATUS_CODE
-        case exceptions.FirmwareAndSoftwareNotCompatibleError:
+        case FirmwareAndSoftwareNotCompatibleError():
             error_code = ErrorCodes.INSTRUMENT_FW_INCOMPATIBLE_WITH_SW
         # case
         #     error_code = ErrorCodes.UI_SENT_BAD_DATA

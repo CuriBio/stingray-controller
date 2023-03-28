@@ -18,8 +18,10 @@ export default function createWebSocketPlugin(socket) {
       store.commit("system/setIsConnectedToController", true);
     };
     socket.onclose = function () {
-      console.log("WS Client Closed");
       store.commit("system/setIsConnectedToController", false);
+      if (!store.state.system.shutdownStatus && !store.state.system.shutdownErrorStatus) {
+        store.commit("system/setShutdownErrorStatus", { error_code: "TODO" });
+      }
     };
 
     socket.onmessage = function (e) {

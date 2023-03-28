@@ -44,6 +44,7 @@ from ..utils.command_tracking import CommandTracker
 from ..utils.data_parsing_cy import parse_stim_data
 from ..utils.data_parsing_cy import sort_serial_packets
 from ..utils.generic import handle_system_error
+from ..utils.generic import log_error
 from ..utils.generic import wait_tasks_clean
 from ..utils.serial_comm import convert_semver_str_to_bytes
 from ..utils.serial_comm import convert_status_code_bytes_to_dict
@@ -146,6 +147,7 @@ class InstrumentComm:
             logger.info("InstrumentComm cancelled")
             raise
         except Exception as e:
+            log_error(e)
             handle_system_error(e, system_error_future)
         finally:
             logger.info("InstrumentComm shut down")
@@ -218,7 +220,6 @@ class InstrumentComm:
                 read_initial_bytes(magic_word_test_bytes), SERIAL_COMM_STATUS_BEACON_TIMEOUT_SECONDS
             )
         except asyncio.TimeoutError as e:
-            print("RAISING ERROR")  # allow-print
             # after the timeout, not having read enough bytes means that a fatal error has occurred on the instrument
             raise SerialCommPacketRegistrationReadEmptyError(list(magic_word_test_bytes)) from e
 
@@ -325,9 +326,9 @@ class InstrumentComm:
                 await asyncio.wait_for(
                     self._status_beacon_received_event.wait(), SERIAL_COMM_STATUS_BEACON_TIMEOUT_SECONDS
                 )
-            except asyncio.TimeoutError:
+            except asyncio.TimeoutError as e:
                 if not self._instrument_in_sensitive_state:
-                    raise SerialCommStatusBeaconTimeoutError()
+                    raise SerialCommStatusBeaconTimeoutError() from e
 
                 # firmware updating / rebooting is complete when a beacon is received,
                 # so just wait indefinitely for the next one
@@ -633,11 +634,19 @@ class VirtualInstrumentConnection:
     async def read_async(self, size: int = 1) -> bytes:
         # Tanner (3/17/23): asyncio.StreamReader does not have configurable timeouts on reads, so if trying to
         # read a specific number of bytes it will block until at least one is available
-        data = await self.reader.read(size)
+        try:
+            data = await self.reader.read(size)
+        except Exception:
+            # TODO probably want to raise a different error here
+            return bytes(0)
         logger.debug(f"RECV: {data}")  # type: ignore
         return data
 
     async def write_async(self, data: bytearray | bytes | memoryview) -> None:
         logger.debug(f"SEND: {data}")  # type: ignore
-        self.writer.write(data)
-        await self.writer.drain()
+        try:
+            self.writer.write(data)
+            await self.writer.drain()
+        except Exception:
+            # TODO probably want to raise a different error here
+            pass

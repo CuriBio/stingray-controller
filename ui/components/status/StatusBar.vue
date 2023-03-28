@@ -260,7 +260,7 @@ export default {
       // only let stim messages through if system is in idle ready state
       if (this.statusUuid === STATUS.IDLE_READY_STATE) this.setStimSpecificStatus(newStatus);
     },
-    confirmationRequest: function () {
+    confirmationRequest: async function () {
       const stimOpsInProgress =
         this.stimStatus === STIM_STATUS.CONFIG_CHECK_IN_PROGRESS || this.stimPlayState;
 
@@ -274,15 +274,12 @@ export default {
         } else if (stimOpsInProgress) {
           this.$bvModal.show("ops-closure-warning");
         } else {
-          this.handleConfirmation(1);
+          await this.handleConfirmation(1);
         }
       }
     },
     isConnectedToController: function (isConnected) {
-      // TODO might want to also make sure that an error status is set.
-      // This is only necessary if the error modal shows up during routine shutdown.
-      // If this for sure isn't happening, feel free to delete this comment
-      if (!isConnected) this.showErrorCatchModal();
+      if (!isConnected && this.shutdownErrorStatus) this.showErrorCatchModal();
     },
     shutdownErrorStatus: function (newVal) {
       if (newVal) this.showErrorCatchModal();
@@ -336,6 +333,7 @@ export default {
         case STATUS.UPDATE_ERROR_STATE:
           this.alertTxt = `Error During Firmware Update`;
           this.closeModalsById(["fw-updates-in-progress-message", "fw-closure-warning"]);
+          // TODO remove this?
           this.$store.commit("system/setShutdownErrorMessage", "Error during firmware update.");
           this.$bvModal.show("error-catch");
           break;
@@ -350,7 +348,7 @@ export default {
       this.$bvModal.show("error-catch");
     },
 
-    handleConfirmation: function (idx) {
+    handleConfirmation: async function (idx) {
       // Tanner (1/19/22): skipping automatic closure cancellation since this method gaurantees
       // sendConfirmation will be emitted, either immediately or after closing sw-update-message
       this.closeModalsById(["ops-closure-warning", "fw-closure-warning"], false);
@@ -359,6 +357,9 @@ export default {
       if (idx === 1 && this.softwareUpdateAvailable && this.allowSWUpdateInstall) {
         this.$bvModal.show("sw-update-message");
       } else {
+        if (idx === 1 && this.isConnectedToController) {
+          await this.$store.dispatch("system/sendShutdown");
+        }
         this.$emit("send-confirmation", idx);
       }
     },
@@ -375,7 +376,7 @@ export default {
         this.confirmationRequest &&
         (ids.includes("ops-closure-warning") || ids.includes("fw-closure-warning"))
       ) {
-        this.$emit("sendConfirmation", 0);
+        this.$emit("send-confirmation", 0);
       } else if (ids.includes("failed-qc-check") || ids.includes("success-qc-check")) {
         this.$store.commit("stimulation/setStimStatus", STIM_STATUS.READY);
       } else if (ids.includes("error-catch")) {
