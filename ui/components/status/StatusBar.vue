@@ -206,6 +206,7 @@ export default {
       "confirmationRequest",
       "statusUuid",
       "firmwareUpdateAvailable",
+      "isConnectedToController",
     ]),
     fwUpdateInProgressLabels: function () {
       let duration = `${this.firmwareUpdateDurMins} minute`;
@@ -275,6 +276,13 @@ export default {
         } else {
           this.handleConfirmation(1);
         }
+      }
+    },
+    isConnectedToController: function (n, o) {
+      if (!n) {
+        this.closeModalsById(["fw-updates-in-progress-message", "fw-closure-warning", "ops-closure-warning"]);
+        this.alertTxt = "Error Occurred";
+        this.$bvModal.show("error-catch");
       }
     },
     shutdownErrorStatus: function (newVal, _) {

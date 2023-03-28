@@ -28,7 +28,7 @@ export default {
     state.shutdownErrorMessage = newValue;
   },
   setShutdownErrorStatus(state, msg) {
-    let error = `Error Code: ${msg.error_code}`; // `${ERRORS[errorType]}.`;
+    let error = `Error Code: ${msg.error_code}`;
     if (msg.latest_compatible_sw_version) {
       state.installerLink = `https://downloads.curibio.com/software/StingrayController-Setup-prod-${msg.latest_compatible_sw_version}.exe`;
       error += " Please download the installer for the correct version here:";

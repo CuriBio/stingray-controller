@@ -73,7 +73,7 @@ export default function createWebSocketPlugin(socket) {
             break;
           case "error":
             // TODO might be different or need to change
-            store.commit("system/setShutdownErrorStatus", wsMessage.error_code);
+            store.commit("system/setShutdownErrorStatus", wsMessage);
             break;
           case "command_response":
             console.log("Response received."); // allow-log
