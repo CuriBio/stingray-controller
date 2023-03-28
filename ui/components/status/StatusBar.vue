@@ -278,19 +278,14 @@ export default {
         }
       }
     },
-    isConnectedToController: function (n, o) {
-      if (!n) {
-        this.closeModalsById(["fw-updates-in-progress-message", "fw-closure-warning", "ops-closure-warning"]);
-        this.alertTxt = "Error Occurred";
-        this.$bvModal.show("error-catch");
-      }
+    isConnectedToController: function (isConnected) {
+      // TODO might want to also make sure that an error status is set.
+      // This is only necessary if the error modal shows up during routine shutdown.
+      // If this for sure isn't happening, feel free to delete this comment
+      if (!isConnected) this.showErrorCatchModal();
     },
-    shutdownErrorStatus: function (newVal, _) {
-      if (newVal) {
-        this.closeModalsById(["fw-updates-in-progress-message", "fw-closure-warning", "ops-closure-warning"]);
-        this.alertTxt = "Error Occurred";
-        this.$bvModal.show("error-catch");
-      }
+    shutdownErrorStatus: function (newVal) {
+      if (newVal) this.showErrorCatchModal();
     },
     firmwareUpdateAvailable(available) {
       if (available) this.$bvModal.show("fw-update-available-message");
@@ -349,6 +344,11 @@ export default {
           break;
       }
     },
+    showErrorCatchModal: function () {
+      this.closeModalsById(["fw-updates-in-progress-message", "fw-closure-warning", "ops-closure-warning"]);
+      this.alertTxt = "Error Occurred";
+      this.$bvModal.show("error-catch");
+    },
 
     handleConfirmation: function (idx) {
       // Tanner (1/19/22): skipping automatic closure cancellation since this method gaurantees
@@ -379,7 +379,7 @@ export default {
       } else if (ids.includes("failed-qc-check") || ids.includes("success-qc-check")) {
         this.$store.commit("stimulation/setStimStatus", STIM_STATUS.READY);
       } else if (ids.includes("error-catch")) {
-        this.shutdownRequest();
+        // TODO Tanner: does something need to happen here? the controller will already exit gracefully just by disconnecting from it, but might make more sense to send the shutdown comment here
       }
     },
     closeSwUpdateModal: function () {
@@ -389,14 +389,6 @@ export default {
     closeFwUpdateAvailableModal(idx) {
       this.$bvModal.hide("fw-update-available-message");
       this.$store.dispatch("settings/sendFirmwareUpdateConfirmation", idx === 1);
-    },
-    shutdownRequest: async function () {
-      const shutdownUrl = "http://localhost:4567/shutdown";
-      try {
-        await Vue.axios.get(shutdownUrl);
-      } catch (error) {
-        return;
-      }
     },
   },
 };

@@ -72,7 +72,6 @@ export default function createWebSocketPlugin(socket) {
             store.commit("system/setFirmwareUpdateAvailable", wsMessage.channel_fw_update);
             break;
           case "error":
-            // TODO might be different or need to change
             store.commit("system/setShutdownErrorStatus", wsMessage);
             break;
           case "command_response":
