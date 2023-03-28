@@ -64,7 +64,7 @@ class Server:
         to_monitor_queue: asyncio.Queue[dict[str, Any]],
     ) -> None:
         self._serve_task: asyncio.Task[None] | None = None
-        # this is only used in _handle_system_error
+        # this is only used in _report_system_error
         self._websocket: WebSocketServerProtocol | None = None
 
         # TODO consider just passing in the read only version of the dict instead
@@ -85,7 +85,7 @@ class Server:
             await asyncio.shield(self._serve_task)
         except asyncio.CancelledError:
             logger.info("Server cancelled")
-            await self._handle_system_error(system_error_future)
+            await self._report_system_error(system_error_future)
 
             ws_server.close()
             await ws_server.wait_closed()
@@ -93,7 +93,7 @@ class Server:
             raise
         except Exception as e:
             handle_system_error(e, system_error_future)
-            await self._handle_system_error(system_error_future)
+            await self._report_system_error(system_error_future)
 
             raise
         finally:
@@ -120,7 +120,7 @@ class Server:
 
         self._serve_task.cancel()
 
-    async def _handle_system_error(self, system_error_future: asyncio.Future[int]) -> None:
+    async def _report_system_error(self, system_error_future: asyncio.Future[int]) -> None:
         # if the error occured before the UI even connected, wait 3 seconds for it to connect
         try:
             await asyncio.wait_for(self._has_ui_connected, 3)

@@ -145,6 +145,8 @@ class InstrumentComm:
         except asyncio.CancelledError:
             logger.info("InstrumentComm cancelled")
             raise
+        except Exception as e:
+            handle_system_error(e, system_error_future)
         finally:
             logger.info("InstrumentComm shut down")
 
@@ -616,6 +618,7 @@ class FirmwareUpdateManager:
         return packet_type, bytes_to_send, command
 
 
+# TODO catch the tcp errors in here so they error quietly to make sure the IC actually handles a disconnection correctly
 class VirtualInstrumentConnection:
     def __init__(self) -> None:
         self.reader: asyncio.StreamReader
