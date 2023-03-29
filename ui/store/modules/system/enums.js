@@ -11,11 +11,30 @@ export const STATUS = {
   UPDATE_ERROR_STATE: "33742bfc-d354-4ae5-88b6-2b3cee23aff8",
 };
 
-export const ERRORS = {
-  InstrumentCreateConnectionError: "Unable to establish a connection to the instrument",
-  InstrumentConnectionLostError: "The instrument failed to respond to one or more commands",
-  InstrumentBadDataError: "Malformed data received from the instrument",
-  InstrumentFirmwareError: "An error occurred in the instrument's firmware",
-  FirmwareAndSoftwareNotCompatibleError:
+export const ERROR_CODES = {
+  // set by controller
+  INSTRUMENT_NOT_FOUND: 1,
+  INSTRUMENT_CONNECTION_CREATION: 2,
+  INSTRUMENT_CONNECTION_LOST: 3,
+  INSTRUMENT_SENT_BAD_DATA: 4,
+  INSTRUMENT_STATUS_CODE: 5,
+  INSTRUMENT_FW_INCOMPATIBLE_WITH_SW: 6,
+  // set by UI
+  UI_SENT_BAD_DATA: 7,
+  CONTROLLER_CONNECTION_CREATION: 8,
+  CONTROLLER_CONNECTION_LOST: 9,
+  CONTROLLER_SENT_BAD_DATA: 10,
+  // this ideally should never happen, but creating it just in case
+  UNSPECIFIED: 999,
+};
+
+export const ERROR_MESSAGES = {
+  [ERROR_CODES.INSTRUMENT_NOT_FOUND]:
+    "No instrument was detected, please make sure it is plugged in and powered on",
+  [ERROR_CODES.INSTRUMENT_CONNECTION_CREATION]: "Unable to establish a connection to the instrument",
+  [ERROR_CODES.INSTRUMENT_CONNECTION_LOST]: "The instrument failed to respond to one or more commands",
+  [ERROR_CODES.INSTRUMENT_SENT_BAD_DATA]: "Malformed data received from the instrument",
+  [ERROR_CODES.INSTRUMENT_STATUS_CODE]: "An error occurred on the instrument",
+  [ERROR_CODES.INSTRUMENT_FW_INCOMPATIBLE_WITH_SW]:
     "The instrument's firmware is not compatible with this version of the Stingray Controller",
 };

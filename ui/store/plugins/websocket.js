@@ -1,4 +1,5 @@
 import { STIM_STATUS } from "@/store/modules/stimulation/enums";
+import { ERROR_CODES } from "@/store/modules/system/enums";
 
 const W3CWebSocket = require("websocket").w3cwebsocket;
 export const socket = new W3CWebSocket("ws://localhost:4567");
@@ -20,7 +21,7 @@ export default function createWebSocketPlugin(socket) {
     socket.onclose = function () {
       store.commit("system/setIsConnectedToController", false);
       if (!store.state.system.shutdownStatus && !store.state.system.shutdownErrorStatus) {
-        store.commit("system/setShutdownErrorStatus", { error_code: "TODO" });
+        store.commit("system/setShutdownErrorStatus", { error_code: ERROR_CODES.CONTROLLER_CONNECTION_LOST });
       }
     };
 

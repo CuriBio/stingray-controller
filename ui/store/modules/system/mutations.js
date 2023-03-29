@@ -1,6 +1,5 @@
 // adapted from https://stackoverflow.com/questions/53446792/nuxt-vuex-how-do-i-break-down-a-vuex-module-into-separate-files
-import { STATUS } from "./enums";
-// import { ERRORS } from "./enums";
+import { STATUS, ERROR_MESSAGES } from "./enums";
 
 export default {
   setStatusUuid(state, newId) {
@@ -31,14 +30,15 @@ export default {
     state.shutdownErrorMessage = newValue;
   },
   setShutdownErrorStatus(state, msg) {
-    let error = `Error Code: ${msg.error_code}`;
+    let error = "";
     if (msg.latest_compatible_sw_version) {
       state.installerLink = `https://downloads.curibio.com/software/StingrayController-Setup-prod-${msg.latest_compatible_sw_version}.exe`;
-      error += " Please download the installer for the correct version here:";
+      error += "Please download the installer for the correct version here:";
     } else {
-      state.installerLink = null;
-      error += " Stingray Controller is about to shutdown.";
+      error += ERROR_MESSAGES[msg.error_code] || "Stingray Controller is about to shutdown.";
     }
+    error += `\nError Code: ${msg.error_code}`;
+    // TODO make this the error code and the error message
     state.shutdownErrorStatus = error;
     state.shutdownErrorMessage = error;
   },
