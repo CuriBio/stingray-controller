@@ -199,7 +199,7 @@ export default {
     ]),
     ...mapState("settings", ["logPath"]),
     ...mapState("system", [
-      "shutdownErrorStatus",
+      "systemErrorCode",
       "softwareUpdateAvailable",
       "allowSWUpdateInstall",
       "firmwareUpdateDurMins",
@@ -252,7 +252,7 @@ export default {
   watch: {
     statusUuid: function (newStatus) {
       // set message for stimulation status and system status if error occurs
-      if (!this.shutdownErrorStatus && newStatus !== STATUS.IDLE_READY_STATE)
+      if (!this.systemErrorCode && newStatus !== STATUS.IDLE_READY_STATE)
         this.setSystemSpecificStatus(newStatus);
       else if (newStatus === STATUS.IDLE_READY_STATE) this.setStimSpecificStatus();
     },
@@ -278,10 +278,7 @@ export default {
         }
       }
     },
-    isConnectedToController: function (isConnected) {
-      if (!isConnected && this.shutdownErrorStatus) this.showErrorCatchModal();
-    },
-    shutdownErrorStatus: function (newVal) {
+    systemErrorCode: function (newVal) {
       if (newVal) this.showErrorCatchModal();
     },
     firmwareUpdateAvailable(available) {
@@ -290,6 +287,11 @@ export default {
   },
   created() {
     this.setSystemSpecificStatus(this.statusUuid);
+  },
+  mounted() {
+    // Tanner (3/28/23): it is possible that an error code is set before this component is mounted,
+    // so also need to check it here
+    if (this.systemErrorCode) this.showErrorCatchModal();
   },
   methods: {
     setStimSpecificStatus: function (status) {

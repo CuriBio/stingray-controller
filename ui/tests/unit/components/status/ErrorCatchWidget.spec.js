@@ -42,7 +42,7 @@ describe("ErrorCatchWidget.vue", () => {
   test("Given that ErrorCatchWidget has a props having error file name and error message, When the lifecyle hook mounted is created, Then title, alert text, contact e-mail and error file name is rendered properly", async () => {
     const propsData = {
       logFilepath: "C:\testFileLog.txt",
-      shutdownErrorMessage: "Stingray software is about to shut down.",
+      systemErrorMessage: "Stingray software is about to shut down.",
     };
     wrapper = mount(ComponentToTest, {
       propsData,

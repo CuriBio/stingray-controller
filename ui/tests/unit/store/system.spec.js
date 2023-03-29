@@ -331,7 +331,7 @@ describe("store/system", () => {
   //   ])(
   //     "When backend emits error messages %s, Then it will update the shutdown error status in settings state",
   //     async (errorType) => {
-  //       expect(store.state.system.shutdownErrorStatus).toBe("");
+  //       expect(store.state.system.systemErrorCode).toBe("");
 
   //       const latestCompatibleSwVersion =
   //         errorType === "FirmwareAndSoftwareNotCompatibleError" ? "1.2.3" : null;
@@ -346,7 +346,7 @@ describe("store/system", () => {
   //         ? ". Please download the installer for the correct version here:"
   //         : ". Stingray Controller is about to shutdown.";
 
-  //       expect(store.state.system.shutdownErrorStatus).toBe(ERRORS[errorType] + additionalText);
+  //       expect(store.state.system.systemErrorCode).toBe(ERRORS[errorType] + additionalText);
   //     }
   //   );
   // });

@@ -26,19 +26,16 @@ export default {
   setBarcodeWarning(state, bool) {
     state.barcodeWarning = bool;
   },
-  setShutdownErrorMessage(state, newValue) {
-    state.shutdownErrorMessage = newValue;
-  },
-  setShutdownErrorStatus(state, msg) {
-    state.errorCode = msg.error_code;
+  setSystemErrorCode(state, msg) {
+    state.systemErrorCode = msg.error_code;
 
     if (msg.latest_compatible_sw_version) {
-      state.shutdownErrorMessage = "Please download the installer for the correct version here:";
+      state.systemErrorMessage = "Please download the installer for the correct version here:";
       state.installerLink = `https://downloads.curibio.com/software/StingrayController-Setup-prod-${msg.latest_compatible_sw_version}.exe`;
     } else if (state.statusUuid === STATUS.UPDATE_ERROR_STATE) {
-      state.shutdownErrorMessage = "Error during firmware update.";
+      state.systemErrorMessage = "Error during firmware update.";
     } else {
-      state.shutdownErrorMessage =
+      state.systemErrorMessage =
         ERROR_MESSAGES[msg.error_code] || "Stingray Controller is about to shutdown.";
     }
   },
