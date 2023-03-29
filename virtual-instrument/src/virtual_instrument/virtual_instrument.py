@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """Mantarray Microcontroller Simulator."""
-from __future__ import annotations
+
 
 import csv
 import logging
@@ -317,7 +317,7 @@ class MantarrayMcSimulator(InfiniteProcess):
                 0, len(data_packet) - 1
             )
             data_packet = data_packet[trunc_index:]
-        print(f"SEND: {data_packet}")  # type: ignore  # allow-print
+        print(f"SEND: {data_packet}")  # allow-print
 
         self.conn.sendall(data_packet)
 

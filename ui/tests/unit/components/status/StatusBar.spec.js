@@ -91,7 +91,7 @@ describe("StatusWidget.vue", () => {
           localVue,
         });
         expect(wrapper.find(textSelector).text()).toBe("Status: Booting Up..."); // initial status
-        await store.commit("system/setShutdownErrorStatus", { errorType });
+        await store.commit("system/setSystemErrorCode", { errorType });
         expect(wrapper.find(textSelector).text()).toBe(`Status: Error Occurred`);
       }
     );
@@ -105,7 +105,7 @@ describe("StatusWidget.vue", () => {
       });
 
       expect(wrapper.find(textSelector).text()).toBe("Status: Booting Up..."); // initial status
-      await store.commit("system/setShutdownErrorStatus", { errorType: "UnknownError" });
+      await store.commit("system/setSystemErrorCode", { errorType: "UnknownError" });
       expect(wrapper.find(textSelector).text()).toBe("Status: Error Occurred");
     });
 

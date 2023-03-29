@@ -1,4 +1,5 @@
 import { STIM_STATUS } from "@/store/modules/stimulation/enums";
+import { ERROR_CODES } from "@/store/modules/system/enums";
 
 const W3CWebSocket = require("websocket").w3cwebsocket;
 export const socket = new W3CWebSocket("ws://localhost:4567");
@@ -10,22 +11,25 @@ export const socket = new W3CWebSocket("ws://localhost:4567");
 export default function createWebSocketPlugin(socket) {
   return (store) => {
     socket.onerror = function () {
-      console.log("Connection Error");
+      console.log("Error connecting to controller");
     };
 
     socket.onopen = function () {
-      console.log("WS Client Connected");
+      console.log("Connected to controller");
       store.commit("system/setIsConnectedToController", true);
     };
     socket.onclose = function () {
-      console.log("WS Client Closed");
       store.commit("system/setIsConnectedToController", false);
+      if (!store.state.system.shutdownStatus && !store.state.system.systemErrorCode) {
+        store.commit("system/setSystemErrorCode", { error_code: ERROR_CODES.CONTROLLER_CONNECTION_LOST });
+      }
     };
 
     socket.onmessage = function (e) {
       if (typeof e.data === "string") {
+        console.log(`Comm from controller: ${e.data}`); // allow-log
+
         const wsMessage = JSON.parse(e.data);
-        console.log("WS Received: '" + e.data + "'"); // allow-log
 
         switch (wsMessage.communication_type) {
           case "status_update":
@@ -72,8 +76,7 @@ export default function createWebSocketPlugin(socket) {
             store.commit("system/setFirmwareUpdateAvailable", wsMessage.channel_fw_update);
             break;
           case "error":
-            // TODO might be different or need to change
-            store.commit("system/setShutdownErrorStatus", wsMessage.message);
+            store.commit("system/setSystemErrorCode", wsMessage);
             break;
           case "command_response":
             console.log("Response received."); // allow-log

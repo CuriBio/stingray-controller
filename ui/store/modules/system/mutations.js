@@ -1,6 +1,5 @@
 // adapted from https://stackoverflow.com/questions/53446792/nuxt-vuex-how-do-i-break-down-a-vuex-module-into-separate-files
-import { STATUS } from "./enums";
-import { ERRORS } from "./enums";
+import { STATUS, ERROR_MESSAGES } from "./enums";
 
 export default {
   setStatusUuid(state, newId) {
@@ -21,23 +20,24 @@ export default {
     state.barcodes[type].value = newValue;
     state.barcodes[type].valid = isValid;
   },
+  setShutdownStatus(state, bool) {
+    state.shutdownStatus = bool;
+  },
   setBarcodeWarning(state, bool) {
     state.barcodeWarning = bool;
   },
-  setShutdownErrorMessage(state, newValue) {
-    state.shutdownErrorMessage = newValue;
-  },
-  setShutdownErrorStatus(state, { errorType, latestCompatibleSwVersion }) {
-    let error = `${ERRORS[errorType]}.`;
-    if (latestCompatibleSwVersion) {
-      state.installerLink = `https://downloads.curibio.com/software/StingrayController-Setup-prod-${latestCompatibleSwVersion}.exe`;
-      error += " Please download the installer for the correct version here:";
+  setSystemErrorCode(state, msg) {
+    state.systemErrorCode = msg.error_code;
+
+    if (msg.latest_compatible_sw_version) {
+      state.systemErrorMessage = "Please download the installer for the correct version here:";
+      state.installerLink = `https://downloads.curibio.com/software/StingrayController-Setup-prod-${msg.latest_compatible_sw_version}.exe`;
+    } else if (state.statusUuid === STATUS.UPDATE_ERROR_STATE) {
+      state.systemErrorMessage = "Error during firmware update.";
     } else {
-      state.installerLink = null;
-      error += " Stingray Controller is about to shutdown.";
+      state.systemErrorMessage =
+        ERROR_MESSAGES[msg.error_code] || "Stingray Controller is about to shutdown.";
     }
-    state.shutdownErrorStatus = error;
-    state.shutdownErrorMessage = error;
   },
   setSoftwareUpdateAvailable(state, bool) {
     state.softwareUpdateAvailable = bool;

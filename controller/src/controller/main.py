@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """Instrument Controller."""
-from __future__ import annotations
+
 
 import argparse
 import asyncio
@@ -88,15 +88,15 @@ async def main(command_line_args: list[str]) -> None:
 
         cloud_comm_subsystem = CloudComm(queues["to"]["cloud_comm"], queues["from"]["cloud_comm"])
 
+        system_error_future: asyncio.Future[int] = asyncio.Future()
+
         tasks = {
-            asyncio.create_task(system_monitor.run()),
-            asyncio.create_task(server.run()),
-            asyncio.create_task(instrument_comm_subsystem.run()),
-            asyncio.create_task(cloud_comm_subsystem.run()),
+            asyncio.create_task(system_monitor.run(system_error_future)),
+            asyncio.create_task(server.run(system_error_future)),
+            asyncio.create_task(instrument_comm_subsystem.run(system_error_future)),
+            asyncio.create_task(cloud_comm_subsystem.run(system_error_future)),
         }
 
-        # TODO make sure that errors in subprocesses get raised all the way up to the top here
-        # TODO have server send a "shutting down" or "error" msg or something when it gets cancelled
         await wait_tasks_clean(tasks)
 
     except Exception as e:
@@ -186,6 +186,7 @@ def _initialize_system_state(parsed_args: dict[str, Any], log_file_id: uuid.UUID
     if (expected_software_version := parsed_args["expected_software_version"]) and not parsed_args[
         "skip_software_version_verification"
     ]:
+        # TODO check this in system monitor start up
         system_state["expected_software_version"] = expected_software_version
 
     return system_state

@@ -40,4 +40,15 @@ export default {
 
     socket.send(wsMessage);
   },
+  async sendShutdown({ commit }) {
+    console.log("User initiated shutdown"); // allow-log
+
+    commit("setShutdownStatus", true);
+
+    const wsMessage = JSON.stringify({
+      command: "shutdown",
+    });
+
+    socket.send(wsMessage);
+  },
 };

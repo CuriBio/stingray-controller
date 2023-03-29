@@ -3,7 +3,8 @@
     <div class="div__status-error-catch-background" :style="errorBackgroundCssprops" />
     <span class="div__status-error-catch-title-label">An&nbsp;<wbr />error&nbsp;<wbr />occurred. </span>
     <div class="div__status-error-catch-alert-txt" :style="errorCatchAlert">
-      <p>{{ shutdownErrorMessage }}</p>
+      <p>{{ systemErrorMessage }}</p>
+      <p>{{ `Error Code: ${systemErrorCode}` }}</p>
       <textarea
         v-if="installerLink"
         class="textarea__installer-link"
@@ -66,7 +67,7 @@ export default {
     logFilepath: { type: String, default: "" },
   },
   computed: {
-    ...mapState("system", ["shutdownErrorMessage", "installerLink"]),
+    ...mapState("system", ["systemErrorCode", "systemErrorMessage", "installerLink"]),
     computeNumberOfRows: function () {
       return Math.ceil(((this.logFilepath.length * 1.0) / 30).toFixed(1));
     },

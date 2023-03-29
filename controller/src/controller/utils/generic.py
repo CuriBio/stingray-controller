@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """Misc utility functions."""
-from __future__ import annotations
+
 
 import asyncio
 import logging
@@ -10,6 +10,14 @@ from typing import Any
 from typing import Optional
 
 from semver import VersionInfo
+
+from ..constants import ErrorCodes
+from ..exceptions import FirmwareAndSoftwareNotCompatibleError
+from ..exceptions import InstrumentBadDataError
+from ..exceptions import InstrumentConnectionCreationError
+from ..exceptions import InstrumentConnectionLostError
+from ..exceptions import InstrumentFirmwareError
+from ..exceptions import NoInstrumentDetectedError
 
 logger = logging.getLogger(__name__)
 
@@ -39,27 +47,65 @@ def semver_gt(version_a: str, version_b: str) -> bool:
     return VersionInfo.parse(version_a) > VersionInfo.parse(version_b)  # type: ignore
 
 
+def log_error(exc: BaseException) -> None:
+    logger.error("".join(traceback.format_exception(exc)))
+
+
 # TODO move these to an async utils file
 
 
-async def wait_tasks_clean(tasks: set[GenericTask], return_when: str = asyncio.FIRST_COMPLETED) -> None:
+async def wait_tasks_clean(
+    tasks: set[GenericTask], return_when: str = asyncio.FIRST_COMPLETED
+) -> Exception | None:
     if not tasks:
-        return
+        return None
 
     try:
         await asyncio.wait(tasks, return_when=return_when)
     finally:
-        await clean_up_tasks(tasks)
+        return await clean_up_tasks(tasks)
 
 
-async def clean_up_tasks(tasks: set[GenericTask]) -> None:
+async def clean_up_tasks(tasks: set[GenericTask]) -> Exception | None:
+    # Tanner (): assuming there will only be one exception per set of tasks
+    exc = None
+
     for task in tasks:
         if task.done():
-            if not task.cancelled() and (exc := task.exception()):
-                logger.error("".join(traceback.format_exception(exc)))
+            if not task.cancelled() and (e := task.exception()):
+                if not exc:
+                    exc = e
+                log_error(e)
         else:
             task.cancel()
             try:
                 await task
             except asyncio.CancelledError:
                 pass
+
+    return exc  # type: ignore
+
+
+def handle_system_error(exc: Exception, system_error_future: asyncio.Future[int]) -> None:
+    if system_error_future.done():
+        return
+
+    match exc:
+        case NoInstrumentDetectedError():
+            error_code = ErrorCodes.INSTRUMENT_NOT_FOUND
+        case InstrumentConnectionCreationError():
+            error_code = ErrorCodes.INSTRUMENT_CONNECTION_CREATION
+        case InstrumentConnectionLostError():
+            error_code = ErrorCodes.INSTRUMENT_CONNECTION_LOST
+        case InstrumentBadDataError():
+            error_code = ErrorCodes.INSTRUMENT_SENT_BAD_DATA
+        case InstrumentFirmwareError():
+            error_code = ErrorCodes.INSTRUMENT_STATUS_CODE
+        case FirmwareAndSoftwareNotCompatibleError():
+            error_code = ErrorCodes.INSTRUMENT_FW_INCOMPATIBLE_WITH_SW
+        # case
+        #     error_code = ErrorCodes.UI_SENT_BAD_DATA
+        case _:
+            error_code = ErrorCodes.UNSPECIFIED
+
+    system_error_future.set_result(error_code)
