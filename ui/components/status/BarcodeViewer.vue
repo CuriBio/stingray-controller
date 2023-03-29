@@ -30,10 +30,10 @@
       </span>
     </div>
     <b-modal id="edit-plate-barcode-modal" size="sm" hide-footer hide-header hide-header-close>
-      <StatusWarningWidget :modalLabels="barcodeManualLabels" @handleConfirmation="handleManualModeChoice" />
+      <StatusWarningWidget :modalLabels="barcodeManualLabels" @handle-confirmation="handleManualModeChoice" />
     </b-modal>
     <b-modal id="barcode-warning" size="sm" hide-footer hide-header hide-header-close>
-      <StatusWarningWidget :modalLabels="barcodeWarningLabels" @handleConfirmation="closeWarningModal" />
+      <StatusWarningWidget :modalLabels="barcodeWarningLabels" @handle-confirmation="closeWarningModal" />
     </b-modal>
   </div>
 </template>

@@ -82,7 +82,7 @@
       <StatusWarningWidget
         id="del-protocol"
         :modalLabels="delProtocolLabels"
-        @handleConfirmation="closeDeleteProtocolModal"
+        @handle-confirmation="closeDeleteProtocolModal"
       />
     </b-modal>
   </div>
