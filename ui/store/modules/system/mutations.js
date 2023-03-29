@@ -30,17 +30,17 @@ export default {
     state.shutdownErrorMessage = newValue;
   },
   setShutdownErrorStatus(state, msg) {
-    let error = "";
+    state.errorCode = msg.error_code;
+
     if (msg.latest_compatible_sw_version) {
+      state.shutdownErrorMessage = "Please download the installer for the correct version here:";
       state.installerLink = `https://downloads.curibio.com/software/StingrayController-Setup-prod-${msg.latest_compatible_sw_version}.exe`;
-      error += "Please download the installer for the correct version here:";
+    } else if (state.statusUuid === STATUS.UPDATE_ERROR_STATE) {
+      state.shutdownErrorMessage = "Error during firmware update.";
     } else {
-      error += ERROR_MESSAGES[msg.error_code] || "Stingray Controller is about to shutdown.";
+      state.shutdownErrorMessage =
+        ERROR_MESSAGES[msg.error_code] || "Stingray Controller is about to shutdown.";
     }
-    error += `\nError Code: ${msg.error_code}`;
-    // TODO make this the error code and the error message
-    state.shutdownErrorStatus = error;
-    state.shutdownErrorMessage = error;
   },
   setSoftwareUpdateAvailable(state, bool) {
     state.softwareUpdateAvailable = bool;

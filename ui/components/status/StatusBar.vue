@@ -333,9 +333,6 @@ export default {
         case STATUS.UPDATE_ERROR_STATE:
           this.alertTxt = `Error During Firmware Update`;
           this.closeModalsById(["fw-updates-in-progress-message", "fw-closure-warning"]);
-          // TODO remove this?
-          this.$store.commit("system/setShutdownErrorMessage", "Error during firmware update.");
-          this.$bvModal.show("error-catch");
           break;
         default:
           this.alertTxt = status;
