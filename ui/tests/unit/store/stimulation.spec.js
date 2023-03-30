@@ -493,7 +493,7 @@ describe("store/stimulation", () => {
       await store.commit("stimulation/setProtocolName", newName);
       await store.dispatch("stimulation/addSavedPotocol");
 
-      const test = protocolList[1].protocol.name;
+      const test = store.state.stimulation.protocolList[1].protocol.name;
       expect(test).toBe(newName);
 
       expect(editMode.status).toBe(false);

@@ -338,10 +338,16 @@ export default {
     }
   },
   async startStimConfiguration({ state, commit }) {
+    const { barcodes } = this.state.system;
+    const plateBarcode = barcodes.plateBarcode.value;
+    const stimBarcode = barcodes.stimBarcode.value;
     const wellIndices = Object.keys(state.protocolAssignments);
+
     const wsMessage = JSON.stringify({
       command: "start_stim_checks",
       well_indices: wellIndices,
+      plate_barcode: plateBarcode,
+      stim_barcode: stimBarcode,
     });
 
     socket.send(wsMessage);
