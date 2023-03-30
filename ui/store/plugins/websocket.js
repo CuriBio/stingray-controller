@@ -16,9 +16,11 @@ export default function createWebSocketPlugin(socket) {
 
     socket.onopen = function () {
       console.log("Connected to controller");
+      // TODO need to execute a system state transition when this value changes ?
       store.commit("system/setIsConnectedToController", true);
     };
     socket.onclose = function () {
+      console.log("Disconnected from controller");
       store.commit("system/setIsConnectedToController", false);
       if (!store.state.system.shutdownStatus && !store.state.system.systemErrorCode) {
         store.commit("system/setSystemErrorCode", { error_code: ERROR_CODES.CONTROLLER_CONNECTION_LOST });

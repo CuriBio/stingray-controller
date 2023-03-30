@@ -63,6 +63,7 @@ class ErrorCodes(IntEnum):
 
 # Serial Communication Values
 STM_VID = 1155
+CURI_VID = 1027
 SERIAL_COMM_BAUD_RATE = int(5e6)
 
 MAX_MC_REBOOT_DURATION_SECONDS = 15

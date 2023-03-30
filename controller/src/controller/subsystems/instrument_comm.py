@@ -11,7 +11,7 @@ import serial
 import serial.tools.list_ports as list_ports
 
 from ..constants import GENERIC_24_WELL_DEFINITION
-from ..constants import NUM_WELLS
+from ..constants import NUM_WELLS,CURI_VID
 from ..constants import SERIAL_COMM_BAUD_RATE
 from ..constants import SERIAL_COMM_HANDSHAKE_PERIOD_SECONDS
 from ..constants import SERIAL_COMM_MAGIC_WORD_BYTES
@@ -171,7 +171,7 @@ class InstrumentComm:
         # first, check for a real instrument on the serial COM ports
         for port_info in list_ports.comports():
             # Tanner (6/14/21): attempt to connect to any device with the STM vendor ID
-            if port_info.vid == STM_VID:
+            if port_info.vid in (STM_VID, CURI_VID):
                 logger.info(f"Instrument detected with description: {port_info.description}")
                 self._instrument = AioSerial(
                     port=port_info.name,
@@ -189,6 +189,8 @@ class InstrumentComm:
                 await virtual_instrument.connect()
             except Exception as e:  # TODO make this a specific exception?
                 raise NoInstrumentDetectedError() from e
+            else:
+                self._instrument = virtual_instrument
 
         await self._to_monitor_queue.put(
             {
@@ -197,7 +199,6 @@ class InstrumentComm:
             }
         )
 
-        self._instrument = virtual_instrument
 
     async def _register_magic_word(self) -> None:
         magic_word_test_bytes = bytearray()
@@ -265,9 +266,6 @@ class InstrumentComm:
     async def _handle_comm_from_monitor(self) -> None:
         while True:
             comm_from_monitor = await self._from_monitor_queue.get()
-
-            # TODO remove this
-            logger.info(f"!!!!!!!!!!!!!!!! {comm_from_monitor}")
 
             bytes_to_send = bytes(0)
             packet_type: int | None = None

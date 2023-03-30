@@ -20,6 +20,7 @@ from ..utils.generic import semver_gt
 from ..utils.generic import wait_tasks_clean
 from ..utils.state_management import ReadOnlyDict
 from ..utils.state_management import SystemStateManager
+from ..utils.stimulation import chunk_protocols_in_stim_info
 
 
 logger = logging.getLogger(__name__)
@@ -197,7 +198,8 @@ class SystemMonitor:
                     )
                 case {"command": "set_stim_protocols", "stim_info": stim_info}:
                     system_state_updates["stim_info"] = stim_info
-                    await self._queues["to"]["instrument_comm"].put(communication)
+                    chunked_stim_info, *_ = chunk_protocols_in_stim_info(stim_info)
+                    await self._queues["to"]["instrument_comm"].put({**communication, "stim_info": chunked_stim_info})
                 case {"command": "start_stim_checks", "well_indices": well_indices}:
                     system_state_updates["stimulator_circuit_statuses"] = {
                         well_idx: StimulatorCircuitStatuses.CALCULATING.name.lower()
