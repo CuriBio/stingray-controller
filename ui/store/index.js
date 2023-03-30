@@ -4,9 +4,6 @@ import Vuex from "vuex";
 import systemModule from "./modules/system";
 import settingsModule from "./modules/settings";
 import stimulationModule from "./modules/stimulation";
-import { default as createWebSocketPlugin, socket } from "./plugins/websocket";
-
-const wsPlugin = createWebSocketPlugin(socket);
 
 const createStore = () => {
   return new Vuex.Store({
@@ -16,7 +13,6 @@ const createStore = () => {
       stimulation: stimulationModule,
       settings: settingsModule,
     },
-    plugins: [wsPlugin],
   });
 };
 

@@ -36,8 +36,6 @@ logger = logging.getLogger(__name__)
 
 async def main(command_line_args: list[str]) -> None:
     """Parse command line arguments and run."""
-    # if object_access_for_testing is None:
-    #     object_access_for_testing = dict()
 
     try:
         parsed_args = _parse_cmd_line_args(command_line_args)

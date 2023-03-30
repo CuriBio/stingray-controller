@@ -6,7 +6,7 @@ import Vuex from "vuex";
 import axios from "axios";
 const MockAxiosAdapter = require("axios-mock-adapter");
 import { createLocalVue } from "@vue/test-utils";
-import { STATUS } from "@/store/modules/system/enums";
+import { SYSTEM_STATUS } from "@/store/modules/system/enums";
 import { STIM_STATUS } from "@/store/modules/stimulation/enums";
 
 let wrapper = null;
@@ -60,7 +60,7 @@ describe("StatusWidget.vue", () => {
           store,
           localVue,
         });
-        store.commit("system/setStatusUuid", STATUS[vuexState]);
+        store.commit("system/setStatusUuid", SYSTEM_STATUS[vuexState]);
         await wrapper.vm.$nextTick(); // wait for update
 
         expect(wrapper.find(textSelector).text()).toBe(expectedText);
@@ -68,7 +68,7 @@ describe("StatusWidget.vue", () => {
     );
     test("When initially mounted, Then the status text matches the Vuex state", async () => {
       const propsData = {};
-      store.commit("system/setStatusUuid", STATUS.SERVER_READY_STATE);
+      store.commit("system/setStatusUuid", SYSTEM_STATUS.SERVER_READY_STATE);
       wrapper = mount(StatusWidget, {
         propsData,
         store,
@@ -134,7 +134,7 @@ describe("StatusWidget.vue", () => {
       expect(wrapper.contains("#error-catch")).toBe(true);
       const modal = wrapper.find("#error-catch");
 
-      store.commit("system/setStatusUuid", STATUS.UPDATE_ERROR_STATE);
+      store.commit("system/setStatusUuid", SYSTEM_STATUS.UPDATE_ERROR_STATE);
       await wrapper.vm.$nextTick(); // wait for update
       expect(wrapper.find(textSelector).text()).toBe("Status: Error During Firmware Update");
       Vue.nextTick(() => {
@@ -164,7 +164,7 @@ describe("StatusWidget.vue", () => {
           localVue,
         });
 
-        await store.commit("system/setStatusUuid", STATUS[vuexState]);
+        await store.commit("system/setStatusUuid", SYSTEM_STATUS[vuexState]);
         await store.commit("system/setConfirmationRequest", true);
         expect(confirmationSpy).toHaveBeenCalledWith(1);
 
@@ -182,7 +182,7 @@ describe("StatusWidget.vue", () => {
           store,
           localVue,
         });
-        await store.commit("system/setStatusUuid", STATUS[vuexState]);
+        await store.commit("system/setStatusUuid", SYSTEM_STATUS[vuexState]);
 
         await store.commit("system/setConfirmationRequest", false);
         Vue.nextTick(() => {
@@ -221,7 +221,7 @@ describe("StatusWidget.vue", () => {
           store,
           localVue,
         });
-        await store.commit("system/setStatusUuid", STATUS[vuexState]);
+        await store.commit("system/setStatusUuid", SYSTEM_STATUS[vuexState]);
 
         await store.commit("system/setConfirmationRequest", false);
         Vue.nextTick(() => {
@@ -266,7 +266,7 @@ describe("StatusWidget.vue", () => {
           store,
           localVue,
         });
-        await store.commit("system/setStatusUuid", STATUS[systemVuexState]);
+        await store.commit("system/setStatusUuid", SYSTEM_STATUS[systemVuexState]);
         store.state.stimulation.protocolAssignments = assignments;
 
         await store.commit("stimulation/setStimStatus", STIM_STATUS[vuexState]);

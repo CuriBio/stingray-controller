@@ -127,7 +127,7 @@
 <script>
 import Vue from "vue";
 import { mapGetters, mapState } from "vuex";
-import { STATUS } from "@/store/modules/system/enums";
+import { SYSTEM_STATUS } from "@/store/modules/system/enums";
 import { STIM_STATUS } from "@/store/modules/stimulation/enums";
 import BootstrapVue from "bootstrap-vue";
 import { BButton } from "bootstrap-vue";
@@ -236,37 +236,37 @@ export default {
     },
     isInitializing: function () {
       return [
-        STATUS.SERVER_INITIALIZING_STATE,
-        STATUS.SERVER_READY_STATE,
-        STATUS.INSTRUMENT_INITIALIZING_STATE,
+        SYSTEM_STATUS.SERVER_INITIALIZING_STATE,
+        SYSTEM_STATUS.SERVER_READY_STATE,
+        SYSTEM_STATUS.INSTRUMENT_INITIALIZING_STATE,
       ].includes(this.statusUuid);
     },
     isUpdating: function () {
       return [
-        STATUS.CHECKING_FOR_UPDATES_STATE,
-        STATUS.INSTALLING_UPDATES_STATE,
-        STATUS.DOWNLOADING_UPDATES_STATE,
+        SYSTEM_STATUS.CHECKING_FOR_UPDATES_STATE,
+        SYSTEM_STATUS.INSTALLING_UPDATES_STATE,
+        SYSTEM_STATUS.DOWNLOADING_UPDATES_STATE,
       ].includes(this.statusUuid);
     },
   },
   watch: {
     statusUuid: function (newStatus) {
       // set message for stimulation status and system status if error occurs
-      if (!this.systemErrorCode && newStatus !== STATUS.IDLE_READY_STATE)
+      if (!this.systemErrorCode && newStatus !== SYSTEM_STATUS.IDLE_READY_STATE)
         this.setSystemSpecificStatus(newStatus);
-      else if (newStatus === STATUS.IDLE_READY_STATE) this.setStimSpecificStatus();
+      else if (newStatus === SYSTEM_STATUS.IDLE_READY_STATE) this.setStimSpecificStatus();
     },
     stimStatus: function (newStatus) {
       // only let stim messages through if system is in idle ready state
-      if (this.statusUuid === STATUS.IDLE_READY_STATE) this.setStimSpecificStatus(newStatus);
+      if (this.statusUuid === SYSTEM_STATUS.IDLE_READY_STATE) this.setStimSpecificStatus(newStatus);
     },
     confirmationRequest: async function () {
       const stimOpsInProgress =
         this.stimStatus === STIM_STATUS.CONFIG_CHECK_IN_PROGRESS || this.stimPlayState;
 
       const fwUpdateInProgress =
-        this.statusUuid === STATUS.DOWNLOADING_UPDATES_STATE ||
-        this.statusUuid === STATUS.INSTALLING_UPDATES_STATE;
+        this.statusUuid === SYSTEM_STATUS.DOWNLOADING_UPDATES_STATE ||
+        this.statusUuid === SYSTEM_STATUS.INSTALLING_UPDATES_STATE;
 
       if (this.confirmationRequest) {
         if (fwUpdateInProgress) {
@@ -287,6 +287,8 @@ export default {
   },
   created() {
     this.setSystemSpecificStatus(this.statusUuid);
+
+    this.$store.dispatch("system/connectToController");
   },
   mounted() {
     // Tanner (3/28/23): it is possible that an error code is set before this component is mounted,
@@ -305,34 +307,34 @@ export default {
     },
     setSystemSpecificStatus: function (status) {
       switch (status) {
-        case STATUS.SERVER_INITIALIZING_STATE:
+        case SYSTEM_STATUS.SERVER_INITIALIZING_STATE:
           this.alertTxt = "Booting Up...";
           break;
-        case STATUS.SERVER_READY_STATE:
+        case SYSTEM_STATUS.SERVER_READY_STATE:
           this.alertTxt = "Connecting...";
           break;
-        case STATUS.INSTRUMENT_INITIALIZING_STATE:
+        case SYSTEM_STATUS.INSTRUMENT_INITIALIZING_STATE:
           this.alertTxt = "Initializing...";
           break;
-        case STATUS.CHECKING_FOR_UPDATES_STATE:
+        case SYSTEM_STATUS.CHECKING_FOR_UPDATES_STATE:
           this.alertTxt = "Checking for Firmware Updates...";
           break;
-        case STATUS.UPDATES_NEEDED_STATE:
+        case SYSTEM_STATUS.UPDATES_NEEDED_STATE:
           this.alertTxt = `Firmware Updates Required`;
           break;
-        case STATUS.DOWNLOADING_UPDATES_STATE:
+        case SYSTEM_STATUS.DOWNLOADING_UPDATES_STATE:
           this.alertTxt = `Downloading Firmware Updates...`;
           this.$bvModal.show("fw-updates-in-progress-message");
           break;
-        case STATUS.INSTALLING_UPDATES_STATE:
+        case SYSTEM_STATUS.INSTALLING_UPDATES_STATE:
           this.alertTxt = `Installing Firmware Updates...`;
           break;
-        case STATUS.UPDATES_COMPLETE_STATE:
+        case SYSTEM_STATUS.UPDATES_COMPLETE_STATE:
           this.alertTxt = `Firmware Updates Complete`;
           this.closeModalsById(["fw-updates-in-progress-message", "fw-closure-warning"]);
           this.$bvModal.show("fw-updates-complete-message");
           break;
-        case STATUS.UPDATE_ERROR_STATE:
+        case SYSTEM_STATUS.UPDATE_ERROR_STATE:
           this.alertTxt = `Error During Firmware Update`;
           this.closeModalsById(["fw-updates-in-progress-message", "fw-closure-warning"]);
           break;

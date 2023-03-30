@@ -74,6 +74,7 @@ class Server:
         self._from_monitor_queue = from_monitor_queue
         self._to_monitor_queue = to_monitor_queue
 
+        # TODO just rename this _ui_connection_made and make it an event?
         self._has_ui_connected: asyncio.Future[bool] = asyncio.Future()
         self.user_initiated_shutdown = False
 
@@ -124,9 +125,14 @@ class Server:
 
     async def _report_system_error(self, system_error_future: asyncio.Future[int]) -> None:
         # if the error occured before the UI even connected, wait 3 seconds for it to connect
+        wait_time = 3
+
+        # TODO skip the wait for completely if the UI has already connected so that the logging is nicer
         try:
-            await asyncio.wait_for(self._has_ui_connected, 3)
+            logger.info(f"waiting up to {wait_time} seconds for UI connection")
+            await asyncio.wait_for(self._has_ui_connected, wait_time)
         except asyncio.TimeoutError:
+            logger.error("UI never connected")
             return
 
         if self._websocket and system_error_future.done():

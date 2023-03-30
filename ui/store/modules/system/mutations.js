@@ -1,17 +1,20 @@
 // adapted from https://stackoverflow.com/questions/53446792/nuxt-vuex-how-do-i-break-down-a-vuex-module-into-separate-files
-import { STATUS, ERROR_MESSAGES } from "./enums";
+import { SYSTEM_STATUS, ERROR_MESSAGES } from "./enums";
 
 export default {
   setStatusUuid(state, newId) {
-    if (state.statusUuid !== STATUS.ERROR_STATE) {
+    if (state.statusUuid !== SYSTEM_STATUS.ERROR_STATE) {
       state.statusUuid = newId;
     }
   },
   setSimulationStatus(state, newId) {
     state.simulationMode = newId;
   },
-  setIsConnectedToController(state, isConnected) {
-    state.isConnectedToController = isConnected;
+  setSocket(state, socket) {
+    state.socket = socket;
+  },
+  setIsConnectedToController(state, newStatus) {
+    state.isConnectedToController = newStatus;
   },
   setBarcodeManualMode(state, newValue) {
     state.barcodeManualMode = newValue;
@@ -32,7 +35,7 @@ export default {
     if (msg.latest_compatible_sw_version) {
       state.systemErrorMessage = "Please download the installer for the correct version here:";
       state.installerLink = `https://downloads.curibio.com/software/StingrayController-Setup-prod-${msg.latest_compatible_sw_version}.exe`;
-    } else if (state.statusUuid === STATUS.UPDATE_ERROR_STATE) {
+    } else if (state.statusUuid === SYSTEM_STATUS.UPDATE_ERROR_STATE) {
       state.systemErrorMessage = "Error during firmware update.";
     } else {
       state.systemErrorMessage =

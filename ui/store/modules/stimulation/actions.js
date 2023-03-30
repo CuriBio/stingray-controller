@@ -1,6 +1,5 @@
 import { WellTitle as LabwareDefinition } from "@/js-utils/LabwareCalculations.js";
 const twentyFourWellPlateDefinition = new LabwareDefinition(4, 6);
-import { socket } from "@/store/plugins/websocket";
 import { STIM_STATUS, TIME_CONVERSION_TO_MILLIS } from "./enums";
 
 export default {
@@ -275,15 +274,16 @@ export default {
     }
 
     const wsProtocolMessage = JSON.stringify({ command: "set_stim_protocols", stim_info: message });
-    socket.send(wsProtocolMessage);
+    this.state.system.socket.send(wsProtocolMessage);
 
     const wsMessage = JSON.stringify({ command: "set_stim_status", running: true });
-    socket.send(wsMessage);
+    this.state.system.socket.send(wsMessage);
   },
 
   async stopStimulation() {
     const wsMessage = JSON.stringify({ command: "set_stim_status", running: false });
-    socket.send(wsMessage);
+    // TODO make an action for sending WS messages
+    this.state.system.socket.send(wsMessage);
   },
 
   async editSelectedProtocol({ commit, dispatch, state }, protocol) {
@@ -344,7 +344,7 @@ export default {
       well_indices: wellIndices,
     });
 
-    socket.send(wsMessage);
+    this.state.system.socket.send(wsMessage);
     commit("setStimStatus", STIM_STATUS.CONFIG_CHECK_IN_PROGRESS);
   },
   async onPulseMouseenter({ state }, idx) {

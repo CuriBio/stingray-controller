@@ -10,8 +10,9 @@ from aioserial import AioSerial
 import serial
 import serial.tools.list_ports as list_ports
 
+from ..constants import CURI_VID
 from ..constants import GENERIC_24_WELL_DEFINITION
-from ..constants import NUM_WELLS,CURI_VID
+from ..constants import NUM_WELLS
 from ..constants import SERIAL_COMM_BAUD_RATE
 from ..constants import SERIAL_COMM_HANDSHAKE_PERIOD_SECONDS
 from ..constants import SERIAL_COMM_MAGIC_WORD_BYTES
@@ -198,7 +199,6 @@ class InstrumentComm:
                 "in_simulation_mode": isinstance(self._instrument, VirtualInstrumentConnection),
             }
         )
-
 
     async def _register_magic_word(self) -> None:
         magic_word_test_bytes = bytearray()
