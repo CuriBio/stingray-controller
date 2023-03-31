@@ -130,8 +130,7 @@ class InstrumentComm:
     # ONE-SHOT TASKS
 
     async def run(self, system_error_future: asyncio.Future[int]) -> None:
-        # TODO ADD MORE LOGGING
-        logger.info("Starting CloudComm")
+        logger.info("Starting InstrumentComm")
 
         try:
             await self._setup()
@@ -165,10 +164,10 @@ class InstrumentComm:
         # now that the magic word is registered,
         await self._prompt_instrument_for_metadata()
 
-        # TODO remove this when better logging is added?
         logger.info("Instrument ready")
 
     async def _create_connection_to_instrument(self) -> None:
+        logger.info("Attempting to connect to instrument")
         # TODO could eventually allow the user to specify in a config file whether or not they want to connect to a real or virtual instrument
 
         # first, check for a real instrument on the serial COM ports
@@ -187,6 +186,7 @@ class InstrumentComm:
 
         # if a real instrument is not found, check for a virtual instrument
         if not self._instrument:
+            logger.info("No live instrument detected, checking for virtual instrument")
             virtual_instrument = VirtualInstrumentConnection()
             try:
                 await virtual_instrument.connect()
@@ -203,6 +203,7 @@ class InstrumentComm:
         )
 
     async def _register_magic_word(self) -> None:
+        logger.info("Syncing with packets from instrument")
         magic_word_test_bytes = bytearray()
 
         async def read_initial_bytes(magic_word_test_bytes: bytearray) -> None:
@@ -255,6 +256,7 @@ class InstrumentComm:
         self._serial_packet_cache = SERIAL_COMM_MAGIC_WORD_BYTES
 
     async def _prompt_instrument_for_metadata(self) -> None:
+        logger.info("Prompting instrument for metadata")
         await self._send_data_packet(SerialCommPacketTypes.GET_METADATA)
         await self._command_tracker.add(SerialCommPacketTypes.GET_METADATA, {"command": "get_metadata"})
 
@@ -300,9 +302,9 @@ class InstrumentComm:
                 }:  # pragma: no cover
                     packet_type = SerialCommPacketTypes.TRIGGER_ERROR
                     bytes_to_send = bytes(first_two_status_codes)
-                case _:
+                case invalid_comm:
                     raise NotImplementedError(
-                        f"InstrumentComm received invalid comm from SystemMonitor: {comm_from_monitor}"
+                        f"InstrumentComm received invalid comm from SystemMonitor: {invalid_comm}"
                     )
 
             if packet_type is not None:
@@ -378,6 +380,8 @@ class InstrumentComm:
     # TEMPORARY TASKS
 
     async def _handle_firmware_update(self, comm_from_monitor: dict[str, Any]) -> None:
+        logger.info("Beginning firmware update")
+
         # create FW update manager, and wait for it to complete. Updates will be pushed to it from another task
         self._firmware_update_manager = FirmwareUpdateManager(comm_from_monitor)
 
@@ -397,6 +401,8 @@ class InstrumentComm:
         )
 
     async def _wait_for_reboot(self) -> None:
+        logger.info("Waiting for instrument to reboot")
+
         self._is_waiting_for_reboot = True
 
         # TODO raise InstrumentRebootTimeoutError() if this times out
@@ -536,6 +542,7 @@ class InstrumentComm:
 FirmwareUpdateItems = tuple[int, bytes, dict[str, Any]]
 
 
+# TODO ADD LOGGING TO THIS
 class FirmwareUpdateManager:
     def __init__(self, update_info: dict[str, Any]) -> None:
         self._file_contents = update_info.pop("file_contents")

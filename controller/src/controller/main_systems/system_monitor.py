@@ -26,7 +26,6 @@ logger = logging.getLogger(__name__)
 ERROR_MSG = "IN SYSTEM MONITOR"
 
 
-# TODO ADD LOGGING
 class SystemMonitor:
     """Manages the state of the system and delegates tasks to subsystems."""
 
@@ -204,7 +203,7 @@ class SystemMonitor:
                     }
                     await self._queues["to"]["instrument_comm"].put(communication)
                 case invalid_comm:
-                    raise NotImplementedError(f"Invalid communication from server: {invalid_comm}")
+                    raise NotImplementedError(f"Invalid communication from Server: {invalid_comm}")
 
             if system_state_updates:
                 await self._system_state_manager.update(system_state_updates)
@@ -220,7 +219,6 @@ class SystemMonitor:
 
             system_state_updates: dict[str, Any] = {}
 
-            # TODO for all these comm handlers, raise error for unrecognized comm. Do this in subsystems as well
             match communication:
                 case {"command": "start_stimulation"}:
                     system_state_updates["stimulation_protocols_running"] = [True] * len(
@@ -262,6 +260,8 @@ class SystemMonitor:
                     system_state_updates["instrument_metadata"] = metadata
                 case {"command": "firmware_update_completed", "firmware_type": firmware_type}:
                     system_state_updates[f"{firmware_type}_firmware_update"] = None
+                case invalid_comm:
+                    raise NotImplementedError(f"Invalid communication from InstrumentComm: {invalid_comm}")
 
             if system_state_updates:
                 await self._system_state_manager.update(system_state_updates)
@@ -330,6 +330,8 @@ class SystemMonitor:
                                     "file_contents": " TODO",
                                 }
                             )
+                case invalid_comm:
+                    raise NotImplementedError(f"Invalid communication from CloudComm: {invalid_comm}")
 
             if system_state_updates:
                 await self._system_state_manager.update(system_state_updates)

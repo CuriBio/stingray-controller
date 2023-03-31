@@ -71,6 +71,7 @@ class CloudComm:
                 res = task.result()
                 task_name = task.get_name()
                 if task_name == main_task_name:
+                    # TODO handle attr not found
                     subtask_fn = getattr(self, f"_{res['command']}")
                     pending |= {
                         asyncio.create_task(self._get_comm_from_monitor(), name=main_task_name),
