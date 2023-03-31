@@ -56,6 +56,7 @@ async def main(command_line_args: list[str]) -> None:
         _log_cmd_line_args(parsed_args)
         _log_system_info()
 
+        # TODO ?
         # if parsed_args.test:
         #     logger.info(f"Successfully opened and closed application v{CURRENT_SOFTWARE_VERSION}")
         #     return
@@ -64,9 +65,6 @@ async def main(command_line_args: list[str]) -> None:
 
         if is_port_in_use(DEFAULT_SERVER_PORT_NUMBER):
             raise LocalServerPortAlreadyInUseError(DEFAULT_SERVER_PORT_NUMBER)
-
-        # TODO move this into SystemMonitor?
-        # logger.info("Spawning subsystems")
 
         # TODO wrap all this in a function?
 
@@ -97,9 +95,9 @@ async def main(command_line_args: list[str]) -> None:
 
         await wait_tasks_clean(tasks)
 
-    except Exception as e:
-        logger.error(f"ERROR IN MAIN: {repr(e)}")
-        # TODO raise error here ?
+    except Exception:
+        # TODO make sure this logs correctly
+        logger.exception("ERROR IN MAIN")
 
     finally:
         logger.info("Program exiting")
@@ -196,7 +194,6 @@ def _log_system_info() -> None:
     uname_release = getattr(uname, "release")
     uname_version = getattr(uname, "version")
 
-    # TODO make a function for this
     computer_name_hash = hashlib.sha512(socket.gethostname().encode(encoding="UTF-8")).hexdigest()
 
     for msg in (

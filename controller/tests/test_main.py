@@ -135,6 +135,7 @@ async def test_main__logs_error_if_port_already_in_use(patch_run_tasks, mocker):
     await main.main([])
 
     spied_info.assert_any_call(f"Using server port number: {DEFAULT_SERVER_PORT_NUMBER}")
+    # TODO
     spied_error.assert_called_once_with(
         f"ERROR IN MAIN: {repr(LocalServerPortAlreadyInUseError(DEFAULT_SERVER_PORT_NUMBER))}"
     )
@@ -152,6 +153,7 @@ async def test_main__handles_errors_correctly(patch_run_tasks, mocker):
 
     await main.main([])
 
+    # TODO
     spied_error.assert_called_once_with(f"ERROR IN MAIN: {repr(expected_err)}")
     # Tanner (2/27/23): using assert_called_with since to make the assertion on the final call to this method
     spied_info.assert_called_with("Program exiting")

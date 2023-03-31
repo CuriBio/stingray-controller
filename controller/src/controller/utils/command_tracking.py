@@ -26,7 +26,7 @@ class _Command:
     async def complete(self) -> None:
         self._timer.cancel()
         await self._timer
-        # TODO is this necessary?
+        # TODO see if this helps clean up errors here
         # try:
         #     await self._timer
         # except asyncio.CancelledError:
@@ -63,6 +63,3 @@ class CommandTracker:
             raise
         finally:
             pass  # TODO complete all commands?
-
-    # def __bool__(self) -> bool:
-    #     return bool(self._command_mapping)

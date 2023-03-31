@@ -53,7 +53,6 @@ class SystemMonitor:
                 handle_system_error(exc, system_error_future)
         except asyncio.CancelledError:
             logger.info("SystemMonitor cancelled")
-            # TODO ?
             raise
         finally:
             logger.info("SystemMonitor shut down")

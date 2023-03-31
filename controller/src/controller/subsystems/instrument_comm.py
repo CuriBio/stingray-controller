@@ -479,9 +479,6 @@ class InstrumentComm:
                     if not self._hardware_test_mode:
                         raise StimulationProtocolUpdateFailedError()
                     prev_command_info["hardware_test_message"] = "Command failed"  # pragma: no cover
-                # TODO is this necessary now?
-                # remove stim info so it is not logged again
-                prev_command_info.pop("stim_info")
             case "start_stimulation":
                 # Tanner (10/25/21): if needed, can save _base_global_time_of_data_stream here
                 if response_data[0]:
@@ -617,7 +614,6 @@ class FirmwareUpdateManager:
         return packet_type, bytes_to_send, command
 
 
-# TODO catch the tcp errors in here so they error quietly to make sure the IC actually handles a disconnection correctly
 class VirtualInstrumentConnection:
     def __init__(self) -> None:
         self.reader: asyncio.StreamReader
@@ -635,7 +631,7 @@ class VirtualInstrumentConnection:
         try:
             data = await self.reader.read(size)
         except Exception:
-            # TODO probably want to raise a different error here
+            # TODO raise a different error here?
             return bytes(0)
         logger.debug(f"RECV: {data}")  # type: ignore
         return data
@@ -646,5 +642,5 @@ class VirtualInstrumentConnection:
             self.writer.write(data)
             await self.writer.drain()
         except Exception:
-            # TODO probably want to raise a different error here
+            # TODO raise a different error here?
             pass
