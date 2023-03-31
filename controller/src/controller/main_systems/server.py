@@ -144,7 +144,7 @@ class Server:
                 return
 
         if self._websocket:
-            logger.info("Sending error message to UI")
+            logger.info(f"Sending system error code {error_code} to UI")
             msg = {"communication_type": "error", "error_code": error_code}
             try:
                 await self._websocket.send(json.dumps(msg))
@@ -160,16 +160,18 @@ class Server:
 
     async def _producer(self, websocket: WebSocketServerProtocol) -> None:
         while True:
-            msg = await self._from_monitor_queue.get()
-            await websocket.send(json.dumps(msg))
+            msg = json.dumps(await self._from_monitor_queue.get())
+            try:
+                await websocket.send(msg)
+            except websockets.ConnectionClosed:
+                logger.error(f"Failed to send message to UI: {msg}")
+                return
 
     async def _consumer(self, websocket: WebSocketServerProtocol) -> None:
         while not self.user_initiated_shutdown:
             try:
                 msg = json.loads(await websocket.recv())
             except websockets.ConnectionClosed:
-                # TODO is this working correctly?
-                logger.error("UI disconnected")
                 return
 
             self._log_incoming_message(msg)

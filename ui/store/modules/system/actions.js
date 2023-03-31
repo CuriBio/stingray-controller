@@ -57,6 +57,7 @@ export default {
 
         const wsMessage = JSON.parse(e.data);
 
+        // TODO catch all errors here and report correct error code
         switch (wsMessage.communication_type) {
           case "status_update":
             if ("system_status" in wsMessage) commit("system/setStatusUuid", wsMessage.system_status);
