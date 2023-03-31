@@ -11,8 +11,6 @@ from pulse3D.constants import MAIN_FIRMWARE_VERSION_UUID
 from pulse3D.constants import MANTARRAY_SERIAL_NUMBER_UUID as INSTRUMENT_SERIAL_NUMBER_UUID
 
 from ..constants import CURRENT_SOFTWARE_VERSION
-from ..constants import GENERIC_24_WELL_DEFINITION
-from ..constants import NUM_WELLS
 from ..constants import StimulatorCircuitStatuses
 from ..constants import SystemStatuses
 from ..utils.aio import wait_tasks_clean
@@ -133,15 +131,11 @@ class SystemMonitor:
             await self._system_state_manager.update(system_status_dict)
 
     async def _push_system_status_update(self, update_details: ReadOnlyDict) -> None:
-        status_update_details = {}
-        if (new_system_status := update_details.get("system_status")) is not None:
-            status_update_details["system_status"] = new_system_status
-        if (stim_running_updates := update_details.get("stimulation_running")) is not None:
-            status_update_details["is_stimulating"] = any(stim_running_updates)
-        if (in_simulation_mode := update_details.get("in_simulation_mode")) is not None:
-            status_update_details["in_simulation_mode"] = in_simulation_mode
-
-        if status_update_details:
+        if status_update_details := {
+            status_name: new_system_status
+            for status_name in ("system_status", "stimulation_protocols_running", "in_simulation_mode")
+            if (new_system_status := update_details.get(status_name))
+        }:
             logger.info(f"System status update: {status_update_details}")
             # want to have system_status logged as an enum, so afterwards need to convert it to a string so it can be json serialized later
             if system_status := status_update_details.get("system_status"):
@@ -229,20 +223,17 @@ class SystemMonitor:
             # TODO for all these comm handlers, raise error for unrecognized comm. Do this in subsystems as well
             match communication:
                 case {"command": "start_stimulation"}:
-                    stim_running_list = [False] * NUM_WELLS
-                    protocol_assignments = system_state["stim_info"]["protocol_assignments"]
-                    for well_name, assignment in protocol_assignments.items():
-                        if not assignment:
-                            continue
-                        well_idx = GENERIC_24_WELL_DEFINITION.get_well_index_from_well_name(well_name)
-                        stim_running_list[well_idx] = True
-                    system_state_updates["stimulation_running"] = stim_running_list
+                    system_state_updates["stimulation_protocols_running"] = [True] * len(
+                        system_state["stim_info"]["protocols"]
+                    )
                 case {"command": "stop_stimulation"}:
-                    system_state_updates["stimulation_running"] = [False] * NUM_WELLS
-                case {"command": "stim_status_update", "wells_done_stimulating": wells_done_stimulating}:
-                    system_state_updates["stimulation_running"] = list(system_state["stimulation_running"])
-                    for well_idx in wells_done_stimulating:
-                        system_state_updates["stimulation_running"][well_idx] = False
+                    pass  # Tanner (3/31/23): let the stim status updates handle setting all the running statuses back to False
+                case {"command": "stim_status_update", "protocols_completed": protocols_completed}:
+                    system_state_updates["stimulation_protocols_running"] = list(
+                        system_state["stimulation_protocols_running"]
+                    )
+                    for protocol_idx in protocols_completed:
+                        system_state_updates["stimulation_protocols_running"][protocol_idx] = False
                 case {
                     "command": "start_stim_checks",
                     "stimulator_circuit_statuses": stimulator_circuit_statuses,

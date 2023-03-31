@@ -7,7 +7,7 @@ const TextValidationPlateBarcode = new TextValidation("plateBarcode");
 const W3CWebSocket = require("websocket").w3cwebsocket;
 
 export default {
-  async connectToController({ state }) {
+  async connectToController({ state }, numRetriesLeft) {
     const { commit, dispatch } = this;
 
     // guarding to be extra safe
@@ -16,12 +16,19 @@ export default {
     const socket = new W3CWebSocket("ws://localhost:4567");
 
     socket.onerror = function () {
-      console.log("Error connecting to controller, retrying...");
+      const baseLogMsg = "Error connecting to controller. ";
 
-      const retryConnection = () => {
-        dispatch("system/connectToController");
-      };
-      setTimeout(retryConnection, 1000);
+      if (numRetriesLeft) {
+        console.log(baseLogMsg + "Retrying...");
+
+        const retryConnection = () => {
+          dispatch("system/connectToController", numRetriesLeft - 1);
+        };
+        setTimeout(retryConnection, 1000);
+      } else {
+        console.error(baseLogMsg + "Max num retries hit");
+        commit("system/setSystemErrorCode", { error_code: ERROR_CODES.CONTROLLER_CONNECTION_CREATION });
+      }
     };
 
     socket.onopen = function () {
@@ -53,12 +60,13 @@ export default {
         switch (wsMessage.communication_type) {
           case "status_update":
             if ("system_status" in wsMessage) commit("system/setStatusUuid", wsMessage.system_status);
-            if ("is_stimulating" in wsMessage) {
+            if ("stimulation_protocols_running" in wsMessage) {
+              const stimPlayState = wsMessage.stimulation_protocols_running.includes(true);
               commit(
                 "stimulation/setStimStatus",
-                wsMessage.is_stimulating ? STIM_STATUS.STIM_ACTIVE : STIM_STATUS.READY
+                stimPlayState ? STIM_STATUS.STIM_ACTIVE : STIM_STATUS.READY
               );
-              commit("stimulation/setStimPlayState", wsMessage.is_stimulating);
+              commit("stimulation/setStimPlayState", stimPlayState);
             }
             break;
           case "stimulator_circuit_statuses":

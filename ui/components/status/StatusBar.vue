@@ -288,7 +288,8 @@ export default {
   created() {
     this.setSystemSpecificStatus(this.statusUuid);
 
-    this.$store.dispatch("system/connectToController");
+    const maxNumConnectionAttempts = 15;
+    this.$store.dispatch("system/connectToController", maxNumConnectionAttempts);
   },
   mounted() {
     // Tanner (3/28/23): it is possible that an error code is set before this component is mounted,

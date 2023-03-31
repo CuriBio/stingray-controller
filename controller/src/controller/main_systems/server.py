@@ -83,6 +83,7 @@ class Server:
 
         ws_server = await serve(self._run, "localhost", DEFAULT_SERVER_PORT_NUMBER)
         self._serve_task = asyncio.create_task(ws_server.serve_forever())
+
         try:
             await asyncio.shield(self._serve_task)
         except asyncio.CancelledError:
@@ -247,7 +248,7 @@ class Server:
         system_state = self._get_system_state_ro()
         system_status = system_state["system_status"]
 
-        if _is_stimulating_on_any_well(system_state):
+        if _are_any_protocols_running(system_state):
             raise WebsocketCommandError("Cannot change protocols while stimulation is running")
         if system_status != SystemStatuses.IDLE_READY_STATE:
             raise WebsocketCommandError(f"Cannot change protocols while in {system_status.name}")
@@ -378,7 +379,7 @@ class Server:
             raise WebsocketCommandError(
                 f"Cannot start stim check unless in {SystemStatuses.IDLE_READY_STATE.name}"
             )
-        if _is_stimulating_on_any_well(system_state):
+        if _are_any_protocols_running(system_state):
             raise WebsocketCommandError("Cannot perform stimulator checks while stimulation is running")
         if _are_stimulator_checks_running(system_state):
             raise WebsocketCommandError("Stimulator checks already running")
@@ -423,7 +424,7 @@ class Server:
             if _are_any_stimulator_circuits_short(system_state):
                 raise WebsocketCommandError("Cannot start stimulation when a stimulator has a short circuit")
 
-        if stim_status is _is_stimulating_on_any_well(system_state):
+        if stim_status is _are_any_protocols_running(system_state):
             raise WebsocketCommandError("Stim status not updated")
 
         await self._to_monitor_queue.put(comm)
@@ -432,8 +433,8 @@ class Server:
 # HELPERS
 
 
-def _is_stimulating_on_any_well(system_state: ReadOnlyDict) -> bool:
-    return any(system_state["stimulation_running"])
+def _are_any_protocols_running(system_state: ReadOnlyDict) -> bool:
+    return any(system_state["stimulation_protocols_running"])
 
 
 def _are_stimulator_checks_running(system_state: ReadOnlyDict) -> bool:

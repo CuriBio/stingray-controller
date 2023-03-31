@@ -37,6 +37,8 @@ class CloudComm:
 
     async def run(self, system_error_future: asyncio.Future[int]) -> None:
         # TODO ADD MORE LOGGING
+        logger.info("Starting CloudComm")
+
         try:
             tasks = {
                 asyncio.create_task(self._manage_subtasks()),

@@ -18,7 +18,6 @@ from stdlib_utils import is_port_in_use
 from .constants import COMPILED_EXE_BUILD_TIMESTAMP
 from .constants import CURRENT_SOFTWARE_VERSION
 from .constants import DEFAULT_SERVER_PORT_NUMBER
-from .constants import NUM_WELLS
 from .constants import SOFTWARE_RELEASE_CHANNEL
 from .constants import SystemStatuses
 from .exceptions import LocalServerPortAlreadyInUseError
@@ -161,7 +160,7 @@ def _initialize_system_state(parsed_args: dict[str, Any], log_file_id: uuid.UUID
         # main
         "system_status": SystemStatuses.SERVER_INITIALIZING_STATE,
         "in_simulation_mode": False,
-        "stimulation_running": [False] * NUM_WELLS,
+        "stimulation_protocols_running": [],
         # updating
         "main_firmware_update": None,
         "channel_firmware_update": None,

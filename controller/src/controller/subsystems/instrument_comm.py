@@ -11,7 +11,6 @@ import serial
 import serial.tools.list_ports as list_ports
 
 from ..constants import CURI_VID
-from ..constants import GENERIC_24_WELL_DEFINITION
 from ..constants import NUM_WELLS
 from ..constants import SERIAL_COMM_BAUD_RATE
 from ..constants import SERIAL_COMM_HANDSHAKE_PERIOD_SECONDS
@@ -102,8 +101,8 @@ class InstrumentComm:
         self._is_waiting_for_reboot = False
         self._status_beacon_received_event = asyncio.Event()
         # stimulation values
-        self._wells_assigned_a_protocol: frozenset[int] = frozenset()
-        self._wells_actively_stimulating: set[int] = set()
+        self._num_stim_protocols: int = 0
+        self._protocols_running: set[int] = set()
         # firmware updating
         self._firmware_update_manager: FirmwareUpdateManager | None = None
 
@@ -119,19 +118,21 @@ class InstrumentComm:
 
     @property
     def _is_stimulating(self) -> bool:
-        return len(self._wells_actively_stimulating) > 0
+        return len(self._protocols_running) > 0
 
     @_is_stimulating.setter
     def _is_stimulating(self, value: bool) -> None:
         if value:
-            self._wells_actively_stimulating = set(well for well in self._wells_assigned_a_protocol)
+            self._protocols_running = set(range(self._num_stim_protocols))
         else:
-            self._wells_actively_stimulating = set()
+            self._protocols_running = set()
 
     # ONE-SHOT TASKS
 
     async def run(self, system_error_future: asyncio.Future[int]) -> None:
         # TODO ADD MORE LOGGING
+        logger.info("Starting CloudComm")
+
         try:
             await self._setup()
 
@@ -286,12 +287,7 @@ class InstrumentComm:
                     bytes_to_send = convert_stim_dict_to_bytes(stim_info)
                     if self._is_stimulating and not self._hardware_test_mode:
                         raise StimulationProtocolUpdateWhileStimulatingError()
-                    protocol_assignments = stim_info["protocol_assignments"]
-                    self._wells_assigned_a_protocol = frozenset(
-                        GENERIC_24_WELL_DEFINITION.get_well_index_from_well_name(well_name)
-                        for well_name, protocol_id in protocol_assignments.items()
-                        if protocol_id is not None
-                    )
+                    self._num_stim_protocols = len(stim_info["protocols"])
                 case {"command": "start_stimulation"}:
                     packet_type = SerialCommPacketTypes.START_STIM
                 case {"command": "stop_stimulation"}:
@@ -505,19 +501,19 @@ class InstrumentComm:
         if not stim_stream_info["num_packets"]:
             return
 
-        # Tanner (2/28/23): there is currently no data stream, so only need to check for wells that have completed stimulation
+        # Tanner (2/28/23): there is currently no data stream, so only need to check for protocols that have completed
 
-        well_statuses: dict[int, Any] = parse_stim_data(*stim_stream_info.values())
+        protocol_statuses: dict[int, Any] = parse_stim_data(*stim_stream_info.values())
 
-        wells_done_stimulating = [
-            well_idx
-            for well_idx, status_updates_arr in well_statuses.items()
+        protocols_completed = [
+            protocol_idx
+            for protocol_idx, status_updates_arr in protocol_statuses.items()
             if status_updates_arr[1][-1] == STIM_COMPLETE_SUBPROTOCOL_IDX
         ]
-        if wells_done_stimulating:
-            self._wells_actively_stimulating -= set(wells_done_stimulating)
+        if protocols_completed:
+            self._protocols_running -= set(protocols_completed)
             await self._to_monitor_queue.put(
-                {"command": "stim_status_update", "wells_done_stimulating": wells_done_stimulating}
+                {"command": "stim_status_update", "protocols_completed": protocols_completed}
             )
 
     async def _process_status_beacon(self, packet_payload: bytes) -> None:
