@@ -15,15 +15,17 @@ from ..constants import GENERIC_24_WELL_DEFINITION
 from ..constants import NUM_WELLS
 from ..constants import StimulatorCircuitStatuses
 from ..constants import SystemStatuses
+from ..utils.aio import wait_tasks_clean
 from ..utils.generic import handle_system_error
 from ..utils.generic import semver_gt
-from ..utils.generic import wait_tasks_clean
 from ..utils.state_management import ReadOnlyDict
 from ..utils.state_management import SystemStateManager
 from ..utils.stimulation import chunk_protocols_in_stim_info
 
 
 logger = logging.getLogger(__name__)
+
+ERROR_MSG = "IN SYSTEM MONITOR"
 
 
 # TODO ADD LOGGING
@@ -48,7 +50,7 @@ class SystemMonitor:
             asyncio.create_task(self._handle_system_state_updates()),
         }
         try:
-            exc = await wait_tasks_clean(tasks)
+            exc = await wait_tasks_clean(tasks, error_msg=ERROR_MSG)
             if exc:
                 handle_system_error(exc, system_error_future)
         except asyncio.CancelledError:

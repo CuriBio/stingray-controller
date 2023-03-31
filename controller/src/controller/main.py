@@ -26,12 +26,14 @@ from .main_systems.server import Server
 from .main_systems.system_monitor import SystemMonitor
 from .subsystems.cloud_comm import CloudComm
 from .subsystems.instrument_comm import InstrumentComm
-from .utils.generic import redact_sensitive_info_from_path
-from .utils.generic import wait_tasks_clean
+from .utils.aio import wait_tasks_clean
+from .utils.logging import redact_sensitive_info_from_path
 from .utils.state_management import SystemStateManager
 
 
 logger = logging.getLogger(__name__)
+
+ERROR_MSG = "IN MAIN"
 
 
 async def main(command_line_args: list[str]) -> None:
@@ -96,8 +98,8 @@ async def main(command_line_args: list[str]) -> None:
         await wait_tasks_clean(tasks)
 
     except Exception:
-        # TODO make sure this logs correctly
-        logger.exception("ERROR IN MAIN")
+        # TODO make sure this logs correctly here and everywhere else it's used
+        logger.exception(ERROR_MSG)
 
     finally:
         logger.info("Program exiting")

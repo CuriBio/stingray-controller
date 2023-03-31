@@ -27,16 +27,17 @@ from ..constants import VALID_CONFIG_SETTINGS
 from ..constants import VALID_STIMULATION_TYPES
 from ..constants import VALID_SUBPROTOCOL_TYPES
 from ..exceptions import WebsocketCommandError
-from ..utils.generic import clean_up_tasks
-from ..utils.generic import get_redacted_string
+from ..utils.aio import clean_up_tasks
+from ..utils.aio import wait_tasks_clean
 from ..utils.generic import handle_system_error
-from ..utils.generic import log_error
-from ..utils.generic import wait_tasks_clean
+from ..utils.logging import get_redacted_string
 from ..utils.state_management import ReadOnlyDict
 from ..utils.stimulation import get_pulse_dur_us
 from ..utils.stimulation import get_pulse_duty_cycle_dur_us
 
 logger = logging.getLogger(__name__)
+
+ERROR_MSG = "IN SERVER"
 
 
 def mark_handler(fn: Callable[..., Any]) -> Callable[..., Any]:
@@ -93,13 +94,13 @@ class Server:
 
             raise
         except Exception as e:
-            log_error(e)
+            logger.exception(ERROR_MSG)
             handle_system_error(e, system_error_future)
             await self._report_system_error(system_error_future)
 
             raise
         finally:
-            await clean_up_tasks({self._serve_task})
+            await clean_up_tasks({self._serve_task}, ERROR_MSG)
             logger.info("Server shut down")
 
     async def _run(self, websocket: WebSocketServerProtocol) -> None:
@@ -154,7 +155,7 @@ class Server:
     async def _handle_comm(self, websocket: WebSocketServerProtocol) -> None:
         producer = asyncio.create_task(self._producer(websocket))
         consumer = asyncio.create_task(self._consumer(websocket))
-        await wait_tasks_clean({producer, consumer})
+        await wait_tasks_clean({producer, consumer}, error_msg=ERROR_MSG)
 
     async def _producer(self, websocket: WebSocketServerProtocol) -> None:
         while True:

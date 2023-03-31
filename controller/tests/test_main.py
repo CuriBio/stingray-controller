@@ -16,7 +16,7 @@ from controller.constants import SystemStatuses
 from controller.exceptions import LocalServerPortAlreadyInUseError
 from controller.main_systems.server import Server
 from controller.main_systems.system_monitor import SystemMonitor
-from controller.utils.generic import redact_sensitive_info_from_path
+from controller.utils.logging import redact_sensitive_info_from_path
 import pytest
 
 

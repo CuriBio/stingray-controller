@@ -5,11 +5,13 @@ import asyncio
 import logging
 from typing import Any
 
+from ..utils.aio import wait_tasks_clean
 from ..utils.generic import handle_system_error
-from ..utils.generic import wait_tasks_clean
 
 
 logger = logging.getLogger(__name__)
+
+ERROR_MSG = "IN CLOUD COMM"
 
 
 class CloudComm:
@@ -40,7 +42,7 @@ class CloudComm:
                 asyncio.create_task(self._manage_subtasks()),
                 # TODO add other tasks
             }
-            exc = await wait_tasks_clean(tasks)
+            exc = await wait_tasks_clean(tasks, error_msg=ERROR_MSG)
             if exc:
                 handle_system_error(exc, system_error_future)
         except asyncio.CancelledError:

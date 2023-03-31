@@ -41,12 +41,11 @@ from ..exceptions import SerialCommUntrackedCommandResponseError
 from ..exceptions import StimulationProtocolUpdateFailedError
 from ..exceptions import StimulationProtocolUpdateWhileStimulatingError
 from ..exceptions import StimulationStatusUpdateFailedError
+from ..utils.aio import wait_tasks_clean
 from ..utils.command_tracking import CommandTracker
 from ..utils.data_parsing_cy import parse_stim_data
 from ..utils.data_parsing_cy import sort_serial_packets
 from ..utils.generic import handle_system_error
-from ..utils.generic import log_error
-from ..utils.generic import wait_tasks_clean
 from ..utils.serial_comm import convert_semver_str_to_bytes
 from ..utils.serial_comm import convert_status_code_bytes_to_dict
 from ..utils.serial_comm import convert_stim_dict_to_bytes
@@ -57,6 +56,8 @@ from ..utils.serial_comm import parse_metadata_bytes
 
 
 logger = logging.getLogger(__name__)
+
+ERROR_MSG = "IN INSTRUMENT COMM"
 
 
 COMMAND_PACKET_TYPES = frozenset(
@@ -141,14 +142,14 @@ class InstrumentComm:
                 asyncio.create_task(self._handle_beacon_tracking()),
                 asyncio.create_task(self._catch_expired_command()),
             }
-            exc = await wait_tasks_clean(tasks)
+            exc = await wait_tasks_clean(tasks, error_msg=ERROR_MSG)
             if exc:
                 handle_system_error(exc, system_error_future)
         except asyncio.CancelledError:
             logger.info("InstrumentComm cancelled")
             raise
         except Exception as e:
-            log_error(e)
+            logger.exception(ERROR_MSG)
             handle_system_error(e, system_error_future)
         finally:
             logger.info("InstrumentComm shut down")
