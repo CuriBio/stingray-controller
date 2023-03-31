@@ -395,6 +395,11 @@ class Server:
         # TODO figure out if the well idxs are still strings
         comm["well_indices"] = [int(idx) for idx in comm["well_indices"]]
 
+        # check if barcodes were manually entered and match
+        for barcode_type in ("plate_barcode", "stim_barcode"):
+            barcode = comm.get(barcode_type)
+            comm[f"{barcode_type}_is_from_scanner"] = barcode == system_state[barcode_type]
+
         await self._to_monitor_queue.put(comm)
 
     @mark_handler
