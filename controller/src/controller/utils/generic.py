@@ -18,6 +18,7 @@ from ..exceptions import InstrumentConnectionCreationError
 from ..exceptions import InstrumentConnectionLostError
 from ..exceptions import InstrumentFirmwareError
 from ..exceptions import NoInstrumentDetectedError
+from ..exceptions import WebsocketCommandError
 
 logger = logging.getLogger(__name__)
 
@@ -103,8 +104,8 @@ def handle_system_error(exc: Exception, system_error_future: asyncio.Future[int]
             error_code = ErrorCodes.INSTRUMENT_STATUS_CODE
         case FirmwareAndSoftwareNotCompatibleError():
             error_code = ErrorCodes.INSTRUMENT_FW_INCOMPATIBLE_WITH_SW
-        # case
-        #     error_code = ErrorCodes.UI_SENT_BAD_DATA
+        case WebsocketCommandError():
+            error_code = ErrorCodes.UI_SENT_BAD_DATA
         case _:
             error_code = ErrorCodes.UNSPECIFIED
 

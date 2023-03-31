@@ -74,8 +74,7 @@ class Server:
         self._from_monitor_queue = from_monitor_queue
         self._to_monitor_queue = to_monitor_queue
 
-        # TODO just rename this _ui_connection_made and make it an event?
-        self._has_ui_connected: asyncio.Future[bool] = asyncio.Future()
+        self._ui_connection_made = asyncio.Event()
         self.user_initiated_shutdown = False
 
     async def run(self, system_error_future: asyncio.Future[int]) -> None:
@@ -108,36 +107,49 @@ class Server:
             raise NotImplementedError("_serve_task must be not be None here")
 
         if self._websocket:
-            logger.exception("ERROR - SECOND CONNECTION MADE")
+            logger.error("SECOND CONNECTION MADE")
             # TODO figure out a good way to handle this
             return
 
-        self._has_ui_connected.set_result(True)
+        self._ui_connection_made.set()
         self._websocket = websocket
-        logger.info("CONNECTED")
+        logger.info("UI has connected")
 
         await self._handle_comm(websocket)
 
         self._websocket = None
-        logger.info("DISCONNECTED")
+        logger.info("UI has disconnected")
 
         self._serve_task.cancel()
 
     async def _report_system_error(self, system_error_future: asyncio.Future[int]) -> None:
-        # if the error occured before the UI even connected, wait 3 seconds for it to connect
-        wait_time = 3
-
-        # TODO skip the wait for completely if the UI has already connected so that the logging is nicer
-        try:
-            logger.info(f"waiting up to {wait_time} seconds for UI connection")
-            await asyncio.wait_for(self._has_ui_connected, wait_time)
-        except asyncio.TimeoutError:
-            logger.error("UI never connected")
+        if not system_error_future.done():
+            logger.info("No errors to report to UI")
             return
 
-        if self._websocket and system_error_future.done():
-            msg = {"communication_type": "error", "error_code": system_error_future.result()}
-            await self._websocket.send(json.dumps(msg))
+        error_code = system_error_future.result()
+
+        logger.info(f"Attempting to report system error code {error_code} to UI")
+
+        if not self._ui_connection_made.is_set():
+            # if the error occured before the UI even connected, wait a little for it to connect
+            wait_time = 3
+            try:
+                logger.info(f"Waiting up to {wait_time} seconds for UI to connect")
+                await asyncio.wait_for(self._ui_connection_made.wait(), wait_time)
+            except asyncio.TimeoutError:
+                logger.error("UI never connected")
+                return
+
+        if self._websocket:
+            logger.info("Sending error message to UI")
+            msg = {"communication_type": "error", "error_code": error_code}
+            try:
+                await self._websocket.send(json.dumps(msg))
+            except Exception:
+                logger.exception("Failed to send error message to UI")
+        else:
+            logger.error("UI has already disconnected, cannot send error message")
 
     async def _handle_comm(self, websocket: WebSocketServerProtocol) -> None:
         producer = asyncio.create_task(self._producer(websocket))
@@ -156,29 +168,25 @@ class Server:
             except websockets.ConnectionClosed:
                 # TODO is this working correctly?
                 logger.error("UI disconnected")
-                break
+                return
 
             self._log_incoming_message(msg)
 
             command = msg["command"]
 
-            # TODO handle KeyError here or make default method to handle unrecognized comm
-            # TODO try using pydantic to define message schema + some other message schema generator (nano message, ask Jason)
-            handler = self._handlers[command]
+            # TODO make sure the error handling works in both of these try/except blocks
+            try:
+                # TODO try using pydantic to define message schema + some other message schema generator (nano message, ask Jason)
+                handler = self._handlers[command]
+            except KeyError as e:
+                logger.error(f"Unrecognized command from UI: {command}")
+                raise WebsocketCommandError() from e
 
             try:
-                handler_res = await handler(self, msg)
+                await handler(self, msg)
             except WebsocketCommandError as e:
                 logger.error(f"Command {command} failed with error: {e.args[0]}")
                 raise
-                # TODO ?
-                # error_res = {"communication_type": "command_error", "command": command, "error": e.args[0]}  # type: ignore
-                # await websocket.send(json.dumps(error_res))
-            else:
-                # TODO remove this
-                if handler_res:
-                    res = {"communication_type": "command_response", "command": command, **handler_res}
-                    await websocket.send(json.dumps(res))
 
     def _log_incoming_message(self, msg: dict[str, Any]) -> None:
         if msg["command"] == "update_user_settings":
@@ -188,20 +196,6 @@ class Server:
         else:
             comm_str = str(msg)
         logger.info(f"Comm from UI: {comm_str}")
-
-    # TEST MESSAGE HANDLERS
-
-    @mark_handler
-    async def _test(self, comm: dict[str, str]) -> dict[str, Any]:
-        return {"test msg": comm["msg"]}
-
-    @mark_handler
-    async def _err(self, *args: Any) -> None:
-        raise Exception()
-
-    @mark_handler
-    async def _ws_err(self, *args: Any) -> None:
-        raise WebsocketCommandError("my test msg")
 
     # MESSAGE HANDLERS
 
@@ -247,7 +241,7 @@ class Server:
     async def _set_stim_protocols(self, comm: dict[str, Any]) -> None:
         """Set stimulation protocols in program memory and send to
         instrument."""
-        # TODO make sure a stim barcode is present
+        # TODO make sure the UI includes a stim barcode in this msg
 
         system_state = self._get_system_state_ro()
         system_status = system_state["system_status"]
@@ -376,7 +370,7 @@ class Server:
     @mark_handler
     async def _start_stim_checks(self, comm: dict[str, Any]) -> None:
         """Start the stimulator impedence checks on the instrument."""
-        # TODO make sure a stim barcode is present
+        # TODO make sure the UI includes a stim barcode in this msg
 
         system_state = self._get_system_state_ro()
         if system_state["system_status"] != SystemStatuses.IDLE_READY_STATE:
@@ -402,7 +396,7 @@ class Server:
     @mark_handler
     async def _set_stim_status(self, comm: dict[str, Any]) -> None:
         """Start or stop stimulation on the instrument."""
-        # TODO make sure a stim barcode is present
+        # TODO make sure the UI includes a stim barcode in this msg
 
         try:
             stim_status = comm["running"]

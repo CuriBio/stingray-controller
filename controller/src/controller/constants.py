@@ -45,6 +45,7 @@ class SystemStatuses(Enum):
     UPDATE_ERROR_STATE = uuid.UUID("33742bfc-d354-4ae5-88b6-2b3cee23aff8")
 
 
+# TODO redo these
 class ErrorCodes(IntEnum):
     INSTRUMENT_NOT_FOUND = 1
     INSTRUMENT_CONNECTION_CREATION = 2
