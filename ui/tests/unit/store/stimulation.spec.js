@@ -180,7 +180,7 @@ describe("store/stimulation", () => {
       ).length;
       expect(protocols).toHaveLength(labeledProtocols);
     });
-    test("When requesting the next available protocol assignment(color, letter), Then the protocol recieved should be unused and unique", async () => {
+    test("When requesting the next available protocol assignment(color, letter), Then the protocol received should be unused and unique", async () => {
       store.state.stimulation.protocolList = [{ letter: "", color: "", label: "Create New" }];
 
       [...Array(26)].map((_, i) => {

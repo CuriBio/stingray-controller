@@ -7,6 +7,13 @@ from typing import Any
 from zlib import crc32
 
 from aioserial import AioSerial
+from immutabledict import immutabledict
+from pulse3D.constants import BOOT_FLAGS_UUID
+from pulse3D.constants import CHANNEL_FIRMWARE_VERSION_UUID
+from pulse3D.constants import INITIAL_MAGNET_FINDING_PARAMS_UUID
+from pulse3D.constants import MAIN_FIRMWARE_VERSION_UUID
+from pulse3D.constants import MANTARRAY_NICKNAME_UUID
+from pulse3D.constants import MANTARRAY_SERIAL_NUMBER_UUID
 import serial
 import serial.tools.list_ports as list_ports
 
@@ -74,6 +81,18 @@ COMMAND_PACKET_TYPES = frozenset(
         SerialCommPacketTypes.FIRMWARE_UPDATE,
         SerialCommPacketTypes.END_FIRMWARE_UPDATE,
     ]
+)
+
+
+METADATA_TAGS_FOR_LOGGING = immutabledict(
+    {
+        BOOT_FLAGS_UUID: "Boot flags",
+        MANTARRAY_NICKNAME_UUID: "Instrument nickname",
+        MANTARRAY_SERIAL_NUMBER_UUID: "Instrument nickname",
+        MAIN_FIRMWARE_VERSION_UUID: "Main micro firmware version",
+        CHANNEL_FIRMWARE_VERSION_UUID: "Channel micro firmware version",
+        INITIAL_MAGNET_FINDING_PARAMS_UUID: "Initial magnet position estimate",
+    }
 )
 
 
@@ -444,6 +463,7 @@ class InstrumentComm:
                 await self._firmware_update_manager.complete()
             case SerialCommPacketTypes.BARCODE_FOUND:
                 barcode = packet_payload.decode("ascii")
+                logger.info(f"Barcode scanned by instrument: {barcode}")
                 barcode_comm = {"command": "get_barcode", "barcode": barcode}
                 await self._to_monitor_queue.put(barcode_comm)
             case _:
@@ -460,7 +480,12 @@ class InstrumentComm:
         match prev_command_info["command"]:
             # TODO make an enum for all these commands?
             case "get_metadata":
-                prev_command_info.update(parse_metadata_bytes(response_data))  # type: ignore [arg-type]  # mypy doesn't like that the keys are UUIDs here
+                metadata_dict = parse_metadata_bytes(response_data)
+                metadata_dict_for_logging = {
+                    METADATA_TAGS_FOR_LOGGING.get(key, key): val for key, val in metadata_dict.items()
+                }
+                logger.info(f"Instrument metadata received: {metadata_dict_for_logging}")
+                prev_command_info.update(metadata_dict)  # type: ignore [arg-type]  # mypy doesn't like that the keys are UUIDs here
             case "start_stim_checks":
                 stimulator_check_dict = convert_stimulator_check_bytes_to_dict(response_data)
 
@@ -477,6 +502,8 @@ class InstrumentComm:
 
                 prev_command_info["stimulator_circuit_statuses"] = stimulator_circuit_statuses
                 prev_command_info["adc_readings"] = adc_readings
+
+                logger.info(f"Stim circuit check results: {prev_command_info}")
             case "set_protocols":
                 if response_data[0]:
                     if not self._hardware_test_mode:

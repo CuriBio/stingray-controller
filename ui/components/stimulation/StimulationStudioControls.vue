@@ -176,7 +176,7 @@ library.add(faPlayCircle, faStopCircle, faSpinner);
  * @vue-data {Boolean} playState - Current play state of stimulation
  * @vue-data {Array} activeGradient - Active gradient colors for icon while stimulation is running
  * @vue-data {Array} inactiveGradient - Inactive gradient colors for icon if stimulation is stopped
- * @vue-data {Array} currentGradient - Dynamically assigned gradient based on when BE recieves start/stop request
+ * @vue-data {Array} currentGradient - Dynamically assigned gradient based on when BE receives start/stop request
  * @vue-computed {Boolean} isStartStopButtonEnabled - Boolean determining start/stop button disabled state
  * @vue-computed {Array} assignedOpenCircuits - Filtered array of any wells with protocols assigned that have open circuits found in config checks
  * @vue-computed {String} startStimLabel - Conditional tooltip text of start stim button
