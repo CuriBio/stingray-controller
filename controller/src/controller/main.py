@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """Instrument Controller."""
-from __future__ import annotations
+
 
 import argparse
 import asyncio
@@ -18,7 +18,6 @@ from stdlib_utils import is_port_in_use
 from .constants import COMPILED_EXE_BUILD_TIMESTAMP
 from .constants import CURRENT_SOFTWARE_VERSION
 from .constants import DEFAULT_SERVER_PORT_NUMBER
-from .constants import NUM_WELLS
 from .constants import SOFTWARE_RELEASE_CHANNEL
 from .constants import SystemStatuses
 from .exceptions import LocalServerPortAlreadyInUseError
@@ -26,18 +25,18 @@ from .main_systems.server import Server
 from .main_systems.system_monitor import SystemMonitor
 from .subsystems.cloud_comm import CloudComm
 from .subsystems.instrument_comm import InstrumentComm
-from .utils.generic import redact_sensitive_info_from_path
-from .utils.generic import wait_tasks_clean
+from .utils.aio import wait_tasks_clean
+from .utils.logging import redact_sensitive_info_from_path
 from .utils.state_management import SystemStateManager
 
 
 logger = logging.getLogger(__name__)
 
+ERROR_MSG = "IN MAIN"
+
 
 async def main(command_line_args: list[str]) -> None:
     """Parse command line arguments and run."""
-    # if object_access_for_testing is None:
-    #     object_access_for_testing = dict()
 
     try:
         parsed_args = _parse_cmd_line_args(command_line_args)
@@ -58,6 +57,7 @@ async def main(command_line_args: list[str]) -> None:
         _log_cmd_line_args(parsed_args)
         _log_system_info()
 
+        # TODO ?
         # if parsed_args.test:
         #     logger.info(f"Successfully opened and closed application v{CURRENT_SOFTWARE_VERSION}")
         #     return
@@ -66,9 +66,6 @@ async def main(command_line_args: list[str]) -> None:
 
         if is_port_in_use(DEFAULT_SERVER_PORT_NUMBER):
             raise LocalServerPortAlreadyInUseError(DEFAULT_SERVER_PORT_NUMBER)
-
-        # TODO move this into SystemMonitor?
-        # logger.info("Spawning subsystems")
 
         # TODO wrap all this in a function?
 
@@ -88,20 +85,19 @@ async def main(command_line_args: list[str]) -> None:
 
         cloud_comm_subsystem = CloudComm(queues["to"]["cloud_comm"], queues["from"]["cloud_comm"])
 
+        system_error_future: asyncio.Future[int] = asyncio.Future()
+
         tasks = {
-            asyncio.create_task(system_monitor.run()),
-            asyncio.create_task(server.run()),
-            asyncio.create_task(instrument_comm_subsystem.run()),
-            asyncio.create_task(cloud_comm_subsystem.run()),
+            asyncio.create_task(system_monitor.run(system_error_future)),
+            asyncio.create_task(server.run(system_error_future)),
+            asyncio.create_task(instrument_comm_subsystem.run(system_error_future)),
+            asyncio.create_task(cloud_comm_subsystem.run(system_error_future)),
         }
 
-        # TODO make sure that errors in subprocesses get raised all the way up to the top here
-        # TODO have server send a "shutting down" or "error" msg or something when it gets cancelled
         await wait_tasks_clean(tasks)
 
-    except Exception as e:
-        logger.error(f"ERROR IN MAIN: {repr(e)}")
-        # TODO raise error here ?
+    except Exception:
+        logger.exception(ERROR_MSG)
 
     finally:
         logger.info("Program exiting")
@@ -163,7 +159,7 @@ def _initialize_system_state(parsed_args: dict[str, Any], log_file_id: uuid.UUID
         # main
         "system_status": SystemStatuses.SERVER_INITIALIZING_STATE,
         "in_simulation_mode": False,
-        "stimulation_running": [False] * NUM_WELLS,
+        "stimulation_protocols_running": [],
         # updating
         "main_firmware_update": None,
         "channel_firmware_update": None,
@@ -186,6 +182,7 @@ def _initialize_system_state(parsed_args: dict[str, Any], log_file_id: uuid.UUID
     if (expected_software_version := parsed_args["expected_software_version"]) and not parsed_args[
         "skip_software_version_verification"
     ]:
+        # TODO check this in system monitor start up
         system_state["expected_software_version"] = expected_software_version
 
     return system_state
@@ -197,7 +194,6 @@ def _log_system_info() -> None:
     uname_release = getattr(uname, "release")
     uname_version = getattr(uname, "version")
 
-    # TODO make a function for this
     computer_name_hash = hashlib.sha512(socket.gethostname().encode(encoding="UTF-8")).hexdigest()
 
     for msg in (

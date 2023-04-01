@@ -116,7 +116,6 @@ export default {
       ipcRenderer.send("latestSwVersionRequest");
     }
 
-    // TODO
     ipcRenderer.on("confirmationRequest", () => {
       this.$store.commit("system/setConfirmationRequest", true);
     });

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """Handling communication between subsystems and server."""
-from __future__ import annotations
+
 
 import asyncio
 import logging
@@ -11,20 +11,21 @@ from pulse3D.constants import MAIN_FIRMWARE_VERSION_UUID
 from pulse3D.constants import MANTARRAY_SERIAL_NUMBER_UUID as INSTRUMENT_SERIAL_NUMBER_UUID
 
 from ..constants import CURRENT_SOFTWARE_VERSION
-from ..constants import GENERIC_24_WELL_DEFINITION
-from ..constants import NUM_WELLS
 from ..constants import StimulatorCircuitStatuses
 from ..constants import SystemStatuses
+from ..utils.aio import wait_tasks_clean
+from ..utils.generic import handle_system_error
 from ..utils.generic import semver_gt
-from ..utils.generic import wait_tasks_clean
 from ..utils.state_management import ReadOnlyDict
 from ..utils.state_management import SystemStateManager
+from ..utils.stimulation import chunk_protocols_in_stim_info
 
 
 logger = logging.getLogger(__name__)
 
+ERROR_MSG = "IN SYSTEM MONITOR"
 
-# TODO ADD LOGGING
+
 class SystemMonitor:
     """Manages the state of the system and delegates tasks to subsystems."""
 
@@ -36,7 +37,7 @@ class SystemMonitor:
         self._system_state_manager = system_state_manager
         self._queues = queues
 
-    async def run(self) -> None:
+    async def run(self, system_error_future: asyncio.Future[int]) -> None:
         logger.info("Starting SystemMonitor")
 
         tasks = {
@@ -46,10 +47,11 @@ class SystemMonitor:
             asyncio.create_task(self._handle_system_state_updates()),
         }
         try:
-            await wait_tasks_clean(tasks)
+            exc = await wait_tasks_clean(tasks, error_msg=ERROR_MSG)
+            if exc:
+                handle_system_error(exc, system_error_future)
         except asyncio.CancelledError:
             logger.info("SystemMonitor cancelled")
-            # TODO ?
             raise
         finally:
             logger.info("SystemMonitor shut down")
@@ -128,15 +130,11 @@ class SystemMonitor:
             await self._system_state_manager.update(system_status_dict)
 
     async def _push_system_status_update(self, update_details: ReadOnlyDict) -> None:
-        status_update_details = {}
-        if (new_system_status := update_details.get("system_status")) is not None:
-            status_update_details["system_status"] = new_system_status
-        if (stim_running_updates := update_details.get("stimulation_running")) is not None:
-            status_update_details["is_stimulating"] = any(stim_running_updates)
-        if (in_simulation_mode := update_details.get("in_simulation_mode")) is not None:
-            status_update_details["in_simulation_mode"] = in_simulation_mode
-
-        if status_update_details:
+        if status_update_details := {
+            status_name: new_system_status
+            for status_name in ("system_status", "stimulation_protocols_running", "in_simulation_mode")
+            if (new_system_status := update_details.get(status_name))
+        }:
             logger.info(f"System status update: {status_update_details}")
             # want to have system_status logged as an enum, so afterwards need to convert it to a string so it can be json serialized later
             if system_status := status_update_details.get("system_status"):
@@ -194,7 +192,10 @@ class SystemMonitor:
                     )
                 case {"command": "set_stim_protocols", "stim_info": stim_info}:
                     system_state_updates["stim_info"] = stim_info
-                    await self._queues["to"]["instrument_comm"].put(communication)
+                    chunked_stim_info, *_ = chunk_protocols_in_stim_info(stim_info)
+                    await self._queues["to"]["instrument_comm"].put(
+                        {**communication, "stim_info": chunked_stim_info}
+                    )
                 case {"command": "start_stim_checks", "well_indices": well_indices}:
                     system_state_updates["stimulator_circuit_statuses"] = {
                         well_idx: StimulatorCircuitStatuses.CALCULATING.name.lower()
@@ -202,7 +203,7 @@ class SystemMonitor:
                     }
                     await self._queues["to"]["instrument_comm"].put(communication)
                 case invalid_comm:
-                    raise NotImplementedError(f"Invalid communication from server: {invalid_comm}")
+                    raise NotImplementedError(f"Invalid communication from Server: {invalid_comm}")
 
             if system_state_updates:
                 await self._system_state_manager.update(system_state_updates)
@@ -218,23 +219,19 @@ class SystemMonitor:
 
             system_state_updates: dict[str, Any] = {}
 
-            # TODO for all these comm handlers, raise error for unrecognized comm. Do this in subsystems as well
             match communication:
                 case {"command": "start_stimulation"}:
-                    stim_running_list = [False] * NUM_WELLS
-                    protocol_assignments = system_state["stim_info"]["protocol_assignments"]
-                    for well_name, assignment in protocol_assignments.items():
-                        if not assignment:
-                            continue
-                        well_idx = GENERIC_24_WELL_DEFINITION.get_well_index_from_well_name(well_name)
-                        stim_running_list[well_idx] = True
-                    system_state_updates["stimulation_running"] = stim_running_list
+                    system_state_updates["stimulation_protocols_running"] = [True] * len(
+                        system_state["stim_info"]["protocols"]
+                    )
                 case {"command": "stop_stimulation"}:
-                    system_state_updates["stimulation_running"] = [False] * NUM_WELLS
-                case {"command": "stim_status_update", "wells_done_stimulating": wells_done_stimulating}:
-                    system_state_updates["stimulation_running"] = list(system_state["stimulation_running"])
-                    for well_idx in wells_done_stimulating:
-                        system_state_updates["stimulation_running"][well_idx] = False
+                    pass  # Tanner (3/31/23): let the stim status updates handle setting all the running statuses back to False
+                case {"command": "stim_status_update", "protocols_completed": protocols_completed}:
+                    system_state_updates["stimulation_protocols_running"] = list(
+                        system_state["stimulation_protocols_running"]
+                    )
+                    for protocol_idx in protocols_completed:
+                        system_state_updates["stimulation_protocols_running"][protocol_idx] = False
                 case {
                     "command": "start_stim_checks",
                     "stimulator_circuit_statuses": stimulator_circuit_statuses,
@@ -263,6 +260,8 @@ class SystemMonitor:
                     system_state_updates["instrument_metadata"] = metadata
                 case {"command": "firmware_update_completed", "firmware_type": firmware_type}:
                     system_state_updates[f"{firmware_type}_firmware_update"] = None
+                case invalid_comm:
+                    raise NotImplementedError(f"Invalid communication from InstrumentComm: {invalid_comm}")
 
             if system_state_updates:
                 await self._system_state_manager.update(system_state_updates)
@@ -331,6 +330,8 @@ class SystemMonitor:
                                     "file_contents": " TODO",
                                 }
                             )
+                case invalid_comm:
+                    raise NotImplementedError(f"Invalid communication from CloudComm: {invalid_comm}")
 
             if system_state_updates:
                 await self._system_state_manager.update(system_state_updates)

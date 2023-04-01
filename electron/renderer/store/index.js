@@ -1,15 +1,7 @@
 // adapted from https://stackoverflow.com/questions/53446792/nuxt-vuex-how-do-i-break-down-a-vuex-module-into-separate-files
 
 import Vuex from "vuex";
-import {
-  settingsStoreModule,
-  systemStoreModule,
-  socket,
-  createWebSocketPlugin,
-  stimulationStoreModule,
-} from "@curi-bio/ui";
-
-const wsPlugin = createWebSocketPlugin(socket);
+import { settingsStoreModule, systemStoreModule, stimulationStoreModule } from "@curi-bio/ui";
 
 const createStore = () => {
   return new Vuex.Store({
@@ -19,7 +11,6 @@ const createStore = () => {
       settings: settingsStoreModule,
       stimulation: stimulationStoreModule,
     },
-    plugins: [wsPlugin],
   });
 };
 

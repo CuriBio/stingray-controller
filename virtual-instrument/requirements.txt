@@ -1,4 +1,0 @@
-immutabledict==2.2.3
-pulse3D==0.30.6
-stdlib-utils==0.5.2
-numpy==1.23.5

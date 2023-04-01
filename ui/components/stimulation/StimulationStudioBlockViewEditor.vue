@@ -82,7 +82,7 @@
       <StatusWarningWidget
         id="del-protocol"
         :modalLabels="delProtocolLabels"
-        @handleConfirmation="closeDeleteProtocolModal"
+        @handle-confirmation="closeDeleteProtocolModal"
       />
     </b-modal>
   </div>
@@ -183,6 +183,9 @@ export default {
     editModeStatus: function () {
       return this.editMode.status;
     },
+    editModeLetter: function () {
+      return this.editMode.letter;
+    },
     editModeLabel: function () {
       return this.editMode.label;
     },
@@ -197,6 +200,9 @@ export default {
       }
     },
     editModeStatus: function () {
+      this.setProtocolForEdit();
+    },
+    editModeLetter: function () {
       this.setProtocolForEdit();
     },
     editModeLabel: function () {

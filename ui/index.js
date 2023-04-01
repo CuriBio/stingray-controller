@@ -25,10 +25,7 @@ export {
   MIN_PHASE_DURATION_US,
   MAX_CHARGE_MA,
 } from "./store/modules/stimulation/enums";
-export { STATUS as SYSTEM_STATUS_ENUMS } from "./store/modules/system/enums";
-
-export { default as createWebSocketPlugin } from "./store/plugins/websocket";
-export { socket } from "./store/plugins/websocket";
+export { SYSTEM_STATUS } from "./store/modules/system/enums";
 
 // Basic Widgets
 export { default as PlateWell } from "./components/basic-widgets/PlateWell.vue";

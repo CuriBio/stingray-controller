@@ -5,10 +5,13 @@ import asyncio
 import logging
 from typing import Any
 
-from ..utils.generic import wait_tasks_clean
+from ..utils.aio import wait_tasks_clean
+from ..utils.generic import handle_system_error
 
 
 logger = logging.getLogger(__name__)
+
+ERROR_MSG = "IN CLOUD COMM"
 
 
 class CloudComm:
@@ -32,14 +35,18 @@ class CloudComm:
 
     # ONE-SHOT TASKS
 
-    async def run(self) -> None:
+    async def run(self, system_error_future: asyncio.Future[int]) -> None:
         # TODO ADD MORE LOGGING
+        logger.info("Starting CloudComm")
+
         try:
             tasks = {
                 asyncio.create_task(self._manage_subtasks()),
                 # TODO add other tasks
             }
-            await wait_tasks_clean(tasks)
+            exc = await wait_tasks_clean(tasks, error_msg=ERROR_MSG)
+            if exc:
+                handle_system_error(exc, system_error_future)
         except asyncio.CancelledError:
             logger.info("CloudComm cancelled")
             # TODO await self._attempt_to_upload_log_files_to_s3()
@@ -64,6 +71,7 @@ class CloudComm:
                 res = task.result()
                 task_name = task.get_name()
                 if task_name == main_task_name:
+                    # TODO handle attr not found
                     subtask_fn = getattr(self, f"_{res['command']}")
                     pending |= {
                         asyncio.create_task(self._get_comm_from_monitor(), name=main_task_name),

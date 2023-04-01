@@ -43,9 +43,8 @@ if (__resources === undefined) console.error("[Main-process]: Resources path is 
 let winHandler = null;
 
 /**
- * Python Flask
+ * Python Subprocess
  */
-const flaskPort = 4567;
 const PY_DIST_FOLDER = path.join("dist-python", "instrument-controller"); // python distributable folder
 const PY_EXE = "instrument-controller"; // the name of the main module
 
@@ -257,28 +256,6 @@ app.once("will-quit", function (e) {
   // responsive and all windows are closed.
   console.log("will-quit event being handled"); // allow-log
 
-  // Tanner (9/1/21): Need to prevent (default) app termination, wait for /shutdown response which confirms
-  // that the backend is completely shutdown, then call app.exit() which terminates app immediately
-  e.preventDefault();
-
-  // Tanner (9/1/21): Need to prevent (default) app termination, wait for /shutdown response which confirms
-  // that the backend is completely shutdown, then call app.exit() which terminates app immediately
-  axios
-    .get(`http://localhost:${flaskPort}/shutdown?called_through_app_will_quit=true`)
-    .then((response) => {
-      console.log(`Flask shutdown response: ${response.status} ${response.statusText}`); // allow-log
-      quitApp();
-    })
-    .catch((response) => {
-      console.log(
-        // allow-log
-        `Error calling Flask shutdown from Electron main process: ${response.status} ${response.statusText}`
-      );
-      quitApp();
-    });
-});
-
-const quitApp = () => {
   const autoInstallStr = autoUpdater.autoInstallOnAppQuit ? "enabled" : "disabled";
   console.log(
     // allow-log
@@ -296,7 +273,7 @@ const quitApp = () => {
   } else {
     exitAppClean();
   }
-};
+});
 
 const exitAppClean = () => {
   if (waitForSubprocessToComplete === null) {

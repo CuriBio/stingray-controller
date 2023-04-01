@@ -1,5 +1,3 @@
-import { socket } from "@/store/plugins/websocket";
-
 export default {
   async updateSettings() {
     const { activeUserIndex, userAccounts } = this.state.settings;
@@ -11,7 +9,7 @@ export default {
       user_password: userPassword,
     };
 
-    socket.send(JSON.stringify(params));
+    this.state.system.socket.send(JSON.stringify(params));
     // TODO remove response here and update from WS response message
     return 200;
   },

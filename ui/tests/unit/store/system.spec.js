@@ -30,20 +30,13 @@ describe("store/system", () => {
   describe("system/mutations", () => {
     test.each([true, false])(
       "When setFirmwareUpdateAvailable is commited, Then firmwareUpdateDurMins is updated accordingly",
-      (channel) => {
-        const updateInfo = { channelFwUpdate: channel };
-        store.commit("system/setFirmwareUpdateAvailable", updateInfo);
-        expect(store.state.system.firmwareUpdateDurMins).toStrictEqual(channel ? 5 : 1);
-      }
-    );
-    test.each([true, false])(
-      "When setFirmwareUpdateAvailable is commited, Then firmwareUpdateAvailable is updated accordingly",
       (update) => {
-        const updateInfo = { firmwareUpdateAvailable: update };
-        store.commit("system/setFirmwareUpdateAvailable", updateInfo);
-        expect(store.state.system.firmwareUpdateAvailable).toStrictEqual(update);
+        store.commit("system/setFirmwareUpdateAvailable", update);
+        expect(store.state.system.firmwareUpdateDurMins).toStrictEqual(update ? 5 : 1);
+        expect(store.state.system.firmwareUpdateAvailable).toStrictEqual(true);
       }
     );
+
     describe("Barcode validity", () => {
       test.each([
         ["", "error due to empty string", false],
@@ -331,7 +324,7 @@ describe("store/system", () => {
   //   ])(
   //     "When backend emits error messages %s, Then it will update the shutdown error status in settings state",
   //     async (errorType) => {
-  //       expect(store.state.system.shutdownErrorStatus).toBe("");
+  //       expect(store.state.system.systemErrorCode).toBe("");
 
   //       const latestCompatibleSwVersion =
   //         errorType === "FirmwareAndSoftwareNotCompatibleError" ? "1.2.3" : null;
@@ -346,7 +339,7 @@ describe("store/system", () => {
   //         ? ". Please download the installer for the correct version here:"
   //         : ". Stingray Controller is about to shutdown.";
 
-  //       expect(store.state.system.shutdownErrorStatus).toBe(ERRORS[errorType] + additionalText);
+  //       expect(store.state.system.systemErrorCode).toBe(ERRORS[errorType] + additionalText);
   //     }
   //   );
   // });

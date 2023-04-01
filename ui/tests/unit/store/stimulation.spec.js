@@ -180,7 +180,7 @@ describe("store/stimulation", () => {
       ).length;
       expect(protocols).toHaveLength(labeledProtocols);
     });
-    test("When requesting the next available protocol assignment(color, letter), Then the protocol recieved should be unused and unique", async () => {
+    test("When requesting the next available protocol assignment(color, letter), Then the protocol received should be unused and unique", async () => {
       store.state.stimulation.protocolList = [{ letter: "", color: "", label: "Create New" }];
 
       [...Array(26)].map((_, i) => {
@@ -493,7 +493,7 @@ describe("store/stimulation", () => {
       await store.commit("stimulation/setProtocolName", newName);
       await store.dispatch("stimulation/addSavedPotocol");
 
-      const test = protocolList[1].protocol.name;
+      const test = store.state.stimulation.protocolList[1].protocol.name;
       expect(test).toBe(newName);
 
       expect(editMode.status).toBe(false);

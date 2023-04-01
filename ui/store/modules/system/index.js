@@ -3,14 +3,15 @@
 import actions from "./actions";
 import getters from "./getters";
 import mutations from "./mutations";
-import { STATUS } from "./enums";
+import { SYSTEM_STATUS } from "./enums";
 
 const defaultState = {
   port: 4567, // http://localhost:4567/
-  statusUuid: STATUS.SERVER_INITIALIZING_STATE,
+  statusUuid: SYSTEM_STATUS.SERVER_INITIALIZING_STATE,
   simulationMode: false,
   barcodeManualMode: false,
   isConnectedToController: false,
+  socket: null,
   barcodes: {
     plateBarcode: {
       value: null,
@@ -21,8 +22,9 @@ const defaultState = {
       valid: false,
     },
   },
-  shutdownErrorMessage: "Stingray software is about to shut down.",
-  shutdownErrorStatus: "",
+  shutdownStatus: false,
+  systemErrorMessage: null,
+  systemErrorCode: null,
   installerLink: null,
   softwareUpdateAvailable: false,
   firmwareUpdateAvailable: false,
@@ -40,5 +42,5 @@ export default {
   actions,
   mutations,
   getters,
-  STATUS,
+  SYSTEM_STATUS,
 };

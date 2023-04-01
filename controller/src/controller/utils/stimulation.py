@@ -3,10 +3,6 @@
 
 import copy
 from typing import Any
-from typing import Dict
-from typing import Optional
-from typing import Tuple
-from typing import Union
 
 from ..constants import STIM_MAX_CHUNKED_SUBPROTOCOL_DUR_MICROSECONDS
 from ..constants import STIM_MIN_SUBPROTOCOL_DURATION_MICROSECONDS
@@ -16,15 +12,15 @@ SUBPROTOCOL_DUTY_CYCLE_DUR_COMPONENTS = frozenset(
 )
 
 
-def get_pulse_duty_cycle_dur_us(subprotocol: Dict[str, Union[str, int]]) -> int:
+def get_pulse_duty_cycle_dur_us(subprotocol: dict[str, str | int]) -> int:
     return sum(subprotocol.get(comp, 0) for comp in SUBPROTOCOL_DUTY_CYCLE_DUR_COMPONENTS)  # type: ignore
 
 
-def get_pulse_dur_us(subprotocol: Dict[str, Union[str, int]]) -> int:
+def get_pulse_dur_us(subprotocol: dict[str, str | int]) -> int:
     return get_pulse_duty_cycle_dur_us(subprotocol) + subprotocol["postphase_interval"]  # type: ignore
 
 
-def get_subprotocol_dur_us(subprotocol: Dict[str, Union[str, int]]) -> int:
+def get_subprotocol_dur_us(subprotocol: dict[str, str | int]) -> int:
     duration = (
         subprotocol["duration"]
         if subprotocol["type"] == "delay"
@@ -34,8 +30,8 @@ def get_subprotocol_dur_us(subprotocol: Dict[str, Union[str, int]]) -> int:
 
 
 def chunk_subprotocol(
-    original_subprotocol: Dict[str, Any]
-) -> Tuple[Optional[Dict[str, Any]], Optional[Dict[str, Any]]]:
+    original_subprotocol: dict[str, Any]
+) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
     # copy so the original subprotocol dict isn't modified
     original_subprotocol = copy.deepcopy(original_subprotocol)
     original_subprotocol_dur_us = get_subprotocol_dur_us(original_subprotocol)
@@ -72,8 +68,8 @@ def chunk_subprotocol(
 
 
 def chunk_protocols_in_stim_info(
-    stim_info: Dict[str, Any]
-) -> Tuple[Dict[str, Any], Dict[str, Dict[int, int]], Dict[str, Tuple[int, ...]]]:
+    stim_info: dict[str, Any]
+) -> tuple[dict[str, Any], dict[str, dict[int, int]], dict[str, tuple[int, ...]]]:
     # copying so the original dict passed in does not get modified
     chunked_stim_info = copy.deepcopy(stim_info)
 

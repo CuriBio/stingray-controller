@@ -90,9 +90,16 @@ repos:
     rev: v1.0.1 # pick a git hash / tag to point to
     hooks:
       - id: mypy
+        name: mypy-controller
         args: [--config-file=controller/pyproject.toml]
-        # additional_dependencies: [nptyping==1.4.0, types-requests==2.28.11]
-        exclude: (tests/)|(build.py)|(.github/)
+        files: controller/.*
+        exclude: (tests/)|(build.py)
+      # TODO
+      # - id: mypy
+      #   name: mypy-virtual-instrument
+      #   args: [--config-file=virtual-instrument/pyproject.toml]
+      #   files: virtual-instrument/.*
+      #   exclude: (tests/)|(build.py)
 
   - repo: https://github.com/Lucas-C/pre-commit-hooks-markup
     rev: v1.0.1

@@ -7,10 +7,17 @@ from typing import Any
 from zlib import crc32
 
 from aioserial import AioSerial
+from immutabledict import immutabledict
+from pulse3D.constants import BOOT_FLAGS_UUID
+from pulse3D.constants import CHANNEL_FIRMWARE_VERSION_UUID
+from pulse3D.constants import INITIAL_MAGNET_FINDING_PARAMS_UUID
+from pulse3D.constants import MAIN_FIRMWARE_VERSION_UUID
+from pulse3D.constants import MANTARRAY_NICKNAME_UUID
+from pulse3D.constants import MANTARRAY_SERIAL_NUMBER_UUID
 import serial
 import serial.tools.list_ports as list_ports
 
-from ..constants import GENERIC_24_WELL_DEFINITION
+from ..constants import CURI_VID
 from ..constants import NUM_WELLS
 from ..constants import SERIAL_COMM_BAUD_RATE
 from ..constants import SERIAL_COMM_HANDSHAKE_PERIOD_SECONDS
@@ -40,10 +47,11 @@ from ..exceptions import SerialCommUntrackedCommandResponseError
 from ..exceptions import StimulationProtocolUpdateFailedError
 from ..exceptions import StimulationProtocolUpdateWhileStimulatingError
 from ..exceptions import StimulationStatusUpdateFailedError
+from ..utils.aio import wait_tasks_clean
 from ..utils.command_tracking import CommandTracker
 from ..utils.data_parsing_cy import parse_stim_data
 from ..utils.data_parsing_cy import sort_serial_packets
-from ..utils.generic import wait_tasks_clean
+from ..utils.generic import handle_system_error
 from ..utils.serial_comm import convert_semver_str_to_bytes
 from ..utils.serial_comm import convert_status_code_bytes_to_dict
 from ..utils.serial_comm import convert_stim_dict_to_bytes
@@ -54,6 +62,8 @@ from ..utils.serial_comm import parse_metadata_bytes
 
 
 logger = logging.getLogger(__name__)
+
+ERROR_MSG = "IN INSTRUMENT COMM"
 
 
 COMMAND_PACKET_TYPES = frozenset(
@@ -71,6 +81,18 @@ COMMAND_PACKET_TYPES = frozenset(
         SerialCommPacketTypes.FIRMWARE_UPDATE,
         SerialCommPacketTypes.END_FIRMWARE_UPDATE,
     ]
+)
+
+
+METADATA_TAGS_FOR_LOGGING = immutabledict(
+    {
+        BOOT_FLAGS_UUID: "Boot flags",
+        MANTARRAY_NICKNAME_UUID: "Instrument nickname",
+        MANTARRAY_SERIAL_NUMBER_UUID: "Instrument nickname",
+        MAIN_FIRMWARE_VERSION_UUID: "Main micro firmware version",
+        CHANNEL_FIRMWARE_VERSION_UUID: "Channel micro firmware version",
+        INITIAL_MAGNET_FINDING_PARAMS_UUID: "Initial magnet position estimate",
+    }
 )
 
 
@@ -98,8 +120,8 @@ class InstrumentComm:
         self._is_waiting_for_reboot = False
         self._status_beacon_received_event = asyncio.Event()
         # stimulation values
-        self._wells_assigned_a_protocol: frozenset[int] = frozenset()
-        self._wells_actively_stimulating: set[int] = set()
+        self._num_stim_protocols: int = 0
+        self._protocols_running: set[int] = set()
         # firmware updating
         self._firmware_update_manager: FirmwareUpdateManager | None = None
 
@@ -115,19 +137,20 @@ class InstrumentComm:
 
     @property
     def _is_stimulating(self) -> bool:
-        return len(self._wells_actively_stimulating) > 0
+        return len(self._protocols_running) > 0
 
     @_is_stimulating.setter
     def _is_stimulating(self, value: bool) -> None:
         if value:
-            self._wells_actively_stimulating = set(well for well in self._wells_assigned_a_protocol)
+            self._protocols_running = set(range(self._num_stim_protocols))
         else:
-            self._wells_actively_stimulating = set()
+            self._protocols_running = set()
 
     # ONE-SHOT TASKS
 
-    async def run(self) -> None:
-        # TODO ADD MORE LOGGING
+    async def run(self, system_error_future: asyncio.Future[int]) -> None:
+        logger.info("Starting InstrumentComm")
+
         try:
             await self._setup()
 
@@ -138,10 +161,15 @@ class InstrumentComm:
                 asyncio.create_task(self._handle_beacon_tracking()),
                 asyncio.create_task(self._catch_expired_command()),
             }
-            await wait_tasks_clean(tasks)
+            exc = await wait_tasks_clean(tasks, error_msg=ERROR_MSG)
+            if exc:
+                handle_system_error(exc, system_error_future)
         except asyncio.CancelledError:
             logger.info("InstrumentComm cancelled")
             raise
+        except Exception as e:
+            logger.exception(ERROR_MSG)
+            handle_system_error(e, system_error_future)
         finally:
             logger.info("InstrumentComm shut down")
 
@@ -155,16 +183,16 @@ class InstrumentComm:
         # now that the magic word is registered,
         await self._prompt_instrument_for_metadata()
 
-        # TODO remove this when better logging is added?
         logger.info("Instrument ready")
 
     async def _create_connection_to_instrument(self) -> None:
+        logger.info("Attempting to connect to instrument")
         # TODO could eventually allow the user to specify in a config file whether or not they want to connect to a real or virtual instrument
 
         # first, check for a real instrument on the serial COM ports
         for port_info in list_ports.comports():
             # Tanner (6/14/21): attempt to connect to any device with the STM vendor ID
-            if port_info.vid == STM_VID:
+            if port_info.vid in (STM_VID, CURI_VID):
                 logger.info(f"Instrument detected with description: {port_info.description}")
                 self._instrument = AioSerial(
                     port=port_info.name,
@@ -177,11 +205,14 @@ class InstrumentComm:
 
         # if a real instrument is not found, check for a virtual instrument
         if not self._instrument:
+            logger.info("No live instrument detected, checking for virtual instrument")
             virtual_instrument = VirtualInstrumentConnection()
             try:
                 await virtual_instrument.connect()
             except Exception as e:  # TODO make this a specific exception?
                 raise NoInstrumentDetectedError() from e
+            else:
+                self._instrument = virtual_instrument
 
         await self._to_monitor_queue.put(
             {
@@ -190,9 +221,8 @@ class InstrumentComm:
             }
         )
 
-        self._instrument = virtual_instrument
-
     async def _register_magic_word(self) -> None:
+        logger.info("Syncing with packets from instrument")
         magic_word_test_bytes = bytearray()
 
         async def read_initial_bytes(magic_word_test_bytes: bytearray) -> None:
@@ -213,7 +243,6 @@ class InstrumentComm:
                 read_initial_bytes(magic_word_test_bytes), SERIAL_COMM_STATUS_BEACON_TIMEOUT_SECONDS
             )
         except asyncio.TimeoutError as e:
-            print("RAISING ERROR")  # allow-print
             # after the timeout, not having read enough bytes means that a fatal error has occurred on the instrument
             raise SerialCommPacketRegistrationReadEmptyError(list(magic_word_test_bytes)) from e
 
@@ -246,6 +275,7 @@ class InstrumentComm:
         self._serial_packet_cache = SERIAL_COMM_MAGIC_WORD_BYTES
 
     async def _prompt_instrument_for_metadata(self) -> None:
+        logger.info("Prompting instrument for metadata")
         await self._send_data_packet(SerialCommPacketTypes.GET_METADATA)
         await self._command_tracker.add(SerialCommPacketTypes.GET_METADATA, {"command": "get_metadata"})
 
@@ -259,9 +289,6 @@ class InstrumentComm:
     async def _handle_comm_from_monitor(self) -> None:
         while True:
             comm_from_monitor = await self._from_monitor_queue.get()
-
-            # TODO remove this
-            logger.info(f"!!!!!!!!!!!!!!!! {comm_from_monitor}")
 
             bytes_to_send = bytes(0)
             packet_type: int | None = None
@@ -281,12 +308,7 @@ class InstrumentComm:
                     bytes_to_send = convert_stim_dict_to_bytes(stim_info)
                     if self._is_stimulating and not self._hardware_test_mode:
                         raise StimulationProtocolUpdateWhileStimulatingError()
-                    protocol_assignments = stim_info["protocol_assignments"]
-                    self._wells_assigned_a_protocol = frozenset(
-                        GENERIC_24_WELL_DEFINITION.get_well_index_from_well_name(well_name)
-                        for well_name, protocol_id in protocol_assignments.items()
-                        if protocol_id is not None
-                    )
+                    self._num_stim_protocols = len(stim_info["protocols"])
                 case {"command": "start_stimulation"}:
                     packet_type = SerialCommPacketTypes.START_STIM
                 case {"command": "stop_stimulation"}:
@@ -299,9 +321,9 @@ class InstrumentComm:
                 }:  # pragma: no cover
                     packet_type = SerialCommPacketTypes.TRIGGER_ERROR
                     bytes_to_send = bytes(first_two_status_codes)
-                case _:
+                case invalid_comm:
                     raise NotImplementedError(
-                        f"InstrumentComm received invalid comm from SystemMonitor: {comm_from_monitor}"
+                        f"InstrumentComm received invalid comm from SystemMonitor: {invalid_comm}"
                     )
 
             if packet_type is not None:
@@ -320,9 +342,9 @@ class InstrumentComm:
                 await asyncio.wait_for(
                     self._status_beacon_received_event.wait(), SERIAL_COMM_STATUS_BEACON_TIMEOUT_SECONDS
                 )
-            except asyncio.TimeoutError:
+            except asyncio.TimeoutError as e:
                 if not self._instrument_in_sensitive_state:
-                    raise SerialCommStatusBeaconTimeoutError()
+                    raise SerialCommStatusBeaconTimeoutError() from e
 
                 # firmware updating / rebooting is complete when a beacon is received,
                 # so just wait indefinitely for the next one
@@ -377,6 +399,8 @@ class InstrumentComm:
     # TEMPORARY TASKS
 
     async def _handle_firmware_update(self, comm_from_monitor: dict[str, Any]) -> None:
+        logger.info("Beginning firmware update")
+
         # create FW update manager, and wait for it to complete. Updates will be pushed to it from another task
         self._firmware_update_manager = FirmwareUpdateManager(comm_from_monitor)
 
@@ -396,6 +420,8 @@ class InstrumentComm:
         )
 
     async def _wait_for_reboot(self) -> None:
+        logger.info("Waiting for instrument to reboot")
+
         self._is_waiting_for_reboot = True
 
         # TODO raise InstrumentRebootTimeoutError() if this times out
@@ -437,6 +463,7 @@ class InstrumentComm:
                 await self._firmware_update_manager.complete()
             case SerialCommPacketTypes.BARCODE_FOUND:
                 barcode = packet_payload.decode("ascii")
+                logger.info(f"Barcode scanned by instrument: {barcode}")
                 barcode_comm = {"command": "get_barcode", "barcode": barcode}
                 await self._to_monitor_queue.put(barcode_comm)
             case _:
@@ -453,7 +480,12 @@ class InstrumentComm:
         match prev_command_info["command"]:
             # TODO make an enum for all these commands?
             case "get_metadata":
-                prev_command_info.update(parse_metadata_bytes(response_data))  # type: ignore [arg-type]  # mypy doesn't like that the keys are UUIDs here
+                metadata_dict = parse_metadata_bytes(response_data)
+                metadata_dict_for_logging = {
+                    METADATA_TAGS_FOR_LOGGING.get(key, key): val for key, val in metadata_dict.items()
+                }
+                logger.info(f"Instrument metadata received: {metadata_dict_for_logging}")
+                prev_command_info.update(metadata_dict)  # type: ignore [arg-type]  # mypy doesn't like that the keys are UUIDs here
             case "start_stim_checks":
                 stimulator_check_dict = convert_stimulator_check_bytes_to_dict(response_data)
 
@@ -470,14 +502,13 @@ class InstrumentComm:
 
                 prev_command_info["stimulator_circuit_statuses"] = stimulator_circuit_statuses
                 prev_command_info["adc_readings"] = adc_readings
+
+                logger.info(f"Stim circuit check results: {prev_command_info}")
             case "set_protocols":
                 if response_data[0]:
                     if not self._hardware_test_mode:
                         raise StimulationProtocolUpdateFailedError()
                     prev_command_info["hardware_test_message"] = "Command failed"  # pragma: no cover
-                # TODO is this necessary now?
-                # remove stim info so it is not logged again
-                prev_command_info.pop("stim_info")
             case "start_stimulation":
                 # Tanner (10/25/21): if needed, can save _base_global_time_of_data_stream here
                 if response_data[0]:
@@ -503,19 +534,19 @@ class InstrumentComm:
         if not stim_stream_info["num_packets"]:
             return
 
-        # Tanner (2/28/23): there is currently no data stream, so only need to check for wells that have completed stimulation
+        # Tanner (2/28/23): there is currently no data stream, so only need to check for protocols that have completed
 
-        well_statuses: dict[int, Any] = parse_stim_data(*stim_stream_info.values())
+        protocol_statuses: dict[int, Any] = parse_stim_data(*stim_stream_info.values())
 
-        wells_done_stimulating = [
-            well_idx
-            for well_idx, status_updates_arr in well_statuses.items()
+        protocols_completed = [
+            protocol_idx
+            for protocol_idx, status_updates_arr in protocol_statuses.items()
             if status_updates_arr[1][-1] == STIM_COMPLETE_SUBPROTOCOL_IDX
         ]
-        if wells_done_stimulating:
-            self._wells_actively_stimulating -= set(wells_done_stimulating)
+        if protocols_completed:
+            self._protocols_running -= set(protocols_completed)
             await self._to_monitor_queue.put(
-                {"command": "stim_status_update", "wells_done_stimulating": wells_done_stimulating}
+                {"command": "stim_status_update", "protocols_completed": protocols_completed}
             )
 
     async def _process_status_beacon(self, packet_payload: bytes) -> None:
@@ -538,6 +569,7 @@ class InstrumentComm:
 FirmwareUpdateItems = tuple[int, bytes, dict[str, Any]]
 
 
+# TODO ADD LOGGING TO THIS
 class FirmwareUpdateManager:
     def __init__(self, update_info: dict[str, Any]) -> None:
         self._file_contents = update_info.pop("file_contents")
@@ -627,11 +659,19 @@ class VirtualInstrumentConnection:
     async def read_async(self, size: int = 1) -> bytes:
         # Tanner (3/17/23): asyncio.StreamReader does not have configurable timeouts on reads, so if trying to
         # read a specific number of bytes it will block until at least one is available
-        data = await self.reader.read(size)
+        try:
+            data = await self.reader.read(size)
+        except Exception:
+            # TODO raise a different error here?
+            return bytes(0)
         logger.debug(f"RECV: {data}")  # type: ignore
         return data
 
     async def write_async(self, data: bytearray | bytes | memoryview) -> None:
         logger.debug(f"SEND: {data}")  # type: ignore
-        self.writer.write(data)
-        await self.writer.drain()
+        try:
+            self.writer.write(data)
+            await self.writer.drain()
+        except Exception:
+            # TODO raise a different error here?
+            pass

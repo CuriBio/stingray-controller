@@ -78,17 +78,8 @@ class SerialCommIncorrectChecksumFromPCError(Exception):
     pass
 
 
-class SerialCommTooManyMissedHandshakesError(Exception):
-    pass
-
-
 class SerialCommUntrackedCommandResponseError(Exception):
     pass
-
-
-# this is only used in the simulator, so not sure if it's necessary here
-# class SerialCommUntrackedCommandResponseError(Exception):
-#     pass
 
 
 class InstrumentRebootTimeoutError(Exception):

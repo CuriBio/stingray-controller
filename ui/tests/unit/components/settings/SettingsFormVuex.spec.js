@@ -1,7 +1,7 @@
 import { mount } from "@vue/test-utils";
 import ComponentToTest from "@/components/settings/SettingsForm.vue";
 import { SettingsForm as DistComponentToTest } from "@/dist/stingray.common";
-import { socket } from "@/store/plugins/websocket";
+import { socket } from "@/store/plugins/websocket"; // TODO need to grab this value from the store now
 import Vuex from "vuex";
 import { createLocalVue } from "@vue/test-utils";
 import BootstrapVue from "bootstrap-vue";
