@@ -229,7 +229,9 @@ jobs:
 
       - name: Build Full Electron App
         run: |
-          cd electron/
+          cd ui/
+          npm run build
+          cd ../electron
           npm run build-${{env.RELEASE_CHANNEL}}
 
       - name: S3 Publisher
