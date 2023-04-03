@@ -1,6 +1,6 @@
 {
   "name": "@curi-bio/ui",
-  "version": "1.4.1",
+  "version": "0.1.0",
   "description": "Stingray Controller UI.",
   "main": "./dist/stingray.common.js",
   "author": "Curi Bio <contact@curibio.com> (http://www.curibio.com/)",
