@@ -79,12 +79,12 @@ jobs:
     name: Python ${{ matrix.python-version }} with Node ${{ matrix.node-version }} on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     steps:
-      - name: Adjust Screen Resolution (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          Get-DisplayResolution
-          Set-DisplayResolution -Width 1920 -Height 1080 -Force
-          Get-DisplayResolution
+      # - name: Adjust Screen Resolution (Windows)
+      #   if: runner.os == 'Windows'
+      #   run: |
+      #     Get-DisplayResolution
+      #     Set-DisplayResolution -Width 1920 -Height 1080 -Force
+      #     Get-DisplayResolution
 
       - name: Checkout
         uses: actions/checkout@v3
@@ -97,21 +97,21 @@ jobs:
       - name: Add prerelease SemVer component (if unstable)
         if: env.RELEASE_CHANNEL == 'unstable'
         run: |
-          ((Get-Content -path package.json -Raw) -replace '\n  "version": "(\d+\.\d+\.\d+)"', $("`n" + '  "version": "$1-pre.' + $(Get-Date -Format 'yyyyMMddHHmm') + '"')) | Set-Content -Path package.json
-          ((Get-Content -path package-lock.json -Raw) -replace '\n  "version": "(\d+\.\d+\.\d+)"', $("`n" + '  "version": "$1-pre.' + $(Get-Date -Format 'yyyyMMddHHmm') + '"')) | Set-Content -Path package-lock.json
+          ((Get-Content -path electron/package.json -Raw) -replace '\n  "version": "(\d+\.\d+\.\d+)"', $("`n" + '  "version": "$1-pre.' + $(Get-Date -Format 'yyyyMMddHHmm') + '"')) | Set-Content -Path electron/package.json
+          ((Get-Content -path electron/package-lock.json -Raw) -replace '\n  "version": "(\d+\.\d+\.\d+)"', $("`n" + '  "version": "$1-pre.' + $(Get-Date -Format 'yyyyMMddHHmm') + '"')) | Set-Content -Path electron/package-lock.json
 
       - name: Get Version
         id: software-version
         uses: notiz-dev/github-action-json-property@v0.2.0
         with:
-          path: "package.json"
+          path: "electron/package.json"
           prop_path: "version"
 
       - name: Get Product Name
         id: product-name
         uses: notiz-dev/github-action-json-property@v0.2.0
         with:
-          path: "package.json"
+          path: "electron/package.json"
           prop_path: "name"
 
       - name: Check release tag (If not unstable)
