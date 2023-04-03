@@ -13,7 +13,6 @@ const S3Publisher = require("app-builder-lib/out/publish/s3/s3Publisher").defaul
 // const S3Publisher = require('electron-publisher-s3').default;
 const argv = require("yargs").argv;
 
-// TODO
 const buildDir = argv.buildDir || "./dist/";
 const channel = argv.channel || "unstable";
 const bucket = argv.bucket || "downloads.curibio.com//software";
