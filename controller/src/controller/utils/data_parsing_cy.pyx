@@ -25,7 +25,6 @@ from libc.stdint cimport uint32_t
 from libc.stdint cimport uint64_t
 from libc.string cimport strncpy
 from libc.string cimport strncmp
-from nptyping import NDArray
 # import numpy correctly
 import numpy as np
 cimport numpy as np
