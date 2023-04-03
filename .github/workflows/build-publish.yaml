@@ -155,15 +155,15 @@ jobs:
           node --version
           npm --version
 
-      - name: Cache node modules # https://docs.github.com/en/free-pro-team@latest/actions/guides/caching-dependencies-to-speed-up-workflows
-        uses: actions/cache@v3
-        env:
-          cache-name: cache-node-modules
-        with:
-          path: ./.npm_cache
-          key: ${{ matrix.os }}-${{ matrix.node-version }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ matrix.os }}-${{ matrix.node-version }}-build-${{ env.cache-name }}-
+      # - name: Cache node modules # https://docs.github.com/en/free-pro-team@latest/actions/guides/caching-dependencies-to-speed-up-workflows
+      #   uses: actions/cache@v3
+      #   env:
+      #     cache-name: cache-node-modules
+      #   with:
+      #     path: .npm_cache
+      #     key: ${{ matrix.os }}-${{ matrix.node-version }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+      #     restore-keys: |
+      #       ${{ matrix.os }}-${{ matrix.node-version }}-build-${{ env.cache-name }}-
 
       # - name: Cache Python modules
       #   uses: actions/cache@v3
@@ -203,12 +203,12 @@ jobs:
       - name: Setup UI
         run: |
           cd ui/
-          npm ci --cache .npm_cache/
+          npm ci
 
       - name: Setup Electron
         run: |
           cd electron/
-          npm ci --cache .npm_cache/
+          npm ci
 
       - name: Insert the Build Number and Software Version into the code (Windows)
         if: runner.os == 'Windows'
