@@ -190,10 +190,9 @@ jobs:
           python .github/workflows/run_zlib_download.py
 
       - name: Install Poetry
-        run: (Invoke-WebRequest -Uri https://install.python-poetry.org -UseBasicParsing).Content | python -
-
-      - name: Setup Poetry alias
-        run: Set-Alias -Name poetry -Value %APPDATA%\pypoetry\venv\Scripts\poetry
+        run: |
+          pip install poetry==1.4.2
+          poetry --version
 
       - name: Setup Controller
         run: |
