@@ -199,19 +199,16 @@ jobs:
           cd controller/
           poetry install
           poetry show
-          cd ..
 
       - name: Setup UI
         run: |
           cd ui/
           npm ci --cache .npm_cache/
-          cd ..
 
       - name: Setup Electron
         run: |
           cd electron/
           npm ci --cache .npm_cache/
-          cd ..
 
       - name: Insert the Build Number and Software Version into the code (Windows)
         if: runner.os == 'Windows'
@@ -229,7 +226,6 @@ jobs:
         run: |
           cd controller/
           poetry run pyinstaller pyinstaller.spec --log-level=DEBUG --distpath=../electron/dist-python --workpath=build-python
-          cd ..
 
       - name: Build Full Electron App
         run: |
@@ -241,4 +237,6 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.CI_IAM_GIT_PUBLISH_ACCESS_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.CI_IAM_GIT_PUBLISH_SECRET_KEY }}
-        run: node .github/workflows/s3_publish.js --file="${{steps.product-name.outputs.prop}}-Setup-${{env.RELEASE_CHANNEL}}-${{steps.software-version.outputs.prop}}.exe" --buildDir=./dist --channel=${{env.RELEASE_CHANNEL}}
+        run: |
+          cd electron/
+          node ../.github/workflows/s3_publish.js --file="${{steps.product-name.outputs.prop}}-Setup-${{env.RELEASE_CHANNEL}}-${{steps.software-version.outputs.prop}}.exe" --buildDir=./dist --channel=${{env.RELEASE_CHANNEL}}
