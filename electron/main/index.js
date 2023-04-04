@@ -60,12 +60,6 @@ const isRunningInBundle = () => {
   return fs.existsSync(pathToPyDistFolder);
 };
 
-const getPythonScriptPath = () => {
-  const unbundledPath = path.join("..", "..", "..", "controller", "src", "entrypoint.py");
-  const bundledPath = path.join(pathToPyDistFolder, PY_EXE);
-  return isRunningInBundle() ? bundledPath : unbundledPath;
-};
-
 let waitForSubprocessToComplete = null;
 
 const startPythonSubprocess = () => {
@@ -84,7 +78,7 @@ const startPythonSubprocess = () => {
 
   console.log("sending command line args: " + redactedArgs); // allow-log
   if (isRunningInBundle()) {
-    const script = getPythonScriptPath();
+    const script = path.join(pathToPyDistFolder, PY_EXE);
     console.log(
       // allow-log
       "Launching compiled Python EXE at path: " + mainUtils.redactUsernameFromLogs(script)
@@ -282,7 +276,7 @@ const exitAppClean = () => {
 
   const waitForSubprocessToCompleteWithTimeout = new Promise((resolve) => {
     waitForSubprocessToComplete.then((msg) => resolve(msg));
-    setTimeout(() => resolve("Backend not closed after timeout"), 8000);
+    setTimeout(() => resolve("Controller process not closed after timeout"), 8000);
   });
   waitForSubprocessToCompleteWithTimeout.then((msg) => {
     console.log(msg); // allow-log

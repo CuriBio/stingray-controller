@@ -1,6 +1,6 @@
 {
   "name": "StingrayController",
-  "version": "1.1.0",
+  "version": "0.1.0",
   "description": "Desktop application for controlling the Stingray instrument.",
   "author": {
     "name": "Curi Bio",
@@ -15,7 +15,6 @@
   "license": "MIT",
   "main": "./dist/main/index.js",
   "scripts": {
-    "prepare": "pre-commit install",
     "dev": "check-engines && cross-env-shell NODE_ENV=development node --trace-warnings .electron-nuxt/index.js",
     "test:unit": "check-engines && cross-env-shell NODE_ENV=test jest -c jest.config.js",
     "build-unstable": "check-engines && cross-env-shell NODE_ENV=production RELEASE_CHANNEL=unstable node .electron-nuxt/index.js",
