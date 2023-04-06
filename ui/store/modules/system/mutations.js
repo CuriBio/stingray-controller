@@ -42,6 +42,10 @@ export default {
         ERROR_MESSAGES[msg.error_code] || "Stingray Controller is about to shutdown.";
     }
   },
+  setSystemErrorMessage(state, msg) {
+    // used for testing
+    state.systemErrorMessage = msg;
+  },
   setSoftwareUpdateAvailable(state, bool) {
     state.softwareUpdateAvailable = bool;
   },
