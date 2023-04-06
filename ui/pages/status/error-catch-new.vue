@@ -5,7 +5,7 @@
     <p class="p__status-error-catch-alert-txt">{{ `Error Code: ${systemErrorCode}` }}</p>
     <textarea
       v-if="installerLink"
-      class="textarea__installer_filepath"
+      class="textarea__installer-link"
       name="installer_link"
       rows="2"
       cols="75"
@@ -21,7 +21,7 @@
     </p>
     <textarea
       v-if="logFilepath"
-      class="textarea__installer_filepath"
+      class="textarea__installer-link"
       name="error_file"
       rows="2"
       cols="50"
@@ -139,10 +139,10 @@ a:hover {
   position: relative;
   margin-right: 100%;
 }
-.textarea__installer_filepath {
+.textarea__installer-link {
   /* line-height: 1.2; */
   transform: rotate(0deg);
-  margin: 8px 0;
+  margin: 10px 0;
   word-break: break-all;
   outline: none;
   color: rgb(183, 183, 183);

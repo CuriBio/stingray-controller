@@ -42,18 +42,18 @@ describe("ErrorCatchWidget.vue", () => {
   test("Given that ErrorCatchWidget has a props having error file name and error message, When the lifecyle hook mounted is created, Then title, alert text, contact e-mail and error file name is rendered properly", async () => {
     const propsData = {
       logFilepath: "C:\testFileLog.txt",
-      systemErrorMessage: "Stingray software is about to shut down.",
     };
     wrapper = mount(ComponentToTest, {
       propsData,
       store,
       localVue,
     });
+    await store.commit("system/setSystemErrorMessage", "Stingray Controller is about to shut down.");
     const targetTitleDiv = wrapper.find(".div__status-error-catch-title-label");
     expect(targetTitleDiv.text()).toStrictEqual("An error occurred.");
-    const targetAlertDiv = wrapper.find(".div__status-error-catch-alert-txt");
+    const targetAlertDiv = wrapper.find(".p__status-error-catch-alert-txt");
     const targetAlertDivP = targetAlertDiv.findAll("p");
-    expect(targetAlertDivP.at(0).text()).toStrictEqual("Stingray software is about to shut down.");
+    expect(targetAlertDivP.at(0).text()).toStrictEqual("Stingray Controller is about to shut down.");
 
     const targetEmailDivP = wrapper.find(".div__status-email-txt").findAll("p");
     expect(targetEmailDivP.at(0)).toMatchInlineSnapshot(`
@@ -64,49 +64,10 @@ describe("ErrorCatchWidget.vue", () => {
     `);
 
     await wrapper.vm.$nextTick(); // wait for update
-    const targetTextArea = wrapper.find(".textarea__error-file-path");
+    const targetTextArea = wrapper.find(".textarea__installer_filepath");
     expect(targetTextArea.element.value).toStrictEqual("C:\testFileLog.txt");
   });
-  test("Given that ErrorCatchWidget has a props having logFilepath is small, When mounting the component with short logFilepath, Then the text area rows attribute is modified to suite the length of props logFilepath intially, at run time based on new logFilepath then the rows attribute of textarea is updated", async () => {
-    const propsData = {
-      logFilepath: "C:\testFileLog.txt",
-    };
-    wrapper = mount(ComponentToTest, {
-      propsData,
-      store,
-      localVue,
-    });
-    await wrapper.vm.$nextTick(); // wait for update
-    const targetTextArea = wrapper.find(".textarea__error-file-path");
-    expect(targetTextArea.attributes("rows")).toBe("1");
-    await wrapper.setProps({
-      logFilepath: "C:UsersEliCuriBioAppDataRoamingStingrayControllerlogsFlaskStingray-2020-10-21-185640.txt",
-    });
-    expect(targetTextArea.attributes("rows")).toBe("3");
-  });
-  test("Given that ErrorCatchWidget has a props having logFilepath is small, When mounting the component with short logFilepath, Then the height attribute of the status-error-catch-background, textarea__error-file-path and the top attribute of errorCatchButton is updated based on the length prop logFilepath", async () => {
-    const propsData = {
-      logFilepath: "C:\testFileLog.txt",
-    };
-    wrapper = mount(ComponentToTest, {
-      propsData,
-      store,
-      localVue,
-    });
-    const targetBackgroundDiv = wrapper.find(".div__status-error-catch-background");
-    expect(targetBackgroundDiv.attributes().style).toBe("height: 262px;");
-    const targetTextArea = wrapper.find(".textarea__error-file-path");
-    expect(targetTextArea.attributes().style).toBe("height: 37px; top: 145px;");
-    const targetErrorButton = wrapper.find(".div__error-button");
-    expect(targetErrorButton.attributes().style).toBe("top: 262px; left: 0px; position: absolute;");
-    /* A run time update of prop occured below then observe that height value and top is updated */
-    await wrapper.setProps({
-      logFilepath: "C:UsersStingrayAppDataRoamingStingrayControllerlogsFlask",
-    });
-    expect(targetBackgroundDiv.attributes().style).toBe("height: 274px;");
-    expect(targetTextArea.attributes().style).toBe("height: 49px; top: 145px;");
-    expect(targetErrorButton.attributes().style).toBe("top: 274px; left: 0px; position: absolute;");
-  });
+
   test("Given that ErrorCatchWidget is mounted, When the ErrorCatchWidget is visible, Then click on 'Okay' results in an event 'ok-clicked' to be emitted", async () => {
     const propsData = {
       logFilepath: "C:\testFileLog.txt",

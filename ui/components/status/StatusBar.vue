@@ -3,7 +3,7 @@
     <span class="span__status-bar-text">Status: {{ alertTxt }}</span>
     <span>
       <b-modal id="error-catch" size="sm" hide-footer hide-header hide-header-close :static="true">
-        <ErrorCatchWidget @ok-clicked="closeModalsById(['error-catch'])" />
+        <ErrorCatchWidget :logFilepath="logPath" @ok-clicked="closeModalsById(['error-catch'])" />
       </b-modal>
       <b-modal
         id="fw-updates-complete-message"
@@ -197,6 +197,7 @@ export default {
       "stimPlayState",
       "stimStatus",
     ]),
+    ...mapState("settings", ["logPath"]),
     ...mapState("system", [
       "systemErrorCode",
       "softwareUpdateAvailable",
