@@ -48,8 +48,6 @@
 </template>
 
 <script>
-// // import { ErrorCatchWidget as ComponentToTest } from "@/dist/mantarray.common";
-// import ErrorCatchWidget from "@/components/status/ErrorCatchWidget.vue";
 import ButtonWidget from "@/components/basic-widgets/ButtonWidget.vue";
 import { mapState } from "vuex";
 
@@ -139,7 +137,6 @@ a:hover {
   margin-right: 100%;
 }
 .textarea__installer_filepath {
-  /* line-height: 1.2; */
   transform: rotate(0deg);
   margin: 8px 0;
   word-break: break-all;
