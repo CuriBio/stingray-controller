@@ -1,46 +1,38 @@
 <template>
-  <div>
-    <div class="div__status-error-catch-background" :style="errorBackgroundCssprops" />
-    <span class="div__status-error-catch-title-label">An&nbsp;<wbr />error&nbsp;<wbr />occurred. </span>
-    <div class="div__status-error-catch-alert-txt" :style="errorCatchAlert">
-      <p>{{ systemErrorMessage }}</p>
-      <p>{{ `Error Code: ${systemErrorCode}` }}</p>
-      <textarea
-        v-if="installerLink"
-        class="textarea__installer-link"
-        name="errorFile"
-        :rows="2"
-        cols="75"
-        spellcheck="false"
-        :value.prop="installerLink"
-        :disabled="true"
-      />
-    </div>
-    <div class="div__status-email-txt" :style="emailTextCssprops">
-      <p>
-        Please send the folder shown below to
-        <a id="errorContact" href="mailto:support@curibio.com ? subject = Stingray Error log"
-          >support@curibio.com</a
-        >
-      </p>
-    </div>
+  <div class="div__status-error-catch-background">
+    <div class="div__status-error-catch-title-label">An&nbsp;<wbr />error&nbsp;<wbr />occurred.</div>
+    <p class="p__status-error-catch-alert-txt">{{ systemErrorMessage }}</p>
+    <p class="p__status-error-catch-alert-txt">{{ `Error Code: ${systemErrorCode}` }}</p>
     <textarea
-      class="textarea__error-file-path"
-      name="errorFile"
-      :rows="computeNumberOfRows"
+      v-if="installerLink"
+      class="textarea__installer_filepath"
+      name="installer_link"
+      rows="2"
+      cols="75"
+      spellcheck="false"
+      :value.prop="installerLink"
+      :disabled="true"
+    />
+    <p class="p__status-error-catch-alert-txt">
+      Please send the folder shown below to
+      <a id="errorContact" href="mailto:support@curibio.com ? subject = Stingray Error log"
+        >support@curibio.com</a
+      >
+    </p>
+    <textarea
+      class="textarea__installer_filepath"
+      name="error_file"
+      rows="2"
       cols="50"
       spellcheck="false"
-      :value.prop="logFilepath"
+      :value.prop="logPath"
       :disabled="true"
-      :style="textarea__errorCssprops"
     />
-    <div class="div__status-error-catch-next-step-txt" :style="nextStepCssprops">
-      <p>
-        Please turn the instrument off, unplug from the PC,<br />
-        and then wait 10 seconds before attempting to use again.
-      </p>
-    </div>
-    <div class="div__error-button" :style="errorCatchButtonCssprops">
+    <p class="p__status-error-catch-alert-txt" style="margin-bottom: 15px">
+      Please turn the instrument off, unplug from the PC,<br />
+      and then wait 10 seconds before attempting to use again.
+    </p>
+    <div class="div__error-button">
       <ButtonWidget
         :buttonWidgetWidth="450"
         :buttonWidgetHeight="50"
@@ -50,60 +42,22 @@
         :enabledColor="'#B7B7B7'"
         :hoverColor="['#FFFFFF']"
         @btn-click="processOk"
-      >
-      </ButtonWidget>
+      />
     </div>
   </div>
 </template>
+
 <script>
 import ButtonWidget from "@/components/basic-widgets/ButtonWidget.vue";
 import { mapState } from "vuex";
+
 export default {
-  name: "ErrorCatchWidget",
   components: {
     ButtonWidget,
   },
-  props: {
-    logFilepath: { type: String, default: "" },
-  },
   computed: {
     ...mapState("system", ["systemErrorCode", "systemErrorMessage", "installerLink"]),
-    computeNumberOfRows: function () {
-      return Math.ceil(((this.logFilepath.length * 1.0) / 30).toFixed(1));
-    },
-    errorBackgroundCssprops: function () {
-      let height = 250 + this.computeNumberOfRows * 12;
-      if (this.installerLink) {
-        height += 25;
-      }
-      return `height: ${height}px;`;
-    },
-    errorCatchAlert: function () {
-      const height = this.installerLink ? 130 : 75;
-      return `height: ${height}px;`;
-    },
-    textarea__errorCssprops: function () {
-      const top = this.installerLink ? 195 : 145;
-      return `height: ${25 + this.computeNumberOfRows * 12}px; top: ${top}px;`;
-    },
-    nextStepCssprops: function () {
-      let top = 180 + this.computeNumberOfRows * 12;
-      if (this.installerLink) {
-        top += 35;
-      }
-      return `top: ${top}px;`;
-    },
-    errorCatchButtonCssprops: function () {
-      let top = 250 + this.computeNumberOfRows * 12;
-      if (this.installerLink) {
-        top += 25;
-      }
-      return `top: ${top}px; left: 0px; position: absolute`;
-    },
-    emailTextCssprops: function () {
-      const top = this.installerLink ? 175 : 107;
-      return `top: ${top}px`;
-    },
+    ...mapState("settings", ["logPath"]),
   },
   methods: {
     processOk: function () {
@@ -123,7 +77,6 @@ a:hover {
   background-color: transparent;
   text-decoration: none;
 }
-
 .div__status-error-catch-background {
   pointer-events: all;
   transform: rotate(0deg);
@@ -134,19 +87,19 @@ a:hover {
   left: 0px;
   visibility: visible;
   z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
-
 .div__status-error-catch-title-label {
   pointer-events: all;
-  line-height: 100%;
+  line-height: 1.5;
   transform: rotate(0deg);
   overflow: hidden;
-  position: absolute;
+  position: relative;
   width: 450px;
   height: 30px;
-  top: 17.3852px;
-  left: 0px;
-  padding: 5px;
+  margin: 11px 0;
   visibility: visible;
   user-select: none;
   font-family: Muli;
@@ -156,19 +109,15 @@ a:hover {
   font-size: 17px;
   color: rgb(255, 255, 255);
   text-align: center;
-  z-index: 3;
 }
-.div__status-error-catch-alert-txt {
-  line-height: 1.2;
+.p__status-error-catch-alert-txt {
   transform: rotate(0deg);
   padding: 0px;
-  margin: 0px;
+  margin: 5px 0;
   overflow-wrap: break-word;
   color: rgb(183, 183, 183);
   font-family: Muli;
-  position: absolute;
-  top: 57.6407px;
-  left: 0px;
+  position: relative;
   width: 450px;
   overflow: hidden;
   visibility: visible;
@@ -179,118 +128,37 @@ a:hover {
   font-weight: normal;
   font-style: normal;
   text-decoration: none;
-  z-index: 5;
   pointer-events: all;
 }
-.div__status-email-txt {
-  line-height: 1.2;
-  transform: rotate(0deg);
-  padding: 0px;
-  margin: 0px;
-  overflow-wrap: break-word;
-  color: rgb(183, 183, 183);
-  font-family: Muli;
-  position: absolute;
-  left: 0px;
-  width: 450px;
-  overflow: hidden;
-  visibility: visible;
-  user-select: none;
-  text-align: center;
-  font-size: 15px;
-  letter-spacing: normal;
-  font-weight: normal;
-  font-style: normal;
-  text-decoration: none;
-  z-index: 5;
-  pointer-events: all;
+.div__error-button {
+  position: relative;
+  margin-right: 100%;
 }
-
-.textarea__error-file-path {
-  line-height: 1.2;
+.textarea__installer_filepath {
+  /* line-height: 1.2; */
   transform: rotate(0deg);
-  padding: 0px;
-  margin: 0px;
+  margin: 8px 0;
   word-break: break-all;
   outline: none;
   color: rgb(183, 183, 183);
   font-family: Courier New;
-  position: absolute;
-  left: 56px;
-  width: 338px;
+  position: relative;
   background: rgb(17, 17, 17);
   border: 2px solid rgb(17, 17, 17);
   border-radius: 0px;
   box-shadow: none;
   overflow: hidden;
   visibility: visible;
+  width: 350px;
   user-select: none;
   vertical-align: top;
-  text-align: left;
-  font-size: 15px;
-  letter-spacing: normal;
-  font-weight: normal;
-  font-style: normal;
-  text-decoration: none;
-  resize: none;
-  z-index: 5;
-  pointer-events: all;
-}
-
-.textarea__installer-link {
-  line-height: 1.2;
-  transform: rotate(0deg);
-  padding: 0px;
-  margin: 0px;
-  word-break: break-all;
-  outline: none;
-  color: rgb(183, 183, 183);
-  font-family: Courier New;
-  position: absolute;
-  top: 59px;
-  left: 20px;
-  width: 406px;
-  background: rgb(17, 17, 17);
-  border: 2px solid rgb(17, 17, 17);
-  border-radius: 0px;
-  box-shadow: none;
-  overflow: hidden;
-  visibility: visible;
-  user-select: none;
-  vertical-align: top;
-  text-align: left;
-  font-size: 15px;
-  letter-spacing: normal;
-  font-weight: normal;
-  font-style: normal;
-  text-decoration: none;
-  resize: none;
-  z-index: 5;
-  pointer-events: all;
-}
-
-.div__status-error-catch-next-step-txt {
-  line-height: 1.2;
-  transform: rotate(0deg);
-  padding: 0px;
-  margin: 0px;
-  overflow-wrap: break-word;
-  color: rgb(183, 183, 183);
-  font-family: Muli;
-  position: absolute;
-  left: 0px;
-  width: 450px;
-  height: 66px;
-  overflow: hidden;
-  visibility: visible;
-  user-select: none;
   text-align: center;
   font-size: 15px;
   letter-spacing: normal;
   font-weight: normal;
   font-style: normal;
   text-decoration: none;
-  z-index: 5;
+  resize: none;
   pointer-events: all;
 }
 </style>
