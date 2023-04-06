@@ -6,7 +6,7 @@
     <textarea
       v-if="installerLink"
       class="textarea__installer_filepath"
-      name="installer_link"
+      name="installerLink"
       rows="2"
       cols="75"
       spellcheck="false"
@@ -21,7 +21,7 @@
     </p>
     <textarea
       class="textarea__installer_filepath"
-      name="error_file"
+      name="errorFile"
       rows="2"
       cols="50"
       spellcheck="false"
