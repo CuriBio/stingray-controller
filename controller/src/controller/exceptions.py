@@ -106,11 +106,6 @@ class FirmwareUpdateTimeoutError(Exception):
     pass
 
 
-# TODO add this in
-class FirmwareDownloadError(Exception):
-    pass
-
-
 class FirmwareAndSoftwareNotCompatibleError(Exception):
     pass
 
@@ -120,7 +115,6 @@ class FirmwareGoingDormantError(Exception):
 
 
 # Cloud
-# TODO remove any of these below if they become unnecessary
 
 
 class PresignedUploadFailedError(Exception):
@@ -128,6 +122,10 @@ class PresignedUploadFailedError(Exception):
 
 
 class CloudAnalysisJobFailedError(Exception):
+    pass
+
+
+class RequestFailedError(Exception):
     pass
 
 

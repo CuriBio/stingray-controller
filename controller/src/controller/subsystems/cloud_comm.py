@@ -2,9 +2,21 @@
 
 
 import asyncio
+from collections import namedtuple
 import logging
 from typing import Any
+from typing import Coroutine
 
+import httpx
+from httpx import Response
+from semver import VersionInfo
+
+from ..constants import CLOUD_API_ENDPOINT
+from ..exceptions import FirmwareAndSoftwareNotCompatibleError
+from ..exceptions import LoginFailedError
+from ..exceptions import RefreshFailedError
+from ..exceptions import RequestFailedError
+from ..utils.aio import clean_up_tasks
 from ..utils.aio import wait_tasks_clean
 from ..utils.generic import handle_system_error
 
@@ -12,6 +24,14 @@ from ..utils.generic import handle_system_error
 logger = logging.getLogger(__name__)
 
 ERROR_MSG = "IN CLOUD COMM"
+
+
+AuthTokens = namedtuple("AuthTokens", ["access", "refresh"])
+AuthCreds = namedtuple("AuthCreds", ["customer_id", "username", "password"])
+
+
+def _get_tokens(response_json: dict[str, Any]) -> AuthTokens:
+    return AuthTokens(access=response_json["access"]["token"], refresh=response_json["refresh"]["token"])
 
 
 class CloudComm:
@@ -26,12 +46,10 @@ class CloudComm:
         self._from_monitor_queue = from_monitor_queue
         self._to_monitor_queue = to_monitor_queue
 
-        self._customer_id: str | None = None
-        self._user_name: str | None = None
-        self._user_password: str | None = None
+        self._creds: AuthCreds | None = None
+        self._tokens: AuthTokens | None = None
 
-        self._access_token: str | None = None
-        self._refresh_token: str | None = None
+        self._client: httpx.AsyncClient | None = None
 
     # ONE-SHOT TASKS
 
@@ -40,22 +58,27 @@ class CloudComm:
         logger.info("Starting CloudComm")
 
         try:
-            tasks = {
-                asyncio.create_task(self._manage_subtasks()),
-                # TODO add other tasks
-            }
-            exc = await wait_tasks_clean(tasks, error_msg=ERROR_MSG)
-            if exc:
-                handle_system_error(exc, system_error_future)
+            with httpx.AsyncClient() as self._client:
+                tasks = {
+                    asyncio.create_task(self._manage_subtasks()),
+                    # TODO add other tasks?
+                }
+                exc = await wait_tasks_clean(tasks, error_msg=ERROR_MSG)
+                if exc:
+                    handle_system_error(exc, system_error_future)
         except asyncio.CancelledError:
             logger.info("CloudComm cancelled")
-            # TODO await self._attempt_to_upload_log_files_to_s3()
+            await self._attempt_to_upload_log_files_to_s3()
             raise
         finally:
+            self._client = None
             logger.info("CloudComm shut down")
 
     async def _get_comm_from_monitor(self) -> dict[str, Any]:
         return await self._from_monitor_queue.get()
+
+    async def _attempt_to_upload_log_files_to_s3(self) -> None:
+        pass  # TODO
 
     # INFINITE TASKS
 
@@ -68,104 +91,173 @@ class CloudComm:
             done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
 
             for task in done:
-                res = task.result()
                 task_name = task.get_name()
+                try:
+                    res = task.result()
+                except Exception as e:
+                    await clean_up_tasks(pending)
+                    raise e
+
                 if task_name == main_task_name:
-                    # TODO handle attr not found
-                    subtask_fn = getattr(self, f"_{res['command']}")
+                    comm_from_monitor = res
+                    try:
+                        subtask_fn = getattr(self, f"_{comm_from_monitor['command']}")
+                    except AttributeError as e:
+                        raise NotImplementedError(
+                            f"CloudComm received invalid comm from SystemMonitor: {comm_from_monitor}"
+                        ) from e
+
+                    # remove this before sending command
+                    comm_from_monitor.pop("command")
+                    wrapped_subtask = self._sub_task_wrapper(subtask_fn(comm_from_monitor))
+
                     pending |= {
                         asyncio.create_task(self._get_comm_from_monitor(), name=main_task_name),
-                        asyncio.create_task(subtask_fn(), name=subtask_fn.__name__),
+                        asyncio.create_task(wrapped_subtask, name=subtask_fn.__name__),
                     }
                 else:
                     await self._to_monitor_queue.put({"command": task_name[1:], **res})
 
     # SUBTASKS
 
-    async def _check_versions(self) -> dict[str, str]:
-        # TODO
-        return {"error": "some error"}
+    async def _login(self, command: dict[str, str]) -> dict[str, str]:
+        subtask_res = {}
+        try:
+            await self._get_cloud_api_tokens(**command)
+        except LoginFailedError:
+            subtask_res["error"] = "Invalid credentials"
+        except httpx.ConnectError:
+            subtask_res["error"] = "No internet connection"
+        # TODO also handle NetworkError?
 
-    # async def _download_firmware_updates(self):
-    #     pass  # TODO
+        return subtask_res
+
+    async def _check_versions(self, command: dict[str, str]) -> dict[str, str]:
+        check_sw_response = await self._request(
+            "get",
+            f"https://{CLOUD_API_ENDPOINT}/mantarray/software-range/{command['main_fw_version']}",
+            error_message="Error checking software/firmware compatibility",
+        )
+        range = check_sw_response.json()
+
+        # TODO move this to constants.py
+        EQUIVALENT_MA_CONTROLLER_VERSION = "1.1.0"
+        if not (range["min_sw"] <= VersionInfo.parse(EQUIVALENT_MA_CONTROLLER_VERSION) <= range["max_sw"]):
+            raise FirmwareAndSoftwareNotCompatibleError(range["max_sw"])
+
+        get_versions_response = await self._request(
+            "get",
+            f"https://{CLOUD_API_ENDPOINT}/mantarray/versions/{command['serial_number']}",
+            error_message="Error getting latest firmware versions",
+        )
+        return {"latest_versions": get_versions_response.json()["latest_versions"]}
+
+    async def download_firmware_updates(
+        self, main_fw_version: str | None, channel_fw_version: str | None
+    ) -> dict[str, bytes]:
+        if self._tokens is None:
+            raise NotImplementedError("self._tokens should never be None here")
+
+        if not main_fw_version and not channel_fw_version:
+            raise NotImplementedError("No firmware types specified")
+
+        presigned_urls = {}
+
+        # get presigned download URL(s)
+        for version, fw_type in ((main_fw_version, "main"), (channel_fw_version, "channel")):
+            if version:
+                download_details = await self._request(
+                    "get",
+                    f"https://{CLOUD_API_ENDPOINT}/mantarray/firmware/{fw_type}/{version}",
+                    headers={"Authorization": f"Bearer {self._tokens.access}"},
+                    error_message=f"Error getting presigned URL for {fw_type} firmware",
+                )
+                presigned_urls[fw_type] = download_details.json()["presigned_url"]
+
+        subtask_res = {}
+
+        # download firmware file(s)
+        for fw_type, presigned_url in presigned_urls.items():
+            download_response = await self._request(
+                "get", presigned_url, error_message=f"Error during download of {fw_type} firmware"
+            )
+            subtask_res[f"{fw_type}_firmware_contents"] = download_response.content
+
+        return subtask_res
 
     # HELPERS
 
-    # async def _call_route(self):
-    #     pass  # TODO
+    async def _sub_task_wrapper(self, coro: Coroutine[Any, Any, dict[str, str]]) -> dict[str, str]:
+        try:
+            return await coro
+        except RequestFailedError as e:
+            e_repr = repr(e)
+            logger.error(e_repr)
+            return {"error": e_repr}
+        except httpx.ConnectError as e:
+            return {"error": repr(e)}
 
+    async def _get_cloud_api_tokens(self, customer_id: str, user_name: str, user_password: str) -> None:
+        if self._client is None:
+            raise NotImplementedError("self._client should never be None here")
 
-# def call_firmware_download_route(url: str, error_message: str, **kwargs: Any) -> Response:
-#     try:
-#         response = requests.get(url, **kwargs)
-#     except ConnectionError as e:
-#         raise FirmwareDownloadError(f"{error_message}") from e
+        res = await self._client.post(
+            f"https://{CLOUD_API_ENDPOINT}/users/login",
+            json={
+                "customer_id": customer_id,
+                "username": user_name,
+                "password": user_password,
+                "service": "pulse3d",
+            },
+        )
 
-#     if response.status_code != 200:
-#         try:
-#             message = response.json()["message"]
-#         except Exception:
-#             message = response.reason
-#         raise FirmwareDownloadError(
-#             f"{error_message}. Status code: {response.status_code}, Reason: {message}"
-#         )
+        if res.status_code != 200:
+            raise LoginFailedError(res.status_code)
 
-#     return response
+        self._tokens = _get_tokens(res.json()["tokens"])
+        self._creds = AuthCreds(customer_id=customer_id, username=user_name, password=user_password)
 
+    async def _refresh_cloud_api_tokens(self) -> None:
+        """Use refresh token to get new set of auth tokens."""
+        if self._client is None:
+            raise NotImplementedError("self._client should never be None here")
+        if self._tokens is None:
+            raise NotImplementedError("self._tokens should never be None here")
 
-# def verify_software_firmware_compatibility(main_fw_version: str) -> None:
-#     check_sw_response = call_firmware_download_route(
-#         f"https://{CLOUD_API_ENDPOINT}/mantarray/software-range/{main_fw_version}",
-#         error_message="Error checking software/firmware compatibility",
-#     )
-#     range = check_sw_response.json()
+        # TODO check service worker to see how refresh mutex is handled
 
-#     if not (range["min_sw"] <= VersionInfo.parse(CURRENT_SOFTWARE_VERSION) <= range["max_sw"]):
-#         raise FirmwareAndSoftwareNotCompatibleError(range["max_sw"])
+        res = await self._client.post(
+            f"https://{CLOUD_API_ENDPOINT}/users/refresh",
+            headers={"Authorization": f"Bearer {self._tokens.refresh}"},
+        )
+        if res.status_code != 201:
+            raise RefreshFailedError(res.status_code)
 
+        self._tokens = _get_tokens(res.json()["tokens"])
 
-# def get_latest_firmware_versions(result_dict: Dict[str, Dict[str, str]], serial_number: str) -> None:
-#     get_versions_response = call_firmware_download_route(
-#         f"https://{CLOUD_API_ENDPOINT}/mantarray/versions/{serial_number}",
-#         error_message="Error getting latest firmware versions",
-#     )
-#     result_dict["latest_versions"] = get_versions_response.json()["latest_versions"]
+    async def _request_with_refresh(self, method: str, url: str, **kwargs: dict[str, Any]) -> Response:
+        """Make request, refresh once if needed, and try request once more."""
+        if self._client is None:
+            raise NotImplementedError("self._client should never be None here")
 
+        response = await self._client.request(method, url, **kwargs)
+        # if auth token expired then request will return 401 code
+        if response.status_code == 401:
+            # get new tokens and try request once more
+            self.tokens = self._refresh_cloud_api_tokens()
+            response = await self._client.request(method, url, **kwargs)
+            # TODO try logging in again if this also fails
 
-# def check_versions(result_dict: Dict[str, Dict[str, str]], serial_number: str, main_fw_version: str) -> None:
-#     verify_software_firmware_compatibility(main_fw_version)
-#     get_latest_firmware_versions(result_dict, serial_number)
+        return response
 
+    async def _request(self, method: str, url: str, error_message: str, **kwargs: dict[str, Any]) -> Response:
+        res = await self._request_with_refresh(method, url, **kwargs)
 
-# def download_firmware_updates(
-#     result_dict: Dict[str, Any],
-#     main_fw_version: Optional[str],
-#     channel_fw_version: Optional[str],
-#     customer_id: str,
-#     username: str,
-#     password: str,
-# ) -> None:
-#     if not main_fw_version and not channel_fw_version:
-#         raise FirmwareDownloadError("No firmware types specified")
+        if not (200 <= res.status_code < 300):
+            try:
+                message = await res.json()["message"]
+            except Exception:
+                message = res.reason_phrase
+            raise RequestFailedError(f"{error_message}. Status code: {res.status_code}, Reason: {message}")
 
-#     # get access token
-#     access_token = get_cloud_api_tokens(customer_id, username, password).access
-
-#     # get presigned download URL(s)
-#     presigned_urls: Dict[str, Optional[str]] = {"main": None, "channel": None}
-#     for version, fw_type in ((main_fw_version, "main"), (channel_fw_version, "channel")):
-#         if version:
-#             download_details = call_firmware_download_route(
-#                 f"https://{CLOUD_API_ENDPOINT}/mantarray/firmware/{fw_type}/{version}",
-#                 headers={"Authorization": f"Bearer {access_token}"},
-#                 error_message=f"Error getting presigned URL for {fw_type} firmware",
-#             )
-#             presigned_urls[fw_type] = download_details.json()["presigned_url"]
-
-#     # download firmware file(s)
-#     for fw_type, presigned_url in presigned_urls.items():
-#         if presigned_url:
-#             download_response = call_firmware_download_route(
-#                 presigned_url, error_message=f"Error during download of {fw_type} firmware"
-#             )
-#             result_dict[fw_type] = download_response.content
+        return res

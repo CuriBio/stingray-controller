@@ -160,9 +160,7 @@ class SystemMonitor:
                         for key in ("customer_id", "user_name", "user_password")
                         if (value := new_settings.pop(key))
                     }:
-                        await self._queues["to"]["cloud_comm"].put(
-                            {"command": "login", "user_creds": new_user_creds}
-                        )
+                        await self._queues["to"]["cloud_comm"].put({"command": "login", **new_user_creds})
                     # all remaining settings fall under config settings
                     if new_settings:
                         # TODO figure out if this sends every setting all together or just the ones that changed
@@ -276,6 +274,8 @@ class SystemMonitor:
             system_state_updates: dict[str, Any] = {}
 
             match communication:
+                case {"command": "login"}:
+                    pass  # TODO
                 case {"command": "check_versions", "error": _}:
                     system_state_updates["system_status"] = SystemStatuses.IDLE_READY_STATE
                 case {"command": "check_versions"}:
