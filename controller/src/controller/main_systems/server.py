@@ -78,11 +78,16 @@ class Server:
         self._ui_connection_made = asyncio.Event()
         self.user_initiated_shutdown = False
 
-    async def run(self, system_error_future: asyncio.Future[int]) -> None:
+    async def run(
+        self, system_error_future: asyncio.Future[int], server_running_event: asyncio.Event
+    ) -> None:
         logger.info("Starting Server")
 
         ws_server = await serve(self._run, "localhost", DEFAULT_SERVER_PORT_NUMBER)
         self._serve_task = asyncio.create_task(ws_server.serve_forever())
+        logger.info("WS Server running")
+
+        server_running_event.set()
 
         try:
             await asyncio.shield(self._serve_task)
@@ -178,14 +183,13 @@ class Server:
 
             command = msg["command"]
 
-            # TODO make sure the error handling works in both of these try/except blocks
             try:
                 # TODO try using pydantic to define message schema + some other message schema generator (nano message, ask Jason)
                 handler = self._handlers[command]
             except KeyError as e:
-                logger.error(f"Unrecognized command from UI: {command}")
-                raise WebsocketCommandError() from e
+                raise WebsocketCommandError(f"Unrecognized command from UI: {command}") from e
 
+            # TODO make sure the error handling works here
             try:
                 await handler(self, msg)
             except WebsocketCommandError as e:
@@ -205,6 +209,7 @@ class Server:
 
     @mark_handler
     async def _shutdown(self, *args: Any) -> None:
+        """Shutdown the controller."""
         logger.info("User initiated shutdown")
         self.user_initiated_shutdown = True
 

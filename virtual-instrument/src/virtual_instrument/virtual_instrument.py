@@ -117,10 +117,10 @@ class MantarrayMcSimulator(InfiniteProcess):
         {"X": 0, "Y": 2, "Z": -5, "REMN": 1200},
     )
 
-    default_mantarray_nickname = "Mantarray Sim"
-    default_mantarray_serial_number = "MA2022001000"
-    default_main_firmware_version = "0.0.0"
-    default_channel_firmware_version = "0.0.0"
+    default_mantarray_nickname = "Vrtl Stingray"
+    default_mantarray_serial_number = "M02022140001"
+    default_main_firmware_version = "1.1.6"
+    default_channel_firmware_version = "1.1.4"
     default_plate_barcode = "ML22001000-2"
     default_stim_barcode = "MS22001000-2"
     default_metadata_values: immutabledict[UUID, Any] = immutabledict(

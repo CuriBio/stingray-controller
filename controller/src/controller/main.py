@@ -18,6 +18,7 @@ from stdlib_utils import is_port_in_use
 from .constants import COMPILED_EXE_BUILD_TIMESTAMP
 from .constants import CURRENT_SOFTWARE_VERSION
 from .constants import DEFAULT_SERVER_PORT_NUMBER
+from .constants import SERVER_BOOT_UP_TIMEOUT_SECONDS
 from .constants import SOFTWARE_RELEASE_CHANNEL
 from .constants import SystemStatuses
 from .exceptions import LocalServerPortAlreadyInUseError
@@ -74,27 +75,38 @@ async def main(command_line_args: list[str]) -> None:
 
         queues = create_system_queues()
 
+        # create subsystems
         system_monitor = SystemMonitor(system_state_manager, queues)
         server = Server(
             system_state_manager.get_read_only_copy, queues["to"]["server"], queues["from"]["server"]
         )
-
         instrument_comm_subsystem = InstrumentComm(
             queues["to"]["instrument_comm"], queues["from"]["instrument_comm"]
         )
-
         cloud_comm_subsystem = CloudComm(queues["to"]["cloud_comm"], queues["from"]["cloud_comm"])
 
+        # future for subsystems to set if they experience an error. The server will report the error in the future to the UI
         system_error_future: asyncio.Future[int] = asyncio.Future()
 
-        tasks = {
-            asyncio.create_task(system_monitor.run(system_error_future)),
-            asyncio.create_task(server.run(system_error_future)),
-            asyncio.create_task(instrument_comm_subsystem.run(system_error_future)),
-            asyncio.create_task(cloud_comm_subsystem.run(system_error_future)),
-        }
+        # make sure that WS server boots up before starting other subsystems. This ensures that errors can be reported to the UI
+        logger.info("Booting up server before other subsystems")
+        server_running_event = asyncio.Event()
 
-        await wait_tasks_clean(tasks)
+        tasks = {asyncio.create_task(server.run(system_error_future, server_running_event))}
+
+        try:
+            await asyncio.wait_for(server_running_event.wait(), SERVER_BOOT_UP_TIMEOUT_SECONDS)
+        except asyncio.CancelledError:
+            logger.error(f"Server failed to boot up before {SERVER_BOOT_UP_TIMEOUT_SECONDS} second timeout")
+        else:
+            logger.info("Creating remaining subsystems")
+            tasks |= {
+                asyncio.create_task(system_monitor.run(system_error_future)),
+                asyncio.create_task(instrument_comm_subsystem.run(system_error_future)),
+                asyncio.create_task(cloud_comm_subsystem.run(system_error_future)),
+            }
+        finally:
+            await wait_tasks_clean(tasks)
 
     except Exception:
         logger.exception(ERROR_MSG)
@@ -164,6 +176,7 @@ def _initialize_system_state(parsed_args: dict[str, Any], log_file_id: uuid.UUID
         "main_firmware_update": None,
         "channel_firmware_update": None,
         "latest_software_version": None,
+        "firmware_updates_accepted": None,
         # user options
         "config_settings": {
             "log_directory": parsed_args["log_file_dir"]

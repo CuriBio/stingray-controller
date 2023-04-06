@@ -117,18 +117,6 @@ class FirmwareGoingDormantError(Exception):
 # Cloud
 
 
-class PresignedUploadFailedError(Exception):
-    pass
-
-
-class CloudAnalysisJobFailedError(Exception):
-    pass
-
-
-class RequestFailedError(Exception):
-    pass
-
-
 class CloudAuthFailedError(Exception):
     """Base class for cloud auth related errors."""
 
@@ -142,3 +130,19 @@ class LoginFailedError(CloudAuthFailedError):
 
 class RefreshFailedError(CloudAuthFailedError):
     pass
+
+
+class RequestFailedError(Exception):
+    pass
+
+
+class FirmwareDownloadError(Exception):
+    pass
+
+
+# class PresignedUploadFailedError(Exception):
+#     pass
+
+
+# class CloudAnalysisJobFailedError(Exception):
+#     pass

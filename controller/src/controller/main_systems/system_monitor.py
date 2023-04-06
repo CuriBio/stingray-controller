@@ -100,7 +100,7 @@ class SystemMonitor:
                         "main_fw_version": instrument_metadata[MAIN_FIRMWARE_VERSION_UUID],
                     }
                 )
-            case SystemStatuses.UPDATES_NEEDED_STATE if system_state["firmware_update_accepted"]:
+            case SystemStatuses.UPDATES_NEEDED_STATE if system_state["firmware_updates_accepted"]:
                 if system_state["is_user_logged_in"]:
                     new_system_status = SystemStatuses.DOWNLOADING_UPDATES_STATE
                     await self._queues["to"]["cloud_comm"].put(
@@ -111,10 +111,12 @@ class SystemMonitor:
                         }
                     )
                 else:
+                    logger.info("Login required to download firmware update(s)")
                     await self._queues["to"]["server"].put(
                         {"communication_type": "user_input_needed", "input_type": "user_creds"}
                     )
-            case SystemStatuses.UPDATES_NEEDED_STATE:
+            case SystemStatuses.UPDATES_NEEDED_STATE if system_state["firmware_updates_accepted"] is False:
+                # firmware_updates_accepted value will be None before a user has made a decision, so need to explicitly check that it is False
                 new_system_status = SystemStatuses.IDLE_READY_STATE
             case SystemStatuses.INSTALLING_UPDATES_STATE:
                 # these two values get reset to None after their respective installs complete
@@ -179,11 +181,9 @@ class SystemMonitor:
                         }
                     )
                 case {"command": "set_firmware_update_confirmation", "update_accepted": update_accepted}:
-                    system_state_updates["system_status"] = (
-                        SystemStatuses.DOWNLOADING_UPDATES_STATE
-                        if update_accepted
-                        else SystemStatuses.IDLE_READY_STATE
-                    )
+                    action = "accepted" if update_accepted else "declined"
+                    logger.info(f"User {action} firmware update(s)")
+                    system_state_updates["firmware_updates_accepted"] = update_accepted
                 case {"command": "set_stim_status", "running": status}:
                     await self._queues["to"]["instrument_comm"].put(
                         {"command": "start_stimulation" if status else "stop_stimulation"}
@@ -218,6 +218,8 @@ class SystemMonitor:
             system_state_updates: dict[str, Any] = {}
 
             match communication:
+                case {"command": "set_stim_protocols"}:
+                    pass  # nothing to do here
                 case {"command": "start_stimulation"}:
                     system_state_updates["stimulation_protocols_running"] = [True] * len(
                         system_state["stim_info"]["protocols"]
@@ -277,6 +279,7 @@ class SystemMonitor:
                 case {"command": "login"}:
                     pass  # TODO
                 case {"command": "check_versions", "error": _}:
+                    # error will be logged by cloud comm
                     system_state_updates["system_status"] = SystemStatuses.IDLE_READY_STATE
                 case {"command": "check_versions"}:
                     required_sw_for_fw = communication["latest_versions"]["sw"]
@@ -284,7 +287,8 @@ class SystemMonitor:
                     latest_channel_fw = communication["latest_versions"]["channel-fw"]
 
                     min_sw_version_available = not semver_gt(
-                        required_sw_for_fw, system_state["latest_software_version"]
+                        required_sw_for_fw,
+                        CURRENT_SOFTWARE_VERSION,  # system_state["latest_software_version"]
                     )
                     main_fw_update_needed = semver_gt(
                         latest_main_fw,
@@ -297,7 +301,9 @@ class SystemMonitor:
 
                     # FW updates are only available if the required SW can be downloaded
                     if (main_fw_update_needed or channel_fw_update_needed) and min_sw_version_available:
-                        system_state_updates["fsystem_status"] = SystemStatuses.UPDATES_NEEDED_STATE
+                        logger.info("Firmware update(s) found")
+
+                        system_state_updates["system_status"] = SystemStatuses.UPDATES_NEEDED_STATE
                         system_state_updates["main_firmware_update"] = (
                             latest_main_fw if main_fw_update_needed else None
                         )
@@ -312,10 +318,11 @@ class SystemMonitor:
                             }
                         )
                     else:
+                        logger.info("No firmware updates found")
                         system_state_updates["system_status"] = SystemStatuses.IDLE_READY_STATE
                         # since no updates available, also enable auto install of SW update
                         await self._send_enable_sw_auto_install_message()
-                case {"error": _}:
+                case {"command": "download_firmware_updates", "error": _}:
                     system_state_updates["system_status"] = SystemStatuses.UPDATE_ERROR_STATE
                 case {"command": "download_firmware_updates"}:
                     system_state_updates["system_status"] = SystemStatuses.INSTALLING_UPDATES_STATE

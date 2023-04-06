@@ -12,7 +12,9 @@ from httpx import Response
 from semver import VersionInfo
 
 from ..constants import CLOUD_API_ENDPOINT
+from ..constants import CURRENT_SOFTWARE_VERSION
 from ..exceptions import FirmwareAndSoftwareNotCompatibleError
+from ..exceptions import FirmwareDownloadError
 from ..exceptions import LoginFailedError
 from ..exceptions import RefreshFailedError
 from ..exceptions import RequestFailedError
@@ -58,7 +60,7 @@ class CloudComm:
         logger.info("Starting CloudComm")
 
         try:
-            with httpx.AsyncClient() as self._client:
+            async with httpx.AsyncClient() as self._client:
                 tasks = {
                     asyncio.create_task(self._manage_subtasks()),
                     # TODO add other tasks?
@@ -70,6 +72,9 @@ class CloudComm:
             logger.info("CloudComm cancelled")
             await self._attempt_to_upload_log_files_to_s3()
             raise
+        except Exception as e:
+            logger.exception(ERROR_MSG)
+            handle_system_error(e, system_error_future)
         finally:
             self._client = None
             logger.info("CloudComm shut down")
@@ -116,7 +121,9 @@ class CloudComm:
                         asyncio.create_task(wrapped_subtask, name=subtask_fn.__name__),
                     }
                 else:
-                    await self._to_monitor_queue.put({"command": task_name[1:], **res})
+                    command = task_name[1:]
+                    logger.info(f"Result of '{command}' command: {res}")
+                    await self._to_monitor_queue.put({"command": command, **res})
 
     # SUBTASKS
 
@@ -140,10 +147,13 @@ class CloudComm:
         )
         range = check_sw_response.json()
 
-        # TODO move this to constants.py
-        EQUIVALENT_MA_CONTROLLER_VERSION = "1.1.0"
-        if not (range["min_sw"] <= VersionInfo.parse(EQUIVALENT_MA_CONTROLLER_VERSION) <= range["max_sw"]):
-            raise FirmwareAndSoftwareNotCompatibleError(range["max_sw"])
+        try:
+            sw_version_semver = VersionInfo.parse(CURRENT_SOFTWARE_VERSION)
+        except ValueError:
+            pass  # CURRENT_SOFTWARE_VERSION will not be a valid semver in dev mode
+        else:
+            if not (range["min_sw"] <= sw_version_semver <= range["max_sw"]):
+                raise FirmwareAndSoftwareNotCompatibleError(range["max_sw"])
 
         get_versions_response = await self._request(
             "get",
@@ -152,36 +162,39 @@ class CloudComm:
         )
         return {"latest_versions": get_versions_response.json()["latest_versions"]}
 
-    async def download_firmware_updates(
+    async def _download_firmware_updates(
         self, main_fw_version: str | None, channel_fw_version: str | None
     ) -> dict[str, bytes]:
-        if self._tokens is None:
-            raise NotImplementedError("self._tokens should never be None here")
+        try:
+            if self._tokens is None:
+                raise NotImplementedError("self._tokens should never be None here")
 
-        if not main_fw_version and not channel_fw_version:
-            raise NotImplementedError("No firmware types specified")
+            if not main_fw_version and not channel_fw_version:
+                raise NotImplementedError("No firmware types specified")
 
-        presigned_urls = {}
+            presigned_urls = {}
 
-        # get presigned download URL(s)
-        for version, fw_type in ((main_fw_version, "main"), (channel_fw_version, "channel")):
-            if version:
-                download_details = await self._request(
-                    "get",
-                    f"https://{CLOUD_API_ENDPOINT}/mantarray/firmware/{fw_type}/{version}",
-                    headers={"Authorization": f"Bearer {self._tokens.access}"},
-                    error_message=f"Error getting presigned URL for {fw_type} firmware",
+            # get presigned download URL(s)
+            for version, fw_type in ((main_fw_version, "main"), (channel_fw_version, "channel")):
+                if version:
+                    download_details = await self._request(
+                        "get",
+                        f"https://{CLOUD_API_ENDPOINT}/mantarray/firmware/{fw_type}/{version}",
+                        headers={"Authorization": f"Bearer {self._tokens.access}"},
+                        error_message=f"Error getting presigned URL for {fw_type} firmware",
+                    )
+                    presigned_urls[fw_type] = download_details.json()["presigned_url"]
+
+            subtask_res = {}
+
+            # download firmware file(s)
+            for fw_type, presigned_url in presigned_urls.items():
+                download_response = await self._request(
+                    "get", presigned_url, error_message=f"Error during download of {fw_type} firmware"
                 )
-                presigned_urls[fw_type] = download_details.json()["presigned_url"]
-
-        subtask_res = {}
-
-        # download firmware file(s)
-        for fw_type, presigned_url in presigned_urls.items():
-            download_response = await self._request(
-                "get", presigned_url, error_message=f"Error during download of {fw_type} firmware"
-            )
-            subtask_res[f"{fw_type}_firmware_contents"] = download_response.content
+                subtask_res[f"{fw_type}_firmware_contents"] = download_response.content
+        except Exception as e:
+            raise FirmwareDownloadError() from e
 
         return subtask_res
 
@@ -190,11 +203,7 @@ class CloudComm:
     async def _sub_task_wrapper(self, coro: Coroutine[Any, Any, dict[str, str]]) -> dict[str, str]:
         try:
             return await coro
-        except RequestFailedError as e:
-            e_repr = repr(e)
-            logger.error(e_repr)
-            return {"error": e_repr}
-        except httpx.ConnectError as e:
+        except (RequestFailedError, httpx.ConnectError) as e:
             return {"error": repr(e)}
 
     async def _get_cloud_api_tokens(self, customer_id: str, user_name: str, user_password: str) -> None:
