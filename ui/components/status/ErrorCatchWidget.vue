@@ -20,7 +20,6 @@
       >
     </p>
     <textarea
-      v-if="logFilepath"
       class="textarea__installer_filepath"
       name="error_file"
       rows="2"
