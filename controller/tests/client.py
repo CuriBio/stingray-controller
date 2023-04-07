@@ -19,7 +19,7 @@ def _get_command(command):
         # REAL COMMANDS
         case "shutdown":
             pass
-        case "update_user_settings":
+        case "login":
             comm |= {
                 "customer_id": "test_customer_id",
                 "user_name": "test_user_name",

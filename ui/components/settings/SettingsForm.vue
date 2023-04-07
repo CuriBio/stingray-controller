@@ -149,6 +149,7 @@ export default {
   },
   computed: {
     ...mapState("settings", ["userAccounts", "activeUserIndex", "storedCustomerId"]),
+    ...mapState("system", ["loginAttemptStatus"]),
     getUserNames: function () {
       return this.userAccounts.map((userAccount) => userAccount.userName);
     },
@@ -161,6 +162,18 @@ export default {
         this.userFocusIdx = userFocusIdx;
       }
       this.modifyBtnStates();
+    },
+    loginAttemptStatus: function (status) {
+      if (status) {
+        this.$emit("close-modal", true);
+      } else if (status === false) {
+        // need to check explicitly for false since null is also used
+        // if login fails, prompt user to re-enter their credentials
+        this.openForInvalidCreds = true;
+        this.$bvModal.show("edit-user");
+      } // else {
+      //   this.resetChanges();
+      // }
     },
   },
   created: function () {
@@ -175,18 +188,8 @@ export default {
     async saveChanges() {
       if (this.userFound) {
         this.$store.commit("settings/setActiveUserIndex", this.userFocusIdx);
-
-        const res = await this.$store.dispatch("settings/updateSettings");
-
-        // Currently, error-handling by resetting inputs to force user to try again if axios request fails
-        if (res == 200) {
-          this.$emit("close-modal", true);
-        } else if (res == 401) {
-          this.openForInvalidCreds = true;
-          this.$bvModal.show("edit-user");
-        } else {
-          this.resetChanges();
-        }
+        this.$store.commit("system/setLoginAttemptStatus", null); // set this back to null to indicate that the result is pending
+        this.$store.dispatch("settings/sendLoginCommand");
       }
     },
     resetChanges() {

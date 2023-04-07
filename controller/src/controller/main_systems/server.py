@@ -197,7 +197,7 @@ class Server:
                 raise
 
     def _log_incoming_message(self, msg: dict[str, Any]) -> None:
-        if msg["command"] == "update_user_settings":
+        if msg["command"] == "login":
             comm_copy = copy.deepcopy(msg)
             comm_copy["user_password"] = get_redacted_string(4)
             comm_str = str(comm_copy)
@@ -214,7 +214,8 @@ class Server:
         self.user_initiated_shutdown = True
 
     @mark_handler
-    async def _update_user_settings(self, comm: dict[str, str]) -> None:
+    async def _login(self, comm: dict[str, str]) -> None:
+        # TODO fix all this, it's no logner used for settings
         """Update the customer/user settings."""
         for setting in comm:
             if setting not in (*VALID_CONFIG_SETTINGS, "command"):

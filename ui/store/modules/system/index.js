@@ -31,6 +31,7 @@ const defaultState = {
   firmwareUpdateDurMins: null,
   allowSWUpdateInstall: false,
   confirmationRequest: false,
+  loginAttemptStatus: null,
 };
 
 // adapted from https://itnext.io/eating-my-advice-efficiently-improving-on-understanding-and-using-nuxt-vuex-6d00769014a2

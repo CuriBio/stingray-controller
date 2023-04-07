@@ -155,18 +155,8 @@ class SystemMonitor:
             system_state_updates: dict[str, Any] = {}
 
             match communication:
-                case {"command": "update_user_settings", **new_settings}:
-                    # Tanner (3/16/23): this assumes that either all or none of these values will be sent
-                    if new_user_creds := {
-                        key: value
-                        for key in ("customer_id", "user_name", "user_password")
-                        if (value := new_settings.pop(key))
-                    }:
-                        await self._queues["to"]["cloud_comm"].put({"command": "login", **new_user_creds})
-                    # all remaining settings fall under config settings
-                    if new_settings:
-                        # TODO figure out if this sends every setting all together or just the ones that changed
-                        system_state_updates["config_settings"] = new_settings
+                case {"command": "login"}:
+                    await self._queues["to"]["cloud_comm"].put(communication)
                 case {"command": "set_latest_software_version", "version": version}:
                     system_state_updates["latest_software_version"] = version
                     # send message to FE if indicating if an update is available
@@ -277,7 +267,12 @@ class SystemMonitor:
 
             match communication:
                 case {"command": "login"}:
-                    pass  # TODO
+                    # TODO figure out what to do if one user is logged in and then there is a failed attempt to login as a different user
+                    success = not communication.get("error")
+                    system_state_updates["is_user_logged_in"] = success
+                    await self._queues["to"]["server"].put(
+                        {"communication_type": "login_result", "success": success}
+                    )
                 case {"command": "check_versions", "error": _}:
                     # error will be logged by cloud comm
                     system_state_updates["system_status"] = SystemStatuses.IDLE_READY_STATE

@@ -135,6 +135,9 @@ class CloudComm:
             subtask_res["error"] = "Invalid credentials"
         except httpx.ConnectError:
             subtask_res["error"] = "No internet connection"
+        else:
+            username = self._creds.username  # type: ignore  # mypy doesn't realize this will never be None here
+            logger.info(f"User {username} successfully logged in")
         # TODO also handle NetworkError?
 
         return subtask_res

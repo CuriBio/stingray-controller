@@ -98,6 +98,9 @@ export default {
             // user creds are the only user input that will ever be required at the moment
             commit("settings/setUserCredInputNeeded", true);
             break;
+          case "login_result":
+            commit("system/setLoginAttemptStatus", wsMessage.success);
+            break;
           case "firmware_update_available":
             console.log("Firmware update found"); // allow-log
             commit("system/setFirmwareUpdateAvailable", wsMessage.channel_fw_update);
