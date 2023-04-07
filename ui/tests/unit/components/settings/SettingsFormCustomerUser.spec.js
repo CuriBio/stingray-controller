@@ -47,7 +47,7 @@ describe("SettingsForm.vue", () => {
           const addUser = {
             customerId: "5FY8KwTsQaUJ2KzHJGetfE",
             userPassword: "ba86b8f0-6fdf-4944-87a0-8a491a19490e",
-            userName: "User account -3",
+            username: "User account -3",
           };
 
           /* This testing is based on the inspiration provided by the documentation handbook mentioned in the link below */
@@ -74,14 +74,14 @@ describe("SettingsForm.vue", () => {
           // eslint-disable-next-line jest/no-standalone-expect
           expect(wrapper.find("#user-account-2").text()).toStrictEqual("User account -3");
         });
-        test("When the method handling the 'save-id' event for the Edit User button is invoked to change the userName, Then the User ID dropdown list gets updated to change to the new userName", async () => {
+        test("When the method handling the 'save-id' event for the Edit User button is invoked to change the username, Then the User ID dropdown list gets updated to change to the new username", async () => {
           const activeUserIndex = 1;
           const editUser = JSON.parse(JSON.stringify(arrayOfUserAccounts[activeUserIndex]));
 
-          await wrapper.find("#input-dropdown-widget-user-account-").setValue(editUser.userName);
+          await wrapper.find("#input-dropdown-widget-user-account-").setValue(editUser.username);
           await wrapper.vm.$nextTick(); // wait for update
 
-          editUser.userName = "Renamed Account -2";
+          editUser.username = "Renamed Account -2";
           wrapper.vm.applyUserUpdate(editUser);
 
           await wrapper.vm.$nextTick();
@@ -93,7 +93,7 @@ describe("SettingsForm.vue", () => {
           const activeUserIndex = 0;
           const deleteUser = JSON.parse(JSON.stringify(arrayOfUserAccounts[activeUserIndex]));
 
-          await wrapper.find("#input-dropdown-widget-user-account-").setValue(deleteUser.userName);
+          await wrapper.find("#input-dropdown-widget-user-account-").setValue(deleteUser.username);
           await wrapper.vm.$nextTick(); // wait for update
 
           wrapper.vm.deleteUser();
@@ -105,11 +105,11 @@ describe("SettingsForm.vue", () => {
       });
       // });
 
-      test("When the SettingsForm method that handles receiving the add user 'save-id' event is invoked with a new user account, Then the Username text input is updated with userName value of the newly added account", async () => {
+      test("When the SettingsForm method that handles receiving the add user 'save-id' event is invoked with a new user account, Then the Username text input is updated with username value of the newly added account", async () => {
         const addUser = {
           customerId: "5FY8KwTsQaUJ2KzHJGetfE",
           userPassword: "ba86b8f0-6fdf-4944-87a0-8a491a19490e",
-          userName: "User account -3",
+          username: "User account -3",
         };
         /* This testing is based on the inspiration provided by the documentation handbook mentioned in the link below */
         /* https://lmiller1990.github.io/vue-testing-handbook/testing-emitted-events.html#write-a-component-and-test   */

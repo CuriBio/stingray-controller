@@ -36,7 +36,7 @@ describe("store/settings", () => {
       {
         customerId: "4vqyd62oARXqj9nRUNhtLQ",
         userPassword: "941532a0-6be1-443a-a9d5-d57bdf180a52",
-        userName: "User account -1",
+        username: "User account -1",
       },
     ];
     expect(store.state.settings.userAccounts).toHaveLength(0);
@@ -48,7 +48,7 @@ describe("store/settings", () => {
     expect(
       store.state.settings.userAccounts[store.state.settings.activeUserIndex].userPassword
     ).toStrictEqual("941532a0-6be1-443a-a9d5-d57bdf180a52");
-    expect(store.state.settings.userAccounts[store.state.settings.activeUserIndex].userName).toStrictEqual(
+    expect(store.state.settings.userAccounts[store.state.settings.activeUserIndex].username).toStrictEqual(
       "User account -1"
     );
   });
@@ -57,12 +57,12 @@ describe("store/settings", () => {
       {
         customerId: "4vqyd62oARXqj9nRUNhtLQ",
         userPassword: "941532a0-6be1-443a-a9d5-d57bdf180a52",
-        userName: "User account -1",
+        username: "User account -1",
       },
       {
         customerId: "6cBaidlJ84Ggc5JA7IYCgv",
         userPassword: "941532a0-6be1-443a-cdee-d57bdf180a52",
-        userName: "User account -1",
+        username: "User account -1",
       },
     ];
     expect(store.state.settings.userAccounts).toHaveLength(0);
@@ -82,12 +82,12 @@ describe("store/settings", () => {
       {
         customerId: "4vqyd62oARXqj9nRUNhtLQ",
         userPassword: "941532a0-6be1-443a-a9d5-d57bdf180a52",
-        userName: "User account -1",
+        username: "User account -1",
       },
       {
         customerId: "6cBaidlJ84Ggc5JA7IYCgv",
         userPassword: "941532a0-6be1-443a-cdee-d57bdf180a52",
-        userName: "User account -2",
+        username: "User account -2",
       },
     ];
     expect(store.state.settings.userAccounts).toHaveLength(0);
@@ -96,7 +96,7 @@ describe("store/settings", () => {
     /* User now does Edit Customer Click on the "User account - 1*/
     store.commit("settings/setActiveUserIndex", 0);
     const currentFocusCustomerid = store.state.settings.userAccounts[0];
-    expect(currentFocusCustomerid.userName).toStrictEqual("User account -1");
+    expect(currentFocusCustomerid.username).toStrictEqual("User account -1");
     expect(currentFocusCustomerid.customerId).toStrictEqual("4vqyd62oARXqj9nRUNhtLQ");
     expect(currentFocusCustomerid.userPassword).toStrictEqual("941532a0-6be1-443a-a9d5-d57bdf180a52");
     /*  (Delete ID) selected */
@@ -109,7 +109,7 @@ describe("store/settings", () => {
     const updatedFocusCustomerid = store.state.settings.userAccounts[0];
     expect(updatedFocusCustomerid.customerId).toStrictEqual("6cBaidlJ84Ggc5JA7IYCgv");
     expect(updatedFocusCustomerid.userPassword).toStrictEqual("941532a0-6be1-443a-cdee-d57bdf180a52");
-    expect(updatedFocusCustomerid.userName).toStrictEqual("User account -2");
+    expect(updatedFocusCustomerid.username).toStrictEqual("User account -2");
     expect(store.state.settings.userAccounts).toHaveLength(1);
   });
   test("When a user resets the settings form, Then the mutation will only reset current selection and toggle switches and will not reset existing IDs", async () => {
@@ -117,7 +117,7 @@ describe("store/settings", () => {
       {
         customerId: "4vqyd62oARXqj9nRUNhtLQ",
         userPassword: "941532a0-6be1-443a-a9d5-d57bdf180a52",
-        userName: "User account -1",
+        username: "User account -1",
       },
     ];
 
@@ -130,7 +130,7 @@ describe("store/settings", () => {
     expect(store.state.settings.activeUserIndex).toBeNull();
   });
 
-  test("When the app is created and the user's log path is committed, Then the base downloads path also gets updated with userName", async () => {
+  test("When the app is created and the user's log path is committed, Then the base downloads path also gets updated with username", async () => {
     const testWinPath = "C:\\Users\\CuriBio\\TestPath";
     const expectedWinBasePath = "C:\\Users\\CuriBio\\Downloads";
 

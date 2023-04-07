@@ -27,7 +27,7 @@ export class TextValidation {
    * Returns the feedback text with either value of "" or text with reason for failure
    *
    * @param  {string}  text The text on which the validation rules are verified
-   * @param  {string}  type The type of value being checked: ID, passkey, or userName
+   * @param  {string}  type The type of value being checked: ID, password, or username
    * @return {string} The string is either empty on valid and <space> or <invalid meessage>
    */
   validate(text, type) {
@@ -56,7 +56,7 @@ export class TextValidation {
    *
    * @param  {stats} stats The stats on the value of the name lenght verification (true) is proper length else (false)
    * @param  {text}  text The value on which the validation rules are verified
-   * @param  {string}  type The type of value being checked: ID, passkey, or userName
+   * @param  {string}  type The type of value being checked: ID, password, or username
    * @param  {len}  len The len the total length of the input
    * @return {string} The string is either empty on valid and <space> or <invalid meessage>
    */
@@ -89,7 +89,7 @@ export class TextValidation {
    *
    * @param  {stats}     stats The stats on the value of the name length verification (true) is proper length else (false)
    * @param  {text}  text The name on which the validation rules are verified
-   * @param  {string}  type The type of value being checked: ID, passkey, or userName
+   * @param  {string}  type The type of value being checked: ID, password, or username
    * @param  {len}  len The len the total length of the name
    * @return {string} The string is either empty on valid and <space> or <invalid meessage>
    */
@@ -99,7 +99,7 @@ export class TextValidation {
       let scanAscii = 0;
       scanAscii = text.charCodeAt(i);
       switch (true) {
-        case scanAscii == 32 && type !== "userName" /* space          */:
+        case scanAscii == 32 && type !== "username" /* space          */:
           parseError = "This field is required. No spaces allowed";
           break;
         case scanAscii == 35: /* hash       #   */
@@ -138,7 +138,7 @@ export class TextValidation {
    * Returns the feedback text with either value of "" or text with reason for failure
    *
    * @param  {text}  text The text on which the validation rules are verified
-   * @param  {string}  type The type of value being checked: ID, passkey, or userName
+   * @param  {string}  type The type of value being checked: ID, password, or username
    * @return {string} The string is either empty on valid and <space> or <invalid meessage>
    */
   validateUserAccountInput(text, type) {
@@ -328,35 +328,35 @@ export class TextValidation {
   /**
    * Returns the feedback text with either value of "" or text with reason for failure
    *
-   * @param  {passkey}  passkey The passkey on which the validation rules are verified
+   * @param  {password}  password The password on which the validation rules are verified
    * @return {string} The string is either empty on valid and <space> or <invalid meessage>
    */
-  // validateAlphanumeric(passkey) {
+  // validateAlphanumeric(password) {
   //   let feedbackText = "";
-  //   const passkeyLen = passkey.length;
+  //   const passwordLen = password.length;
   //   let encodeUuid = "";
   //   let decodeUuid = "";
-  //   if (passkeyLen == 36) {
+  //   if (passwordLen == 36) {
   //     // encode the the value provided
   //     try {
-  //       encodeUuid = uuidBase62.encode(passkey);
+  //       encodeUuid = uuidBase62.encode(password);
   //       decodeUuid = uuidBase62.decode(encodeUuid);
 
-  //       if (decodeUuid === passkey) {
-  //         feedbackText = this.passkeyErrorfinder("valid");
+  //       if (decodeUuid === password) {
+  //         feedbackText = this.passwordErrorfinder("valid");
   //       }
   //     } catch (err) {
-  //       feedbackText = this.passkeyErrorfinder("error");
+  //       feedbackText = this.passwordErrorfinder("error");
   //     }
   //   } else {
-  //     if (passkeyLen == 0) {
+  //     if (passwordLen == 0) {
   //       feedbackText = "This field is required";
   //     } else {
-  //       if (passkeyLen > 36) {
-  //         feedbackText = this.passkeyErrorfinder("error");
+  //       if (passwordLen > 36) {
+  //         feedbackText = this.passwordErrorfinder("error");
   //       }
-  //       if (passkeyLen <= 35) {
-  //         feedbackText = this.passkeyErrorfinder("error");
+  //       if (passwordLen <= 35) {
+  //         feedbackText = this.passwordErrorfinder("error");
   //       }
   //     }
   //   }
@@ -368,7 +368,7 @@ export class TextValidation {
   //  * @param  {stats}  stats The stats on which the validation status
   //  * @return {string} The string is either empty on valid and <space> or <invalid meessage>
   //  */
-  // passkeyErrorfinder(stats) {
+  // passwordErrorfinder(stats) {
   //   let invalidText = "";
   //   switch (stats) {
   //     case "valid":

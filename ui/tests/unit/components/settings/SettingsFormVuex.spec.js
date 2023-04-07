@@ -35,14 +35,14 @@ describe("SettingsForm.vue", () => {
     {
       customerId: "4vqyd62oARXqj9nRUNhtLQ",
       userPassword: "941532a0-6be1-443a-a9d5-d57bdf180a52",
-      userName: "User account -1",
+      username: "User account -1",
     },
   ];
   const arrayOfCustomeridNullMissingUserIds = [
     {
       customerId: "4vqyd62oARXqj9nRUNhtLQ",
       userPassword: "941532a0-6be1-443a-a9d5-d57bdf180a52",
-      userName: "",
+      username: "",
     },
   ];
 
@@ -191,7 +191,7 @@ describe("SettingsForm.vue", () => {
     });
     expect(wrapper.find("#input-dropdown-widget-user-account-").element.value).toStrictEqual("");
   });
-  test("Given that badly formed data with empty customer account userName with missing userIds in the Vuex, When the component is mounted, Then verify that Input of Customer ID and User ID are <empty>", async () => {
+  test("Given that badly formed data with empty customer account username with missing userIds in the Vuex, When the component is mounted, Then verify that Input of Customer ID and User ID are <empty>", async () => {
     store.commit("settings/setUserAccounts", arrayOfCustomeridNullMissingUserIds);
     store.commit("settings/setActiveUserIndex", 0);
     wrapper = mount(ComponentToTest, {

@@ -51,13 +51,11 @@ describe("ErrorCatchWidget.vue", () => {
     await store.commit("system/setSystemErrorMessage", "Stingray Controller is about to shut down.");
     const targetTitleDiv = wrapper.find(".div__status-error-catch-title-label");
     expect(targetTitleDiv.text()).toStrictEqual("An error occurred.");
-    const targetAlertDiv = wrapper.find(".p__status-error-catch-alert-txt");
-    const targetAlertDivP = targetAlertDiv.findAll("p");
-    expect(targetAlertDivP.at(0).text()).toStrictEqual("Stingray Controller is about to shut down.");
+    const targetAlertP = wrapper.findAll(".p__status-error-catch-alert-txt");
+    expect(targetAlertP.at(0).text()).toStrictEqual("Stingray Controller is about to shut down.");
 
-    const targetEmailDivP = wrapper.find(".div__status-email-txt").findAll("p");
-    expect(targetEmailDivP.at(0)).toMatchInlineSnapshot(`
-      <p>
+    expect(targetAlertP.at(2)).toMatchInlineSnapshot(`
+      <p class="p__status-error-catch-alert-txt">
         Please send the folder shown below to
         <a id="errorContact" href="mailto:support@curibio.com ? subject = Stingray Error log">support@curibio.com</a>
       </p>

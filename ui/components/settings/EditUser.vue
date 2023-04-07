@@ -16,18 +16,18 @@
         @update:value="onUpdateId($event)"
       />
     </div>
-    <div id="userName" style="top: 145px; left: 50px; position: absolute; z-index: 23">
+    <div id="username" style="top: 145px; left: 50px; position: absolute; z-index: 23">
       <InputWidget
         :titleLabel="'Username'"
         :placeholder="'Curi Bio User'"
-        :invalidText="errorTextUserName"
-        :initialValue="userName"
+        :invalidText="errorTextUsername"
+        :initialValue="username"
         :inputWidth="400"
         :domIdSuffix="'username'"
-        @update:value="onUpdateUserName($event)"
+        @update:value="onUpdateUsername($event)"
       />
     </div>
-    <div id="passkey" style="top: 241px; left: 50px; position: absolute; z-index: 22">
+    <div id="password" style="top: 241px; left: 50px; position: absolute; z-index: 22">
       <InputWidget
         :titleLabel="'Password'"
         :placeholder="'2VSckkBYr2An3dqHEyfRRE'"
@@ -36,7 +36,7 @@
         :type="'password'"
         :spellcheck="false"
         :inputWidth="400"
-        :domIdSuffix="'passkey-id'"
+        :domIdSuffix="'password-id'"
         @update:value="onUpdatePass($event)"
       />
     </div>
@@ -81,11 +81,11 @@ export default {
   data() {
     return {
       customerId: this.dialogdata.customerId,
-      userName: this.dialogdata.userName,
+      username: this.dialogdata.username,
       userPassword: this.dialogdata.userPassword,
       errorTextId: "",
       errorTextPass: "",
-      errorTextUserName: "",
+      errorTextUsername: "",
       enablelistEditUser: [true, true, true],
     };
   },
@@ -93,7 +93,7 @@ export default {
     if (this.openForInvalidCreds) {
       this.errorTextId = "Invalid Customer ID, Username, or Password";
       this.errorTextPass = "Invalid Customer ID, Username, or Password";
-      this.errorTextUserName = "Invalid Customer ID, Username, or Password";
+      this.errorTextUsername = "Invalid Customer ID, Username, or Password";
       this.enablelistEditUser = [true, true, false];
     }
   },
@@ -102,27 +102,27 @@ export default {
       this.errorTextId = TextValidation_User.validate(newValue, "ID");
       if (this.openForInvalidCreds && this.errorTextId.length === 0) {
         this.errorTextPass = "";
-        this.errorTextUserName = "";
+        this.errorTextUsername = "";
       }
       this.customerId = newValue;
       this.enableSaveButton();
     },
     onUpdatePass: function (newValue) {
-      this.errorTextPass = TextValidation_User.validate(newValue, "passkey");
+      this.errorTextPass = TextValidation_User.validate(newValue, "password");
       if (this.openForInvalidCreds && this.errorTextPass.length === 0) {
         this.errorTextId = "";
-        this.errorTextUserName = "";
+        this.errorTextUsername = "";
       }
       this.userPassword = newValue;
       this.enableSaveButton();
     },
-    onUpdateUserName: function (newValue) {
-      this.errorTextUserName = TextValidation_User.validate(newValue, "userName");
-      if (this.openForInvalidCreds && this.errorTextUserName.length === 0) {
+    onUpdateUsername: function (newValue) {
+      this.errorTextUsername = TextValidation_User.validate(newValue, "username");
+      if (this.openForInvalidCreds && this.errorTextUsername.length === 0) {
         this.errorTextId = "";
         this.errorTextPass = "";
       }
-      this.userName = newValue;
+      this.username = newValue;
       this.enableSaveButton();
     },
     clickedButton: function (choice) {
@@ -148,14 +148,14 @@ export default {
       const editUser = {
         customerId: this.customerId,
         userPassword: this.userPassword,
-        userName: this.userName,
+        username: this.username,
       };
       this.$emit("save-id", editUser);
     },
     enableSaveButton() {
       if (this.errorTextId === "") {
         if (this.errorTextPass === "") {
-          if (this.errorTextUserName === "") {
+          if (this.errorTextUsername === "") {
             this.enablelistEditUser = [true, true, true];
             return;
           }

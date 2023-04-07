@@ -12,7 +12,7 @@
           :value.sync="entrykeyUser"
           :inputWidth="entryWidthUser"
           :disabled="disallowEntryUser"
-          :optionsText="getUserNames"
+          :optionsText="getUsernames"
           :messageIfInvalid="!userFound"
           :optionsId="'user-account-'"
         />
@@ -150,13 +150,13 @@ export default {
   computed: {
     ...mapState("settings", ["userAccounts", "activeUserIndex", "storedCustomerId"]),
     ...mapState("system", ["loginAttemptStatus"]),
-    getUserNames: function () {
-      return this.userAccounts.map((userAccount) => userAccount.userName);
+    getUsernames: function () {
+      return this.userAccounts.map((userAccount) => userAccount.username);
     },
   },
   watch: {
     entrykeyUser: function () {
-      const userFocusIdx = this.getUserNames.indexOf(this.entrykeyUser);
+      const userFocusIdx = this.getUsernames.indexOf(this.entrykeyUser);
       this.userFound = this.entrykeyUser !== "" && userFocusIdx !== -1;
       if (this.userFound) {
         this.userFocusIdx = userFocusIdx;
@@ -178,7 +178,7 @@ export default {
   },
   created: function () {
     if (this.activeUserIndex != null) {
-      this.entrykeyUser = this.userAccounts[this.activeUserIndex].userName;
+      this.entrykeyUser = this.userAccounts[this.activeUserIndex].username;
       this.userFocusIdx = this.activeUserIndex;
       this.disableEditUser = false;
       this.userFound = true;
@@ -205,7 +205,7 @@ export default {
     saveNewUser(newUser) {
       this.$bvModal.hide("add-user");
       this.userAccounts.push(newUser);
-      this.entrykeyUser = newUser.userName;
+      this.entrykeyUser = newUser.username;
     },
     cancelUserUpdate() {
       this.$bvModal.hide("edit-user");
@@ -215,7 +215,7 @@ export default {
       this.openForInvalidCreds = false;
       // need to use splice so that Vue will recognize that the array was updated
       this.userAccounts.splice(this.userFocusIdx, 1, editedUser);
-      this.entrykeyUser = editedUser.userName;
+      this.entrykeyUser = editedUser.username;
     },
     deleteUser() {
       this.$bvModal.hide("edit-user");
