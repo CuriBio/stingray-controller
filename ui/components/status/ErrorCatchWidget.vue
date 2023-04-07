@@ -22,7 +22,7 @@
     <textarea
       class="textarea__installer_filepath"
       name="errorFile"
-      rows="2"
+      rows="3"
       cols="50"
       spellcheck="false"
       :value.prop="logFilepath"
