@@ -75,7 +75,7 @@ const generateFlaskCommandLineArgs = function (electronStore) {
   const flaskLogsFullPath = getFlaskLogsFullPath(electronStore);
 
   const args = [];
-  args.push("--log-file-dir=" + flaskLogsFullPath);
+  args.push("--log-directory=" + flaskLogsFullPath);
   args.push("--expected-software-version=" + exportFunctions.getCurrentAppVersion());
 
   return args;

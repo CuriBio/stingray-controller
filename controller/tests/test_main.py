@@ -30,21 +30,21 @@ def fixture_patch_run_tasks(mocker):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("use_debug_logging", [True, False])
-@pytest.mark.parametrize("log_file_dir", [None, "some/dir"])
-async def test_main__configures_logging_correctly(use_debug_logging, log_file_dir, patch_run_tasks, mocker):
+@pytest.mark.parametrize("log_directory", [None, "some/dir"])
+async def test_main__configures_logging_correctly(use_debug_logging, log_directory, patch_run_tasks, mocker):
     mocked_configure_logging = mocker.patch.object(main, "configure_logging", autospec=True)
 
     cmd_line_args = []
     if use_debug_logging:
         cmd_line_args.append("--log-level-debug")
-    if log_file_dir:
-        cmd_line_args.append(f"--log-file-dir={log_file_dir}")
+    if log_directory:
+        cmd_line_args.append(f"--log-directory={log_directory}")
 
     await main.main(cmd_line_args)
 
     expected_log_level = logging.DEBUG if use_debug_logging else logging.INFO
     mocked_configure_logging.assert_called_once_with(
-        path_to_log_folder=log_file_dir, log_file_prefix="stingray_log", log_level=expected_log_level
+        path_to_log_folder=log_directory, log_file_prefix="stingray_log", log_level=expected_log_level
     )
 
 
@@ -65,8 +65,8 @@ async def test_main__initial_bootup_logging(patch_run_tasks, mocker):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("log_file_dir", [None, r"Users\Username\AppData"])
-async def test_main__logs_command_line_args(log_file_dir, patch_run_tasks, mocker):
+@pytest.mark.parametrize("log_directory", [None, r"Users\Username\AppData"])
+async def test_main__logs_command_line_args(log_directory, patch_run_tasks, mocker):
     # mock to avoid looking for non-existent dir
     mocker.patch.object(main, "configure_logging", autospec=True)
 
@@ -77,8 +77,8 @@ async def test_main__logs_command_line_args(log_file_dir, patch_run_tasks, mocke
     )
 
     cmd_line_args = [rand_arg]
-    if log_file_dir:
-        cmd_line_args.append(f"--log-file-dir={log_file_dir}")
+    if log_directory:
+        cmd_line_args.append(f"--log-directory={log_directory}")
 
     await main.main(cmd_line_args)
 
@@ -86,7 +86,7 @@ async def test_main__logs_command_line_args(log_file_dir, patch_run_tasks, mocke
     for arg in sorted(cmd_line_args):
         arg_name, *arg_values = arg.split("=")
         arg_name = arg_name[2:].replace("-", "_")
-        if arg_name == "log_file_dir":
+        if arg_name == "log_directory":
             arg_value = redact_sensitive_info_from_path(arg_values[0])
         else:
             arg_value = arg_values[0] if arg_values else True
@@ -159,11 +159,11 @@ async def test_main__handles_errors_correctly(patch_run_tasks, mocker):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("log_file_dir", [None, r"Users\Username\AppData"])
+@pytest.mark.parametrize("log_directory", [None, r"Users\Username\AppData"])
 @pytest.mark.parametrize("expected_software_version", [None, "1.2.3"])
 @pytest.mark.parametrize("skip_software_version_verification", [True, False])
 async def test_main__initializes_system_state_correctly(
-    log_file_dir, expected_software_version, skip_software_version_verification, patch_run_tasks, mocker
+    log_directory, expected_software_version, skip_software_version_verification, patch_run_tasks, mocker
 ):
     spied_uuid4 = mocker.spy(main.uuid, "uuid4")
     # mock to avoid looking for non-existent dir
@@ -172,8 +172,8 @@ async def test_main__initializes_system_state_correctly(
     spied_init_state = mocker.spy(main, "_initialize_system_state")
 
     cmd_line_args = []
-    if log_file_dir:
-        cmd_line_args.append(f"--log-file-dir={log_file_dir}")
+    if log_directory:
+        cmd_line_args.append(f"--log-directory={log_directory}")
     if expected_software_version:
         cmd_line_args.append(f"--expected-software-version={expected_software_version}")
     if skip_software_version_verification:
@@ -184,7 +184,6 @@ async def test_main__initializes_system_state_correctly(
     expected_system_state = {
         "system_status": SystemStatuses.SERVER_INITIALIZING_STATE,
         "stimulation_protocols_running": [],
-        "config_settings": {"log_directory": log_file_dir},
         "is_user_logged_in": False,
         "stimulator_circuit_statuses": {},
         "stim_info": None,

@@ -22,8 +22,8 @@ def _get_command(command):
         case "login":
             comm |= {
                 "customer_id": "test_customer_id",
-                "user_name": "test_user_name",
-                "user_password": "test_user_password",
+                "username": "test_username",
+                "password": "test_password",
             }
         case "set_latest_software_version":
             comm |= {"version": "6.7.9"}

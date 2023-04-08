@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Constants for the Stingray Controller."""
+from collections import namedtuple
 import datetime
 from enum import Enum
 from enum import IntEnum
@@ -19,7 +20,12 @@ DEFAULT_SERVER_PORT_NUMBER = 4567
 NUM_WELLS = 24
 GENERIC_24_WELL_DEFINITION = LabwareDefinition(row_count=4, column_count=6)
 
-VALID_CONFIG_SETTINGS = frozenset(["customer_id", "user_name", "user_password"])
+AuthTokens = namedtuple("AuthTokens", ["access", "refresh"])
+AuthCreds = namedtuple("AuthCreds", ["customer_id", "username", "password"])
+ConfigSettings = namedtuple("ConfigSettings", ["auto_upload_on_completion", "log_directory"])
+
+VALID_CREDENTIAL_TYPES = frozenset(AuthCreds._fields)
+VALID_CONFIG_SETTINGS = frozenset(ConfigSettings._fields)
 
 # TODO try replacing all immutabledicts with enums
 BARCODE_HEADERS: immutabledict[str, str] = immutabledict({"plate_barcode": "ML", "stim_barcode": "MS"})

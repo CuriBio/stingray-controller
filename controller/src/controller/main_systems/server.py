@@ -23,7 +23,7 @@ from ..constants import STIM_MAX_SUBPROTOCOL_DURATION_MICROSECONDS
 from ..constants import STIM_MIN_SUBPROTOCOL_DURATION_MICROSECONDS
 from ..constants import StimulatorCircuitStatuses
 from ..constants import SystemStatuses
-from ..constants import VALID_CONFIG_SETTINGS
+from ..constants import VALID_CREDENTIAL_TYPES
 from ..constants import VALID_STIMULATION_TYPES
 from ..constants import VALID_SUBPROTOCOL_TYPES
 from ..exceptions import WebsocketCommandError
@@ -199,7 +199,7 @@ class Server:
     def _log_incoming_message(self, msg: dict[str, Any]) -> None:
         if msg["command"] == "login":
             comm_copy = copy.deepcopy(msg)
-            comm_copy["user_password"] = get_redacted_string(4)
+            comm_copy["password"] = get_redacted_string(4)
             comm_str = str(comm_copy)
         else:
             comm_str = str(msg)
@@ -215,11 +215,10 @@ class Server:
 
     @mark_handler
     async def _login(self, comm: dict[str, str]) -> None:
-        # TODO fix all this, it's no logner used for settings
         """Update the customer/user settings."""
-        for setting in comm:
-            if setting not in (*VALID_CONFIG_SETTINGS, "command"):
-                raise WebsocketCommandError(f"Invalid setting given: {setting}")
+        for cred_type in comm:
+            if cred_type not in VALID_CREDENTIAL_TYPES | {"command"}:
+                raise WebsocketCommandError(f"Invalid cred type given: {cred_type}")
 
         await self._to_monitor_queue.put(comm)
 

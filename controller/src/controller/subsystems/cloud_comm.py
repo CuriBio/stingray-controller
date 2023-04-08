@@ -2,7 +2,6 @@
 
 
 import asyncio
-from collections import namedtuple
 import copy
 import logging
 from typing import Any
@@ -13,7 +12,10 @@ import httpx
 from httpx import Response
 from semver import VersionInfo
 
+from ..constants import AuthCreds
+from ..constants import AuthTokens
 from ..constants import CLOUD_API_ENDPOINT
+from ..constants import ConfigSettings
 from ..constants import CURRENT_SOFTWARE_VERSION
 from ..exceptions import FirmwareAndSoftwareNotCompatibleError
 from ..exceptions import FirmwareDownloadError
@@ -30,10 +32,6 @@ logger = logging.getLogger(__name__)
 ERROR_MSG = "IN CLOUD COMM"
 
 
-AuthTokens = namedtuple("AuthTokens", ["access", "refresh"])
-AuthCreds = namedtuple("AuthCreds", ["customer_id", "username", "password"])
-
-
 def _get_tokens(response_json: dict[str, Any]) -> AuthTokens:
     return AuthTokens(access=response_json["access"]["token"], refresh=response_json["refresh"]["token"])
 
@@ -45,10 +43,15 @@ class CloudComm:
         self,
         from_monitor_queue: asyncio.Queue[dict[str, Any]],
         to_monitor_queue: asyncio.Queue[dict[str, Any]],
+        **config_settings: dict[str, Any],
     ) -> None:
         # comm queues
         self._from_monitor_queue = from_monitor_queue
         self._to_monitor_queue = to_monitor_queue
+
+        # TODO figure out if there is a better way to define this default value for auto_upload_on_completion,
+        # or if it should also become a command line arg
+        self._config = ConfigSettings(**config_settings, auto_upload_on_completion=False)
 
         self._creds: AuthCreds | None = None
         self._tokens: AuthTokens | None = None
@@ -86,6 +89,26 @@ class CloudComm:
 
     async def _attempt_to_upload_log_files_to_s3(self) -> None:
         pass  # TODO
+        # if self._creds and self._config.auto_upload_on_completion:
+        #     logger.info("Auto-upload is not turned on, skipping upload of log files.")
+        #     return
+
+        # if not self._config.log_directory:
+        #     logger.info("Skipping upload of log files to s3 because no log files were created")
+        #     return
+
+        # logger.info("Attempting upload of log files to s3")
+
+        # file_directory = os.path.dirname(self._config.log_directory)
+        # sub_dir_name = os.path.basename(self._config.log_directory)
+
+        # with tempfile.TemporaryDirectory() as zipped_dir:
+        #     try:
+        #         pass  # TODO
+        #     except Exception as e:
+        #         logger.error(f"Failed to upload log files to s3: {repr(e)}")
+        #     else:
+        #         logger.info("Successfully uploaded session logs to s3")
 
     # INFINITE TASKS
 
@@ -219,7 +242,7 @@ class CloudComm:
         except (RequestFailedError, httpx.ConnectError) as e:
             return {"error": repr(e)}
 
-    async def _get_cloud_api_tokens(self, customer_id: str, user_name: str, user_password: str) -> None:
+    async def _get_cloud_api_tokens(self, customer_id: str, username: str, password: str) -> None:
         if self._client is None:
             raise NotImplementedError("self._client should never be None here")
 
@@ -227,8 +250,8 @@ class CloudComm:
             f"https://{CLOUD_API_ENDPOINT}/users/login",
             json={
                 "customer_id": customer_id,
-                "username": user_name,
-                "password": user_password,
+                "username": username,
+                "password": password,
                 "service": "pulse3d",
             },
         )
@@ -237,7 +260,7 @@ class CloudComm:
             raise LoginFailedError(res.status_code)
 
         self._tokens = _get_tokens(res.json()["tokens"])
-        self._creds = AuthCreds(customer_id=customer_id, username=user_name, password=user_password)
+        self._creds = AuthCreds(customer_id=customer_id, username=username, password=password)
 
     async def _refresh_cloud_api_tokens(self) -> None:
         """Use refresh token to get new set of auth tokens."""

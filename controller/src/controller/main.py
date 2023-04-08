@@ -21,6 +21,7 @@ from .constants import DEFAULT_SERVER_PORT_NUMBER
 from .constants import SERVER_BOOT_UP_TIMEOUT_SECONDS
 from .constants import SOFTWARE_RELEASE_CHANNEL
 from .constants import SystemStatuses
+from .constants import VALID_CONFIG_SETTINGS
 from .exceptions import LocalServerPortAlreadyInUseError
 from .main_systems.server import Server
 from .main_systems.system_monitor import SystemMonitor
@@ -43,7 +44,7 @@ async def main(command_line_args: list[str]) -> None:
         parsed_args = _parse_cmd_line_args(command_line_args)
         log_level = logging.DEBUG if parsed_args["log_level_debug"] else logging.INFO
         configure_logging(
-            path_to_log_folder=parsed_args["log_file_dir"],
+            path_to_log_folder=parsed_args["log_directory"],
             log_file_prefix="stingray_log",
             log_level=log_level,
         )
@@ -83,7 +84,9 @@ async def main(command_line_args: list[str]) -> None:
         instrument_comm_subsystem = InstrumentComm(
             queues["to"]["instrument_comm"], queues["from"]["instrument_comm"]
         )
-        cloud_comm_subsystem = CloudComm(queues["to"]["cloud_comm"], queues["from"]["cloud_comm"])
+        cloud_comm_subsystem = CloudComm(
+            queues["to"]["cloud_comm"], queues["from"]["cloud_comm"], **_get_user_config_settings(parsed_args)
+        )
 
         # future for subsystems to set if they experience an error. The server will report the error in the future to the UI
         system_error_future: asyncio.Future[int] = asyncio.Future()
@@ -136,7 +139,7 @@ def _parse_cmd_line_args(command_line_args: list[str]) -> dict[str, Any]:
         help="sets the loggers to be more verbose and log DEBUG level pieces of information",
     )
     parser.add_argument(
-        "--log-file-dir",
+        "--log-directory",
         type=str,
         help="allow manual setting of the directory in which log files will be stored",
     )
@@ -159,8 +162,8 @@ def _log_cmd_line_args(parsed_args: dict[str, Any]) -> None:
         arg_name: arg_value for arg_name, arg_value in sorted(parsed_args.items()) if arg_value
     }
 
-    if log_file_dir := parsed_args_copy.get("log_file_dir"):
-        parsed_args_copy["log_file_dir"] = redact_sensitive_info_from_path(log_file_dir)
+    if log_directory := parsed_args_copy.get("log_directory"):
+        parsed_args_copy["log_directory"] = redact_sensitive_info_from_path(log_directory)
     # Tanner (1/14/21): Unsure why the back slashes are duplicated when converting the dict to string. Using replace here to remove the duplication, not sure if there is a better way to solve or avoid this problem
     logger.info(f"Command Line Args: {parsed_args_copy}".replace(r"\\", "\\"))
 
@@ -177,10 +180,6 @@ def _initialize_system_state(parsed_args: dict[str, Any], log_file_id: uuid.UUID
         "channel_firmware_update": None,
         "latest_software_version": None,
         "firmware_updates_accepted": None,
-        # user options
-        "config_settings": {
-            "log_directory": parsed_args["log_file_dir"]
-        },  # TODO consider not storing this in a dict
         "is_user_logged_in": False,
         # instrument
         "instrument_metadata": {},
@@ -223,3 +222,7 @@ def _log_system_info() -> None:
         f"SHA512 digest of Computer Name {computer_name_hash}",
     ):
         logger.info(msg)
+
+
+def _get_user_config_settings(parsed_args: dict[str, Any]) -> dict[str, Any]:
+    return {key: val for key, val in parsed_args.items() if key in VALID_CONFIG_SETTINGS}

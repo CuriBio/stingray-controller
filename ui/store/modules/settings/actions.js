@@ -6,8 +6,8 @@ export default {
     const params = {
       command: "login",
       customer_id: customerId,
-      user_name: username,
-      user_password: userPassword,
+      username: username,
+      password: userPassword,
     };
 
     this.state.system.socket.send(JSON.stringify(params));
