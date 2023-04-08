@@ -52,6 +52,7 @@ class SerialCommCommandResponseTimeoutError(InstrumentConnectionLostError):
     pass
 
 
+# TODO change this to be an issue processing comm from instrument, rather than explicitly bad data from it
 class InstrumentBadDataError(InstrumentError):
     """Generic exception for errors caused by malformed data."""
 

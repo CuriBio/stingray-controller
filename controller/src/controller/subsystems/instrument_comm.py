@@ -96,6 +96,13 @@ METADATA_TAGS_FOR_LOGGING = immutabledict(
 )
 
 
+INTERMEDIATE_FIRMWARE_UPDATE_COMMANDS = (
+    "start_firmware_update",
+    "send_firmware_data",
+    "end_of_firmware_update",
+)
+
+
 class InstrumentComm:
     """Subsystem that manages communication with the Stingray Instrument."""
 
@@ -401,7 +408,7 @@ class InstrumentComm:
     async def _handle_firmware_update(self, comm_from_monitor: dict[str, Any]) -> None:
         logger.info("Beginning firmware update")
 
-        # create FW update manager, and wait for it to complete. Updates will be pushed to it from another task
+        # create FW update manager and wait for it to complete. Updates will be pushed to it from another task
         self._firmware_update_manager = FirmwareUpdateManager(comm_from_monitor)
 
         async for packet_type, bytes_to_send, command in self._firmware_update_manager:
@@ -523,12 +530,13 @@ class InstrumentComm:
                         raise StimulationStatusUpdateFailedError("stop_stimulation")
                     prev_command_info["hardware_test_message"] = "Command failed"  # pragma: no cover
                 self._is_stimulating = False
-            case ("start_firmware_update" | "send_firmware_data" | "end_of_firmware_update") as command:
+            case command if command in INTERMEDIATE_FIRMWARE_UPDATE_COMMANDS:
                 if self._firmware_update_manager is None:
                     raise NotImplementedError("_firmware_update_manager should never be None here")
                 await self._firmware_update_manager.update(command, response_data)
 
-        await self._to_monitor_queue.put(prev_command_info)
+        if prev_command_info["command"] not in INTERMEDIATE_FIRMWARE_UPDATE_COMMANDS:
+            await self._to_monitor_queue.put(prev_command_info)
 
     async def _process_stim_packets(self, stim_stream_info: dict[str, bytes | int]) -> None:
         if not stim_stream_info["num_packets"]:
@@ -593,6 +601,7 @@ class FirmwareUpdateManager:
     async def __anext__(self) -> FirmwareUpdateItems:
         if self._packet_idx == -1:
             command_items = self._create_initial_update_items()
+            self._packet_idx += 1
         else:
             command_items = await self._command_queue.get()  # type: ignore
             if command_items is self._sentinel:

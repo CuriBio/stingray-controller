@@ -3,10 +3,12 @@
 
 import asyncio
 from collections import namedtuple
+import copy
 import logging
 from typing import Any
 from typing import Coroutine
 
+from controller.utils.logging import get_redacted_string
 import httpx
 from httpx import Response
 from semver import VersionInfo
@@ -122,7 +124,8 @@ class CloudComm:
                     }
                 else:
                     command = task_name[1:]
-                    logger.info(f"Result of '{command}' command: {res}")
+                    # TODO make a general dict redaction function and make sure to call it before logging in all subsystems
+                    self._log_sub_task_result(command, res)
                     await self._to_monitor_queue.put({"command": command, **res})
 
     # SUBTASKS
@@ -165,21 +168,16 @@ class CloudComm:
         )
         return {"latest_versions": get_versions_response.json()["latest_versions"]}
 
-    async def _download_firmware_updates(
-        self, main_fw_version: str | None, channel_fw_version: str | None
-    ) -> dict[str, bytes]:
+    async def _download_firmware_updates(self, command: dict[str, str]) -> dict[str, bytes]:
         try:
             if self._tokens is None:
                 raise NotImplementedError("self._tokens should never be None here")
 
-            if not main_fw_version and not channel_fw_version:
-                raise NotImplementedError("No firmware types specified")
-
             presigned_urls = {}
 
             # get presigned download URL(s)
-            for version, fw_type in ((main_fw_version, "main"), (channel_fw_version, "channel")):
-                if version:
+            for fw_type in ("main", "channel"):
+                if version := command[fw_type]:
                     download_details = await self._request(
                         "get",
                         f"https://{CLOUD_API_ENDPOINT}/mantarray/firmware/{fw_type}/{version}",
@@ -187,6 +185,9 @@ class CloudComm:
                         error_message=f"Error getting presigned URL for {fw_type} firmware",
                     )
                     presigned_urls[fw_type] = download_details.json()["presigned_url"]
+
+            if not presigned_urls:
+                raise NotImplementedError("No firmware types specified")
 
             subtask_res = {}
 
@@ -202,6 +203,15 @@ class CloudComm:
         return subtask_res
 
     # HELPERS
+
+    def _log_sub_task_result(self, command: str, result: dict[str, Any]) -> None:
+        result = copy.copy(result)
+
+        for key in result:
+            if "content" in key:
+                result[key] = get_redacted_string(4)
+
+        logger.info(f"Result of '{command}' command: {result}")
 
     async def _sub_task_wrapper(self, coro: Coroutine[Any, Any, dict[str, str]]) -> dict[str, str]:
         try:

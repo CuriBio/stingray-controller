@@ -248,7 +248,7 @@ class SystemMonitor:
                         )
                 case {"command": "get_metadata", **metadata}:
                     system_state_updates["instrument_metadata"] = metadata
-                case {"command": "firmware_update_completed", "firmware_type": firmware_type}:
+                case {"command": "firmware_update_complete", "firmware_type": firmware_type}:
                     system_state_updates[f"{firmware_type}_firmware_update"] = None
                 case invalid_comm:
                     raise NotImplementedError(f"Invalid communication from InstrumentComm: {invalid_comm}")
@@ -324,12 +324,13 @@ class SystemMonitor:
                     # Tanner (1/13/22): send both firmware update commands at once, and make sure channel is sent first.
                     # If both are sent, the second will be ignored by instrument comm until the first install completes
                     for firmware_type in ("channel", "main"):
-                        if system_state[f"{firmware_type}_firmware_update"] is not None:
+                        if (version := system_state[f"{firmware_type}_firmware_update"]) is not None:
                             self._queues["to"]["instrument_comm"].put_nowait(
                                 {
                                     "command": "start_firmware_update",
                                     "firmware_type": firmware_type,
-                                    "file_contents": " TODO",
+                                    "file_contents": communication[f"{firmware_type}_firmware_contents"],
+                                    "version": version,
                                 }
                             )
                 case invalid_comm:
