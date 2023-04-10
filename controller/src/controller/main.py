@@ -111,7 +111,7 @@ async def main(command_line_args: list[str]) -> None:
         finally:
             await wait_tasks_clean(tasks)
 
-    except Exception:
+    except BaseException:
         logger.exception(ERROR_MSG)
 
     finally:

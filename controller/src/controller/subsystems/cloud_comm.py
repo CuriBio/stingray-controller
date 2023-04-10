@@ -2,10 +2,15 @@
 
 
 import asyncio
+import base64
 import copy
+import hashlib
 import logging
+import os
+import tempfile
 from typing import Any
 from typing import Coroutine
+import zipfile
 
 from controller.utils.logging import get_redacted_string
 import httpx
@@ -15,6 +20,7 @@ from semver import VersionInfo
 from ..constants import AuthCreds
 from ..constants import AuthTokens
 from ..constants import CLOUD_API_ENDPOINT
+from ..constants import CLOUD_PULSE3D_ENDPOINT
 from ..constants import ConfigSettings
 from ..constants import CURRENT_SOFTWARE_VERSION
 from ..exceptions import FirmwareAndSoftwareNotCompatibleError
@@ -36,6 +42,23 @@ def _get_tokens(response_json: dict[str, Any]) -> AuthTokens:
     return AuthTokens(access=response_json["access"]["token"], refresh=response_json["refresh"]["token"])
 
 
+# TODO move this to a utils module
+def get_file_md5(file_path: str) -> str:
+    """Generate md5 of zip file.
+
+    Args:
+        file_path: path to zip file.
+    """
+    with open(file_path, "rb") as file_to_read:
+        contents = file_to_read.read()
+        md5 = hashlib.md5(  # nosec B324 B303 # Tanner (2/4/21): Bandit blacklisted this hash function for cryptographic security reasons that do not apply to the desktop app.
+            contents
+        ).digest()
+        md5s = base64.b64encode(md5).decode()
+
+    return md5s
+
+
 class CloudComm:
     """Subsystem that manages communication with cloud services."""
 
@@ -51,7 +74,7 @@ class CloudComm:
 
         # TODO figure out if there is a better way to define this default value for auto_upload_on_completion,
         # or if it should also become a command line arg
-        self._config = ConfigSettings(**config_settings, auto_upload_on_completion=False)
+        self._config = ConfigSettings(**config_settings, auto_upload_on_completion=True)
 
         self._creds: AuthCreds | None = None
         self._tokens: AuthTokens | None = None
@@ -65,22 +88,22 @@ class CloudComm:
         logger.info("Starting CloudComm")
 
         try:
-            async with httpx.AsyncClient() as self._client:
-                tasks = {
-                    asyncio.create_task(self._manage_subtasks()),
-                    # TODO add other tasks?
-                }
-                exc = await wait_tasks_clean(tasks, error_msg=ERROR_MSG)
-                if exc:
-                    handle_system_error(exc, system_error_future)
+            self._client = httpx.AsyncClient()
+            tasks = {
+                asyncio.create_task(self._manage_subtasks()),
+                # TODO add other tasks?
+            }
+            await wait_tasks_clean(tasks, error_msg=ERROR_MSG)
         except asyncio.CancelledError:
+            # TODO figure out why this isn't being reached
             logger.info("CloudComm cancelled")
-            await self._attempt_to_upload_log_files_to_s3()
+            # await self._attempt_to_upload_log_files_to_s3()
             raise
-        except Exception as e:
+        except BaseException as e:
             logger.exception(ERROR_MSG)
             handle_system_error(e, system_error_future)
         finally:
+            await self._attempt_to_upload_log_files_to_s3()
             self._client = None
             logger.info("CloudComm shut down")
 
@@ -88,27 +111,28 @@ class CloudComm:
         return await self._from_monitor_queue.get()
 
     async def _attempt_to_upload_log_files_to_s3(self) -> None:
-        pass  # TODO
-        # if self._creds and self._config.auto_upload_on_completion:
-        #     logger.info("Auto-upload is not turned on, skipping upload of log files.")
-        #     return
+        if not self._creds:
+            logger.info("No user logged in, skipping upload of log files.")
+            return
+        if not self._config.auto_upload_on_completion:
+            logger.info("Auto-upload is not turned on, skipping upload of log files.")
+            return
 
-        # if not self._config.log_directory:
-        #     logger.info("Skipping upload of log files to s3 because no log files were created")
-        #     return
+        if not self._config.log_directory:
+            logger.info("Skipping upload of log files to s3 because no log files were created")
+            return
 
-        # logger.info("Attempting upload of log files to s3")
+        logger.info("Attempting upload of log files to s3")
 
-        # file_directory = os.path.dirname(self._config.log_directory)
-        # sub_dir_name = os.path.basename(self._config.log_directory)
-
-        # with tempfile.TemporaryDirectory() as zipped_dir:
-        #     try:
-        #         pass  # TODO
-        #     except Exception as e:
-        #         logger.error(f"Failed to upload log files to s3: {repr(e)}")
-        #     else:
-        #         logger.info("Successfully uploaded session logs to s3")
+        try:
+            with tempfile.TemporaryDirectory() as tmp_dir:
+                await self._upload_to_s3(
+                    self._config.log_directory, upload_type="log", dir_for_zipping=tmp_dir
+                )
+        except BaseException:
+            logger.exception("Failed to upload log files to s3")
+        else:
+            logger.info("Successfully uploaded session logs to s3")
 
     # INFINITE TASKS
 
@@ -124,7 +148,8 @@ class CloudComm:
                 task_name = task.get_name()
                 try:
                     res = task.result()
-                except Exception as e:
+                except BaseException as e:
+                    # TODO make sure this works as expected
                     await clean_up_tasks(pending)
                     raise e
 
@@ -163,7 +188,7 @@ class CloudComm:
             subtask_res["error"] = "No internet connection"
         else:
             username = self._creds.username  # type: ignore  # mypy doesn't realize this will never be None here
-            logger.info(f"User {username} successfully logged in")
+            logger.info(f"User '{username}' successfully logged in")
         # TODO also handle NetworkError?
 
         return subtask_res
@@ -172,6 +197,7 @@ class CloudComm:
         check_sw_response = await self._request(
             "get",
             f"https://{CLOUD_API_ENDPOINT}/mantarray/software-range/{command['main_fw_version']}",
+            auth_required=False,
             error_message="Error checking software/firmware compatibility",
         )
         range = check_sw_response.json()
@@ -187,15 +213,13 @@ class CloudComm:
         get_versions_response = await self._request(
             "get",
             f"https://{CLOUD_API_ENDPOINT}/mantarray/versions/{command['serial_number']}",
+            auth_required=False,
             error_message="Error getting latest firmware versions",
         )
         return {"latest_versions": get_versions_response.json()["latest_versions"]}
 
     async def _download_firmware_updates(self, command: dict[str, str]) -> dict[str, bytes]:
         try:
-            if self._tokens is None:
-                raise NotImplementedError("self._tokens should never be None here")
-
             presigned_urls = {}
 
             # get presigned download URL(s)
@@ -204,8 +228,8 @@ class CloudComm:
                     download_details = await self._request(
                         "get",
                         f"https://{CLOUD_API_ENDPOINT}/mantarray/firmware/{fw_type}/{version}",
-                        headers={"Authorization": f"Bearer {self._tokens.access}"},
-                        error_message=f"Error getting presigned URL for {fw_type} firmware",
+                        auth_required=True,
+                        error_message=f"Error getting presigned URL for {fw_type} firmware download",
                     )
                     presigned_urls[fw_type] = download_details.json()["presigned_url"]
 
@@ -217,10 +241,13 @@ class CloudComm:
             # download firmware file(s)
             for fw_type, presigned_url in presigned_urls.items():
                 download_response = await self._request(
-                    "get", presigned_url, error_message=f"Error during download of {fw_type} firmware"
+                    "get",
+                    presigned_url,
+                    auth_required=False,
+                    error_message=f"Error during download of {fw_type} firmware",
                 )
                 subtask_res[f"{fw_type}_firmware_contents"] = download_response.content
-        except Exception as e:
+        except BaseException as e:
             raise FirmwareDownloadError() from e
 
         return subtask_res
@@ -280,29 +307,98 @@ class CloudComm:
 
         self._tokens = _get_tokens(res.json()["tokens"])
 
-    async def _request_with_refresh(self, method: str, url: str, **kwargs: dict[str, Any]) -> Response:
-        """Make request, refresh once if needed, and try request once more."""
+    async def _request_with_refresh(
+        self, method: str, url: str, **request_kwargs: dict[str, Any]
+    ) -> Response:
+        """Make request, refresh once if needed, and try request once more.
+
+        This is primarily for use inside _request.
+        """
         if self._client is None:
             raise NotImplementedError("self._client should never be None here")
 
-        response = await self._client.request(method, url, **kwargs)
+        res = await self._client.request(method, url, **request_kwargs)
         # if auth token expired then request will return 401 code
-        if response.status_code == 401:
+        if res.status_code == 401:
             # get new tokens and try request once more
             self.tokens = self._refresh_cloud_api_tokens()
-            response = await self._client.request(method, url, **kwargs)
+            res = await self._client.request(method, url, **request_kwargs)
             # TODO try logging in again if this also fails
 
-        return response
+        return res
 
-    async def _request(self, method: str, url: str, error_message: str, **kwargs: dict[str, Any]) -> Response:
-        res = await self._request_with_refresh(method, url, **kwargs)
+    async def _request(
+        self,
+        method: str,
+        url: str,
+        *,
+        auth_required: bool,
+        error_message: str,
+        **request_kwargs: dict[str, Any],
+    ) -> Response:
+        """Make a request.
+
+        This is the primary function that should be used to handle
+        requests.
+        """
+        if self._tokens is None:
+            raise NotImplementedError("self._tokens should never be None here")
+
+        if auth_required:
+            request_kwargs["headers"] = {"Authorization": f"Bearer {self._tokens.access}"}
+
+        res = await self._request_with_refresh(method, url, **request_kwargs)
 
         if not (200 <= res.status_code < 300):
             try:
                 message = await res.json()["message"]
-            except Exception:
+            except BaseException:
                 message = res.reason_phrase
             raise RequestFailedError(f"{error_message}. Status code: {res.status_code}, Reason: {message}")
 
         return res
+
+    # TODO make an enum for upload types
+    async def _upload_to_s3(
+        self, path_: str, *, upload_type: str, dir_for_zipping: str | None = None
+    ) -> None:
+        # TODO break this into smaller functions
+        if os.path.isdir(path_):
+            if not dir_for_zipping:
+                raise NotImplementedError("a dir to store the zipped file must be given if path_ is a folder")
+
+            uploaded_file_name = f"{os.path.basename(path_)}.zip"
+            path_to_upload_file = os.path.join(dir_for_zipping, uploaded_file_name)
+
+            # Tanner (4/10/23): assuming that the folder only contains files. Can change this if needed
+            with zipfile.ZipFile(path_to_upload_file, "w") as zf:
+                for file_name in os.listdir(path_):
+                    zf.write(os.path.join(path_, file_name), file_name)
+        elif os.path.isfile(path_):
+            uploaded_file_name = os.path.basename(path_)
+            path_to_upload_file = path_
+        else:
+            raise NotImplementedError("given path does not exist")
+
+        # upload file
+        file_md5 = get_file_md5(path_to_upload_file)
+
+        route = "uploads" if upload_type == "recording" else "logs"
+        upload_details_res = await self._request(
+            "post",
+            f"https://{CLOUD_PULSE3D_ENDPOINT}/{route}",
+            json={"filename": uploaded_file_name, "md5s": file_md5, "upload_type": "pulse3d"},
+            auth_required=True,
+            error_message="Error getting presigned URL for file upload",
+        )
+        upload_details = upload_details_res.json()
+
+        with open(path_to_upload_file, "rb") as file_handle:
+            await self._request(
+                "post",
+                upload_details["params"]["url"],
+                data=upload_details["params"]["fields"],
+                files={"file": (uploaded_file_name, file_handle)},
+                auth_required=False,
+                error_message="Error uploading file to s3 through presigned URL",
+            )

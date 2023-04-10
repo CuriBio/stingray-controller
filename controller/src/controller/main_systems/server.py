@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import asyncio
 import copy
+import functools
 import json
 import logging
 from typing import Any
@@ -83,7 +84,9 @@ class Server:
     ) -> None:
         logger.info("Starting Server")
 
-        ws_server = await serve(self._run, "localhost", DEFAULT_SERVER_PORT_NUMBER)
+        _run = functools.partial(self._run, system_error_future=system_error_future)
+
+        ws_server = await serve(_run, "localhost", DEFAULT_SERVER_PORT_NUMBER)
         self._serve_task = asyncio.create_task(ws_server.serve_forever())
         logger.info("WS Server running")
 
@@ -92,24 +95,25 @@ class Server:
         try:
             await asyncio.shield(self._serve_task)
         except asyncio.CancelledError:
-            logger.info("Server cancelled")
-            await self._report_system_error(system_error_future)
+            # if _serve_task is cancelled, assume the error has already been reported
+            if not self._serve_task.cancelled():
+                logger.info("Server cancelled")
+                await self._report_system_error(system_error_future)
 
             ws_server.close()
             await ws_server.wait_closed()
 
             raise
-        except Exception as e:
+        except BaseException:
+            # Tanner (4/10/23): don't expected this to be reached, but logging just in case
             logger.exception(ERROR_MSG)
-            handle_system_error(e, system_error_future)
-            await self._report_system_error(system_error_future)
-
-            raise
         finally:
             await clean_up_tasks({self._serve_task}, ERROR_MSG)
             logger.info("Server shut down")
 
-    async def _run(self, websocket: WebSocketServerProtocol) -> None:
+    async def _run(
+        self, websocket: WebSocketServerProtocol, system_error_future: asyncio.Future[int]
+    ) -> None:
         if not self._serve_task:
             raise NotImplementedError("_serve_task must be not be None here")
 
@@ -122,10 +126,14 @@ class Server:
         self._websocket = websocket
         logger.info("UI has connected")
 
-        await self._handle_comm(websocket)
-
-        self._websocket = None
-        logger.info("UI has disconnected")
+        try:
+            await self._handle_comm(websocket)
+        except asyncio.CancelledError:
+            pass
+        except BaseException as e:
+            logger.exception(ERROR_MSG)
+            handle_system_error(e, system_error_future)
+            await self._report_system_error(system_error_future)
 
         self._serve_task.cancel()
 
@@ -153,7 +161,7 @@ class Server:
             msg = {"communication_type": "error", "error_code": error_code}
             try:
                 await self._websocket.send(json.dumps(msg))
-            except Exception:
+            except BaseException:
                 logger.exception("Failed to send error message to UI")
         else:
             logger.error("UI has already disconnected, cannot send error message")

@@ -141,9 +141,5 @@ class FirmwareDownloadError(Exception):
     pass
 
 
-# class PresignedUploadFailedError(Exception):
-#     pass
-
-
 # class CloudAnalysisJobFailedError(Exception):
 #     pass

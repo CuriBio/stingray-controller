@@ -20,7 +20,7 @@ def semver_gt(version_a: str, version_b: str) -> bool:
     return VersionInfo.parse(version_a) > VersionInfo.parse(version_b)  # type: ignore
 
 
-def handle_system_error(exc: Exception, system_error_future: asyncio.Future[int]) -> None:
+def handle_system_error(exc: BaseException, system_error_future: asyncio.Future[int]) -> None:
     if system_error_future.done():
         return
 

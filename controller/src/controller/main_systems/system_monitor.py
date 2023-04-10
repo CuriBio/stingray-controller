@@ -47,12 +47,13 @@ class SystemMonitor:
             asyncio.create_task(self._handle_system_state_updates()),
         }
         try:
-            exc = await wait_tasks_clean(tasks, error_msg=ERROR_MSG)
-            if exc:
-                handle_system_error(exc, system_error_future)
+            await wait_tasks_clean(tasks, error_msg=ERROR_MSG)
         except asyncio.CancelledError:
             logger.info("SystemMonitor cancelled")
             raise
+        except BaseException as e:
+            logger.exception(ERROR_MSG)
+            handle_system_error(e, system_error_future)
         finally:
             logger.info("SystemMonitor shut down")
 

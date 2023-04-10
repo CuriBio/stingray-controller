@@ -170,13 +170,11 @@ class InstrumentComm:
                 asyncio.create_task(self._handle_beacon_tracking()),
                 asyncio.create_task(self._catch_expired_command()),
             }
-            exc = await wait_tasks_clean(tasks, error_msg=ERROR_MSG)
-            if exc:
-                handle_system_error(exc, system_error_future)
+            await wait_tasks_clean(tasks, error_msg=ERROR_MSG)
         except asyncio.CancelledError:
             logger.info("InstrumentComm cancelled")
             raise
-        except Exception as e:
+        except BaseException as e:
             logger.exception(ERROR_MSG)
             handle_system_error(e, system_error_future)
         finally:
@@ -218,7 +216,7 @@ class InstrumentComm:
             virtual_instrument = VirtualInstrumentConnection()
             try:
                 await virtual_instrument.connect()
-            except Exception as e:  # TODO make this a specific exception?
+            except BaseException as e:  # TODO make this a specific exception?
                 raise NoInstrumentDetectedError() from e
             else:
                 self._instrument = virtual_instrument
@@ -396,7 +394,7 @@ class InstrumentComm:
                     FirmwareUpdateCommandFailedError,
                 ):
                     raise
-                except Exception as e:
+                except BaseException as e:
                     raise SerialCommCommandProcessingError(
                         f"Timestamp: {timestamp}, Packet Type: {packet_type}, Payload: {packet_payload}"
                     ) from e
@@ -672,7 +670,7 @@ class VirtualInstrumentConnection:
         # read a specific number of bytes it will block until at least one is available
         try:
             data = await self.reader.read(size)
-        except Exception:
+        except BaseException:
             # TODO raise a different error here?
             return bytes(0)
         logger.debug(f"RECV: {data}")  # type: ignore
@@ -683,6 +681,6 @@ class VirtualInstrumentConnection:
         try:
             self.writer.write(data)
             await self.writer.drain()
-        except Exception:
+        except BaseException:
             # TODO raise a different error here?
             pass
