@@ -23,13 +23,13 @@ import pytest
 
 # TODO consider patching __init__ of all subsystems instead
 @pytest.fixture(scope="function", name="patch_ic_event", autouse=True)
-def fixture_patch_ic_event(mocker):
+def fixture__patch_ic_event(mocker):
     # InstrumentComm.__init__ creates an asyncio.Event, so mock it there so this doesn't happen
     mocker.patch.object(instrument_comm.asyncio, "Event")
 
 
 @pytest.fixture(scope="function", name="patch_run_tasks")
-def fixture_patch_run_tasks(mocker):
+def fixture__patch_run_tasks(mocker):
     def server_run_se(server, system_error_future, server_running_event):
         server_running_event.set()
 

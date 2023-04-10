@@ -3,7 +3,6 @@
 # Tanner (9/1/20): Make sure to set `linetrace=False` except when profiling cython code or creating annotation file. All performance tests should be timed without line tracing enabled. Cython files in this package can easily be recompiled with `pip install -e .`
 # cython: linetrace=False
 """Parsing data from instrument firmware."""
-# TODO clean up this file
 from ..constants import NUM_WELLS
 from ..constants import SERIAL_COMM_PAYLOAD_INDEX
 from ..constants import SERIAL_COMM_CHECKSUM_LENGTH_BYTES
@@ -13,8 +12,6 @@ from ..constants import SERIAL_COMM_PACKET_METADATA_LENGTH_BYTES
 from ..constants import SERIAL_COMM_PACKET_REMAINDER_SIZE_LENGTH_BYTES
 from ..constants import SERIAL_COMM_TIME_OFFSET_LENGTH_BYTES
 from ..constants import SerialCommPacketTypes
-from ..constants import STIM_MODULE_ID_TO_WELL_IDX
-from ..constants import StimProtocolStatuses
 from ..exceptions import SerialCommIncorrectChecksumFromInstrumentError
 from ..exceptions import SerialCommIncorrectMagicWordFromInstrumentError
 

@@ -20,11 +20,13 @@ import serial.tools.list_ports as list_ports
 from ..constants import CURI_VID
 from ..constants import NUM_WELLS
 from ..constants import SERIAL_COMM_BAUD_RATE
+from ..constants import SERIAL_COMM_BYTESIZE
 from ..constants import SERIAL_COMM_HANDSHAKE_PERIOD_SECONDS
 from ..constants import SERIAL_COMM_MAGIC_WORD_BYTES
 from ..constants import SERIAL_COMM_MAX_FULL_PACKET_LENGTH_BYTES
 from ..constants import SERIAL_COMM_MAX_PAYLOAD_LENGTH_BYTES
 from ..constants import SERIAL_COMM_PACKET_METADATA_LENGTH_BYTES
+from ..constants import SERIAL_COMM_READ_TIMEOUT
 from ..constants import SERIAL_COMM_REGISTRATION_TIMEOUT_SECONDS
 from ..constants import SERIAL_COMM_STATUS_BEACON_TIMEOUT_SECONDS
 from ..constants import SERIAL_COMM_STATUS_CODE_LENGTH_BYTES
@@ -204,8 +206,8 @@ class InstrumentComm:
                 self._instrument = AioSerial(
                     port=port_info.name,
                     baudrate=SERIAL_COMM_BAUD_RATE,
-                    bytesize=8,
-                    timeout=0.01,
+                    bytesize=SERIAL_COMM_BYTESIZE,
+                    timeout=SERIAL_COMM_READ_TIMEOUT,
                     stopbits=serial.STOPBITS_ONE,
                 )
                 break
