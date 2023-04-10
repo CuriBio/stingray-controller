@@ -246,8 +246,7 @@ class Server:
 
     @mark_handler
     async def _set_firmware_update_confirmation(self, comm: dict[str, Any]) -> None:
-        """Confirm whether or not the user wants to proceed with the FW
-        update."""
+        """Confirm whether or not the user wants to proceed with the FW update."""
         if not isinstance(update_accepted := comm["update_accepted"], bool):
             raise WebsocketCommandError(f"Invalid value for update_accepted: {update_accepted}")
 
@@ -256,8 +255,7 @@ class Server:
     # TODO consider changing this to "set_stim_info"
     @mark_handler
     async def _set_stim_protocols(self, comm: dict[str, Any]) -> None:
-        """Set stimulation protocols in program memory and send to
-        instrument."""
+        """Set stimulation protocols in program memory and send to instrument."""
         # TODO make sure the UI includes a stim barcode in this msg
 
         system_state = self._get_system_state_ro()

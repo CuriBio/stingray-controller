@@ -338,8 +338,7 @@ class CloudComm:
     ) -> Response:
         """Make a request.
 
-        This is the primary function that should be used to handle
-        requests.
+        This is the primary function that should be used to handle requests.
         """
         if self._tokens is None:
             raise NotImplementedError("self._tokens should never be None here")

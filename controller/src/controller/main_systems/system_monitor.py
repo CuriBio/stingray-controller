@@ -68,10 +68,9 @@ class SystemMonitor:
     async def _update_system_status_special_cases(self) -> None:
         """Update system status in special cases.
 
-        Most system status updates can be driven by just one message
-        from another subsystem, however these updates require either
-        multiple or specific values in the state to be present, that
-        often come from different subsystems.
+        Most system status updates can be driven by just one message from another subsystem, however these
+        updates require either multiple or specific values in the state to be present, that often come from
+        different subsystems.
         """
         system_state = self._system_state_manager.data
 
