@@ -12,18 +12,32 @@ from controller.constants import CURRENT_SOFTWARE_VERSION
 from controller.constants import DEFAULT_SERVER_PORT_NUMBER
 from controller.constants import SOFTWARE_RELEASE_CHANNEL
 from controller.constants import SystemStatuses
-from controller.exceptions import LocalServerPortAlreadyInUseError
 from controller.main_systems.server import Server
 from controller.main_systems.system_monitor import SystemMonitor
+from controller.subsystems import instrument_comm
+from controller.subsystems.cloud_comm import CloudComm
+from controller.subsystems.instrument_comm import InstrumentComm
 from controller.utils.logging import redact_sensitive_info_from_path
 import pytest
 
 
+# TODO consider patching __init__ of all subsystems instead
+@pytest.fixture(scope="function", name="patch_ic_event", autouse=True)
+def fixture_patch_ic_event(mocker):
+    # InstrumentComm.__init__ creates an asyncio.Event, so mock it there so this doesn't happen
+    mocker.patch.object(instrument_comm.asyncio, "Event")
+
+
 @pytest.fixture(scope="function", name="patch_run_tasks")
 def fixture_patch_run_tasks(mocker):
+    def server_run_se(server, system_error_future, server_running_event):
+        server_running_event.set()
+
     mocks = {
         "system_monitor": mocker.patch.object(main.SystemMonitor, "run", autospec=True),
-        "server": mocker.patch.object(main.Server, "run", autospec=True),
+        "server": mocker.patch.object(main.Server, "run", autospec=True, side_effect=server_run_se),
+        "instrument_comm": mocker.patch.object(main.InstrumentComm, "run", autospec=True),
+        "cloud_comm": mocker.patch.object(main.CloudComm, "run", autospec=True),
     }
     yield mocks
 
@@ -127,23 +141,20 @@ async def test_main__logs_system_info(patch_run_tasks, mocker):
 @pytest.mark.asyncio
 async def test_main__logs_error_if_port_already_in_use(patch_run_tasks, mocker):
     spied_info = mocker.spy(main.logger, "info")
-    spied_error = mocker.spy(main.logger, "error")
+    spied_exception = mocker.spy(main.logger, "exception")
 
     mocker.patch.object(main, "is_port_in_use", autospec=True, return_value=True)
 
     await main.main([])
 
     spied_info.assert_any_call(f"Using server port number: {DEFAULT_SERVER_PORT_NUMBER}")
-    # TODO
-    spied_error.assert_called_once_with(
-        f"ERROR IN MAIN: {repr(LocalServerPortAlreadyInUseError(DEFAULT_SERVER_PORT_NUMBER))}"
-    )
+    spied_exception.assert_called_once_with(main.ERROR_MSG)
 
 
 @pytest.mark.asyncio
 async def test_main__handles_errors_correctly(patch_run_tasks, mocker):
     spied_info = mocker.spy(main.logger, "info")
-    spied_error = mocker.spy(main.logger, "error")
+    spied_exception = mocker.spy(main.logger, "exception")
 
     expected_err = Exception("test msg")
 
@@ -152,8 +163,7 @@ async def test_main__handles_errors_correctly(patch_run_tasks, mocker):
 
     await main.main([])
 
-    # TODO
-    spied_error.assert_called_once_with(f"ERROR IN MAIN: {repr(expected_err)}")
+    spied_exception.assert_called_once_with(main.ERROR_MSG)
     # Tanner (2/27/23): using assert_called_with since to make the assertion on the final call to this method
     spied_info.assert_called_with("Program exiting")
 
@@ -183,11 +193,18 @@ async def test_main__initializes_system_state_correctly(
 
     expected_system_state = {
         "system_status": SystemStatuses.SERVER_INITIALIZING_STATE,
+        "in_simulation_mode": False,
         "stimulation_protocols_running": [],
+        "main_firmware_update": None,
+        "channel_firmware_update": None,
+        "latest_software_version": None,
+        "firmware_updates_accepted": None,
         "is_user_logged_in": False,
+        "instrument_metadata": {},
+        "stim_info": {},
         "stimulator_circuit_statuses": {},
-        "stim_info": None,
-        # "latest_software_version": None,
+        "stim_barcode": None,
+        "plate_barcode": None,
         "log_file_id": spied_uuid4.spy_return,
     }
 
@@ -197,23 +214,25 @@ async def test_main__initializes_system_state_correctly(
     assert spied_init_state.spy_return == expected_system_state
 
 
+# TODO test state management
+
+
+# TODO make sure to add all the run() assertions
 @pytest.mark.asyncio
-async def test_main__creates_SystemMonitor_correctly(patch_run_tasks, mocker):
-    spied_init_state = mocker.spy(main, "_initialize_system_state")
+async def test_main__creates_SystemMonitor_and_runs_correctly(patch_run_tasks, mocker):
+    spied_ssm = mocker.spy(main, "SystemStateManager")
     spied_create_queues = mocker.spy(main, "create_system_queues")
 
     spied_spm_init = mocker.spy(SystemMonitor, "__init__")
 
     await main.main([])
 
-    spied_spm_init.assert_called_once_with(
-        mocker.ANY, spied_init_state.spy_return, spied_create_queues.spy_return
-    )
+    spied_spm_init.assert_called_once_with(mocker.ANY, spied_ssm.spy_return, spied_create_queues.spy_return)
 
 
 @pytest.mark.asyncio
-async def test_main__creates_Server_correctly(patch_run_tasks, mocker):
-    spied_init_state = mocker.spy(main, "_initialize_system_state")
+async def test_main__creates_Server_and_runs_correctly(patch_run_tasks, mocker):
+    spied_ssm = mocker.spy(main, "SystemStateManager")
     spied_create_queues = mocker.spy(main, "create_system_queues")
 
     spied_server_init = mocker.spy(Server, "__init__")
@@ -224,16 +243,55 @@ async def test_main__creates_Server_correctly(patch_run_tasks, mocker):
 
     spied_server_init.assert_called_once_with(
         mocker.ANY,
-        spied_init_state.spy_return,
+        spied_ssm.spy_return.get_read_only_copy,
         expected_queues["to"]["server"],
         expected_queues["from"]["server"],
     )
 
 
 @pytest.mark.asyncio
+async def test_main__creates_InstrumentComm_and_runs_correctly(patch_run_tasks, mocker):
+    spied_create_queues = mocker.spy(main, "create_system_queues")
+
+    spied_ic_init = mocker.spy(InstrumentComm, "__init__")
+
+    await main.main([])
+
+    expected_queues = spied_create_queues.spy_return
+
+    spied_ic_init.assert_called_once_with(
+        mocker.ANY, expected_queues["to"]["instrument_comm"], expected_queues["from"]["instrument_comm"]
+    )
+
+
+@pytest.mark.asyncio
+async def test_main__creates_CloudComm_and_runs_correctly(patch_run_tasks, mocker):
+    spied_create_queues = mocker.spy(main, "create_system_queues")
+    spied_get_setting = mocker.spy(main, "_get_user_config_settings")
+
+    spied_cc_init = mocker.spy(CloudComm, "__init__")
+
+    await main.main([])
+
+    expected_queues = spied_create_queues.spy_return
+
+    spied_cc_init.assert_called_once_with(
+        mocker.ANY,
+        expected_queues["to"]["cloud_comm"],
+        expected_queues["from"]["cloud_comm"],
+        **spied_get_setting.spy_return,
+    )
+
+
+# TODO  Wait for WS server to start
+
+
+@pytest.mark.asyncio
 async def test_main__runs_tasks_correctly(mocker):
     mocked_server = mocker.patch.object(main, "Server")
     mocked_spm = mocker.patch.object(main, "SystemMonitor")
+    mocked_ic = mocker.patch.object(main, "InstrumentComm")
+    mocked_cc = mocker.patch.object(main, "CloudComm")
 
     expected_tasks = []
 
@@ -245,11 +303,16 @@ async def test_main__runs_tasks_correctly(mocker):
         main.asyncio, "create_task", autospec=True, side_effect=create_task_se
     )
 
+    # mock to speed up test
+    mocker.patch.object(main.asyncio, "wait_for", autospec=True)
+
     mocked_wait_tasks_clean = mocker.patch.object(main, "wait_tasks_clean", autospec=True)
 
     await main.main([])
 
     mocked_create_task.assert_any_call(mocked_server().run())
     mocked_create_task.assert_any_call(mocked_spm().run())
+    mocked_create_task.assert_any_call(mocked_ic().run())
+    mocked_create_task.assert_any_call(mocked_cc().run())
 
     mocked_wait_tasks_clean.assert_called_once_with(set(expected_tasks))

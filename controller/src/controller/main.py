@@ -93,8 +93,8 @@ async def main(command_line_args: list[str]) -> None:
 
         # make sure that WS server boots up before starting other subsystems. This ensures that errors can be reported to the UI
         logger.info("Booting up server before other subsystems")
-        server_running_event = asyncio.Event()
 
+        server_running_event = asyncio.Event()
         tasks = {asyncio.create_task(server.run(system_error_future, server_running_event))}
 
         try:
