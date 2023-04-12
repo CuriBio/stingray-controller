@@ -20,11 +20,13 @@ import serial.tools.list_ports as list_ports
 from ..constants import CURI_VID
 from ..constants import NUM_WELLS
 from ..constants import SERIAL_COMM_BAUD_RATE
+from ..constants import SERIAL_COMM_BYTESIZE
 from ..constants import SERIAL_COMM_HANDSHAKE_PERIOD_SECONDS
 from ..constants import SERIAL_COMM_MAGIC_WORD_BYTES
 from ..constants import SERIAL_COMM_MAX_FULL_PACKET_LENGTH_BYTES
 from ..constants import SERIAL_COMM_MAX_PAYLOAD_LENGTH_BYTES
 from ..constants import SERIAL_COMM_PACKET_METADATA_LENGTH_BYTES
+from ..constants import SERIAL_COMM_READ_TIMEOUT
 from ..constants import SERIAL_COMM_REGISTRATION_TIMEOUT_SECONDS
 from ..constants import SERIAL_COMM_STATUS_BEACON_TIMEOUT_SECONDS
 from ..constants import SERIAL_COMM_STATUS_CODE_LENGTH_BYTES
@@ -96,6 +98,13 @@ METADATA_TAGS_FOR_LOGGING = immutabledict(
 )
 
 
+INTERMEDIATE_FIRMWARE_UPDATE_COMMANDS = (
+    "start_firmware_update",
+    "send_firmware_data",
+    "end_of_firmware_update",
+)
+
+
 class InstrumentComm:
     """Subsystem that manages communication with the Stingray Instrument."""
 
@@ -161,13 +170,11 @@ class InstrumentComm:
                 asyncio.create_task(self._handle_beacon_tracking()),
                 asyncio.create_task(self._catch_expired_command()),
             }
-            exc = await wait_tasks_clean(tasks, error_msg=ERROR_MSG)
-            if exc:
-                handle_system_error(exc, system_error_future)
+            await wait_tasks_clean(tasks, error_msg=ERROR_MSG)
         except asyncio.CancelledError:
             logger.info("InstrumentComm cancelled")
             raise
-        except Exception as e:
+        except BaseException as e:
             logger.exception(ERROR_MSG)
             handle_system_error(e, system_error_future)
         finally:
@@ -197,8 +204,8 @@ class InstrumentComm:
                 self._instrument = AioSerial(
                     port=port_info.name,
                     baudrate=SERIAL_COMM_BAUD_RATE,
-                    bytesize=8,
-                    timeout=0.01,
+                    bytesize=SERIAL_COMM_BYTESIZE,
+                    timeout=SERIAL_COMM_READ_TIMEOUT,
                     stopbits=serial.STOPBITS_ONE,
                 )
                 break
@@ -209,7 +216,7 @@ class InstrumentComm:
             virtual_instrument = VirtualInstrumentConnection()
             try:
                 await virtual_instrument.connect()
-            except Exception as e:  # TODO make this a specific exception?
+            except BaseException as e:  # TODO make this a specific exception?
                 raise NoInstrumentDetectedError() from e
             else:
                 self._instrument = virtual_instrument
@@ -387,7 +394,7 @@ class InstrumentComm:
                     FirmwareUpdateCommandFailedError,
                 ):
                     raise
-                except Exception as e:
+                except BaseException as e:
                     raise SerialCommCommandProcessingError(
                         f"Timestamp: {timestamp}, Packet Type: {packet_type}, Payload: {packet_payload}"
                     ) from e
@@ -401,7 +408,7 @@ class InstrumentComm:
     async def _handle_firmware_update(self, comm_from_monitor: dict[str, Any]) -> None:
         logger.info("Beginning firmware update")
 
-        # create FW update manager, and wait for it to complete. Updates will be pushed to it from another task
+        # create FW update manager and wait for it to complete. Updates will be pushed to it from another task
         self._firmware_update_manager = FirmwareUpdateManager(comm_from_monitor)
 
         async for packet_type, bytes_to_send, command in self._firmware_update_manager:
@@ -523,12 +530,13 @@ class InstrumentComm:
                         raise StimulationStatusUpdateFailedError("stop_stimulation")
                     prev_command_info["hardware_test_message"] = "Command failed"  # pragma: no cover
                 self._is_stimulating = False
-            case ("start_firmware_update" | "send_firmware_data" | "end_of_firmware_update") as command:
+            case command if command in INTERMEDIATE_FIRMWARE_UPDATE_COMMANDS:
                 if self._firmware_update_manager is None:
                     raise NotImplementedError("_firmware_update_manager should never be None here")
                 await self._firmware_update_manager.update(command, response_data)
 
-        await self._to_monitor_queue.put(prev_command_info)
+        if prev_command_info["command"] not in INTERMEDIATE_FIRMWARE_UPDATE_COMMANDS:
+            await self._to_monitor_queue.put(prev_command_info)
 
     async def _process_stim_packets(self, stim_stream_info: dict[str, bytes | int]) -> None:
         if not stim_stream_info["num_packets"]:
@@ -593,6 +601,7 @@ class FirmwareUpdateManager:
     async def __anext__(self) -> FirmwareUpdateItems:
         if self._packet_idx == -1:
             command_items = self._create_initial_update_items()
+            self._packet_idx += 1
         else:
             command_items = await self._command_queue.get()  # type: ignore
             if command_items is self._sentinel:
@@ -661,7 +670,7 @@ class VirtualInstrumentConnection:
         # read a specific number of bytes it will block until at least one is available
         try:
             data = await self.reader.read(size)
-        except Exception:
+        except BaseException:
             # TODO raise a different error here?
             return bytes(0)
         logger.debug(f"RECV: {data}")  # type: ignore
@@ -672,6 +681,6 @@ class VirtualInstrumentConnection:
         try:
             self.writer.write(data)
             await self.writer.drain()
-        except Exception:
+        except BaseException:
             # TODO raise a different error here?
             pass

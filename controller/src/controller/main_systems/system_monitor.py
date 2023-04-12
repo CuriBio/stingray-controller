@@ -47,12 +47,13 @@ class SystemMonitor:
             asyncio.create_task(self._handle_system_state_updates()),
         }
         try:
-            exc = await wait_tasks_clean(tasks, error_msg=ERROR_MSG)
-            if exc:
-                handle_system_error(exc, system_error_future)
+            await wait_tasks_clean(tasks, error_msg=ERROR_MSG)
         except asyncio.CancelledError:
             logger.info("SystemMonitor cancelled")
             raise
+        except BaseException as e:
+            logger.exception(ERROR_MSG)
+            handle_system_error(e, system_error_future)
         finally:
             logger.info("SystemMonitor shut down")
 
@@ -67,10 +68,9 @@ class SystemMonitor:
     async def _update_system_status_special_cases(self) -> None:
         """Update system status in special cases.
 
-        Most system status updates can be driven by just one message
-        from another subsystem, however these updates require either
-        multiple or specific values in the state to be present, that
-        often come from different subsystems.
+        Most system status updates can be driven by just one message from another subsystem, however these
+        updates require either multiple or specific values in the state to be present, that often come from
+        different subsystems.
         """
         system_state = self._system_state_manager.data
 
@@ -100,7 +100,7 @@ class SystemMonitor:
                         "main_fw_version": instrument_metadata[MAIN_FIRMWARE_VERSION_UUID],
                     }
                 )
-            case SystemStatuses.UPDATES_NEEDED_STATE if system_state["firmware_update_accepted"]:
+            case SystemStatuses.UPDATES_NEEDED_STATE if system_state["firmware_updates_accepted"]:
                 if system_state["is_user_logged_in"]:
                     new_system_status = SystemStatuses.DOWNLOADING_UPDATES_STATE
                     await self._queues["to"]["cloud_comm"].put(
@@ -111,10 +111,12 @@ class SystemMonitor:
                         }
                     )
                 else:
+                    logger.info("Login required to download firmware update(s)")
                     await self._queues["to"]["server"].put(
                         {"communication_type": "user_input_needed", "input_type": "user_creds"}
                     )
-            case SystemStatuses.UPDATES_NEEDED_STATE:
+            case SystemStatuses.UPDATES_NEEDED_STATE if system_state["firmware_updates_accepted"] is False:
+                # firmware_updates_accepted value will be None before a user has made a decision, so need to explicitly check that it is False
                 new_system_status = SystemStatuses.IDLE_READY_STATE
             case SystemStatuses.INSTALLING_UPDATES_STATE:
                 # these two values get reset to None after their respective installs complete
@@ -153,20 +155,8 @@ class SystemMonitor:
             system_state_updates: dict[str, Any] = {}
 
             match communication:
-                case {"command": "update_user_settings", **new_settings}:
-                    # Tanner (3/16/23): this assumes that either all or none of these values will be sent
-                    if new_user_creds := {
-                        key: value
-                        for key in ("customer_id", "user_name", "user_password")
-                        if (value := new_settings.pop(key))
-                    }:
-                        await self._queues["to"]["cloud_comm"].put(
-                            {"command": "login", "user_creds": new_user_creds}
-                        )
-                    # all remaining settings fall under config settings
-                    if new_settings:
-                        # TODO figure out if this sends every setting all together or just the ones that changed
-                        system_state_updates["config_settings"] = new_settings
+                case {"command": "login"}:
+                    await self._queues["to"]["cloud_comm"].put(communication)
                 case {"command": "set_latest_software_version", "version": version}:
                     system_state_updates["latest_software_version"] = version
                     # send message to FE if indicating if an update is available
@@ -181,11 +171,9 @@ class SystemMonitor:
                         }
                     )
                 case {"command": "set_firmware_update_confirmation", "update_accepted": update_accepted}:
-                    system_state_updates["system_status"] = (
-                        SystemStatuses.DOWNLOADING_UPDATES_STATE
-                        if update_accepted
-                        else SystemStatuses.IDLE_READY_STATE
-                    )
+                    action = "accepted" if update_accepted else "declined"
+                    logger.info(f"User {action} firmware update(s)")
+                    system_state_updates["firmware_updates_accepted"] = update_accepted
                 case {"command": "set_stim_status", "running": status}:
                     await self._queues["to"]["instrument_comm"].put(
                         {"command": "start_stimulation" if status else "stop_stimulation"}
@@ -220,6 +208,8 @@ class SystemMonitor:
             system_state_updates: dict[str, Any] = {}
 
             match communication:
+                case {"command": "set_stim_protocols"}:
+                    pass  # nothing to do here
                 case {"command": "start_stimulation"}:
                     system_state_updates["stimulation_protocols_running"] = [True] * len(
                         system_state["stim_info"]["protocols"]
@@ -258,7 +248,7 @@ class SystemMonitor:
                         )
                 case {"command": "get_metadata", **metadata}:
                     system_state_updates["instrument_metadata"] = metadata
-                case {"command": "firmware_update_completed", "firmware_type": firmware_type}:
+                case {"command": "firmware_update_complete", "firmware_type": firmware_type}:
                     system_state_updates[f"{firmware_type}_firmware_update"] = None
                 case invalid_comm:
                     raise NotImplementedError(f"Invalid communication from InstrumentComm: {invalid_comm}")
@@ -276,7 +266,15 @@ class SystemMonitor:
             system_state_updates: dict[str, Any] = {}
 
             match communication:
+                case {"command": "login"}:
+                    # TODO figure out what to do if one user is logged in and then there is a failed attempt to login as a different user
+                    success = not communication.get("error")
+                    system_state_updates["is_user_logged_in"] = success
+                    await self._queues["to"]["server"].put(
+                        {"communication_type": "login_result", "success": success}
+                    )
                 case {"command": "check_versions", "error": _}:
+                    # error will be logged by cloud comm
                     system_state_updates["system_status"] = SystemStatuses.IDLE_READY_STATE
                 case {"command": "check_versions"}:
                     required_sw_for_fw = communication["latest_versions"]["sw"]
@@ -297,7 +295,9 @@ class SystemMonitor:
 
                     # FW updates are only available if the required SW can be downloaded
                     if (main_fw_update_needed or channel_fw_update_needed) and min_sw_version_available:
-                        system_state_updates["fsystem_status"] = SystemStatuses.UPDATES_NEEDED_STATE
+                        logger.info("Firmware update(s) found")
+
+                        system_state_updates["system_status"] = SystemStatuses.UPDATES_NEEDED_STATE
                         system_state_updates["main_firmware_update"] = (
                             latest_main_fw if main_fw_update_needed else None
                         )
@@ -312,22 +312,24 @@ class SystemMonitor:
                             }
                         )
                     else:
+                        logger.info("No firmware updates found")
                         system_state_updates["system_status"] = SystemStatuses.IDLE_READY_STATE
                         # since no updates available, also enable auto install of SW update
                         await self._send_enable_sw_auto_install_message()
-                case {"error": _}:
+                case {"command": "download_firmware_updates", "error": _}:
                     system_state_updates["system_status"] = SystemStatuses.UPDATE_ERROR_STATE
                 case {"command": "download_firmware_updates"}:
                     system_state_updates["system_status"] = SystemStatuses.INSTALLING_UPDATES_STATE
                     # Tanner (1/13/22): send both firmware update commands at once, and make sure channel is sent first.
                     # If both are sent, the second will be ignored by instrument comm until the first install completes
                     for firmware_type in ("channel", "main"):
-                        if system_state[f"{firmware_type}_firmware_update"] is not None:
+                        if (version := system_state[f"{firmware_type}_firmware_update"]) is not None:
                             self._queues["to"]["instrument_comm"].put_nowait(
                                 {
                                     "command": "start_firmware_update",
                                     "firmware_type": firmware_type,
-                                    "file_contents": " TODO",
+                                    "file_contents": communication[f"{firmware_type}_firmware_contents"],
+                                    "version": version,
                                 }
                             )
                 case invalid_comm:

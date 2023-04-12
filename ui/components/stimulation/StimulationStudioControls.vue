@@ -143,6 +143,7 @@
       :static="true"
       :no-close-on-backdrop="true"
     >
+      <!-- Tanner (4/6/23): This modal lives in this compenent since the settings modal is always opened after it's closed. It's possible to refactor and move this to StatusBar however, but for keeping here right now for simplicity -->
       <StatusWarningWidget
         id="user-input-prompt"
         :modalLabels="userInputPromptLabels"
@@ -580,6 +581,7 @@ body {
   fill: none;
 }
 
+#user-input-prompt-message,
 #open-circuit-warning,
 #stim-24hr-warning {
   position: fixed;

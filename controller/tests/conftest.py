@@ -1,14 +1,11 @@
 # -*- coding: utf-8 -*-
 """Pytest configuration."""
-import multiprocessing
 import sys
 
 import pytest
 
-# TODO figure out what this does
+# don't create .pyc files (Tanner (4/9/23): not sure why this is being done. Also, a .pyc file for conftest.py is still being created)
 sys.dont_write_bytecode = True
-# Spawn is the only start method that works on Windows. This can only be set once during each run, so set it in conftest to make sure development environment matches production.
-multiprocessing.set_start_method("spawn")
 
 
 def pytest_addoption(parser) -> None:
@@ -16,7 +13,7 @@ def pytest_addoption(parser) -> None:
         "--full-ci", action="store_true", default=False, help="include tests that are marked as only for CI"
     )
     parser.addoption(
-        "--include-slow-tests", action="store_true", default=False, help="include tests that are a bit slow"
+        "--include-slow-tests", action="store_true", default=False, help="include tests that are a slow"
     )
     parser.addoption(
         "--only-exe",

@@ -52,6 +52,7 @@ class SerialCommCommandResponseTimeoutError(InstrumentConnectionLostError):
     pass
 
 
+# TODO change this to be an issue processing comm from instrument, rather than explicitly bad data from it
 class InstrumentBadDataError(InstrumentError):
     """Generic exception for errors caused by malformed data."""
 
@@ -106,11 +107,6 @@ class FirmwareUpdateTimeoutError(Exception):
     pass
 
 
-# TODO add this in
-class FirmwareDownloadError(Exception):
-    pass
-
-
 class FirmwareAndSoftwareNotCompatibleError(Exception):
     pass
 
@@ -120,15 +116,6 @@ class FirmwareGoingDormantError(Exception):
 
 
 # Cloud
-# TODO remove any of these below if they become unnecessary
-
-
-class PresignedUploadFailedError(Exception):
-    pass
-
-
-class CloudAnalysisJobFailedError(Exception):
-    pass
 
 
 class CloudAuthFailedError(Exception):
@@ -144,3 +131,15 @@ class LoginFailedError(CloudAuthFailedError):
 
 class RefreshFailedError(CloudAuthFailedError):
     pass
+
+
+class RequestFailedError(Exception):
+    pass
+
+
+class FirmwareDownloadError(Exception):
+    pass
+
+
+# class CloudAnalysisJobFailedError(Exception):
+#     pass

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Constants for the Stingray Controller."""
+from collections import namedtuple
 import datetime
 from enum import Enum
 from enum import IntEnum
@@ -14,21 +15,17 @@ CURRENT_SOFTWARE_VERSION = "REPLACETHISWITHVERSIONDURINGBUILD"
 COMPILED_EXE_BUILD_TIMESTAMP = "REPLACETHISWITHTIMESTAMPDURINGBUILD"
 SOFTWARE_RELEASE_CHANNEL = "REPLACETHISWITHRELEASECHANNELDURINGBUILD"
 
-# Cloud APIs
-CLOUD_ENDPOINT_USER_OPTION = "REPLACETHISWITHENDPOINTDURINGBUILD"
-CLOUD_ENDPOINT_VALID_OPTIONS: immutabledict[str, str] = immutabledict(
-    {"test": "curibio-test", "prod": "curibio"}
-)
-CLOUD_DOMAIN = CLOUD_ENDPOINT_VALID_OPTIONS.get(CLOUD_ENDPOINT_USER_OPTION, "curibio-test")
-CLOUD_API_ENDPOINT = f"apiv2.{CLOUD_DOMAIN}.com"
-CLOUD_PULSE3D_ENDPOINT = f"pulse3d.{CLOUD_DOMAIN}.com"
-
 DEFAULT_SERVER_PORT_NUMBER = 4567
 
 NUM_WELLS = 24
 GENERIC_24_WELL_DEFINITION = LabwareDefinition(row_count=4, column_count=6)
 
-VALID_CONFIG_SETTINGS = frozenset(["customer_id", "user_name", "user_password"])
+AuthTokens = namedtuple("AuthTokens", ["access", "refresh"])
+AuthCreds = namedtuple("AuthCreds", ["customer_id", "username", "password"])
+ConfigSettings = namedtuple("ConfigSettings", ["auto_upload_on_completion", "log_directory"])
+
+VALID_CREDENTIAL_TYPES = frozenset(AuthCreds._fields)
+VALID_CONFIG_SETTINGS = frozenset(ConfigSettings._fields)
 
 # TODO try replacing all immutabledicts with enums
 BARCODE_HEADERS: immutabledict[str, str] = immutabledict({"plate_barcode": "ML", "stim_barcode": "MS"})
@@ -36,6 +33,21 @@ ALL_VALID_BARCODE_HEADERS = frozenset(BARCODE_HEADERS.values())
 
 MICROS_PER_MILLIS = int(1e3)
 MICRO_TO_BASE_CONVERSION = int(1e6)
+
+# Cloud APIs
+CLOUD_ENDPOINT_USER_OPTION = "REPLACETHISWITHENDPOINTDURINGBUILD"
+CLOUD_ENDPOINT_VALID_OPTIONS: immutabledict[str, str] = immutabledict(
+    {"test": "curibio-test", "prod": "curibio"}
+)
+CLOUD_DOMAIN = CLOUD_ENDPOINT_VALID_OPTIONS.get(
+    CLOUD_ENDPOINT_USER_OPTION, "curibio-test"
+)  # TODO change this back
+CLOUD_API_ENDPOINT = f"apiv2.{CLOUD_DOMAIN}.com"
+CLOUD_PULSE3D_ENDPOINT = f"pulse3d.{CLOUD_DOMAIN}.com"
+
+
+# System
+SERVER_BOOT_UP_TIMEOUT_SECONDS = 5
 
 
 class SystemStatuses(Enum):
@@ -75,6 +87,8 @@ class ErrorCodes(IntEnum):
 STM_VID = 1155
 CURI_VID = 1027
 SERIAL_COMM_BAUD_RATE = int(5e6)
+SERIAL_COMM_BYTESIZE = 8
+SERIAL_COMM_READ_TIMEOUT = 0.01
 
 MAX_MC_REBOOT_DURATION_SECONDS = 15
 MAX_MAIN_FIRMWARE_UPDATE_DURATION_SECONDS = 60

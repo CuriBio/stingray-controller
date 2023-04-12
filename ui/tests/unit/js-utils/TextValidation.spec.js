@@ -26,7 +26,7 @@ describe("TextValidation", () => {
     const validation = TextValidation_Alphanumeric;
     expect(validation.toString()).toStrictEqual("TextValidation.alphanumeric");
   });
-  test("Given a text validation is for userName, When called toString(), Then return would match the text rule of 'userName' applied", () => {
+  test("Given a text validation is for username, When called toString(), Then return would match the text rule of 'username' applied", () => {
     const validation = TextValidationUserAccount;
     expect(validation.toString()).toStrictEqual("TextValidation.userAccountInput");
   });
@@ -133,11 +133,11 @@ describe("TextValidation.validateUserAccountInput", () => {
     [null, "This field is required"],
     ["Experiment anemia -1234567890-1234567890", "Invalid as its more than 36 charcters"],
   ])(
-    "Given the userName %s is invalid and fails the matching criteria, When the text contains (%s), Then validation fails and appropriate invalid text is returned",
-    (userNameId, message) => {
+    "Given the username %s is invalid and fails the matching criteria, When the text contains (%s), Then validation fails and appropriate invalid text is returned",
+    (usernameId, message) => {
       const text = message;
-      const TestValidationuserName = TextValidationUserAccount;
-      expect(TestValidationuserName.validate(userNameId, "userName")).toStrictEqual(text);
+      const TestValidationusername = TextValidationUserAccount;
+      expect(TestValidationusername.validate(usernameId, "username")).toStrictEqual(text);
     }
   );
 });

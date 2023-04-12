@@ -117,10 +117,10 @@ class MantarrayMcSimulator(InfiniteProcess):
         {"X": 0, "Y": 2, "Z": -5, "REMN": 1200},
     )
 
-    default_mantarray_nickname = "Mantarray Sim"
-    default_mantarray_serial_number = "MA2022001000"
-    default_main_firmware_version = "0.0.0"
-    default_channel_firmware_version = "0.0.0"
+    default_mantarray_nickname = "Vrtl Stingray"
+    default_mantarray_serial_number = "M02022140001"
+    default_main_firmware_version = "1.1.6"
+    default_channel_firmware_version = "1.1.2"
     default_plate_barcode = "ML22001000-2"
     default_stim_barcode = "MS22001000-2"
     default_metadata_values: immutabledict[UUID, Any] = immutabledict(
@@ -317,7 +317,7 @@ class MantarrayMcSimulator(InfiniteProcess):
                 0, len(data_packet) - 1
             )
             data_packet = data_packet[trunc_index:]
-        print(f"SEND: {data_packet}")  # allow-print
+        print("SEND:", packet_type)  # allow-print
 
         self.conn.sendall(data_packet)
 
@@ -369,7 +369,6 @@ class MantarrayMcSimulator(InfiniteProcess):
             + packet_remainder_size_bytes
             + self.conn.recv(int.from_bytes(packet_remainder_size_bytes, "little"))
         )
-        print("RECV:", comm_from_controller)  # allow-print
 
         self._time_of_last_comm_from_controller_secs = perf_counter()
 
@@ -402,6 +401,7 @@ class MantarrayMcSimulator(InfiniteProcess):
         response_body = bytes(0)
 
         packet_type = comm_from_controller[SERIAL_COMM_PACKET_TYPE_INDEX]
+        print("RECV:", packet_type)  # allow-print
         if packet_type == SerialCommPacketTypes.REBOOT:
             self._reboot_time_secs = perf_counter()
         elif packet_type == SerialCommPacketTypes.HANDSHAKE:
@@ -507,6 +507,7 @@ class MantarrayMcSimulator(InfiniteProcess):
             pass
         else:
             raise UnrecognizedSerialCommPacketTypeError(f"Packet Type ID: {packet_type} is not defined")
+
         if send_response:
             self._send_data_packet(packet_type, response_body)
 

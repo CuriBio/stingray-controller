@@ -8,6 +8,7 @@ const W3CWebSocket = require("websocket").w3cwebsocket;
 
 export default {
   async connectToController({ state }, numRetriesLeft) {
+    // Tanner (4/6/23): need to grab these values this way, destructuring from the value passed into this function does not seem to work
     const { commit, dispatch } = this;
 
     // guarding to be extra safe
@@ -94,7 +95,11 @@ export default {
             }
             break;
           case "user_input_needed":
-            commit("settings/userInputNeeded", true);
+            // user creds are the only user input that will ever be required at the moment
+            commit("settings/setUserCredInputNeeded", true);
+            break;
+          case "login_result":
+            commit("system/setLoginAttemptStatus", wsMessage.success);
             break;
           case "firmware_update_available":
             console.log("Firmware update found"); // allow-log
@@ -136,7 +141,7 @@ export default {
     console.log(`User ${status} firmware update`); // allow-log
 
     const wsMessage = JSON.stringify({
-      command: "firmware_update_confirmation",
+      command: "set_firmware_update_confirmation",
       update_accepted: updateAccepted,
     });
 

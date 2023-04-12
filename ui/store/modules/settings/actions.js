@@ -1,16 +1,15 @@
 export default {
-  async updateSettings() {
+  async sendLoginCommand() {
     const { activeUserIndex, userAccounts } = this.state.settings;
-    const { customerId, userPassword, userName } = userAccounts[activeUserIndex];
+    const { customerId, userPassword, username } = userAccounts[activeUserIndex];
+
     const params = {
-      command: "update_user_settings",
+      command: "login",
       customer_id: customerId,
-      user_name: userName,
-      user_password: userPassword,
+      username: username,
+      password: userPassword,
     };
 
     this.state.system.socket.send(JSON.stringify(params));
-    // TODO remove response here and update from WS response message
-    return 200;
   },
 };

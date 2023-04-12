@@ -15,19 +15,19 @@
       />
     </div>
 
-    <div id="userName" style="top: 184px; left: 50px; position: absolute; z-index: 23">
+    <div id="username" style="top: 184px; left: 50px; position: absolute; z-index: 23">
       <span class="span__input-user-title">Enter&nbsp;<wbr />Username</span>
       <InputDropDown
         :placeholder="'Curi Bio User'"
-        :invalidText="errorTextUserName"
+        :invalidText="errorTextUsername"
         :inputWidth="400"
         :optionsText="storedUsernames"
-        :messageIfInvalid="errorTextUserName != ''"
+        :messageIfInvalid="errorTextUsername != ''"
         :optionsId="'username'"
         :inputBackgroundColor="'rgb(63, 63, 63)'"
         :containerBackgroundColor="'#111'"
-        :value.sync="userName"
-        @update:value="onUpdateUserName($event)"
+        :value.sync="username"
+        @update:value="onUpdateUsername($event)"
       />
     </div>
     <div id="pass-key" style="top: 241px; left: 50px; position: absolute; z-index: 22">
@@ -38,7 +38,7 @@
         :spellcheck="false"
         :inputWidth="400"
         :type="'password'"
-        :domIdSuffix="'passkey-id'"
+        :domIdSuffix="'password-id'"
         @update:value="onUpdatePass($event)"
       />
     </div>
@@ -85,10 +85,10 @@ export default {
     return {
       customerId: "",
       userPassword: "",
-      userName: "",
+      username: "",
       errorTextId: "This field is required",
       errorTextPass: "This field is required",
-      errorTextUserName: "This field is required",
+      errorTextUsername: "This field is required",
       enablelistAddUser: [true, false],
     };
   },
@@ -105,13 +105,13 @@ export default {
       this.enableSaveButton();
     },
     onUpdatePass: function (newValue) {
-      this.errorTextPass = TextValidation_User.validate(newValue, "passkey");
+      this.errorTextPass = TextValidation_User.validate(newValue, "password");
       this.userPassword = newValue;
       this.enableSaveButton();
     },
-    onUpdateUserName: function (newValue) {
-      this.errorTextUserName = TextValidation_User.validate(newValue, "userName");
-      this.userName = newValue;
+    onUpdateUsername: function (newValue) {
+      this.errorTextUsername = TextValidation_User.validate(newValue, "username");
+      this.username = newValue;
       this.enableSaveButton();
     },
     clickedButton: function (choice) {
@@ -131,14 +131,14 @@ export default {
       const addUser = {
         customerId: this.customerId,
         userPassword: this.userPassword,
-        userName: this.userName,
+        username: this.username,
       };
       this.$emit("save-id", addUser);
     },
     enableSaveButton() {
       if (this.errorTextId === "") {
         if (this.errorTextPass === "") {
-          if (this.errorTextUserName === "") {
+          if (this.errorTextUsername === "") {
             this.enablelistAddUser = [true, true];
             return;
           }

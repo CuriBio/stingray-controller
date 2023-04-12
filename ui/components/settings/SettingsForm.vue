@@ -12,7 +12,7 @@
           :value.sync="entrykeyUser"
           :inputWidth="entryWidthUser"
           :disabled="disallowEntryUser"
-          :optionsText="getUserNames"
+          :optionsText="getUsernames"
           :messageIfInvalid="!userFound"
           :optionsId="'user-account-'"
         />
@@ -149,23 +149,36 @@ export default {
   },
   computed: {
     ...mapState("settings", ["userAccounts", "activeUserIndex", "storedCustomerId"]),
-    getUserNames: function () {
-      return this.userAccounts.map((userAccount) => userAccount.userName);
+    ...mapState("system", ["loginAttemptStatus"]),
+    getUsernames: function () {
+      return this.userAccounts.map((userAccount) => userAccount.username);
     },
   },
   watch: {
     entrykeyUser: function () {
-      const userFocusIdx = this.getUserNames.indexOf(this.entrykeyUser);
+      const userFocusIdx = this.getUsernames.indexOf(this.entrykeyUser);
       this.userFound = this.entrykeyUser !== "" && userFocusIdx !== -1;
       if (this.userFound) {
         this.userFocusIdx = userFocusIdx;
       }
       this.modifyBtnStates();
     },
+    loginAttemptStatus: function (status) {
+      if (status) {
+        this.$emit("close-modal", true);
+      } else if (status === false) {
+        // need to check explicitly for false since null is also used
+        // if login fails, prompt user to re-enter their credentials
+        this.openForInvalidCreds = true;
+        this.$bvModal.show("edit-user");
+      } // else {
+      //   this.resetChanges();
+      // }
+    },
   },
   created: function () {
     if (this.activeUserIndex != null) {
-      this.entrykeyUser = this.userAccounts[this.activeUserIndex].userName;
+      this.entrykeyUser = this.userAccounts[this.activeUserIndex].username;
       this.userFocusIdx = this.activeUserIndex;
       this.disableEditUser = false;
       this.userFound = true;
@@ -175,18 +188,8 @@ export default {
     async saveChanges() {
       if (this.userFound) {
         this.$store.commit("settings/setActiveUserIndex", this.userFocusIdx);
-
-        const res = await this.$store.dispatch("settings/updateSettings");
-
-        // Currently, error-handling by resetting inputs to force user to try again if axios request fails
-        if (res == 200) {
-          this.$emit("close-modal", true);
-        } else if (res == 401) {
-          this.openForInvalidCreds = true;
-          this.$bvModal.show("edit-user");
-        } else {
-          this.resetChanges();
-        }
+        this.$store.commit("system/setLoginAttemptStatus", null); // set this back to null to indicate that the result is pending
+        this.$store.dispatch("settings/sendLoginCommand");
       }
     },
     resetChanges() {
@@ -202,7 +205,7 @@ export default {
     saveNewUser(newUser) {
       this.$bvModal.hide("add-user");
       this.userAccounts.push(newUser);
-      this.entrykeyUser = newUser.userName;
+      this.entrykeyUser = newUser.username;
     },
     cancelUserUpdate() {
       this.$bvModal.hide("edit-user");
@@ -212,7 +215,7 @@ export default {
       this.openForInvalidCreds = false;
       // need to use splice so that Vue will recognize that the array was updated
       this.userAccounts.splice(this.userFocusIdx, 1, editedUser);
-      this.entrykeyUser = editedUser.userName;
+      this.entrykeyUser = editedUser.username;
     },
     deleteUser() {
       this.$bvModal.hide("edit-user");

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import asyncio
 import copy
+import functools
 import json
 import logging
 from typing import Any
@@ -23,7 +24,7 @@ from ..constants import STIM_MAX_SUBPROTOCOL_DURATION_MICROSECONDS
 from ..constants import STIM_MIN_SUBPROTOCOL_DURATION_MICROSECONDS
 from ..constants import StimulatorCircuitStatuses
 from ..constants import SystemStatuses
-from ..constants import VALID_CONFIG_SETTINGS
+from ..constants import VALID_CREDENTIAL_TYPES
 from ..constants import VALID_STIMULATION_TYPES
 from ..constants import VALID_SUBPROTOCOL_TYPES
 from ..exceptions import WebsocketCommandError
@@ -78,33 +79,41 @@ class Server:
         self._ui_connection_made = asyncio.Event()
         self.user_initiated_shutdown = False
 
-    async def run(self, system_error_future: asyncio.Future[int]) -> None:
+    async def run(
+        self, system_error_future: asyncio.Future[int], server_running_event: asyncio.Event
+    ) -> None:
         logger.info("Starting Server")
 
-        ws_server = await serve(self._run, "localhost", DEFAULT_SERVER_PORT_NUMBER)
+        _run = functools.partial(self._run, system_error_future=system_error_future)
+
+        ws_server = await serve(_run, "localhost", DEFAULT_SERVER_PORT_NUMBER)
         self._serve_task = asyncio.create_task(ws_server.serve_forever())
+        logger.info("WS Server running")
+
+        server_running_event.set()
 
         try:
             await asyncio.shield(self._serve_task)
         except asyncio.CancelledError:
-            logger.info("Server cancelled")
-            await self._report_system_error(system_error_future)
+            # if _serve_task is cancelled, assume the error has already been reported
+            if not self._serve_task.cancelled():
+                logger.info("Server cancelled")
+                await self._report_system_error(system_error_future)
 
             ws_server.close()
             await ws_server.wait_closed()
 
             raise
-        except Exception as e:
+        except BaseException:
+            # Tanner (4/10/23): don't expected this to be reached, but logging just in case
             logger.exception(ERROR_MSG)
-            handle_system_error(e, system_error_future)
-            await self._report_system_error(system_error_future)
-
-            raise
         finally:
             await clean_up_tasks({self._serve_task}, ERROR_MSG)
             logger.info("Server shut down")
 
-    async def _run(self, websocket: WebSocketServerProtocol) -> None:
+    async def _run(
+        self, websocket: WebSocketServerProtocol, system_error_future: asyncio.Future[int]
+    ) -> None:
         if not self._serve_task:
             raise NotImplementedError("_serve_task must be not be None here")
 
@@ -117,10 +126,14 @@ class Server:
         self._websocket = websocket
         logger.info("UI has connected")
 
-        await self._handle_comm(websocket)
-
-        self._websocket = None
-        logger.info("UI has disconnected")
+        try:
+            await self._handle_comm(websocket)
+        except asyncio.CancelledError:
+            pass
+        except BaseException as e:
+            logger.exception(ERROR_MSG)
+            handle_system_error(e, system_error_future)
+            await self._report_system_error(system_error_future)
 
         self._serve_task.cancel()
 
@@ -148,7 +161,7 @@ class Server:
             msg = {"communication_type": "error", "error_code": error_code}
             try:
                 await self._websocket.send(json.dumps(msg))
-            except Exception:
+            except BaseException:
                 logger.exception("Failed to send error message to UI")
         else:
             logger.error("UI has already disconnected, cannot send error message")
@@ -178,14 +191,13 @@ class Server:
 
             command = msg["command"]
 
-            # TODO make sure the error handling works in both of these try/except blocks
             try:
                 # TODO try using pydantic to define message schema + some other message schema generator (nano message, ask Jason)
                 handler = self._handlers[command]
             except KeyError as e:
-                logger.error(f"Unrecognized command from UI: {command}")
-                raise WebsocketCommandError() from e
+                raise WebsocketCommandError(f"Unrecognized command from UI: {command}") from e
 
+            # TODO make sure the error handling works here
             try:
                 await handler(self, msg)
             except WebsocketCommandError as e:
@@ -193,9 +205,9 @@ class Server:
                 raise
 
     def _log_incoming_message(self, msg: dict[str, Any]) -> None:
-        if msg["command"] == "update_user_settings":
+        if msg["command"] == "login":
             comm_copy = copy.deepcopy(msg)
-            comm_copy["user_password"] = get_redacted_string(4)
+            comm_copy["password"] = get_redacted_string(4)
             comm_str = str(comm_copy)
         else:
             comm_str = str(msg)
@@ -205,15 +217,16 @@ class Server:
 
     @mark_handler
     async def _shutdown(self, *args: Any) -> None:
+        """Shutdown the controller."""
         logger.info("User initiated shutdown")
         self.user_initiated_shutdown = True
 
     @mark_handler
-    async def _update_user_settings(self, comm: dict[str, str]) -> None:
+    async def _login(self, comm: dict[str, str]) -> None:
         """Update the customer/user settings."""
-        for setting in comm:
-            if setting not in (*VALID_CONFIG_SETTINGS, "command"):
-                raise WebsocketCommandError(f"Invalid setting given: {setting}")
+        for cred_type in comm:
+            if cred_type not in VALID_CREDENTIAL_TYPES | {"command"}:
+                raise WebsocketCommandError(f"Invalid cred type given: {cred_type}")
 
         await self._to_monitor_queue.put(comm)
 
@@ -233,8 +246,7 @@ class Server:
 
     @mark_handler
     async def _set_firmware_update_confirmation(self, comm: dict[str, Any]) -> None:
-        """Confirm whether or not the user wants to proceed with the FW
-        update."""
+        """Confirm whether or not the user wants to proceed with the FW update."""
         if not isinstance(update_accepted := comm["update_accepted"], bool):
             raise WebsocketCommandError(f"Invalid value for update_accepted: {update_accepted}")
 
@@ -243,8 +255,7 @@ class Server:
     # TODO consider changing this to "set_stim_info"
     @mark_handler
     async def _set_stim_protocols(self, comm: dict[str, Any]) -> None:
-        """Set stimulation protocols in program memory and send to
-        instrument."""
+        """Set stimulation protocols in program memory and send to instrument."""
         # TODO make sure the UI includes a stim barcode in this msg
 
         system_state = self._get_system_state_ro()

@@ -68,9 +68,9 @@ describe("AddUser", () => {
       ["06ad547f-fe02-477b-9473-f7977e4d5e14k", "ID", "customer-id", "validateUserAccountInput"],
       ["Cat lab;", "ID", "customer-id", "validateUserAccountInput"],
       ["Experiment anemia -1", "ID", "customer-id", "validateUserAccountInput"],
-      ["Cat * lab", "passkey", "passkey-id", "validateUserAccountInput"],
-      ["Valid", "passkey", "passkey-id", "validateUserAccountInput"],
-      ["Cat lab", "passkey", "passkey-id", "validateUserAccountInput"],
+      ["Cat * lab", "password", "password-id", "validateUserAccountInput"],
+      ["Valid", "password", "password-id", "validateUserAccountInput"],
+      ["Cat lab", "password", "password-id", "validateUserAccountInput"],
     ])(
       "When the text %s (%s) is entered into the field found with the selector ID %s, Then the correct text validation function (%s) is called and the error message from the validation function is rendered below the input in the DOM",
       async (entry, testId, selectorIdSuffix, TextValidationType) => {
@@ -87,8 +87,8 @@ describe("AddUser", () => {
     );
 
     test.each([
-      ["Experiment anemia alpha cells -1", "userName", "validateUserAccountInput"],
-      ["C", "userName", "validateUserAccountInput"],
+      ["Experiment anemia alpha cells -1", "username", "validateUserAccountInput"],
+      ["C", "username", "validateUserAccountInput"],
     ])(
       "When the text %s (%s) is entered into the field found with the selector ID username, Then the correct text validation function (%s) is called and the error message from the validation function is rendered below the input in the DOM",
       async (entry, testId, TextValidationType) => {
@@ -106,7 +106,7 @@ describe("AddUser", () => {
 
     test.each([
       ["customer-id", "This field is required"],
-      ["passkey-id", "This field is required"],
+      ["password-id", "This field is required"],
     ])(
       "Given some nonsense value in the input field with the DOM Id suffix %s, When the input field is updated to be a blank value, Then the error message below the text in the DOM matches what the business logic dictates (%s)",
       async (selectorIdSuffix, expectedMessage) => {
@@ -162,22 +162,22 @@ describe("AddUser", () => {
       ["fasd44", "06ad54", "Experiment anemia -1", "color: rgb(255, 255, 255);"],
       ["", "", "Experiment anemia -1", "color: rgb(63, 63, 63);"],
     ])(
-      "Given an UUID (%s), pass Key (%s), userName (%s) for 'Add Customer' as input, When the input contains based on valid the critera or failure, Then display of Label 'Save ID' is visible or greyed (%s)",
-      async (uuid, passkey, userName, saveBtnCss) => {
+      "Given an UUID (%s), pass Key (%s), username (%s) for 'Add Customer' as input, When the input contains based on valid the critera or failure, Then display of Label 'Save ID' is visible or greyed (%s)",
+      async (uuid, password, username, saveBtnCss) => {
         const selectorIdSuffixAlphanumericId = "customer-id";
-        const selectorIdSuffixPasskeyId = "passkey-id";
+        const selectorIdSuffixpasswordId = "password-id";
         const selectorIdSuffixUserName = "username";
 
         const targetInputFieldUuid = wrapper.find("#input-widget-field-" + selectorIdSuffixAlphanumericId);
         targetInputFieldUuid.setValue(uuid);
         await Vue.nextTick();
 
-        const targetInputFieldPasskey = wrapper.find("#input-widget-field-" + selectorIdSuffixPasskeyId);
-        targetInputFieldPasskey.setValue(passkey);
+        const targetInputFieldpassword = wrapper.find("#input-widget-field-" + selectorIdSuffixpasswordId);
+        targetInputFieldpassword.setValue(password);
         await Vue.nextTick();
 
         const targetInputFieldUserName = wrapper.find("#input-dropdown-widget-" + selectorIdSuffixUserName);
-        targetInputFieldUserName.setValue(userName);
+        targetInputFieldUserName.setValue(username);
         await Vue.nextTick();
 
         const targetButtonLabelBtn = wrapper.findAll(".span__button-label");
@@ -199,18 +199,18 @@ describe("AddUser", () => {
     afterEach(() => wrapper.destroy());
 
     test.each([["5FY8KwTsQa", "06ad547f", "Experiment anemia -1", "", "", "", "color: rgb(255, 255, 255);"]])(
-      "Given an UUID(%s) , pass Key(%s), userName(%s) for 'Add Customer' as input, When the input contains based on valid the critera or failure %s %s %s, Then display of Label 'Save ID' is visible %s, click on Cancel, an event 'cancel-id' is emmited to the parent and click on Save an event 'save-id' is emmited to parent with object containing uuid,passkey and userName",
+      "Given an UUID(%s) , pass Key(%s), username(%s) for 'Add Customer' as input, When the input contains based on valid the critera or failure %s %s %s, Then display of Label 'Save ID' is visible %s, click on Cancel, an event 'cancel-id' is emmited to the parent and click on Save an event 'save-id' is emmited to parent with object containing uuid,password and username",
       async (
         uuidTest,
-        passkeyTest,
-        userNameTest,
-        invalidPasskey,
+        passwordTest,
+        usernameTest,
+        invalidpassword,
         invalidUuid,
         invalidUserName,
         saveBtnCss
       ) => {
         const selectorIdSuffixAlphanumericId = "customer-id";
-        const selectorIdSuffixPasskeyId = "passkey-id";
+        const selectorIdSuffixpasswordId = "password-id";
         const selectorIdSuffixUserName = "username";
 
         const targetInputFieldUuid = wrapper.find("#input-widget-field-" + selectorIdSuffixAlphanumericId);
@@ -220,16 +220,18 @@ describe("AddUser", () => {
         targetInputFieldUuid.setValue(uuidTest);
         await Vue.nextTick();
         expect(targetErrorMessageUuid.text()).toStrictEqual(invalidUuid);
-        const targetInputFieldPasskey = wrapper.find("#input-widget-field-" + selectorIdSuffixPasskeyId);
-        const targetErrorMessagePasskey = wrapper.find("#input-widget-feedback-" + selectorIdSuffixPasskeyId);
-        targetInputFieldPasskey.setValue(passkeyTest);
+        const targetInputFieldpassword = wrapper.find("#input-widget-field-" + selectorIdSuffixpasswordId);
+        const targetErrorMessagepassword = wrapper.find(
+          "#input-widget-feedback-" + selectorIdSuffixpasswordId
+        );
+        targetInputFieldpassword.setValue(passwordTest);
         await Vue.nextTick();
-        expect(targetErrorMessagePasskey.text()).toStrictEqual(invalidPasskey);
+        expect(targetErrorMessagepassword.text()).toStrictEqual(invalidpassword);
         const targetInputFieldUserName = wrapper.find("#input-dropdown-widget-" + selectorIdSuffixUserName);
         const targetErrorMessageUserName = wrapper.find(
           "#input-dropdown-widget-feedback-" + selectorIdSuffixUserName
         );
-        targetInputFieldUserName.setValue(userNameTest);
+        targetInputFieldUserName.setValue(usernameTest);
         await Vue.nextTick();
         expect(targetErrorMessageUserName.text()).toStrictEqual(invalidUserName);
         const targetButtonLabelBtn = wrapper.findAll(".span__button-label");
@@ -248,8 +250,8 @@ describe("AddUser", () => {
         expect(saveIdEvents).toHaveLength(1);
         expect(saveIdEvents[0]).toStrictEqual([
           {
-            userPassword: passkeyTest,
-            userName: userNameTest,
+            userPassword: passwordTest,
+            username: usernameTest,
             customerId: uuidTest,
           },
         ]);

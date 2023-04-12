@@ -33,7 +33,7 @@ describe("SettingsForm.vue", () => {
       // commit a deep copy of the template object to the Vuex store using JSON stringify/parse, as it may be modified during tests. https://www.javascripttutorial.net/object/3-ways-to-copy-objects-in-javascript/
       store.commit("settings/setUserAccounts", JSON.parse(JSON.stringify(arrayOfUserAccounts)));
     });
-    test("When the SettingsForm is mounted, Then the dropDown of customer contains the userNamess from Vuex", () => {
+    test("When the SettingsForm is mounted, Then the dropDown of customer contains the usernamess from Vuex", () => {
       wrapper = mount(ComponentToTest, {
         store,
         localVue,

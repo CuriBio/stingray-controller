@@ -103,7 +103,7 @@
       >
         <StatusWarningWidget
           id="fw-update-available"
-          :modal_labels="fwUpdateAvailableLabels"
+          :modalLabels="fwUpdateAvailableLabels"
           @handle-confirmation="closeFwUpdateAvailableModal"
         />
       </b-modal>
@@ -252,9 +252,11 @@ export default {
   watch: {
     statusUuid: function (newStatus) {
       // set message for stimulation status and system status if error occurs
-      if (!this.systemErrorCode && newStatus !== SYSTEM_STATUS.IDLE_READY_STATE)
+      if (!this.systemErrorCode && newStatus !== SYSTEM_STATUS.IDLE_READY_STATE) {
         this.setSystemSpecificStatus(newStatus);
-      else if (newStatus === SYSTEM_STATUS.IDLE_READY_STATE) this.setStimSpecificStatus();
+      } else if (newStatus === SYSTEM_STATUS.IDLE_READY_STATE) {
+        this.setStimSpecificStatus();
+      }
     },
     stimStatus: function (newStatus) {
       // only let stim messages through if system is in idle ready state
@@ -298,13 +300,14 @@ export default {
   },
   methods: {
     setStimSpecificStatus: function (status) {
-      this.alertTxt = status ? status : this.stimStatus;
+      this.alertTxt = status || this.stimStatus;
 
-      if (status === STIM_STATUS.CONFIG_CHECK_COMPLETE)
-        this.assignedOpenCircuits.length > 0
-          ? this.$bvModal.show("failed-qc-check")
-          : this.$bvModal.show("success-qc-check");
-      else if (status === STIM_STATUS.SHORT_CIRCUIT_ERROR) this.$bvModal.show("short-circuit-err");
+      if (status === STIM_STATUS.CONFIG_CHECK_COMPLETE) {
+        const modalToShow = this.assignedOpenCircuits.length > 0 ? "failed-qc-check" : "success-qc-check";
+        this.$bvModal.show(modalToShow);
+      } else if (status === STIM_STATUS.SHORT_CIRCUIT_ERROR) {
+        this.$bvModal.show("short-circuit-err");
+      }
     },
     setSystemSpecificStatus: function (status) {
       switch (status) {
@@ -382,7 +385,7 @@ export default {
       } else if (ids.includes("failed-qc-check") || ids.includes("success-qc-check")) {
         this.$store.commit("stimulation/setStimStatus", STIM_STATUS.READY);
       } else if (ids.includes("error-catch")) {
-        // TODO Tanner: does something need to happen here? the controller will already exit gracefully just by disconnecting from it, but might make more sense to send the shutdown comment here
+        // TODO Tanner: does something need to happen here? Previously the /shutdown route was sent, but now the controller will already exit gracefully just by disconnecting from it. Still might be worth sending the shutdown command here
       }
     },
     closeSwUpdateModal: function () {
@@ -391,7 +394,7 @@ export default {
     },
     closeFwUpdateAvailableModal(idx) {
       this.$bvModal.hide("fw-update-available-message");
-      this.$store.dispatch("settings/sendFirmwareUpdateConfirmation", idx === 1);
+      this.$store.dispatch("system/sendFirmwareUpdateConfirmation", idx === 1);
     },
   },
 };

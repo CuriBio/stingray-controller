@@ -59,4 +59,7 @@ export default {
   setConfirmationRequest(state, bool) {
     state.confirmationRequest = bool;
   },
+  setLoginAttemptStatus(state, bool) {
+    state.loginAttemptStatus = bool;
+  },
 };

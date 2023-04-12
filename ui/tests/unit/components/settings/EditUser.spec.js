@@ -33,8 +33,8 @@ describe("EditUser", () => {
   describe("EditUser.vue", () => {
     const editcustomer = {
       uuid: "",
-      passkey: "",
-      userName: "",
+      password: "",
+      username: "",
     };
     const propsData = {
       dialogdata: editcustomer,
@@ -63,8 +63,8 @@ describe("EditUser", () => {
       openForInvalidCreds: true,
       dialogdata: {
         customerId: "testId",
-        passkey: "testPass",
-        userName: "testUserName",
+        password: "testPass",
+        username: "testUserName",
       },
     };
     beforeEach(async () => {
@@ -77,26 +77,26 @@ describe("EditUser", () => {
     afterEach(() => wrapper.destroy());
     test("When mounting EditUser with invalid credentials, Then it loads with 'Invalid Customer ID, Username, or Password' text", () => {
       const idErrorMessage = wrapper.find("#input-widget-feedback-customer-id");
-      const passErrorMessage = wrapper.find("#input-widget-feedback-passkey-id");
-      const userNameErrorMessage = wrapper.find("#input-widget-feedback-username");
+      const passErrorMessage = wrapper.find("#input-widget-feedback-password-id");
+      const usernameErrorMessage = wrapper.find("#input-widget-feedback-username");
 
       const invalidText = "Invalid Customer ID, Username, or Password";
 
       expect(idErrorMessage.text()).toStrictEqual(invalidText);
       expect(passErrorMessage.text()).toStrictEqual(invalidText);
-      expect(userNameErrorMessage.text()).toStrictEqual(invalidText);
+      expect(usernameErrorMessage.text()).toStrictEqual(invalidText);
     });
-    test.each(["passkey-id", "customer-id", "username"])(
-      "When EditUser has invalid credentials, Then both ID and passkey will mount with invalid text and will both become become valid with any change to %s",
+    test.each(["password-id", "customer-id", "username"])(
+      "When EditUser has invalid credentials, Then both ID and password will mount with invalid text and will both become become valid with any change to %s",
       async (selectorIdSuffix) => {
         const idErrorMessage = wrapper.find("#input-widget-feedback-customer-id");
-        const passErrorMessage = wrapper.find("#input-widget-feedback-passkey-id");
-        const userNameErrorMessage = wrapper.find("#input-widget-feedback-username");
+        const passErrorMessage = wrapper.find("#input-widget-feedback-password-id");
+        const usernameErrorMessage = wrapper.find("#input-widget-feedback-username");
         const invalidText = "Invalid Customer ID, Username, or Password";
 
         expect(idErrorMessage.text()).toStrictEqual(invalidText);
         expect(passErrorMessage.text()).toStrictEqual(invalidText);
-        expect(userNameErrorMessage.text()).toStrictEqual(invalidText);
+        expect(usernameErrorMessage.text()).toStrictEqual(invalidText);
 
         const targetInputField = wrapper.find("#input-widget-field-" + selectorIdSuffix);
         await targetInputField.setValue("new entry");
@@ -104,15 +104,15 @@ describe("EditUser", () => {
 
         expect(idErrorMessage.text()).toStrictEqual("");
         expect(passErrorMessage.text()).toStrictEqual("");
-        expect(userNameErrorMessage.text()).toStrictEqual("");
+        expect(usernameErrorMessage.text()).toStrictEqual("");
       }
     );
   });
   describe("EditUser.enterUuidbase57", () => {
     const editcustomer = {
       uuid: "",
-      passkey: "",
-      userName: "",
+      password: "",
+      username: "",
     };
     afterEach(() => {
       wrapper.destroy();
@@ -123,23 +123,23 @@ describe("EditUser", () => {
       ["06ad547f-fe02-477b-9473-f7977e4d5e14k", "ID", "customer-id", "validateUserAccountInput"],
       ["Cat lab;", "ID", "customer-id", "validateUserAccountInput"],
       ["Experiment anemia -1", "ID", "customer-id", "validateUserAccountInput"],
-      ["Cat * lab", "passkey", "passkey-id", "validateUserAccountInput"],
-      ["Valid", "passkey", "passkey-id", "validateUserAccountInput"],
-      ["Cat lab", "passkey", "passkey-id", "validateUserAccountInput"],
-      ["Experiment anemia alpha cells -1", "userName", "username", "validateUserAccountInput"],
-      ["C", "userName", "username", "validateUserAccountInput"],
-      ["", "userName", "username", "validateUserAccountInput"],
+      ["Cat * lab", "password", "password-id", "validateUserAccountInput"],
+      ["Valid", "password", "password-id", "validateUserAccountInput"],
+      ["Cat lab", "password", "password-id", "validateUserAccountInput"],
+      ["Experiment anemia alpha cells -1", "username", "username", "validateUserAccountInput"],
+      ["C", "username", "username", "validateUserAccountInput"],
+      ["", "username", "username", "validateUserAccountInput"],
     ])(
       "When the text %s (%s) is entered into the field found with the selector ID %s, Then the correct text validation function (%s) is called and the error message from the validation function is rendered below the input in the DOM",
       async (entry, textId, selectorIdSuffix, TextValidationType) => {
         if (selectorIdSuffix === "customer-id") {
           editcustomer.customerId = entry;
         }
-        if (selectorIdSuffix === "passkey-id") {
-          editcustomer.passkey = entry;
+        if (selectorIdSuffix === "password-id") {
+          editcustomer.password = entry;
         }
         if (selectorIdSuffix === "username") {
-          editcustomer.userName = entry;
+          editcustomer.username = entry;
         }
 
         const propsData = {
@@ -168,7 +168,7 @@ describe("EditUser", () => {
 
     test.each([
       ["customer-id", "This field is required"],
-      ["passkey-id", "This field is required"],
+      ["password-id", "This field is required"],
       ["username", "This field is required"],
     ])(
       "Given some nonsense value in the input field with the DOM Id suffix %s, When the input field is updated to be a blank value, Then the error message below the text in the DOM matches what the business logic dictates (%s)",
@@ -200,8 +200,8 @@ describe("EditUser", () => {
   describe("EditUser.enableSaveButton", () => {
     const editcustomer = {
       uuid: "",
-      passkey: "",
-      userName: "",
+      password: "",
+      username: "",
     };
     afterEach(() => wrapper.destroy());
     test.each([
@@ -216,15 +216,15 @@ describe("EditUser", () => {
       ["fasd44", "06ad54", "Experiment anemia -1", "color: rgb(255, 255, 255);"],
       ["", "", "Experiment anemia -1", "color: rgb(63, 63, 63);"],
     ])(
-      "Given an UUID (%s), pass Key (%s), userName (%s) for 'Edit Customer' as input, When the input contains based on valid the critera or failure, Then display of Label 'Save ID' is visible or greyed (%s)",
-      async (uuid, passkey, userName, saveBtnCss) => {
+      "Given an UUID (%s), pass Key (%s), username (%s) for 'Edit Customer' as input, When the input contains based on valid the critera or failure, Then display of Label 'Save ID' is visible or greyed (%s)",
+      async (uuid, password, username, saveBtnCss) => {
         const selectorIdSuffixAlphanumericId = "customer-id";
-        const selectorIdSuffixPasskeyId = "passkey-id";
+        const selectorIdSuffixpasswordId = "password-id";
         const selectorIdSuffixUserName = "username";
 
         editcustomer.uuid = uuid;
-        editcustomer.passkey = passkey;
-        editcustomer.userName = userName;
+        editcustomer.password = password;
+        editcustomer.username = username;
 
         const propsData = {
           dialogdata: editcustomer,
@@ -238,12 +238,12 @@ describe("EditUser", () => {
         const targetInputFieldUuid = wrapper.find("#input-widget-field-" + selectorIdSuffixAlphanumericId);
         targetInputFieldUuid.setValue(uuid);
         await wrapper.vm.$nextTick();
-        const targetInputFieldPasskey = wrapper.find("#input-widget-field-" + selectorIdSuffixPasskeyId);
-        targetInputFieldPasskey.setValue(passkey);
+        const targetInputFieldpassword = wrapper.find("#input-widget-field-" + selectorIdSuffixpasswordId);
+        targetInputFieldpassword.setValue(password);
         await wrapper.vm.$nextTick();
 
         const targetInputFieldUserName = wrapper.find("#input-widget-field-" + selectorIdSuffixUserName);
-        targetInputFieldUserName.setValue(userName);
+        targetInputFieldUserName.setValue(username);
         await wrapper.vm.$nextTick();
 
         const targetButtonLabelBtn = wrapper.findAll(".span__button-label");
@@ -260,8 +260,8 @@ describe("EditUser", () => {
   describe("EditUser.clickedButton", () => {
     const editcustomer = {
       customerId: "",
-      passkey: "",
-      userName: "",
+      password: "",
+      username: "",
     };
     afterEach(() => wrapper.destroy());
     test.each([
@@ -275,23 +275,23 @@ describe("EditUser", () => {
         "color: rgb(255, 255, 255);",
       ],
     ])(
-      "Given an UUID(%s) , pass Key(%s), userName(%s) for 'Edit Customer' as input, When the input contains based on valid the critera or failure %s %s %s, Then display of Label 'Save ID' is visible %s, click on Cancel, an event 'cancel-id' is emmited to the parent, click on Delete an event 'delete-id' is emmited to the parent, and click on Save an event 'save-id' is emmited to parent",
+      "Given an UUID(%s) , pass Key(%s), username(%s) for 'Edit Customer' as input, When the input contains based on valid the critera or failure %s %s %s, Then display of Label 'Save ID' is visible %s, click on Cancel, an event 'cancel-id' is emmited to the parent, click on Delete an event 'delete-id' is emmited to the parent, and click on Save an event 'save-id' is emmited to parent",
       async (
         uuidTest,
-        passkeyTest,
-        userNameTest,
-        invalidPasskey,
+        passwordTest,
+        usernameTest,
+        invalidpassword,
         invalidUuid,
         invalidUserName,
         saveBtnCss
       ) => {
         const selectorIdSuffixAlphanumericId = "customer-id";
-        const selectorIdSuffixPasskeyId = "passkey-id";
+        const selectorIdSuffixpasswordId = "password-id";
         const selectorIdSuffixUserName = "username";
 
         editcustomer.customerId = uuidTest;
-        editcustomer.passkey = passkeyTest;
-        editcustomer.userName = userNameTest;
+        editcustomer.password = passwordTest;
+        editcustomer.username = usernameTest;
 
         const propsData = {
           dialogdata: editcustomer,
@@ -311,16 +311,18 @@ describe("EditUser", () => {
 
         expect(targetErrorMessageUuid.text()).toStrictEqual(invalidUuid);
 
-        const targetInputFieldPasskey = wrapper.find("#input-widget-field-" + selectorIdSuffixPasskeyId);
-        const targetErrorMessagePasskey = wrapper.find("#input-widget-feedback-" + selectorIdSuffixPasskeyId);
-        targetInputFieldPasskey.setValue(passkeyTest);
+        const targetInputFieldpassword = wrapper.find("#input-widget-field-" + selectorIdSuffixpasswordId);
+        const targetErrorMessagepassword = wrapper.find(
+          "#input-widget-feedback-" + selectorIdSuffixpasswordId
+        );
+        targetInputFieldpassword.setValue(passwordTest);
         await wrapper.vm.$nextTick();
 
-        expect(targetErrorMessagePasskey.text()).toStrictEqual(invalidPasskey);
+        expect(targetErrorMessagepassword.text()).toStrictEqual(invalidpassword);
 
         const targetInputFieldUserName = wrapper.find("#input-widget-field-" + selectorIdSuffixUserName);
         const targetErrorMessageUserName = wrapper.find("#input-widget-feedback-" + selectorIdSuffixUserName);
-        targetInputFieldUserName.setValue(userNameTest);
+        targetInputFieldUserName.setValue(usernameTest);
         await wrapper.vm.$nextTick();
 
         expect(targetErrorMessageUserName.text()).toStrictEqual(invalidUserName);
@@ -353,8 +355,8 @@ describe("EditUser", () => {
         expect(saveIdEvents[0]).toStrictEqual([
           {
             customerId: uuidTest,
-            userPassword: passkeyTest,
-            userName: userNameTest,
+            userPassword: passwordTest,
+            username: usernameTest,
           },
         ]);
       }
