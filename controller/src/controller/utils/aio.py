@@ -31,6 +31,7 @@ async def clean_up_tasks(tasks: set[GenericTask], error_msg: str = CLEANUP_ERROR
     exc = None
 
     for task in tasks:
+        logger.debug(f"cleaning up task {task}")
         if not task.done():
             task.cancel()
 

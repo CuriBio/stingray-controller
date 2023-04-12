@@ -101,6 +101,7 @@ class CloudComm:
             logger.exception(ERROR_MSG)
             handle_system_error(e, system_error_future)
         finally:
+            # TODO consider making this a public function and calling in main after this is shut down
             await self._attempt_to_upload_log_files_to_s3()
             self._client = None
             logger.info("CloudComm shut down")
@@ -124,6 +125,7 @@ class CloudComm:
 
         try:
             with tempfile.TemporaryDirectory() as tmp_dir:
+                # TODO put a timeout on this
                 await self._upload_to_s3(
                     self._config.log_directory, upload_type="log", dir_for_zipping=tmp_dir
                 )
@@ -147,7 +149,7 @@ class CloudComm:
                 try:
                     res = task.result()
                 except BaseException as e:
-                    # TODO make sure this works as expected
+                    # TODO make sure this works as expected. Also see if asyncio.CancelledError needs to be handled differently
                     await clean_up_tasks(pending)
                     raise e
 
@@ -247,6 +249,7 @@ class CloudComm:
                 )
                 subtask_res[f"{fw_type}_firmware_contents"] = download_response.content
         except BaseException as e:
+            # TODO see if asyncio.CancelledError needs to be handled differently?
             raise FirmwareDownloadError() from e
 
         return subtask_res
@@ -350,7 +353,7 @@ class CloudComm:
         if not (200 <= res.status_code < 300):
             try:
                 message = await res.json()["message"]
-            except BaseException:
+            except Exception:
                 message = res.reason_phrase
             raise RequestFailedError(f"{error_message}. Status code: {res.status_code}, Reason: {message}")
 
