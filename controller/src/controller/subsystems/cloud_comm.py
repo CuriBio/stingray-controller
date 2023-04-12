@@ -340,10 +340,9 @@ class CloudComm:
 
         This is the primary function that should be used to handle requests.
         """
-        if self._tokens is None:
-            raise NotImplementedError("self._tokens should never be None here")
-
         if auth_required:
+            if self._tokens is None:
+                raise NotImplementedError("self._tokens should never be None here")
             request_kwargs["headers"] = {"Authorization": f"Bearer {self._tokens.access}"}
 
         res = await self._request_with_refresh(method, url, **request_kwargs)

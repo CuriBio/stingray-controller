@@ -1,7 +1,7 @@
 Changelog for Stingray Controller
 =================================
 
-0.0.1 (unreleased)
+0.1.0 (unreleased)
 ------------------
 
 Added:
