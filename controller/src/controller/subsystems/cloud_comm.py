@@ -95,9 +95,7 @@ class CloudComm:
             }
             await wait_tasks_clean(tasks, error_msg=ERROR_MSG)
         except asyncio.CancelledError:
-            # TODO figure out why this isn't being reached
             logger.info("CloudComm cancelled")
-            # await self._attempt_to_upload_log_files_to_s3()
             raise
         except BaseException as e:
             logger.exception(ERROR_MSG)
@@ -193,6 +191,7 @@ class CloudComm:
 
         return subtask_res
 
+    # TODO make sure entire FW update process (including InstrumentComm portion) has sufficient logging
     async def _check_versions(self, command: dict[str, str]) -> dict[str, str]:
         check_sw_response = await self._request(
             "get",
@@ -296,8 +295,6 @@ class CloudComm:
         if self._tokens is None:
             raise NotImplementedError("self._tokens should never be None here")
 
-        # TODO check service worker to see how refresh mutex is handled
-
         res = await self._client.post(
             f"https://{CLOUD_API_ENDPOINT}/users/refresh",
             headers={"Authorization": f"Bearer {self._tokens.refresh}"},
@@ -320,10 +317,13 @@ class CloudComm:
         res = await self._client.request(method, url, **request_kwargs)
         # if auth token expired then request will return 401 code
         if res.status_code == 401:
+            # TODO check service worker to see how refresh mutex is handled
+
             # get new tokens and try request once more
-            self.tokens = self._refresh_cloud_api_tokens()
-            res = await self._client.request(method, url, **request_kwargs)
             # TODO try logging in again if this also fails
+            self.tokens = self._refresh_cloud_api_tokens()
+
+            res = await self._client.request(method, url, **request_kwargs)
 
         return res
 
