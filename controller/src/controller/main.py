@@ -4,14 +4,13 @@
 
 import argparse
 import asyncio
-import hashlib
 import logging
 import platform
-import socket
 import sys
 from typing import Any
 import uuid
 
+from controller.utils.generic import get_hash_of_computer_name
 from stdlib_utils import configure_logging
 from stdlib_utils import is_port_in_use
 
@@ -206,8 +205,6 @@ def _log_system_info() -> None:
     uname_release = getattr(uname, "release")
     uname_version = getattr(uname, "version")
 
-    computer_name_hash = hashlib.sha512(socket.gethostname().encode(encoding="UTF-8")).hexdigest()
-
     for msg in (
         f"System: {uname_sys}",
         f"Release: {uname_release}",
@@ -219,7 +216,7 @@ def _log_system_info() -> None:
         f"Architecture: {platform.architecture()}",
         f"Interpreter is 64-bits: {sys.maxsize > 2**32}",
         f"System Alias: {platform.system_alias(uname_sys, uname_release, uname_version)}",
-        f"SHA512 digest of Computer Name {computer_name_hash}",
+        f"SHA512 digest of Computer Name {get_hash_of_computer_name()}",
     ):
         logger.info(msg)
 

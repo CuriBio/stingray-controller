@@ -2,6 +2,8 @@
 """Misc utility functions."""
 
 import asyncio
+import hashlib
+import socket
 
 from semver import VersionInfo
 
@@ -13,6 +15,10 @@ from ..exceptions import InstrumentConnectionLostError
 from ..exceptions import InstrumentFirmwareError
 from ..exceptions import NoInstrumentDetectedError
 from ..exceptions import WebsocketCommandError
+
+
+def get_hash_of_computer_name() -> str:
+    return hashlib.sha512(socket.gethostname().encode(encoding="UTF-8")).hexdigest()
 
 
 def semver_gt(version_a: str, version_b: str) -> bool:

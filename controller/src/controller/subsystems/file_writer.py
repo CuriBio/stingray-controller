@@ -1,21 +1,26 @@
 # -*- coding: utf-8 -*-
 import asyncio
 import datetime
+import json
 import logging
 import os
 import tempfile
 from typing import Any
 import uuid
 
-import numpy as np
+import h5py
+from pulse3D.constants import DATETIME_STR_FORMAT as METADATA_DATETIME_STR_FORMAT
 from pulse3D.constants import IS_CALIBRATION_FILE_UUID
 from pulse3D.constants import METADATA_UUID_DESCRIPTIONS
 from pulse3D.constants import NOT_APPLICABLE_H5_METADATA
 from pulse3D.constants import PLATE_BARCODE_UUID
+from pulse3D.constants import STIMULATION_PROTOCOL_UUID
 from pulse3D.constants import STIMULATION_READINGS
 from pulse3D.constants import TIME_INDICES
 from pulse3D.constants import TIME_OFFSETS
 from pulse3D.constants import TISSUE_SENSOR_READINGS
+from pulse3D.constants import UTC_BEGINNING_DATA_ACQUISTION_UUID
+from pulse3D.constants import UTC_BEGINNING_RECORDING_UUID
 from pulse3D.plate_recording import MantarrayH5FileCreator
 
 from ..constants import CURRENT_RECORDING_FILE_VERSION
@@ -23,6 +28,13 @@ from ..constants import NUM_MAG_DATA_CHANNELS_PER_WELL
 from ..constants import NUM_MAG_SENSORS_PER_WELL
 from ..utils.aio import wait_tasks_clean
 from ..utils.generic import handle_system_error
+
+
+# TODO move these to pulse3D
+UTC_BEGINNING_CALIBRATION_UUID = uuid.UUID("b0995a2e-8f1d-41d7-b369-54ec06656683")
+CALIBRATION_TIME_INDICES = "calibration_time_indices"
+CALIBRATION_TIME_OFFSETS = "calibration_time_offsets"
+CALIBRATION_TISSUE_SENSOR_READINGS = "calibration_tissue_sensor_readings"
 
 
 logger = logging.getLogger(__name__)
@@ -50,8 +62,12 @@ class FileWriter:
         self._recordings_directory: str | None = None
         self._current_recording_name: str | None = None
         self._current_recording_path: str | None = None
+        self._current_calibration_path: str | None = None
 
         self._current_recording_file: MantarrayH5FileCreator | None = None
+
+        self._start_data_stream_timestamp_utc: datetime.datetime | None = None
+        self._stim_info: dict[str, Any] | None = None
 
     # ONE-SHOT TASKS
 
@@ -84,7 +100,7 @@ class FileWriter:
 
             match comm_from_monitor:
                 case {"command": "start_recording"}:
-                    self._start_recording(comm_from_monitor)
+                    await self._start_recording(comm_from_monitor)
                 case {"command": "stop_recording"}:
                     pass  # TODO: self._stop_recording()
                 case {"command": "update_recording_name"}:
@@ -101,57 +117,52 @@ class FileWriter:
         self._is_recording = True
 
         metadata = start_recording_command["metadata"]
+        recording_start_timestamp_str = metadata[UTC_BEGINNING_RECORDING_UUID].strftime("%Y_%m_%d__%H_%M_%S")
 
         self._is_recording_calibration = metadata[IS_CALIBRATION_FILE_UUID]
-
-        # TODO just do this in the start recording route. Also try to put as much into the 'metadata' sub-dict as possible
-        recording_start_timestamp_str = datetime.datetime.utcnow().strftime("%Y_%m_%d_%H%M%S")
 
         if self._is_recording_calibration:
             self._current_recording_name = f"Calibration__{recording_start_timestamp_str}"
             self._current_recording_path = os.path.join(
                 self._calibration_tmp_dir.name, self._current_recording_name
             )
-            # delete existing calibration file  # TODO handle this a better way
-            for f in os.listdir(self._calibration_tmp_dir.name):
-                os.remove(os.path.join(self._calibration_tmp_dir.name, f))
+            # remove old calibration file if one exists
+            if self._current_calibration_path and os.path.isfile(self._current_calibration_path):
+                os.remove(self._current_calibration_path)
+            # set new calibration file path
+            self._current_calibration_path = self._current_recording_path
         else:
             self._current_recording_name = f"{metadata[PLATE_BARCODE_UUID]}__{recording_start_timestamp_str}"
             self._current_recording_path = os.path.join(
                 self._recordings_directory, self._current_recording_name
             )
 
-        self._create_recording_file()
+        await self._create_recording_file(metadata)
 
         if not self._is_recording_calibration:
-            self._add_calibration_data_to_recording()
-            self._add_protocols_to_recording_files()
-            self._record_data_from_buffers()
+            await self._add_calibration_data_to_recording()
+            await self._add_protocols_to_recording_files()
+            await self._record_data_from_buffers()
 
     # HELPERS
 
-    async def _create_recording_file(self, start_recording_command: dict[str, Any]) -> None:
+    async def _create_recording_file(self, metadata_for_file: dict[uuid.UUID, Any]) -> None:
         self._current_recording_file = MantarrayH5FileCreator(
             self._current_recording_path, file_format_version=CURRENT_RECORDING_FILE_VERSION
         )
 
-        # TODO include this in the metadata instead
-        # {
-        #     IS_CALIBRATION_FILE_UUID: self._is_recording_calibration,
-        #     TOTAL_WELL_COUNT_UUID: NUM_WELLS,
-        #     PLATEMAP_NAME_UUID: start_recording_command["platemap"]["name"],
-        #     PLATEMAP_LABEL_UUID: start_recording_command["platemap"]["labels"],
-        # }
+        # TODO set this value when start_data_stream command is received
+        metadata_for_file[
+            UTC_BEGINNING_DATA_ACQUISTION_UUID
+        ] = self._start_data_stream_timestamp_utc.strftime(METADATA_DATETIME_STR_FORMAT)
 
-        # TODO remember to omit unnecessary metadata when creating start recording command for calibration files
-
-        for this_attr_name, this_attr_value in start_recording_command["metadata"].items():
+        for this_attr_name, this_attr_value in metadata_for_file.items():
             # apply custom formatting to UTC datetime value
             if (
                 METADATA_UUID_DESCRIPTIONS[this_attr_name].startswith("UTC Timestamp")
                 and this_attr_value != NOT_APPLICABLE_H5_METADATA
             ):
-                this_attr_value = this_attr_value.strftime("%Y-%m-%d %H:%M:%S.%f")
+                this_attr_value = this_attr_value.strftime(METADATA_DATETIME_STR_FORMAT)
 
             # UUIDs must be stored as strings
             this_attr_name = str(this_attr_name)
@@ -160,15 +171,17 @@ class FileWriter:
 
             self._current_recording_file.attrs[this_attr_name] = this_attr_value
 
-        # converting to a string instead of json since json does not like UUIDs
+        # converting to a string since json does not like UUIDs
         self._current_recording_file.attrs["Metadata UUID Descriptions"] = str(METADATA_UUID_DESCRIPTIONS)
 
         # Tanner (5/17/21): Not sure what this value represents, should make it a constant or add comment if/when it is determined
         max_data_len = 100 * 3600 * 12
 
+        # sampling time values
         self._current_recording_file.create_dataset(
             TIME_INDICES, (0,), maxshape=(max_data_len,), dtype="uint64", chunks=True
         )
+        # sampling time offset
         self._current_recording_file.create_dataset(
             TIME_OFFSETS,
             (NUM_MAG_SENSORS_PER_WELL, 0),
@@ -176,10 +189,11 @@ class FileWriter:
             dtype="uint16",
             chunks=True,
         )
+        # stim data
         self._current_recording_file.create_dataset(
             STIMULATION_READINGS, (2, 0), maxshape=(2, max_data_len), dtype="int64", chunks=True
         )
-        # create datasets present in files for both beta versions
+        # magnetometer data (tissue)
         self._current_recording_file.create_dataset(
             TISSUE_SENSOR_READINGS,
             (NUM_MAG_DATA_CHANNELS_PER_WELL, 0),
@@ -190,10 +204,22 @@ class FileWriter:
         self._current_recording_file.swmr_mode = True
 
     async def _add_calibration_data_to_recording(self) -> None:
-        pass  #  TODO, also make new UUIDs for calibration metadata
+        with h5py.File(self._current_calibration_path, "r") as calibration_file:
+            self._current_recording_file.attrs[UTC_BEGINNING_CALIBRATION_UUID] = calibration_file.attrs[
+                UTC_BEGINNING_RECORDING_UUID
+            ]
+
+            for new_label, original_label in {
+                CALIBRATION_TIME_INDICES: TIME_INDICES,
+                CALIBRATION_TIME_OFFSETS: TIME_OFFSETS,
+                CALIBRATION_TISSUE_SENSOR_READINGS: TISSUE_SENSOR_READINGS,
+            }.items():
+                self._current_recording_file.create_dataset(
+                    new_label, data=calibration_file[original_label], chunks=True
+                )
 
     async def _add_protocols_to_recording_files(self) -> None:
-        pass  #  TODO
+        self._current_recording_file.attrs[str(STIMULATION_PROTOCOL_UUID)] = json.dumps(self._stim_info)
 
     async def _record_data_from_buffers(self) -> None:
         pass  # TODO
