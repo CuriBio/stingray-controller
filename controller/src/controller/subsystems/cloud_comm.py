@@ -208,8 +208,8 @@ class CloudComm:
         except ValueError:
             pass  # CURRENT_SOFTWARE_VERSION will not be a valid semver in dev mode
         else:
-            if not (range["min_sw"] <= sw_version_semver <= range["max_sw"]):
-                raise FirmwareAndSoftwareNotCompatibleError(range["max_sw"])
+            if not (range["min_sting_sw"] <= sw_version_semver <= range["max_sting_sw"]):
+                raise FirmwareAndSoftwareNotCompatibleError(range["max_sting_sw"])
 
         get_versions_response = await self._request(
             "get",
