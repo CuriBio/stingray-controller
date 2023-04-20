@@ -256,7 +256,7 @@ jobs:
           cd ui/
           npm run build
           cd ../electron
-          npm run build-${{env.RELEASE_CHANNEL}}
+          npm run build-unstable
 
       # - name: Archive Installer File
       #   if: runner.os == 'Windows'
