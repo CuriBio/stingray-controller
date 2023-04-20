@@ -146,6 +146,16 @@ jobs:
           poetry install
           poetry show
 
+      - name: Setup UI
+        run: |
+          cd ui/
+          npm ci
+
+      - name: Setup Electron
+        run: |
+          cd electron/
+          npm ci
+
       - name: Run pre-commit hooks
         # only enable pre-commit on the fastest job.
         if: matrix.IS_FASTEST_JOB == true
