@@ -670,7 +670,7 @@ class VirtualInstrumentConnection:
         # read a specific number of bytes it will block until at least one is available
         try:
             data = await self.reader.read(size)
-        except Exception:
+        except Exception:  # nosec B110
             # TODO make sure to add a unit test confirming this can be cancelled correctly
             # TODO raise a different error here?
             return bytes(0)
@@ -682,7 +682,7 @@ class VirtualInstrumentConnection:
         try:
             self.writer.write(data)
             await self.writer.drain()
-        except Exception:
+        except Exception:  # nosec B110
             # TODO make sure to add a unit test confirming this can be cancelled correctly
             # TODO raise a different error here?
             pass

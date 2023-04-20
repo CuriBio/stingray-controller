@@ -1,4 +1,3 @@
-# Based on https://github.com/prettier/prettier/blob/master/.github/workflows/dev-test.yml
 name: Release and Publish to s3
 
 on:
@@ -79,13 +78,6 @@ jobs:
     name: Python ${{ matrix.python-version }} with Node ${{ matrix.node-version }} on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     steps:
-      # - name: Adjust Screen Resolution (Windows)
-      #   if: runner.os == 'Windows'
-      #   run: |
-      #     Get-DisplayResolution
-      #     Set-DisplayResolution -Width 1920 -Height 1080 -Force
-      #     Get-DisplayResolution
-
       - name: Checkout
         uses: actions/checkout@v3
 
@@ -138,22 +130,8 @@ jobs:
           git fetch --tags
           git checkout tags/${{steps.software-version.outputs.prop}}
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: ${{ matrix.node-version }}
-
-      - name: Display Language Dependency Versions
-        run: |
-          python --version
-          pip --version
-          node --version
-          npm --version
+      - name: Set Up Langs
+        uses: ./.github/actions/set-up-langs
 
       # - name: Cache node modules # https://docs.github.com/en/free-pro-team@latest/actions/guides/caching-dependencies-to-speed-up-workflows
       #   uses: actions/cache@v3
@@ -184,21 +162,25 @@ jobs:
           echo ${{steps.software-version.outputs.prop}}
           echo ${{steps.product-name.outputs.prop}}
 
-      - name: Download zlib Library
+      - name: Insert the Build Number and Software Version into the code
+        env:
+          build_number: ${{ github.run_number }}
+        shell: bash
         run: |
-          pip install requests
-          python .github/workflows/run_zlib_download.py
+          echo $build_number
+          sed -i 's/REPLACETHISWITHTIMESTAMPDURINGBUILD/'"$(date +'%y%m%d%H%M%S')"'--$build_number/g' controller/src/controller/constants.py
+          sed -i 's/REPLACETHISWITHVERSIONDURINGBUILD/'"${{steps.software-version.outputs.prop}}"'/g' controller/src/controller/constants.py
+          sed -i 's/REPLACETHISWITHENDPOINTDURINGBUILD/'"${{github.event.inputs.api_endpoint}}"'/g' controller/src/controller/constants.py
+          sed -i 's/REPLACETHISWITHENDPOINTDURINGBUILD/'"${{github.event.inputs.api_endpoint}}"'/g' electron/main/index.js
+          sed -i 's/REPLACETHISWITHRELEASECHANNELDURINGBUILD/'"${{env.RELEASE_CHANNEL}}"'/g' controller/src/controller/constants.py
 
-      - name: Install Poetry
-        run: |
-          pip install poetry==1.4.2
-          poetry --version
+      - name: Set Up Controller
+        uses: ./.github/actions/set-up-controller
 
-      - name: Setup Controller
+      - name: Compile the Python Executable
         run: |
           cd controller/
-          poetry install
-          poetry show
+          poetry run pyinstaller pyinstaller.spec --log-level=DEBUG --distpath=../electron/dist-python --workpath=build-python
 
       - name: Setup UI
         run: |
@@ -209,23 +191,6 @@ jobs:
         run: |
           cd electron/
           npm ci
-
-      - name: Insert the Build Number and Software Version into the code (Windows)
-        if: runner.os == 'Windows'
-        env:
-          build_number: ${{ github.run_number }}
-        run: |
-          echo $env:build_number
-          ((Get-Content -path controller\src\controller\constants.py -Raw) -replace 'REPLACETHISWITHTIMESTAMPDURINGBUILD',"$(Get-Date -Format 'yyMMddHHmmss')--$env:build_number") | Set-Content -Path controller\src\controller\constants.py
-          ((Get-Content -path controller\src\controller\constants.py -Raw) -replace 'REPLACETHISWITHVERSIONDURINGBUILD',"${{steps.software-version.outputs.prop}}") | Set-Content -Path controller\src\controller\constants.py
-          ((Get-Content -path controller\src\controller\constants.py -Raw) -replace 'REPLACETHISWITHENDPOINTDURINGBUILD',"${{env.API_ENDPOINT}}") | Set-Content -Path controller\src\controller\constants.py
-          ((Get-Content -path electron\main\index.js -Raw) -replace 'REPLACETHISWITHENDPOINTDURINGBUILD',"${{env.API_ENDPOINT}}") | Set-Content -Path electron\main\index.js
-          ((Get-Content -path controller\src\controller\constants.py -Raw) -replace 'REPLACETHISWITHRELEASECHANNELDURINGBUILD',"${{env.RELEASE_CHANNEL}}") | Set-Content -Path controller\src\controller\constants.py
-
-      - name: Compile the Python Executable
-        run: |
-          cd controller/
-          poetry run pyinstaller pyinstaller.spec --log-level=DEBUG --distpath=../electron/dist-python --workpath=build-python
 
       - name: Build Full Electron App
         run: |
