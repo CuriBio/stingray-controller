@@ -67,22 +67,8 @@ jobs:
           path: "electron/package.json"
           prop_path: "name"
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: ${{ matrix.node-version }}
-
-      - name: Display Language Dependency Versions
-        run: |
-          python --version
-          pip --version
-          node --version
-          npm --version
+      - name: Set Up Langs
+        uses: ./.github/workflows/set-up-langs
 
       # - name: Cache node modules # https://docs.github.com/en/free-pro-team@latest/actions/guides/caching-dependencies-to-speed-up-workflows
       #   uses: actions/cache@v3
