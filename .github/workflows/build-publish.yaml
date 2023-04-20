@@ -163,18 +163,17 @@ jobs:
           echo ${{steps.software-version.outputs.prop}}
           echo ${{steps.product-name.outputs.prop}}
 
-      # TODO try using bash
-      - name: Insert the Build Number and Software Version into the code (Windows)
-        if: runner.os == 'Windows'
+      - name: Insert the Build Number and Software Version into the code
         env:
           build_number: ${{ github.run_number }}
+        shell: bash
         run: |
-          echo $env:build_number
-          ((Get-Content -path controller\src\controller\constants.py -Raw) -replace 'REPLACETHISWITHTIMESTAMPDURINGBUILD',"$(Get-Date -Format 'yyMMddHHmmss')--$env:build_number") | Set-Content -Path controller\src\controller\constants.py
-          ((Get-Content -path controller\src\controller\constants.py -Raw) -replace 'REPLACETHISWITHVERSIONDURINGBUILD',"${{steps.software-version.outputs.prop}}") | Set-Content -Path controller\src\controller\constants.py
-          ((Get-Content -path controller\src\controller\constants.py -Raw) -replace 'REPLACETHISWITHENDPOINTDURINGBUILD',"${{env.API_ENDPOINT}}") | Set-Content -Path controller\src\controller\constants.py
-          ((Get-Content -path electron\main\index.js -Raw) -replace 'REPLACETHISWITHENDPOINTDURINGBUILD',"${{env.API_ENDPOINT}}") | Set-Content -Path electron\main\index.js
-          ((Get-Content -path controller\src\controller\constants.py -Raw) -replace 'REPLACETHISWITHRELEASECHANNELDURINGBUILD',"${{env.RELEASE_CHANNEL}}") | Set-Content -Path controller\src\controller\constants.py
+          echo $build_number
+          sed -i 's/REPLACETHISWITHTIMESTAMPDURINGBUILD/'"$(date +'%y%m%d%H%M%S')"'--$build_number/g' controller/src/controller/constants.py
+          sed -i 's/REPLACETHISWITHVERSIONDURINGBUILD/'"${{steps.software-version.outputs.prop}}"'/g' controller/src/controller/constants.py
+          sed -i 's/REPLACETHISWITHENDPOINTDURINGBUILD/'"${{github.event.inputs.api_endpoint}}"'/g' controller/src/controller/constants.py
+          sed -i 's/REPLACETHISWITHENDPOINTDURINGBUILD/'"${{github.event.inputs.api_endpoint}}"'/g' electron/main/index.js
+          sed -i 's/REPLACETHISWITHRELEASECHANNELDURINGBUILD/'"${{env.RELEASE_CHANNEL}}"'/g' controller/src/controller/constants.py
 
       - name: Set Up Controller
         uses: ./.github/workflows/set-up-controller
