@@ -168,13 +168,17 @@ jobs:
 
       - name: Run Python Tests with randomly generated seed
         if: github.event.inputs.randomlyseed == ''
-        timeout-minutes: 40
-        run: poetry run pytest -xsvv --cov-report=xml --include-slow-tests --full-ci
+        timeout-minutes: 15
+        run: |
+          cd controller/
+          poetry run pytest -xsvv --cov-report=xml --include-slow-tests --full-ci
 
       - name: Run Python Tests with supplied pytest-randomly seed
         if: github.event.inputs.randomlyseed != ''
-        timeout-minutes: 40
-        run: poetry run pytest -xsvv --cov-report=xml --include-slow-tests --full-ci --randomly-seed=${{ github.event.inputs.randomlyseed }}
+        timeout-minutes: 15
+        run: |
+          cd controller/
+          poetry run pytest -xsvv --cov-report=xml --include-slow-tests --full-ci --randomly-seed=${{ github.event.inputs.randomlyseed }}
 
       # TODO
       # - name: Run Jest Tests for Electron
@@ -223,11 +227,15 @@ jobs:
 
       # - name: Run Python Tests on Executable with randomly generated seed
       #   if: github.event.inputs.randomlyseed == ''
-      #   run: poetry run pytest tests/test_exe.py -xsvv --only-exe --no-cov
+      #   run: |
+      #     cd controller/
+      #     poetry run pytest tests/test_exe.py -xsvv --only-exe --no-cov
 
       # - name: Run Python Tests on Executable with supplied pytest-randomly seed
       #   if: github.event.inputs.randomlyseed != ''
-      #   run: poetry run pytest tests/test_exe.py -xsvv --only-exe --no-cov --randomly-seed=${{ github.event.inputs.randomlyseed }}
+      #   run: |
+      #     cd controller/
+      #     poetry run pytest tests/test_exe.py -xsvv --only-exe --no-cov --randomly-seed=${{ github.event.inputs.randomlyseed }}
 
       - name: Upload coverage to Codecov
         # only upload coverage from fastest job
