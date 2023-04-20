@@ -7,7 +7,7 @@ runs:
       shell: bash
       run: |
         pip install requests
-        python .github/workflows/run_zlib_download.py
+        python .github/actions/run_zlib_download.py
 
     - name: Install Poetry
       shell: bash

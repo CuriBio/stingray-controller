@@ -1,4 +1,3 @@
-# Based on https://github.com/prettier/prettier/blob/master/.github/workflows/dev-test.yml
 name: Release and Publish to s3
 
 on:
@@ -132,7 +131,7 @@ jobs:
           git checkout tags/${{steps.software-version.outputs.prop}}
 
       - name: Set Up Langs
-        uses: ./.github/workflows/set-up-langs
+        uses: ./.github/actions/set-up-langs
 
       # - name: Cache node modules # https://docs.github.com/en/free-pro-team@latest/actions/guides/caching-dependencies-to-speed-up-workflows
       #   uses: actions/cache@v3
@@ -176,7 +175,7 @@ jobs:
           sed -i 's/REPLACETHISWITHRELEASECHANNELDURINGBUILD/'"${{env.RELEASE_CHANNEL}}"'/g' controller/src/controller/constants.py
 
       - name: Set Up Controller
-        uses: ./.github/workflows/set-up-controller
+        uses: ./.github/actions/set-up-controller
 
       - name: Compile the Python Executable
         run: |
