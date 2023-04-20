@@ -116,22 +116,10 @@ jobs:
           echo ${{steps.software-version.outputs.prop}}
           echo ${{steps.product-name.outputs.prop}}
 
-      - name: Download zlib Library
-        run: |
-          pip install requests
-          python .github/workflows/run_zlib_download.py
+      - name: Set Up Controller
+        uses: ./.github/workflows/set-up-controller
 
-      - name: Install Poetry
-        run: |
-          pip install poetry==1.4.2
-          poetry --version
-
-      - name: Setup Controller
-        run: |
-          cd controller/
-          poetry install
-          poetry show
-
+      # TODO put these into Set Up Controller and rename the action
       - name: Setup UI
         run: |
           cd ui/
@@ -185,21 +173,10 @@ jobs:
           cd controller/
           poetry run pre-commit run git-dirty -a
 
-      - name: Insert the Build Number and Software Version into the code (Windows)
-        if: runner.os == 'Windows'
+      - name: Insert the Build Number and Software Version into the code
         env:
           build_number: ${{ github.run_number }}
-        run: |
-          echo $env:build_number
-          ((Get-Content -path controller\src\controller\constants.py -Raw) -replace 'REPLACETHISWITHTIMESTAMPDURINGBUILD',"$(Get-Date -Format 'yyMMddHHmmss')--$env:build_number") | Set-Content -Path controller\src\controller\constants.py
-          ((Get-Content -path controller\src\controller\constants.py -Raw) -replace 'REPLACETHISWITHVERSIONDURINGBUILD',"${{steps.software-version.outputs.prop}}") | Set-Content -Path controller\src\controller\constants.py
-          ((Get-Content -path controller\src\controller\constants.py -Raw) -replace 'REPLACETHISWITHENDPOINTDURINGBUILD',"${{env.API_ENDPOINT}}") | Set-Content -Path controller\src\controller\constants.py
-          ((Get-Content -path electron\main\index.js -Raw) -replace 'REPLACETHISWITHENDPOINTDURINGBUILD',"${{env.API_ENDPOINT}}") | Set-Content -Path electron\main\index.js
-
-      - name: Insert the Build Number and Software Version into the code (Linux)
-        if: runner.os == 'Linux'
-        env:
-          build_number: ${{ github.run_number }}
+        shell: bash
         run: |
           echo $build_number
           sed -i 's/REPLACETHISWITHTIMESTAMPDURINGBUILD/'"$(date +'%y%m%d%H%M%S')"'--$build_number/g' controller/src/controller/constants.py
@@ -212,6 +189,7 @@ jobs:
           cd controller/
           poetry run pyinstaller pyinstaller.spec --log-level=DEBUG --distpath=../electron/dist-python --workpath=build-python
 
+      # TODO
       # - name: Run Python Tests on Executable with randomly generated seed
       #   if: github.event.inputs.randomlyseed == ''
       #   run: |
