@@ -13,14 +13,12 @@ files:
     to: "dist/main/"
   - from: "dist/renderer/"
     to: "dist/renderer/"
-  - from: "src/extraResources/"
-    to: ""
 win:
   target: "nsis"
   artifactName: "StingrayController-Setup-prod-${version}.${ext}"
 publish:
   provider: "s3"
   bucket: "downloads.curibio.com"
-  path: "software"
+  path: "software/stingray"
   channel: "prod"
   region: "us-east-1"

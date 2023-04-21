@@ -1,4 +1,3 @@
-# Based on https://github.com/prettier/prettier/blob/master/.github/workflows/dev-test.yml
 name: Dev
 
 on:
@@ -50,63 +49,56 @@ jobs:
     name: Python ${{ matrix.python-version }} with Node ${{ matrix.node-version }} on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     steps:
-      - name: Adjust Screen Resolution (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          Get-DisplayResolution
-          Set-DisplayResolution -Width 1920 -Height 1080 -Force
-          Get-DisplayResolution
       - name: Checkout
         uses: actions/checkout@v3
-        with:
-          fetch-depth: 1
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - name: Get Version
+        id: software-version
+        uses: notiz-dev/github-action-json-property@v0.2.0
         with:
-          python-version: ${{ matrix.python-version }}
+          path: "electron/package.json"
+          prop_path: "version"
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
+      - name: Get Product Name
+        id: product-name
+        uses: notiz-dev/github-action-json-property@v0.2.0
         with:
-          node-version: ${{ matrix.node-version }}
-      - name: Display Language Dependency Versions
-        run: |
-          python --version
-          pip --version
-          node --version
-          npm --version
+          path: "electron/package.json"
+          prop_path: "name"
 
-      - name: Cache node modules # https://docs.github.com/en/free-pro-team@latest/actions/guides/caching-dependencies-to-speed-up-workflows
-        uses: actions/cache@v3
-        env:
-          cache-name: cache-node-modules
-        with:
-          path: ./.npm_cache
-          key: ${{ matrix.os }}-${{ matrix.node-version }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ matrix.os }}-${{ matrix.node-version }}-build-${{ env.cache-name }}-
+      - name: Set Up Langs
+        uses: ./.github/actions/set-up-langs
 
-      - name: Cache Python modules
-        uses: actions/cache@v3
-        env:
-          cache-name: cache-python-modules
-        with:
-          path: ./.pipenv_cache
-          key: ${{ matrix.os }}-${{ matrix.python-version }}-build-${{ env.cache-name }}-${{ hashFiles('**/Pipfile.lock') }}
-          restore-keys: |
-            ${{ matrix.os }}-${{ matrix.python-version }}-build-${{ env.cache-name }}-
+      # - name: Cache node modules # https://docs.github.com/en/free-pro-team@latest/actions/guides/caching-dependencies-to-speed-up-workflows
+      #   uses: actions/cache@v3
+      #   env:
+      #     cache-name: cache-node-modules
+      #   with:
+      #     path: ./.npm_cache
+      #     key: ${{ matrix.os }}-${{ matrix.node-version }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+      #     restore-keys: |
+      #       ${{ matrix.os }}-${{ matrix.node-version }}-build-${{ env.cache-name }}-
 
-      - name: Cache Pre-commit hooks
-        uses: actions/cache@v3
-        env:
-          cache-name: cache-pre-commit-hooks
-        if: matrix.IS_FASTEST_JOB == true
-        with:
-          path: ~/.precommit_cache # Eli (10/22/20): Having the pre-commit cache inside the repo creates problems with Pytest detecting test files inside the cache
-          key: ${{ matrix.os }}-${{ matrix.python-version }}-${{ matrix.node-version }}-build-${{ env.cache-name }}-${{ hashFiles('**/.pre-commit-config.yaml') }}
-          restore-keys: |
-            ${{ matrix.os }}-${{ matrix.python-version }}-${{ matrix.node-version }}-build-${{ env.cache-name }}-
+      # - name: Cache Python modules
+      #   uses: actions/cache@v3
+      #   env:
+      #     cache-name: cache-python-modules
+      #   with:
+      #     path: ./TODO
+      #     key: ${{ matrix.os }}-${{ matrix.python-version }}-build-${{ env.cache-name }}-${{ hashFiles('**/Pipfile.lock') }}
+      #     restore-keys: |
+      #       ${{ matrix.os }}-${{ matrix.python-version }}-build-${{ env.cache-name }}-
+
+      # - name: Cache Pre-commit hooks
+      #   uses: actions/cache@v3
+      #   env:
+      #     cache-name: cache-pre-commit-hooks
+      #   if: matrix.IS_FASTEST_JOB == true
+      #   with:
+      #     path: ~/.precommit_cache # Eli (10/22/20): Having the pre-commit cache inside the repo creates problems with Pytest detecting test files inside the cache
+      #     key: ${{ matrix.os }}-${{ matrix.python-version }}-${{ matrix.node-version }}-build-${{ env.cache-name }}-${{ hashFiles('**/.pre-commit-config.yaml') }}
+      #     restore-keys: |
+      #       ${{ matrix.os }}-${{ matrix.python-version }}-${{ matrix.node-version }}-build-${{ env.cache-name }}-
 
       - name: Display Chrome version (Windows)
         if: runner.os == 'Windows'
@@ -118,53 +110,24 @@ jobs:
           google-chrome --version
           chromedriver --version
 
-      - name: Get Version
-        id: software-version
-        uses: notiz-dev/github-action-json-property@v0.2.0
-        with:
-          path: "package.json"
-          prop_path: "version"
-
-      - name: Get Product Name
-        id: product-name
-        uses: notiz-dev/github-action-json-property@v0.2.0
-        with:
-          path: "package.json"
-          prop_path: "name"
-
       - name: Display Extracted Software Version and Product Name
         run: |
           echo ${{steps.software-version.outputs.prop}}
           echo ${{steps.product-name.outputs.prop}}
 
-      - name: Install pipenv # no known reason for this specific version of pipenv, just pinning it for good practice
-        run: pip install pipenv==2020.11.15
+      - name: Set Up Controller
+        uses: ./.github/actions/set-up-controller
 
-      - name: Setup Pipenv
-        env:
-          PIPENV_VENV_IN_PROJECT: 1
-        # Eli (10/28/20): in the windows environments, just saying `pipenv --three` defaults to the highest installed version of Python on the image...not the actual one specified in the matrix. So need to specify
+      # TODO put these into Set Up Controller and rename the action
+      - name: Setup UI
         run: |
-          pipenv --python ${{ matrix.python-version }}
-          pipenv run pip freeze
+          cd ui/
+          npm ci
 
-      - name: Install Python Dependencies
-        env:
-          PIPENV_CACHE_DIR: ./.pipenv_cache
-        # Eli (10/28/20): The --sequential flag was found to be necessary on windows due to issues where scipy wouldn't recognize that it had been installed. Also, when this was part of a set of multiple run commands using the pipe, when it errored it didn't cause the whole step to fail, so separating it out into its own step
-        run: pipenv install --dev --deploy --sequential
-
-      - name: Download zlib Library
-        run: pipenv run python .github/workflows/run_zlib_download.py
-
-      - name: Install Local Package in editable mode for testing
-        run: pipenv run pip install -e .
-
-      - name: Log full installed Python packages
-        run: pipenv run pip freeze
-
-      - name: Install NPM Dependencies
-        run: pipenv run npm ci --cache .npm_cache/
+      - name: Setup Electron
+        run: |
+          cd electron/
+          npm ci
 
       - name: Run pre-commit hooks
         # only enable pre-commit on the fastest job.
@@ -172,18 +135,23 @@ jobs:
         env:
           PRE_COMMIT_HOME: ~/.precommit_cache
         run: |
-          pipenv run pre-commit install
-          pipenv run pre-commit run -a
+          cd controller/
+          poetry run pre-commit install
+          poetry run pre-commit run -a
 
       - name: Run Python Tests with randomly generated seed
         if: github.event.inputs.randomlyseed == ''
-        timeout-minutes: 40
-        run: pipenv run pytest -xsvv --cov-report=xml --include-slow-tests --full-ci
+        timeout-minutes: 15
+        run: |
+          cd controller/
+          poetry run pytest -xsvv --cov-report=xml --include-slow-tests --full-ci
 
       - name: Run Python Tests with supplied pytest-randomly seed
         if: github.event.inputs.randomlyseed != ''
-        timeout-minutes: 40
-        run: pipenv run pytest -xsvv --cov-report=xml --include-slow-tests --full-ci --randomly-seed=${{ github.event.inputs.randomlyseed }}
+        timeout-minutes: 15
+        run: |
+          cd controller/
+          poetry run pytest -xsvv --cov-report=xml --include-slow-tests --full-ci --randomly-seed=${{ github.event.inputs.randomlyseed }}
 
       # TODO
       # - name: Run Jest Tests for Electron
@@ -200,49 +168,44 @@ jobs:
         env:
           PRE_COMMIT_HOME: ./.precommit_cache
         # only enable pre-commit on the fastest job
-        run: pipenv run pre-commit run git-dirty -a
-
-      - name: Insert the Build Number and Software Version into the code (Windows)
-        if: runner.os == 'Windows'
-        env:
-          build_number: ${{ github.run_number }}
         run: |
-          echo $env:build_number
-          ((Get-Content -path src\controllertroller\constants.py -Raw) -replace 'REPLACETHISWITHTIMESTAMPDURINGBUILD',"$(Get-Date -Format 'yyMMddHHmmss')--$env:build_number") | Set-Content -Path src\controllertroller\constants.py
-          ((Get-Content -path src\controllertroller\constants.py -Raw) -replace 'REPLACETHISWITHVERSIONDURINGBUILD',"${{steps.software-version.outputs.prop}}") | Set-Content -Path src\controllertroller\constants.py
-          ((Get-Content -path src\controllertroller\constants.py -Raw) -replace 'REPLACETHISWITHENDPOINTDURINGBUILD',"${{github.event.inputs.api_endpoint}}") | Set-Content -Path src\controllertroller\constants.py
-          ((Get-Content -path src\main\index.js -Raw) -replace 'REPLACETHISWITHENDPOINTDURINGBUILD',"${{env.API_ENDPOINT}}") | Set-Content -Path src\main\index.js
+          cd controller/
+          poetry run pre-commit run git-dirty -a
 
-      - name: Insert the Build Number and Software Version into the code (Linux)
-        if: runner.os == 'Linux'
+      - name: Insert the Build Number and Software Version into the code
         env:
           build_number: ${{ github.run_number }}
+        shell: bash
         run: |
           echo $build_number
-          sed -i 's/REPLACETHISWITHTIMESTAMPDURINGBUILD/'"$(date +'%y%m%d%H%M%S')"'--$build_number/g' src/controllertroller/constants.py
-          sed -i 's/REPLACETHISWITHVERSIONDURINGBUILD/'"${{steps.software-version.outputs.prop}}"'/g' src/controllertroller/constants.py
-          sed -i 's/REPLACETHISWITHENDPOINTDURINGBUILD/'"${{github.event.inputs.api_endpoint}}"'/g' src/controllertroller/constants.py
-          sed -i 's/REPLACETHISWITHENDPOINTDURINGBUILD/'"${{github.event.inputs.api_endpoint}}"'/g' src/main/index.js
+          sed -i 's/REPLACETHISWITHTIMESTAMPDURINGBUILD/'"$(date +'%y%m%d%H%M%S')"'--$build_number/g' controller/src/controller/constants.py
+          sed -i 's/REPLACETHISWITHVERSIONDURINGBUILD/'"${{steps.software-version.outputs.prop}}"'/g' controller/src/controller/constants.py
+          sed -i 's/REPLACETHISWITHENDPOINTDURINGBUILD/'"${{github.event.inputs.api_endpoint}}"'/g' controller/src/controller/constants.py
+          sed -i 's/REPLACETHISWITHENDPOINTDURINGBUILD/'"${{github.event.inputs.api_endpoint}}"'/g' electron/main/index.js
 
       - name: Compile the Python Executable
-        run: pipenv run pyinstaller pyinstaller.spec --log-level=DEBUG --distpath=dist-python --workpath=build-python
+        run: |
+          cd controller/
+          poetry run pyinstaller pyinstaller.spec --log-level=DEBUG --distpath=../electron/dist-python --workpath=build-python
 
-      - name: Run Python Tests on Executable with randomly generated seed
-        if: github.event.inputs.randomlyseed == ''
-        run: pipenv run pytest tests/test_exe.py -xsvv --only-exe --no-cov
+      # TODO
+      # - name: Run Python Tests on Executable with randomly generated seed
+      #   if: github.event.inputs.randomlyseed == ''
+      #   run: |
+      #     cd controller/
+      #     poetry run pytest tests/test_exe.py -xsvv --only-exe --no-cov
 
-      - name: Run Python Tests on Executable with supplied pytest-randomly seed
-        if: github.event.inputs.randomlyseed != ''
-        run: pipenv run pytest tests/test_exe.py -xsvv --only-exe --no-cov --randomly-seed=${{ github.event.inputs.randomlyseed }}
-
-      - name: Build Full Electron App
-        run: pipenv run npm run build-unstable
+      # - name: Run Python Tests on Executable with supplied pytest-randomly seed
+      #   if: github.event.inputs.randomlyseed != ''
+      #   run: |
+      #     cd controller/
+      #     poetry run pytest tests/test_exe.py -xsvv --only-exe --no-cov --randomly-seed=${{ github.event.inputs.randomlyseed }}
 
       - name: Upload coverage to Codecov
         # only upload coverage from fastest job
         if: matrix.IS_FASTEST_JOB == true
         uses: codecov/codecov-action@v3
-        timeout-minutes: 1 # Tanner (8/11/20): once fundmental issue with codecov timeout is fixed, remove this line and the next
+        timeout-minutes: 1
         continue-on-error: true
         with:
           file: ./coverage.xml
@@ -251,16 +214,23 @@ jobs:
           name: codecov-umbrella
           fail_ci_if_error: true
 
-      - name: Archive Installer File
-        if: runner.os == 'Windows'
-        uses: actions/upload-artifact@v3
-        with:
-          name: installer--${{ matrix.os }}--${{ matrix.node-version }}--${{ matrix.python-version }}
-          path: "dist/Stingray*.exe"
+      - name: Build Full Electron App
+        run: |
+          cd ui/
+          npm run build
+          cd ../electron
+          npm run build-unstable
 
-      - name: Archive Dist Folder
-        if: runner.os == 'Windows'
-        uses: actions/upload-artifact@v3
-        with:
-          name: dist--${{ matrix.os }}--${{ matrix.node-version }}--${{ matrix.python-version }}
-          path: "dist/**/*"
+      # - name: Archive Installer File
+      #   if: runner.os == 'Windows'
+      #   uses: actions/upload-artifact@v3
+      #   with:
+      #     name: installer--${{ matrix.os }}--${{ matrix.node-version }}--${{ matrix.python-version }}
+      #     path: "dist/Stingray*.exe"
+
+      # - name: Archive Dist Folder
+      #   if: runner.os == 'Windows'
+      #   uses: actions/upload-artifact@v3
+      #   with:
+      #     name: dist--${{ matrix.os }}--${{ matrix.node-version }}--${{ matrix.python-version }}
+      #     path: "dist/**/*"

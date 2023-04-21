@@ -1,0 +1,23 @@
+name: "Set Up Controller"
+description: "Set up tools needed to run controller"
+runs:
+  using: composite
+  steps:
+    - name: Download zlib Library
+      shell: bash
+      run: |
+        pip install requests
+        python .github/actions/run_zlib_download.py
+
+    - name: Install Poetry
+      shell: bash
+      run: |
+        pip install poetry==1.4.2
+        poetry --version
+
+    - name: Set Up Controller Package
+      shell: bash
+      run: |
+        cd controller/
+        poetry install
+        poetry show
