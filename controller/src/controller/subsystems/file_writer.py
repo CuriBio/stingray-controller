@@ -1,22 +1,24 @@
 # -*- coding: utf-8 -*-
 import asyncio
-from collections import deque, namedtuple
+from collections import deque
+from collections import namedtuple
 import datetime
 import json
-import logging, numpy as np
+import logging
 import os
 import tempfile
 from typing import Any
 import uuid
 
 import h5py
+import numpy as np
 from pulse3D.constants import DATETIME_STR_FORMAT as METADATA_DATETIME_STR_FORMAT
 from pulse3D.constants import IS_CALIBRATION_FILE_UUID
 from pulse3D.constants import METADATA_UUID_DESCRIPTIONS
 from pulse3D.constants import NOT_APPLICABLE_H5_METADATA
 from pulse3D.constants import PLATE_BARCODE_UUID
+from pulse3D.constants import START_RECORDING_TIME_INDEX_UUID
 from pulse3D.constants import STIMULATION_PROTOCOL_UUID
-from pulse3D.constants import STIMULATION_READINGS, START_RECORDING_TIME_INDEX_UUID
 from pulse3D.constants import TIME_INDICES
 from pulse3D.constants import TIME_OFFSETS
 from pulse3D.constants import TISSUE_SENSOR_READINGS
@@ -24,9 +26,10 @@ from pulse3D.constants import UTC_BEGINNING_DATA_ACQUISTION_UUID
 from pulse3D.constants import UTC_BEGINNING_RECORDING_UUID
 from pulse3D.plate_recording import MantarrayH5FileCreator
 
-from ..constants import CURRENT_RECORDING_FILE_VERSION, NUM_WELLS
+from ..constants import CURRENT_RECORDING_FILE_VERSION
 from ..constants import NUM_MAG_DATA_CHANNELS_PER_WELL
 from ..constants import NUM_MAG_SENSORS_PER_WELL
+from ..constants import NUM_WELLS
 from ..utils.aio import wait_tasks_clean
 from ..utils.generic import handle_system_error
 
@@ -79,10 +82,7 @@ class FileWriter:
         self._end_of_stim_stream_reached = False
 
         self._mag_data_buffer: deque[dict[str, Any]] = deque()
-        self._stim_data_buffers: dict[int, tuple[deque[int], deque[int]]] = {
-            # TODO
-            # protocol_idx: (deque(), deque()) for protocol_idx in range(len(self._stim_info["protocols"]))
-        }
+        self._stim_data_buffers: dict[int, tuple[deque[int], deque[int]]] = dict()
 
     # PROPERTIES
 
@@ -119,9 +119,8 @@ class FileWriter:
             logger.exception(ERROR_MSG)
             handle_system_error(e, system_error_future)
         finally:
-            # TODO make this a function?
             if self._current_recording_file:
-                self._current_recording_file.close()
+                await self._handle_file_close()
             self._calibration_tmp_dir.cleanup()
             logger.info("FileWriter shut down")
 
@@ -132,12 +131,25 @@ class FileWriter:
             comm_from_monitor = await self._from_monitor_queue.get()
 
             match comm_from_monitor:
+                case {"command": "start_data_stream"}:
+                    self._start_data_stream_timestamp_utc = datetime.datetime.utcnow()
+                case {"command": "stop_data_stream"}:
+                    self._start_data_stream_timestamp_utc = None
+                    if self._current_recording_file:
+                        await self._handle_file_close()
                 case {"command": "start_recording"}:
                     await self._start_recording(comm_from_monitor)
                 case {"command": "stop_recording"}:
                     await self._stop_recording(comm_from_monitor)
                 case {"command": "update_recording_name"}:
                     await self._update_recording_name(comm_from_monitor)
+                case {"command": "set_stim_protocols", "stim_info": stim_info}:
+                    self._stim_info = stim_info
+                    self._stim_data_buffers = {
+                        protocol_idx: deque() for protocol_idx in range(len(stim_info["protocols"]))
+                    }
+
+            # TODO send responses for all these commands except stop_recording
 
     async def _handle_incoming_data(self) -> None:
         while True:
@@ -156,7 +168,7 @@ class FileWriter:
     # COMMAND HANDLERS
 
     async def _start_recording(self, command: dict[str, Any]) -> None:
-        # TODO handle setting this UTC_FIRST_TISSUE_DATA_POINT_UUID
+        # TODO handle setting this UTC_FIRST_TISSUE_DATA_POINT_UUID in create_start_recording_command
         metadata = command["metadata"]
 
         self._recording_time_idx_bounds.start = metadata[START_RECORDING_TIME_INDEX_UUID]
@@ -183,60 +195,45 @@ class FileWriter:
             await self._record_data_from_buffers()
 
     async def _stop_recording(self, command: dict[str, Any]) -> None:
-        # TODO refactor this entire method
-        self._recording_time_idx_bounds.stop = "TODO"
-
-        # no further action needed if this is stopping a calibration recording
-        if self._is_calibration_recording:
+        # if the final timpeoint need is not present, then there's nothing else to do yet
+        if self._current_recording_file[TIME_INDICES][-1] < command["stop_timepoint"]:
+            self._recording_time_idx_bounds.stop = command["stop_timepoint"]
             return
 
-        this_file = self._open_files[board_idx][this_well_idx]
-        latest_timepoint = self.get_file_latest_timepoint(this_well_idx)
+        # TODO ? no further action needed if this is stopping a calibration recording
+        # if self._is_calibration_recording:
+        #     return
 
-        # find num points needed to remove from magnetometer datasets
-        time_index_dataset = get_time_index_dataset_from_file(this_file)
-        try:
-            num_indices_to_remove = next(
-                i for i, time in enumerate(reversed(time_index_dataset)) if time <= stop_recording_timepoint
-            )
-        except StopIteration as e:
-            raise InvalidStopRecordingTimepointError(
-                f"The timepoint {stop_recording_timepoint} is earlier than all recorded timepoints"
-            ) from e
-        # trim off data after stop recording timepoint
-        magnetometer_datasets = [
-            time_index_dataset,
-            get_time_offset_dataset_from_file(this_file),
-            get_tissue_dataset_from_file(this_file),
-        ]
-        for dataset in magnetometer_datasets:
-            dataset_shape = list(dataset.shape)
-            dataset_shape[-1] -= num_indices_to_remove
-            dataset.resize(dataset_shape)
+        # if the final timepoint needed is already present, then clear the recording bounds as the recording can be completed without another data packet
+        self._recording_time_idx_bounds.start = None
+        self._recording_time_idx_bounds.stop = None
 
-        # find num points needed to remove from stimulation datasets
-        stimulation_dataset = get_stimulation_dataset_from_file(this_file)
-        try:
-            num_indices_to_remove = next(
-                i
-                for i, time in enumerate(reversed(stimulation_dataset[0]))
-                if time <= stop_recording_timepoint
-            )
-        except StopIteration:
-            num_indices_to_remove = 0
-        # trim off data after stop recording timepoint
-        dataset_shape = list(stimulation_dataset.shape)
-        dataset_shape[-1] -= num_indices_to_remove
-        stimulation_dataset.resize(dataset_shape)
+        final_magnetometer_data_idx = np.argmax(
+            self._current_recording_file[TIME_INDICES] > command["stop_timepoint"]
+        )
 
-        # TODO change this to something else?
-        # finalization_status = bool(  # need to convert from numpy._bool to regular bool
-        #     latest_timepoint >= stop_recording_timepoint
-        # )
-        # self._tissue_data_finalized_for_recording[board_idx][this_well_idx] = finalization_status
+        # trim off magnetometer data after stop recording timepoint
+        for data_type in (TIME_INDICES, TIME_OFFSETS, TISSUE_SENSOR_READINGS):
+            current_recorded_data = self._current_recording_file[data_type]
+            current_recorded_data.resize([*current_recorded_data.shape[:-1], final_magnetometer_data_idx])
 
-        # finalize here instead of waiting for next packet
-        self._finalize_completed_files()
+        # TODO
+        # # find num points needed to remove from stimulation datasets
+        # stimulation_dataset = get_stimulation_dataset_from_file(this_file)
+        # try:
+        #     num_indices_to_remove = next(
+        #         i
+        #         for i, time in enumerate(reversed(stimulation_dataset[0]))
+        #         if time <= stop_recording_timepoint
+        #     )
+        # except StopIteration:
+        #     num_indices_to_remove = 0
+        # # trim off data after stop recording timepoint
+        # dataset_shape = list(stimulation_dataset.shape)
+        # dataset_shape[-1] -= num_indices_to_remove
+        # stimulation_dataset.resize(dataset_shape)
+
+        await self._handle_file_close()
 
     async def _update_recording_name(self, command: dict[str, str]) -> None:
         new_recording_path = self._current_recording_path.replace(
@@ -254,8 +251,7 @@ class FileWriter:
         if not self._end_of_mag_stream_reached:
             self._mag_data_buffer.append(data_packet)
 
-        # TODO figure out how to denote the case where recording has stopped by the file is still open and waiting for the final data point to be received. Could probably just set self._is_recording = False only after the file is closed
-        if self._is_recording:  # or self._board_has_open_files:
+        if self._is_recording:
             self._handle_recording_of_mag_data_packet(data_packet)
 
     async def _process_stim_data_packet(self, data_packet) -> None:
@@ -264,7 +260,7 @@ class FileWriter:
             self._end_of_stim_stream_reached = False
             self._clear_stim_data_buffers()  # TODO
             # TODO try to handle stim chunking entirely in InstrumentComm
-            self._reset_stim_idx_counters()  # TODO
+            # self._reset_stim_idx_counters()  # TODO
         if not self._end_of_stim_stream_reached:
             self.append_to_stim_data_buffers(data_packet["protocol_statuses"])  # TODO
             # output_queue = self._board_queues[board_idx][1]
@@ -281,7 +277,6 @@ class FileWriter:
             self._current_recording_path, file_format_version=CURRENT_RECORDING_FILE_VERSION
         )
 
-        # TODO set this value when start_data_stream command is received
         metadata_for_file[
             UTC_BEGINNING_DATA_ACQUISTION_UUID
         ] = self._start_data_stream_timestamp_utc.strftime(METADATA_DATETIME_STR_FORMAT)
@@ -359,12 +354,11 @@ class FileWriter:
                 self._handle_recording_of_stim_statuses(protocol_idx, protocol_buffers)
 
     async def _handle_recording_of_mag_data_packet(self, data_packet) -> None:
-        # TODO all of this probably needs to be refactored
         if self._recording_time_idx_bounds.start is None:  # check needed for mypy to be happy
             raise NotImplementedError("_recording_time_idx_bounds.start should never be None here")
 
-        # TODO swap in H5 dataset labels here to grab values from data packet dict?
-        time_indices = data_packet["time_indices"]
+        # TODO swap in H5 dataset labels here in other subsystems too
+        time_indices = data_packet[TIME_INDICES]
 
         if time_indices[-1] < self._recording_time_idx_bounds.start:
             # if final data point is less than the recording start time, then there's nothing else to do
@@ -398,6 +392,9 @@ class FileWriter:
             )
             current_recorded_data[..., previous_recorded_data_len:] = new_data_to_record
 
+        if self._recording_time_idx_bounds.stop is None:
+            await self._handle_file_close()
+
         # # record new time indices
         # current_recorded_time_indices = self._current_recording_file[TIME_INDICES]
         # previous_time_idx_data_len = current_recorded_time_indices.shape[0]
@@ -420,7 +417,7 @@ class FileWriter:
         # # record new tissue data
         # current_recorded_tissue_data = self._current_recording_file[TISSUE_SENSOR_READINGS]
         # previous_tissue_data_data_len = current_recorded_tissue_data.shape[2]
-        # new_tissue_data_to_record = data_packet["TODO"][data_window]
+        # new_tissue_data_to_record = data_packet["???"][data_window]
         # current_recorded_tissue_data.resize(
         #     (
         #         current_recorded_tissue_data.shape[0],
@@ -466,3 +463,19 @@ class FileWriter:
         previous_data_size = stimulation_dataset.shape[1]
         stimulation_dataset.resize((2, previous_data_size + stim_data_arr.shape[1]))
         stimulation_dataset[:, previous_data_size:] = stim_data_arr
+
+    async def _handle_file_close(self):
+        self._current_recording_file.close()
+
+        msg_to_main = {"command": "stop_recording"}
+
+        # after h5 close, reopen them and attempt to read. If not possible then add file to list
+        try:
+            with h5py.File(self._current_recording_path, "r"):
+                pass  # if file opens, then there is no corruption
+        except Exception:
+            # TODO does a different message need to be sent if this is a calibration recording?
+            msg_to_main["corrupted_file"] = self._current_recording_path
+
+        # TODO does a different message need to be sent if this is a calibration recording?
+        await self._to_monitor_queue.put(msg_to_main)
