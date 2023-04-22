@@ -3,71 +3,13 @@ import StimulationStudioProtocolViewer from "@/components/stimulation/Stimulatio
 import StimulationStudioWaveform from "@/components/stimulation/StimulationStudioWaveform.vue";
 import Vuex from "vuex";
 import { convertXYArraysToD3Array } from "@/js-utils/WaveformDataFormatter.js";
+import { TEST_PROTOCOL_ORDER_2 } from "@/tests/sample-stim-protocols/stim-protocols";
 
 const localVue = createLocalVue();
 localVue.use(Vuex);
 let NuxtStore;
 let store;
 
-const testProtocolOrder = [
-  {
-    type: "Biphasic",
-    src: "placeholder",
-    color: "#ffff1",
-    pulseSettings: {
-      phaseOneDuration: 30,
-      phaseOneCharge: 20,
-      interphaseInterval: 5,
-      phaseTwoDuration: 10,
-      phaseTwoCharge: -5,
-      postphaseInterval: 10,
-      totalActiveDuration: {
-        duration: 2000,
-        unit: "milliseconds",
-      },
-      numCycles: 2,
-    },
-  },
-  {
-    type: "Monophasic",
-    src: "placeholder",
-    color: "#ffff2",
-    pulseSettings: {
-      phaseOneDuration: 30,
-      phaseOneCharge: 2,
-      postphaseInterval: 20,
-      totalActiveDuration: {
-        duration: 1000,
-        unit: "milliseconds",
-      },
-      numCycles: 1,
-    },
-  },
-  {
-    type: "Delay",
-    src: "placeholder",
-    color: "#ffff3",
-    pulseSettings: {
-      duration: 1300,
-      unit: "seconds",
-    },
-  },
-  {
-    type: "Monophasic",
-    src: "placeholder",
-    color: "#ffff4",
-    pulseSettings: {
-      phaseOneDuration: 30,
-      phaseOneCharge: 50,
-      postphaseInterval: 10,
-      totalActiveDuration: {
-        duration: 2000,
-        unit: "milliseconds",
-      },
-      numCycles: 2,
-    },
-  },
-];
 describe("StimulationStudioProtocolViewer.vue", () => {
   beforeAll(async () => {
     const storePath = `${process.env.buildDir}/store.js`;
@@ -165,7 +107,7 @@ describe("StimulationStudioProtocolViewer.vue", () => {
       localVue,
     });
 
-    await store.dispatch("stimulation/handleProtocolOrder", testProtocolOrder);
+    await store.dispatch("stimulation/handleProtocolOrder", TEST_PROTOCOL_ORDER_2);
     expect(wrapper.vm.repeatColors).toBe(store.state.stimulation.repeatColors);
   });
 
@@ -177,7 +119,7 @@ describe("StimulationStudioProtocolViewer.vue", () => {
 
     const testValue = 5;
 
-    await store.dispatch("stimulation/handleProtocolOrder", testProtocolOrder);
+    await store.dispatch("stimulation/handleProtocolOrder", TEST_PROTOCOL_ORDER_2);
     await store.dispatch("stimulation/handleNewRestDuration", testValue);
 
     expect(wrapper.vm.delayBlocks).toBe(store.state.stimulation.delayBlocks);
@@ -223,7 +165,7 @@ describe("StimulationStudioProtocolViewer.vue", () => {
         localVue,
       });
 
-      await store.dispatch("stimulation/handleProtocolOrder", testProtocolOrder);
+      await store.dispatch("stimulation/handleProtocolOrder", TEST_PROTOCOL_ORDER_2);
       const { xAxisValues, yAxisValues } = store.state.stimulation;
       const dPoints = await convertXYArraysToD3Array(xAxisValues, yAxisValues);
       await wrapper.setProps({ dataPoints: dPoints });
@@ -244,7 +186,7 @@ describe("StimulationStudioProtocolViewer.vue", () => {
         localVue,
       });
 
-      await store.dispatch("stimulation/handleProtocolOrder", testProtocolOrder);
+      await store.dispatch("stimulation/handleProtocolOrder", TEST_PROTOCOL_ORDER_2);
       const { xAxisValues, yAxisValues } = store.state.stimulation;
       const dPoints = await convertXYArraysToD3Array(xAxisValues, yAxisValues);
       await wrapper.setProps({ dataPoints: dPoints });

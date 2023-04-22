@@ -25,6 +25,7 @@ const state = () => ({
     color: null,
   },
   stimulatorCircuitStatuses: [],
+  invalidImportedProtocols: [],
 });
 
 export default {

@@ -27,10 +27,6 @@ export default {
       return state.currentAssignment;
     }
   },
-  getStimulationType({ protocolEditor }) {
-    return protocolEditor.stimulationType === "C" ? "Current" : "Voltage";
-  },
-
   getProtocolName({ protocolEditor }) {
     return protocolEditor.name;
   },
@@ -39,7 +35,7 @@ export default {
   },
 };
 
-const getProtocolEditorLetter = (list) => {
+export const getProtocolEditorLetter = (list) => {
   const protocolIdx = list.length - 1;
   const letterAssignment = ALPHABET[protocolIdx % 26];
   const numLetters = Math.floor(protocolIdx / 26) + 1;

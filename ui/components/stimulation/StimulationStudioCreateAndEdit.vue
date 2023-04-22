@@ -26,18 +26,16 @@
     </div>
     <div
       v-for="(key, value, idx) in importExportBtnLabels"
-      :id="value"
+      id="importExportButton"
       :key="value"
       @click.exact="handleImportExport(idx)"
     >
       <div :class="'div__stimulationstudio-btn-container'" :style="key">
         <span type="button" :class="'span__stimulationstudio-btn-label'">{{ value }}</span>
-        <input ref="file" type="file" style="display: none" @change="handleImport($event.target.files)" />
       </div>
     </div>
   </div>
 </template>
-
 <script>
 import SelectDropDown from "@/components/basic-widgets/SelectDropDown.vue";
 import { mapActions, mapMutations, mapState } from "vuex";
@@ -141,7 +139,15 @@ export default {
     },
     handleImportExport(idx) {
       if (idx === 0) {
-        this.$refs.file[idx].click();
+        // this adds and removes the input element to be able to allow importing the same file twice in a row.
+        // Otherwise the @change event won't get triggered if the same file is selected twice.
+        const inputEl = document.createElement("input");
+        document.body.appendChild(inputEl);
+        inputEl.setAttribute("ref", "file");
+        inputEl.setAttribute("type", "file");
+        inputEl.addEventListener("change", (e) => this.handleImport(e.target.files));
+        inputEl.click();
+        inputEl.remove();
       } else if (idx === 1) {
         this.handleExport();
       }
