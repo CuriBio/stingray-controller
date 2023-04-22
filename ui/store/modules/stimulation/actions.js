@@ -157,7 +157,7 @@ export default {
   async handleExportProtocol({ state }) {
     const { protocolAssignments, protocolList } = state;
     // convert to snakecase to be interchangable with MA controller
-    const protocolCopy = JSON.parse(JSON.stringify(protocolList)).map((protocol) =>
+    const protocolCopy = [...protocolList].map((protocol) =>
       convertProtocolCasing(protocol, _convertObjToSnakeCase)
     );
 
@@ -206,6 +206,8 @@ export default {
   async addImportedProtocol({ commit, getters }, { protocols }) {
     const invalidImportedProtocols = [];
     for (const [idx, { protocol }] of Object.entries(protocols)) {
+      // if protocol is unnamed, assign generic name with place in list, +1 to index
+      protocol.name = protocol.name.length > 0 ? protocol.name : `protocol_${idx + 1}`;
       // (22/04/2023) For now with mantarray, all protocols will be exported in snake_case, including from stingray
       const convertedProtocol = convertProtocolCasing(protocol, _convertObjToCamelCase);
       const invalidPulses = convertedProtocol.subprotocols.filter((pulse) => {
@@ -220,9 +222,7 @@ export default {
         const importedProtocol = { color, letter, label: protocol.name, protocol: convertedProtocol };
         await commit("setNewProtocol", importedProtocol);
       } else {
-        // if protocol is unnamed, assign generic name with place in list, +1 to index
-        const nameToUse = protocol.name && protocol.name.length > 0 ? protocol.name : `protocol_${idx + 1}`;
-        invalidImportedProtocols.push(nameToUse);
+        invalidImportedProtocols.push(protocol.name);
       }
     }
 

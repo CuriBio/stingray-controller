@@ -208,6 +208,9 @@ export default {
     protocolName: function () {
       this.checkNameValidity(this.protocolName);
     },
+    protocolList: function () {
+      this.updateProtocols();
+    },
   },
   created() {
     this.updateProtocols();
