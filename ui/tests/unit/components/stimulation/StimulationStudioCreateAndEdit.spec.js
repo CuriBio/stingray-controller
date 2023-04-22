@@ -139,7 +139,7 @@ describe("StimulationStudioCreateAndEdit.vue", () => {
       attachToDocument: true,
     });
 
-    await wrapper.findAll("#import_export_button").at(0).trigger("click");
+    await wrapper.findAll("#importExportButton").at(0).trigger("click");
     // calling directly here because input element gets removed before it can be manually clicked here on the wrapper
     wrapper.vm.handleImport([new File([new Blob()], "testFilename")]);
     expect(importSpy).toHaveBeenCalledTimes(1);

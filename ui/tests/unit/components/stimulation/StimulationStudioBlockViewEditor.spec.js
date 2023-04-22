@@ -57,13 +57,13 @@ describe("StimulationStudioDragAndDropPanel.vue", () => {
     expect(wrapper.vm.currentLetter).toBe(testParam1.letter);
     expect(wrapper.vm.restDuration).toBe("20");
     expect(wrapper.vm.stopOptionIdx).toBe(1);
-    expect(wrapper.vm.disabledTime).toBe(false);
+    expect(wrapper.vm.disabledTime).toBe(true);
 
     await store.dispatch("stimulation/editSelectedProtocol", testParam2);
     expect(wrapper.vm.currentLetter).toBe(testParam2.letter);
     expect(wrapper.vm.restDuration).toBe("40");
     expect(wrapper.vm.stopOptionIdx).toBe(0);
-    expect(wrapper.vm.disabledTime).toBe(true);
+    expect(wrapper.vm.disabledTime).toBe(false);
   });
 
   test("When a user adds input to frequency input, Then the change will be recorded in data", async () => {
