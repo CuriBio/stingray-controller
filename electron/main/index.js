@@ -246,9 +246,11 @@ app.on("second-instance", (event, commandLine, workingDirectory) => {
 
 // This is another place to handle events after all windows are closed
 app.once("will-quit", function (e) {
-  // This is a good place to add tests ensuring the app is still
-  // responsive and all windows are closed.
   console.log("will-quit event being handled"); // allow-log
+
+  // prevent default behavior which is the app immediately closing upon completion of this callback.
+  // app exit will be handled manually
+  e.preventDefault();
 
   const autoInstallStr = autoUpdater.autoInstallOnAppQuit ? "enabled" : "disabled";
   console.log(
@@ -270,8 +272,14 @@ app.once("will-quit", function (e) {
 });
 
 const exitAppClean = () => {
-  if (waitForSubprocessToComplete === null) {
+  const exit = () => {
+    console.log("App exiting"); // allow-log
     app.exit();
+  };
+
+  if (waitForSubprocessToComplete === null) {
+    console.log("No subprocess being waited on");
+    exit();
   }
 
   const waitForSubprocessToCompleteWithTimeout = new Promise((resolve) => {
@@ -280,8 +288,7 @@ const exitAppClean = () => {
   });
   waitForSubprocessToCompleteWithTimeout.then((msg) => {
     console.log(msg); // allow-log
-    console.log("App exiting"); // allow-log
-    app.exit();
+    exit();
   });
 };
 

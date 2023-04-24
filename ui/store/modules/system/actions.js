@@ -86,7 +86,7 @@ export default {
             break;
           case "sw_update":
             if (wsMessage.allow_software_update !== undefined) {
-              commit("system/setAllowSwUpdateInstall", wsMessage.allow_software_update);
+              commit("system/setallowSwUpdateInstall", wsMessage.allow_software_update);
             }
             if (wsMessage.software_update_available !== undefined) {
               const status = wsMessage.software_update_available ? "found" : "not found";
