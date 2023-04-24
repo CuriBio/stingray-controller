@@ -183,14 +183,14 @@ describe("store/system", () => {
   //     };
 
   //     // confirm precondition
-  //     expect(store.state.system.allowSWUpdateInstall).toBe(false);
+  //     expect(store.state.system.allowSwUpdateInstall).toBe(false);
 
   //     await new Promise((resolve) => {
   //       socketServerSide.emit("swUpdate", JSON.stringify(message), (ack) => {
   //         resolve(ack);
   //       });
   //     });
-  //     expect(store.state.system.allowSWUpdateInstall).toBe(true);
+  //     expect(store.state.system.allowSwUpdateInstall).toBe(true);
   //   });
   //   test("When backend emits swUpdate message with softwareUpdateAvailable value, Then ws client commits value to store", async () => {
   //     const message = {

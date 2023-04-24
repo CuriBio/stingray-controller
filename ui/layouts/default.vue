@@ -60,7 +60,7 @@ export default {
   },
   computed: {
     ...mapState("stimulation", ["stimPlayState"]),
-    ...mapState("system", ["statusUuid", "allowSWUpdateInstall"]),
+    ...mapState("system", ["statusUuid", "allowSwUpdateInstall"]),
   },
 
   methods: {

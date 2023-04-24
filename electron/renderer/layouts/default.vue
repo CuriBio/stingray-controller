@@ -63,12 +63,12 @@ export default {
   },
   computed: {
     ...mapState("stimulation", ["stimPlayState"]),
-    ...mapState("system", ["statusUuid", "allowSWUpdateInstall", "isConnectedToController"]),
+    ...mapState("system", ["statusUuid", "allowSwUpdateInstall", "isConnectedToController"]),
     ...mapState("settings", ["userAccounts", "activeUserIndex"]),
   },
   watch: {
     allowSwUpdateInstall: function () {
-      ipcRenderer.send("setSwUpdateAutoInstall", this.allowSWUpdateInstall);
+      ipcRenderer.send("setSwUpdateAutoInstall", this.allowSwUpdateInstall);
     },
     latestSwVersionAvailable: function () {
       this.setLatestSwVersion();

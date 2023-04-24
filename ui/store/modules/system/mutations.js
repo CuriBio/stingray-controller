@@ -53,8 +53,8 @@ export default {
     state.firmwareUpdateAvailable = true;
     state.firmwareUpdateDurMins = channelFwUpdate ? 5 : 1;
   },
-  setAllowSWUpdateInstall(state, bool) {
-    state.allowSWUpdateInstall = bool;
+  setallowSwUpdateInstall(state, bool) {
+    state.allowSwUpdateInstall = bool;
   },
   setConfirmationRequest(state, bool) {
     state.confirmationRequest = bool;

@@ -29,7 +29,7 @@ const defaultState = {
   softwareUpdateAvailable: false,
   firmwareUpdateAvailable: false,
   firmwareUpdateDurMins: null,
-  allowSWUpdateInstall: false,
+  allowSwUpdateInstall: false,
   confirmationRequest: false,
   loginAttemptStatus: null,
 };
