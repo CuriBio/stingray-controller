@@ -12,7 +12,6 @@ from labware_domain_models import LabwareDefinition
 
 # TODO organize this file
 
-
 # General
 CURRENT_SOFTWARE_VERSION = "REPLACETHISWITHVERSIONDURINGBUILD"
 COMPILED_EXE_BUILD_TIMESTAMP = "REPLACETHISWITHTIMESTAMPDURINGBUILD"
@@ -308,3 +307,9 @@ STIM_MODULE_ID_TO_WELL_IDX: immutabledict[int, int] = immutabledict(
 STIM_WELL_IDX_TO_MODULE_ID: immutabledict[int, int] = immutabledict(
     {well_idx: module_id for module_id, well_idx in STIM_MODULE_ID_TO_WELL_IDX.items()}
 )
+
+
+# Recording
+
+FILE_WRITER_BUFFER_SIZE_SECONDS = 30
+FILE_WRITER_BUFFER_SIZE_MILLISECONDS = FILE_WRITER_BUFFER_SIZE_SECONDS * MICRO_TO_BASE_CONVERSION

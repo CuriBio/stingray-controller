@@ -67,6 +67,12 @@ logger = logging.getLogger(__name__)
 
 ERROR_MSG = "IN INSTRUMENT COMM"
 
+# TODO try to handle stim chunking entirely in InstrumentComm. If successful, remove the rest of the commented out code in this method
+# self._reset_stim_idx_counters()
+# output_queue = self._board_queues[board_idx][1]
+# if reduced_well_statuses := self._reduce_subprotocol_chunks(stim_packet["well_statuses"]):
+#     output_queue.put_nowait({**stim_packet, "well_statuses": reduced_well_statuses})
+
 
 COMMAND_PACKET_TYPES = frozenset(
     [

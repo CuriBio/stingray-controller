@@ -11,6 +11,7 @@ from typing import Any
 import uuid
 
 import h5py
+from nptyping import NDArray
 import numpy as np
 from pulse3D.constants import DATETIME_STR_FORMAT as METADATA_DATETIME_STR_FORMAT
 from pulse3D.constants import IS_CALIBRATION_FILE_UUID
@@ -19,6 +20,7 @@ from pulse3D.constants import NOT_APPLICABLE_H5_METADATA
 from pulse3D.constants import PLATE_BARCODE_UUID
 from pulse3D.constants import START_RECORDING_TIME_INDEX_UUID
 from pulse3D.constants import STIMULATION_PROTOCOL_UUID
+from pulse3D.constants import STIMULATION_READINGS
 from pulse3D.constants import TIME_INDICES
 from pulse3D.constants import TIME_OFFSETS
 from pulse3D.constants import TISSUE_SENSOR_READINGS
@@ -27,6 +29,7 @@ from pulse3D.constants import UTC_BEGINNING_RECORDING_UUID
 from pulse3D.plate_recording import MantarrayH5FileCreator
 
 from ..constants import CURRENT_RECORDING_FILE_VERSION
+from ..constants import FILE_WRITER_BUFFER_SIZE_MILLISECONDS
 from ..constants import NUM_MAG_DATA_CHANNELS_PER_WELL
 from ..constants import NUM_MAG_SENSORS_PER_WELL
 from ..constants import NUM_WELLS
@@ -34,19 +37,28 @@ from ..utils.aio import wait_tasks_clean
 from ..utils.generic import handle_system_error
 
 
+logger = logging.getLogger(__name__)
+
+RecordingBounds = namedtuple("RecordingBounds", ["start", "stop"])
+
 # TODO move these to pulse3D
 UTC_BEGINNING_CALIBRATION_UUID = uuid.UUID("b0995a2e-8f1d-41d7-b369-54ec06656683")
-CALIBRATION_TIME_INDICES = "calibration_time_indices"
-CALIBRATION_TIME_OFFSETS = "calibration_time_offsets"
-CALIBRATION_TISSUE_SENSOR_READINGS = "calibration_tissue_sensor_readings"
+CALIBRATION_TIME_INDICES = f"calibration_{TIME_INDICES}"
+CALIBRATION_TIME_OFFSETS = f"calibration_{TIME_OFFSETS}"
+CALIBRATION_TISSUE_SENSOR_READINGS = f"calibration_{TISSUE_SENSOR_READINGS}"
+STIMULATION_READINGS_TEMPLATE = f"{STIMULATION_READINGS}_{{protocol_idx}}"
 
-
-logger = logging.getLogger(__name__)
 
 ERROR_MSG = "IN FILE WRITER"
 
+# Tanner (5/17/21): Not sure what this value represents, should add comment if/when it is determined
+MAX_DATA_LEN = 100 * 3600 * 12
 
-RecordingBounds = namedtuple("RecordingBounds", ["start", "stop"])
+
+def _get_earliest_required_stim_idx(
+    stim_timepoints: NDArray[(1, Any), int], earliest_mag_time_idx: int
+) -> int:
+    return max(np.argmax(stim_timepoints > earliest_mag_time_idx) - 1, 0)  # type: ignore
 
 
 class FileWriter:
@@ -66,7 +78,7 @@ class FileWriter:
         self._data_queue = data_queue
 
         self._recordings_directory = recordings_directory
-        self._calibration_tmp_dir: tempfile.TemporaryDirectory | None = None
+        self._calibration_tmp_dir: tempfile.TemporaryDirectory | None = None  # type: ignore [type-arg]
 
         self._current_calibration_path: str | None = None
         self._current_recording_name: str | None = None
@@ -82,7 +94,7 @@ class FileWriter:
         self._end_of_stim_stream_reached = False
 
         self._mag_data_buffer: deque[dict[str, Any]] = deque()
-        self._stim_data_buffers: dict[int, tuple[deque[int], deque[int]]] = dict()
+        self._stim_data_buffers: dict[int, NDArray[(2, Any), int]] = dict()
 
     # PROPERTIES
 
@@ -92,10 +104,22 @@ class FileWriter:
 
     @property
     def _current_recording_path(self) -> str | None:
+        if not self._calibration_tmp_dir:
+            raise NotImplementedError("self._calibration_tmp_dir should never be None here")
+
+        if not self._current_recording_name:
+            return None
+
         recording_dir = (
             self._calibration_tmp_dir.name if self._is_calibration_recording else self._recordings_directory
         )
         return os.path.join(recording_dir, self._current_recording_name)
+
+    @property
+    def _num_stim_protocols(self) -> int:
+        if not self._stim_info:
+            return 0
+        return len(self._stim_info["protocols"])
 
     # ONE-SHOT TASKS
 
@@ -121,7 +145,8 @@ class FileWriter:
         finally:
             if self._current_recording_file:
                 await self._handle_file_close()
-            self._calibration_tmp_dir.cleanup()
+            if self._calibration_tmp_dir:
+                self._calibration_tmp_dir.cleanup()
             logger.info("FileWriter shut down")
 
     # INFINITE TASKS
@@ -145,11 +170,12 @@ class FileWriter:
                     await self._update_recording_name(comm_from_monitor)
                 case {"command": "set_stim_protocols", "stim_info": stim_info}:
                     self._stim_info = stim_info
-                    self._stim_data_buffers = {
-                        protocol_idx: deque() for protocol_idx in range(len(stim_info["protocols"]))
-                    }
+                    await self._reset_stim_data_buffers()
+                    if self._is_recording:
+                        await self._create_stim_datasets()
 
-            # TODO send responses for all these commands except stop_recording
+            if comm_from_monitor["command"] != "stop_recording":
+                await self._to_monitor_queue.put(comm_from_monitor)
 
     async def _handle_incoming_data(self) -> None:
         while True:
@@ -168,10 +194,9 @@ class FileWriter:
     # COMMAND HANDLERS
 
     async def _start_recording(self, command: dict[str, Any]) -> None:
-        # TODO handle setting this UTC_FIRST_TISSUE_DATA_POINT_UUID in create_start_recording_command
         metadata = command["metadata"]
 
-        self._recording_time_idx_bounds.start = metadata[START_RECORDING_TIME_INDEX_UUID]
+        self._recording_time_idx_bounds._replace(start=metadata[START_RECORDING_TIME_INDEX_UUID])
         self._is_calibration_recording = metadata[IS_CALIBRATION_FILE_UUID]
 
         if self._is_calibration_recording:
@@ -195,47 +220,45 @@ class FileWriter:
             await self._record_data_from_buffers()
 
     async def _stop_recording(self, command: dict[str, Any]) -> None:
+        if not self._current_recording_file:
+            raise NotImplementedError("self._current_recording_file should never be None here")
+
         # if the final timpeoint need is not present, then there's nothing else to do yet
         if self._current_recording_file[TIME_INDICES][-1] < command["stop_timepoint"]:
-            self._recording_time_idx_bounds.stop = command["stop_timepoint"]
+            self._recording_time_idx_bounds._replace(stop=command["stop_timepoint"])
             return
 
-        # TODO ? no further action needed if this is stopping a calibration recording
-        # if self._is_calibration_recording:
-        #     return
-
         # if the final timepoint needed is already present, then clear the recording bounds as the recording can be completed without another data packet
-        self._recording_time_idx_bounds.start = None
-        self._recording_time_idx_bounds.stop = None
+        self._recording_time_idx_bounds._replace(start=None)
+        self._recording_time_idx_bounds._replace(stop=None)
 
-        final_magnetometer_data_idx = np.argmax(
+        upper_magnetometer_data_bound = np.argmax(
             self._current_recording_file[TIME_INDICES] > command["stop_timepoint"]
         )
 
         # trim off magnetometer data after stop recording timepoint
-        for data_type in (TIME_INDICES, TIME_OFFSETS, TISSUE_SENSOR_READINGS):
-            current_recorded_data = self._current_recording_file[data_type]
-            current_recorded_data.resize([*current_recorded_data.shape[:-1], final_magnetometer_data_idx])
+        for mag_data_type in (TIME_INDICES, TIME_OFFSETS, TISSUE_SENSOR_READINGS):
+            current_recorded_data = self._current_recording_file[mag_data_type]
+            current_recorded_data.resize([*current_recorded_data.shape[:-1], upper_magnetometer_data_bound])
 
-        # TODO
-        # # find num points needed to remove from stimulation datasets
-        # stimulation_dataset = get_stimulation_dataset_from_file(this_file)
-        # try:
-        #     num_indices_to_remove = next(
-        #         i
-        #         for i, time in enumerate(reversed(stimulation_dataset[0]))
-        #         if time <= stop_recording_timepoint
-        #     )
-        # except StopIteration:
-        #     num_indices_to_remove = 0
-        # # trim off data after stop recording timepoint
-        # dataset_shape = list(stimulation_dataset.shape)
-        # dataset_shape[-1] -= num_indices_to_remove
-        # stimulation_dataset.resize(dataset_shape)
+        # trim off stim data after stop recording timepoint
+        for protocol_idx in range(self._num_stim_protocols):
+            current_recorded_data = self._current_recording_file[
+                STIMULATION_READINGS_TEMPLATE.format(protocol_idx)
+            ]
+            if current_recorded_data[0, -1] <= command["stop_timepoint"]:
+                continue
+            upper_stim_data_bound = np.argmax(current_recorded_data[0] > command["stop_timepoint"])
+            current_recorded_data.resize([*current_recorded_data.shape[:-1], upper_stim_data_bound])
 
         await self._handle_file_close()
 
     async def _update_recording_name(self, command: dict[str, str]) -> None:
+        if not self._current_recording_path:
+            raise NotImplementedError("self._current_recording_path should never be None here")
+        if not self._current_recording_name:
+            raise NotImplementedError("self._current_recording_name should never be None here")
+
         new_recording_path = self._current_recording_path.replace(
             self._current_recording_name, command["new_name"]
         )
@@ -244,35 +267,33 @@ class FileWriter:
 
     # DATA HANDLERS
 
-    async def _process_mag_data_packet(self, data_packet) -> None:
+    async def _process_mag_data_packet(self, data_packet: dict[str, Any]) -> None:
         if data_packet["is_first_packet_of_stream"]:
             self._end_of_mag_stream_reached = False
             self._mag_data_buffer.clear()
         if not self._end_of_mag_stream_reached:
             self._mag_data_buffer.append(data_packet)
+            await self._update_data_buffers()
 
         if self._is_recording:
-            self._handle_recording_of_mag_data_packet(data_packet)
+            await self._handle_recording_of_mag_data_packet(data_packet)
 
-    async def _process_stim_data_packet(self, data_packet) -> None:
-        # TODO
+    async def _process_stim_data_packet(self, data_packet: dict[str, Any]) -> None:
         if data_packet["is_first_packet_of_stream"]:
             self._end_of_stim_stream_reached = False
-            self._clear_stim_data_buffers()  # TODO
-            # TODO try to handle stim chunking entirely in InstrumentComm
-            # self._reset_stim_idx_counters()  # TODO
+            await self._reset_stim_data_buffers()
         if not self._end_of_stim_stream_reached:
-            self.append_to_stim_data_buffers(data_packet["protocol_statuses"])  # TODO
-            # output_queue = self._board_queues[board_idx][1]
-            # if reduced_well_statuses := self._reduce_subprotocol_chunks(stim_packet["well_statuses"]):
-            #     output_queue.put_nowait({**stim_packet, "well_statuses": reduced_well_statuses})
+            await self._append_to_stim_data_buffers(data_packet["protocol_statuses"])
 
         if self._is_recording:
-            self._handle_recording_of_stim_statuses(data_packet["well_statuses"])
+            await self._handle_recording_of_stim_statuses(data_packet["protocol_statuses"])
 
     # HELPERS
 
     async def _create_recording_file(self, metadata_for_file: dict[uuid.UUID, Any]) -> None:
+        if not self._start_data_stream_timestamp_utc:
+            raise NotImplementedError("self._start_data_stream_timestamp_utc should never be None here")
+
         self._current_recording_file = MantarrayH5FileCreator(
             self._current_recording_path, file_format_version=CURRENT_RECORDING_FILE_VERSION
         )
@@ -290,7 +311,7 @@ class FileWriter:
                 this_attr_value = this_attr_value.strftime(METADATA_DATETIME_STR_FORMAT)
 
             # UUIDs must be stored as strings
-            this_attr_name = str(this_attr_name)
+            this_attr_name = str(this_attr_name)  # type: ignore
             if isinstance(this_attr_value, uuid.UUID):
                 this_attr_value = str(this_attr_value)
 
@@ -299,36 +320,51 @@ class FileWriter:
         # converting to a string since json does not like UUIDs
         self._current_recording_file.attrs["Metadata UUID Descriptions"] = str(METADATA_UUID_DESCRIPTIONS)
 
-        # Tanner (5/17/21): Not sure what this value represents, should make it a constant or add comment if/when it is determined
-        max_data_len = 100 * 3600 * 12
-
         # sampling time values
         self._current_recording_file.create_dataset(
-            TIME_INDICES, (0,), maxshape=(max_data_len,), dtype="uint64", chunks=True
+            TIME_INDICES, (0,), maxshape=(MAX_DATA_LEN,), dtype="uint64", chunks=True
         )
         # sampling time offset
         self._current_recording_file.create_dataset(
             TIME_OFFSETS,
             (NUM_MAG_SENSORS_PER_WELL, 0),
-            maxshape=(NUM_MAG_SENSORS_PER_WELL, max_data_len),
+            maxshape=(NUM_MAG_SENSORS_PER_WELL, MAX_DATA_LEN),
             dtype="uint16",
             chunks=True,
         )
-        # stim data  # TODO only do this if necessary. Also, only need to store statuses per protocol instead of per well
-        # self._current_recording_file.create_dataset(
-        #     STIMULATION_READINGS, (2, 0), maxshape=(2, max_data_len), dtype="int64", chunks=True
-        # )
         # magnetometer data (tissue)
         self._current_recording_file.create_dataset(
             TISSUE_SENSOR_READINGS,
             (NUM_WELLS, NUM_MAG_DATA_CHANNELS_PER_WELL, 0),
-            maxshape=(NUM_WELLS, NUM_MAG_DATA_CHANNELS_PER_WELL, max_data_len),
+            maxshape=(NUM_WELLS, NUM_MAG_DATA_CHANNELS_PER_WELL, MAX_DATA_LEN),
             dtype="uint16",
             chunks=True,
         )
+        # stim data
+        if self._stim_info:
+            await self._create_stim_datasets()
+
         self._current_recording_file.swmr_mode = True
 
+    async def _create_stim_datasets(self) -> None:
+        if not self._current_recording_file:
+            raise NotImplementedError("self._current_recording_file should never be None here")
+
+        for protocol_idx in range(self._num_stim_protocols):
+            self._current_recording_file.create_dataset(
+                STIMULATION_READINGS_TEMPLATE.format(protocol_idx),
+                (2, 0),
+                maxshape=(2, MAX_DATA_LEN),
+                dtype="int64",
+                chunks=True,
+            )
+
     async def _add_calibration_data_to_recording(self) -> None:
+        if not self._current_recording_file:
+            raise NotImplementedError("self._current_recording_file should never be None here")
+        if not self._current_calibration_path:
+            raise NotImplementedError("self._current_calibration_path should never be None here")
+
         with h5py.File(self._current_calibration_path, "r") as calibration_file:
             self._current_recording_file.attrs[UTC_BEGINNING_CALIBRATION_UUID] = calibration_file.attrs[
                 UTC_BEGINNING_RECORDING_UUID
@@ -344,16 +380,19 @@ class FileWriter:
                 )
 
     async def _add_protocols_to_recording_files(self) -> None:
+        if not self._current_recording_file:
+            raise NotImplementedError("self._current_recording_file should never be None here")
+        if not self._stim_info:
+            raise NotImplementedError("self._stim_info should never be None here")
+
         self._current_recording_file.attrs[str(STIMULATION_PROTOCOL_UUID)] = json.dumps(self._stim_info)
 
     async def _record_data_from_buffers(self) -> None:
         for data_packet in self._mag_data_buffer:
-            self._handle_recording_of_mag_data_packet(data_packet)
-        for protocol_idx, protocol_buffers in self._stim_data_buffers.items():
-            if protocol_buffers[0]:
-                self._handle_recording_of_stim_statuses(protocol_idx, protocol_buffers)
+            await self._handle_recording_of_mag_data_packet(data_packet)
+        await self._handle_recording_of_stim_statuses(self._stim_data_buffers)
 
-    async def _handle_recording_of_mag_data_packet(self, data_packet) -> None:
+    async def _handle_recording_of_mag_data_packet(self, data_packet: dict[str, Any]) -> None:
         if self._recording_time_idx_bounds.start is None:  # check needed for mypy to be happy
             raise NotImplementedError("_recording_time_idx_bounds.start should never be None here")
 
@@ -372,99 +411,56 @@ class FileWriter:
 
         # if the final timepoint needed is present, then clear the recording bounds as the recording will be complete after this packet
         if time_indices[-1] >= upper_time_bound:
-            self._recording_time_idx_bounds.start = None
-            self._recording_time_idx_bounds.stop = None
+            self._recording_time_idx_bounds._replace(start=None)
+            self._recording_time_idx_bounds._replace(stop=None)
 
         data_window = (self._recording_time_idx_bounds.start <= time_indices) & (
             time_indices <= upper_time_bound
         )
 
-        # TODO make sure this loop works before deleting the commented out code below
         for data_type in (TIME_INDICES, TIME_OFFSETS, TISSUE_SENSOR_READINGS):
-            current_recorded_data = self._current_recording_file[data_type]
-            previous_recorded_data_len = current_recorded_data.shape[-1]
-            new_data_to_record = data_packet[data_type][data_window]
-            current_recorded_data.resize(
-                [
-                    *current_recorded_data.shape[:-1],
-                    previous_recorded_data_len + new_data_to_record.shape[-1],
-                ]
-            )
-            current_recorded_data[..., previous_recorded_data_len:] = new_data_to_record
+            await self._update_dataset(data_packet[data_type][data_window], data_type)
 
         if self._recording_time_idx_bounds.stop is None:
             await self._handle_file_close()
 
-        # # record new time indices
-        # current_recorded_time_indices = self._current_recording_file[TIME_INDICES]
-        # previous_time_idx_data_len = current_recorded_time_indices.shape[0]
-        # new_time_indices_to_record = time_indices[data_window]
-        # current_recorded_time_indices.resize(
-        #     (previous_time_idx_data_len + new_time_indices_to_record.shape[0],)
-        # )
-        # current_recorded_time_indices[previous_time_idx_data_len:] = new_time_indices_to_record
-        # # record new time offsets
-        # current_recorded_time_offsets = self._current_recording_file[TIME_OFFSETS]
-        # previous_time_offset_data_len = current_recorded_time_offsets.shape[1]
-        # new_time_offsets_to_record = data_packet["time_offsets"][data_window]
-        # current_recorded_time_offsets.resize(
-        #     (
-        #         current_recorded_time_offsets.shape[0],
-        #         previous_time_offset_data_len + new_time_offsets_to_record.shape[1],
-        #     )
-        # )
-        # current_recorded_time_offsets[:, previous_time_offset_data_len:] = new_time_offsets_to_record
-        # # record new tissue data
-        # current_recorded_tissue_data = self._current_recording_file[TISSUE_SENSOR_READINGS]
-        # previous_tissue_data_data_len = current_recorded_tissue_data.shape[2]
-        # new_tissue_data_to_record = data_packet["???"][data_window]
-        # current_recorded_tissue_data.resize(
-        #     (
-        #         current_recorded_tissue_data.shape[0],
-        #         current_recorded_tissue_data.shape[1],
-        #         previous_tissue_data_data_len + new_tissue_data_to_record.shape[2],
-        #     )
-        # )
-        # current_recorded_tissue_data[:, :, previous_tissue_data_data_len:] = new_tissue_data_to_record
+    async def _handle_recording_of_stim_statuses(
+        self, protocol_statuses: dict[int, NDArray[(2, Any), int]]
+    ) -> None:
+        if self._recording_time_idx_bounds.start is None:  # check needed for mypy to be happy
+            raise NotImplementedError("_recording_time_idx_bounds.start should never be None here")
 
-    async def _handle_recording_of_stim_statuses(self, well_statuses) -> None:
-        # TODO all of this needs to be refactored
-        board_idx = 0
-        if well_idx not in self._open_files[board_idx]:
-            return
+        for protocol_idx, new_stim_statuses in protocol_statuses.items():
+            # TODO
+            # stim_statuses[1] = np.array(
+            #     [
+            #         self._convert_subprotocol_idx(protocol_idx, chunked_subprotocol_idx)
+            #         for chunked_subprotocol_idx in stim_statuses[1]
+            #     ]
+            # )
 
-        well_name = GENERIC_24_WELL_DEFINITION.get_well_name_from_well_index(well_idx)
-        assigned_protocol_id = self._stim_info["protocol_assignments"][well_name]
+            earliest_required_idx = _get_earliest_required_stim_idx(
+                new_stim_statuses[0], self._recording_time_idx_bounds.start
+            )
 
-        stim_data_arr[1] = np.array(
-            [
-                self._convert_subprotocol_idx(assigned_protocol_id, chunked_subprotocol_idx)
-                for chunked_subprotocol_idx in stim_data_arr[1]
-            ]
-        )
+            upper_idx_bound = None
+            if (
+                self._recording_time_idx_bounds.stop is not None
+                and new_stim_statuses[0, -1] > self._recording_time_idx_bounds.stop
+            ):
+                upper_idx_bound = np.argmax(new_stim_statuses[0] > self._recording_time_idx_bounds.stop)
 
-        this_start_recording_timestamps = self._start_recording_timestamps[board_idx]
-        if this_start_recording_timestamps is None:  # check needed for mypy to be happy
-            raise NotImplementedError("Something wrong in the code. This should never be none.")
+            await self._update_dataset(
+                new_stim_statuses[:, earliest_required_idx:upper_idx_bound],
+                STIMULATION_READINGS_TEMPLATE.format(protocol_idx),
+            )
 
-        stop_recording_timestamp = self.get_stop_recording_timestamps()[board_idx]
-        if stop_recording_timestamp is not None and stim_data_arr[0, 0] >= stop_recording_timestamp:
-            return
+    async def _handle_file_close(self) -> None:
+        if not self._current_recording_file:
+            raise NotImplementedError("self._current_recording_file should never be None here")
+        if not self._current_recording_path:
+            raise NotImplementedError("self._current_recording_path should never be None here")
 
-        # remove unneeded status updates
-        earliest_magnetometer_time_idx = this_start_recording_timestamps[1]
-        earliest_valid_index = _find_earliest_valid_stim_status_index(
-            stim_data_arr[0].tolist(), earliest_magnetometer_time_idx
-        )
-        stim_data_arr = stim_data_arr[:, earliest_valid_index:]
-        # update dataset in h5 file
-        this_well_file = self._open_files[board_idx][well_idx]
-        stimulation_dataset = get_stimulation_dataset_from_file(this_well_file)
-        previous_data_size = stimulation_dataset.shape[1]
-        stimulation_dataset.resize((2, previous_data_size + stim_data_arr.shape[1]))
-        stimulation_dataset[:, previous_data_size:] = stim_data_arr
-
-    async def _handle_file_close(self):
         self._current_recording_file.close()
 
         msg_to_main = {"command": "stop_recording"}
@@ -479,3 +475,50 @@ class FileWriter:
 
         # TODO does a different message need to be sent if this is a calibration recording?
         await self._to_monitor_queue.put(msg_to_main)
+
+    async def _update_dataset(self, new_data: NDArray, dataset: str) -> None:
+        if not self._current_recording_file:
+            raise NotImplementedError("self._current_recording_file should never be None here")
+
+        current_recorded_data = self._current_recording_file[dataset]
+        previous_recorded_data_len = current_recorded_data.shape[-1]
+        current_recorded_data.resize(
+            [*current_recorded_data.shape[:-1], previous_recorded_data_len + new_data.shape[-1]]
+        )
+        current_recorded_data[..., previous_recorded_data_len:] = new_data
+
+    async def _update_data_buffers(self) -> None:
+        """Remove old data packets if necessary"""
+        curr_buffer_memory_size = (
+            self._mag_data_buffer[-1]["time_indices"][0] - self._mag_data_buffer[0]["time_indices"][0]
+        )
+        if curr_buffer_memory_size <= FILE_WRITER_BUFFER_SIZE_MILLISECONDS:
+            return
+
+        # buffer has grown too large, so need to remove the earliest magnetomer data packet
+        self._mag_data_buffer.popleft()
+
+        # since a magnetometer data packet was removed, also check to see if the earliest stim data packet
+        # is now unnecessary
+        earliest_buffered_mag_time_idx = self._mag_data_buffer[0]["time_indices"][0]
+
+        for protocol_idx in range(self._num_stim_protocols):
+            buffered_stim_statuses = self._stim_data_buffers[protocol_idx]
+            earliest_required_stim_idx = _get_earliest_required_stim_idx(
+                buffered_stim_statuses[0], earliest_buffered_mag_time_idx
+            )
+            self._stim_data_buffers[protocol_idx] = buffered_stim_statuses[:, earliest_required_stim_idx:]
+
+    async def _reset_stim_data_buffers(self) -> None:
+        self._stim_data_buffers = {
+            protocol_idx: np.empty((2, 0)) for protocol_idx in range(self._num_stim_protocols)
+        }
+
+    async def _append_to_stim_data_buffers(
+        self, protocol_statuses: dict[int, NDArray[(2, Any), int]]
+    ) -> None:
+        for protocol_idx in range(self._num_stim_protocols):
+            if (status_arr := protocol_statuses.get(protocol_idx)) is not None:
+                self._stim_data_buffers[protocol_idx] = np.concatenate(
+                    self._stim_data_buffers[protocol_idx], status_arr
+                )
