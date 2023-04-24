@@ -10,6 +10,7 @@ Added:
 
 Fixed:
 ^^^^^^
+- SW auto-updating
 - Issue with firmware versions always reported as being incompatible
 
 
