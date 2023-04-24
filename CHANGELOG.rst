@@ -4,6 +4,10 @@ Changelog for Stingray Controller
 0.1.1 (unreleased)
 ------------------
 
+Added:
+^^^^^^
+- Protocol validation checks on import in Stimulation Studio
+
 Fixed:
 ^^^^^^
 - Issue with firmware versions always reported as being incompatible

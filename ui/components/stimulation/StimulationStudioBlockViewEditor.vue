@@ -33,9 +33,8 @@
             :inputWidth="200"
             :disableSelection="true"
             :optionsText="stimulationTypesArray"
-            :optionsIdx="stimulationTypeIdx"
+            :optionsIdx="0"
             :domIdSuffix="'stimulationType'"
-            @selection-changed="handleStimulationType"
           />
           <SmallDropDown
             :style="'margin-left: 5%;'"
@@ -120,7 +119,6 @@ library.add(faTrashAlt);
  * @vue-data {String} errorMessage - Error message that appears under name input field after validity check
  * @vue-data {String} invalidRestDurText - Error message that appears under rest duration input field after validity check
  * @vue-data {Array} localProtocolList - All available protocols from Vuex
- * @vue-data {Int} stimulationTypeIdx - Used to change preselected index in the dropdown when user wants to edit existing protocols
  * @vue-computed {Object} restInputHover - Handle tooltip text when hovering rest duration input
  * @vue-computed {String} restTimeUnit - Current time unit selected for rest duration
  * @vue-computed {String} editModeLabel - Current protocol name in protocol editor when editing is active
@@ -154,7 +152,6 @@ export default {
       stopOptionsArray: ["Stimulate Until Stopped", "Stimulate Until Complete"],
       protocolName: "",
       stopOptionIdx: 0,
-      stimulationTypeIdx: 0,
       restDuration: "",
       nameValidity: "null",
       errorMessage: "",
@@ -211,6 +208,9 @@ export default {
     protocolName: function () {
       this.checkNameValidity(this.protocolName);
     },
+    protocolList: function () {
+      this.updateProtocols();
+    },
   },
   created() {
     this.updateProtocols();
@@ -221,7 +221,7 @@ export default {
   },
   methods: {
     ...mapActions("stimulation", ["handleProtocolEditorReset", "handleNewRestDuration"]),
-    ...mapMutations("stimulation", ["setStimulationType", "setProtocolName", "setStopSetting"]),
+    ...mapMutations("stimulation", ["setProtocolName", "setStopSetting"]),
     updateProtocols() {
       this.localProtocolList = this.protocolList;
       const { letter, color } = this.getNextProtocol;
@@ -230,11 +230,10 @@ export default {
     },
     setProtocolForEdit() {
       this.updateProtocols();
-      const { name, restDuration, runUntilStopped, stimulationType } = this.protocolEditor;
+      const { name, restDuration, runUntilStopped } = this.protocolEditor;
 
       this.protocolName = name;
       this.restDuration = JSON.stringify(restDuration);
-      this.stimulationTypeIdx = +(stimulationType === "V");
       this.stopOptionIdx = +!runUntilStopped;
       this.disabledTime = !runUntilStopped;
     },
@@ -247,11 +246,6 @@ export default {
     closeDeleteProtocolModal(idx) {
       this.$bvModal.hide("del-protocol-modal");
       if (idx === 0) this.handleProtocolEditorReset();
-    },
-    handleStimulationType(idx) {
-      const type = this.stimulationTypesArray[idx];
-      this.stimulationTypeIdx = idx;
-      this.setStimulationType(type);
     },
     handleStopSetting(idx) {
       const setting = this.stopOptionsArray[idx];

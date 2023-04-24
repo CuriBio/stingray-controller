@@ -1,6 +1,13 @@
 import { WellTitle as LabwareDefinition } from "@/js-utils/LabwareCalculations.js";
 const twentyFourWellPlateDefinition = new LabwareDefinition(4, 6);
 import { STIM_STATUS, TIME_CONVERSION_TO_MILLIS } from "./enums";
+import {
+  isValidDelayPulse,
+  isValidSinglePulse,
+  convertProtocolCasing,
+  _convertObjToCamelCase,
+  _convertObjToSnakeCase,
+} from "@/js-utils/ProtocolValidation";
 
 export default {
   handleSelectedWells({ commit }, wells) {
@@ -149,7 +156,11 @@ export default {
 
   async handleExportProtocol({ state }) {
     const { protocolAssignments, protocolList } = state;
-    const protocolCopy = JSON.parse(JSON.stringify(protocolList));
+    // convert to snakecase to be interchangable with MA controller
+    const protocolCopy = [...protocolList].map((protocol) =>
+      convertProtocolCasing(protocol, _convertObjToSnakeCase)
+    );
+
     const message = { protocols: protocolCopy.slice(1), protocolAssignments: {} };
 
     for (const wellIdx of Array(24).keys()) {
@@ -193,12 +204,30 @@ export default {
   },
 
   async addImportedProtocol({ commit, getters }, { protocols }) {
-    for (const { protocol } of protocols) {
-      // needs to be set to off every iteration because an action elsewhere triggers it on
-      await commit("setEditModeOff");
-      const { color, letter } = await getters["getNextProtocol"];
-      const importedProtocol = { color, letter, label: protocol.name, protocol };
-      await commit("setNewProtocol", importedProtocol);
+    const invalidImportedProtocols = [];
+    for (const [idx, { protocol }] of Object.entries(protocols)) {
+      // if protocol is unnamed, assign generic name with place in list, +1 to index
+      protocol.name = protocol.name.length > 0 ? protocol.name : `protocol_${idx + 1}`;
+      // (22/04/2023) For now with mantarray, all protocols will be exported in snake_case, including from stingray
+      const convertedProtocol = convertProtocolCasing(protocol, _convertObjToCamelCase);
+      const invalidPulses = convertedProtocol.subprotocols.filter((pulse) => {
+        // first check if imported protocols are from stingray or mantarray
+        return !(pulse.type === "Delay" ? isValidDelayPulse(pulse) : isValidSinglePulse(pulse));
+      });
+
+      if (invalidPulses.length === 0) {
+        await commit("setEditModeOff");
+        // needs to be set to off every iteration because an action elsewhere triggers it on
+        const { color, letter } = await getters["getNextProtocol"];
+        const importedProtocol = { color, letter, label: protocol.name, protocol: convertedProtocol };
+        await commit("setNewProtocol", importedProtocol);
+      } else {
+        invalidImportedProtocols.push(protocol.name);
+      }
+    }
+
+    if (invalidImportedProtocols.length > 0) {
+      await commit("setInvalidImportedProtocols", invalidImportedProtocols);
     }
   },
   async addSavedPotocol({ commit, state, dispatch }) {
@@ -257,7 +286,7 @@ export default {
         if (!uniqueProtocolIds.has(letter)) {
           uniqueProtocolIds.add(letter);
           // this needs to be converted before sent because stim type changes independently of pulse settings
-          const convertedSubprotocols = await _getConvertedSettings(subprotocols, stimulationType);
+          const convertedSubprotocols = await _getConvertedSettings(subprotocols);
           const protocolModel = {
             protocol_id: letter,
             stimulation_type: stimulationType,
@@ -288,18 +317,11 @@ export default {
 
   async editSelectedProtocol({ commit, dispatch, state }, protocol) {
     const { label, letter, color } = protocol;
-    const {
-      stimulationType,
-      timeUnit,
-      restDuration,
-      detailedSubprotocols,
-      runUntilStopped,
-    } = protocol.protocol;
+    const { timeUnit, restDuration, detailedSubprotocols, runUntilStopped } = protocol.protocol;
 
     state.currentAssignment = { letter, color };
 
     await commit("setProtocolName", label);
-    await commit("setStimulationType", stimulationType);
     await commit("setTimeUnit", timeUnit);
     await commit("setRestDuration", restDuration);
     await commit("setStopSetting", runUntilStopped);
@@ -385,10 +407,9 @@ export default {
   },
 };
 
-const _getConvertedSettings = async (subprotocols, stimType) => {
+const _getConvertedSettings = async (subprotocols) => {
   const milliToMicro = 1e3;
-  const chargeConversion = { C: 1000, V: 1 };
-  const conversion = chargeConversion[stimType];
+  const chargeConversion = milliToMicro;
 
   return subprotocols.map((pulse) => {
     let typeSpecificSettings = {};
@@ -399,14 +420,14 @@ const _getConvertedSettings = async (subprotocols, stimType) => {
         num_cycles: pulse.numCycles,
         postphase_interval: Math.round(pulse.postphaseInterval * milliToMicro), // sent in µs, also needs to be an integer value
         phase_one_duration: pulse.phaseOneDuration * milliToMicro, // sent in µs
-        phase_one_charge: pulse.phaseOneCharge * conversion, // sent in mV
+        phase_one_charge: pulse.phaseOneCharge * chargeConversion, // sent in mV
       };
 
     if (pulse.type === "Biphasic")
       typeSpecificSettings = {
         ...typeSpecificSettings,
         interphase_interval: pulse.interphaseInterval * milliToMicro, // sent in µs
-        phase_two_charge: pulse.phaseTwoCharge * conversion, // sent in mV or µA
+        phase_two_charge: pulse.phaseTwoCharge * chargeConversion, // sent in mV or µA
         phase_two_duration: pulse.phaseTwoDuration * milliToMicro, // sent in µs
       };
 

@@ -150,6 +150,20 @@
         @handle-confirmation="closeUserInputPromptModal"
       />
     </b-modal>
+    <b-modal
+      id="invalid-imported-protocols"
+      size="sm"
+      hide-footer
+      hide-header
+      hide-header-close
+      :static="true"
+      :no-close-on-backdrop="true"
+    >
+      <StatusWarningWidget
+        :modalLabels="invalidImportedProtocolsLabels"
+        @handle-confirmation="closeInvalidProtocolModal"
+      />
+    </b-modal>
   </div>
 </template>
 <script>
@@ -240,6 +254,7 @@ export default {
     ]),
     ...mapState("system", ["barcodes"]),
     ...mapState("settings", ["userCredInputNeeded"]),
+    ...mapState("stimulation", ["invalidImportedProtocols"]),
     isStartStopButtonEnabled: function () {
       if (!this.playState) {
         // if starting stim make sure initial magnetometer calibration has been completed and
@@ -326,6 +341,15 @@ export default {
     configCheckInProgress: function () {
       return this.stimStatus === STIM_STATUS.CONFIG_CHECK_IN_PROGRESS;
     },
+    invalidImportedProtocolsLabels: function () {
+      return {
+        header: "Warning!",
+        msgOne:
+          "The following protocols were not imported because some values no longer pass current validity checks:",
+        msgTwo: this.invalidImportedProtocols.join(", "),
+        buttonNames: ["Close"],
+      };
+    },
   },
   watch: {
     stimPlayState: function () {
@@ -338,6 +362,9 @@ export default {
     },
     userCredInputNeeded: function () {
       if (this.userCredInputNeeded) this.$bvModal.show("user-input-prompt-message");
+    },
+    invalidImportedProtocols: function () {
+      if (this.invalidImportedProtocols.length > 0) this.$bvModal.show("invalid-imported-protocols");
     },
   },
   methods: {
@@ -381,6 +408,10 @@ export default {
         // this event is used in electron
         this.$emit("save-account-info");
       }
+    },
+    closeInvalidProtocolModal: function () {
+      this.$bvModal.hide("invalid-imported-protocols");
+      this.$store.commit("stimulation/setInvalidImportedProtocols", []);
     },
   },
 };
@@ -583,7 +614,8 @@ body {
 
 #user-input-prompt-message,
 #open-circuit-warning,
-#stim-24hr-warning {
+#stim-24hr-warning,
+#invalid-imported-protocols {
   position: fixed;
   margin: 5% auto;
   top: 15%;

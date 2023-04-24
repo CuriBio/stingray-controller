@@ -71,7 +71,7 @@ export default {
     xAxisMin: { type: Number, default: 0 },
     yMin: { type: Number, default: 0 },
     yMax: { type: Number, default: 120 },
-    yAxisLabel: { type: String, default: "Voltage" },
+    yAxisLabel: { type: String, default: "Current" },
     xAxisLabel: { type: String, default: "Time" },
     dataPoints: {
       type: Array, // exactly the format D3 accepts: 2D array of [[x1,y1],[x2,y2],...]

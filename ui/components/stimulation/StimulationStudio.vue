@@ -9,17 +9,13 @@
     />
     <StimulationStudioDragAndDropPanel
       class="stimulationstudio_draganddroppanel-container"
-      :stimulationType="stimulationType"
       :disableEdits="disableEdits"
     />
     <StimulationStudioBlockViewEditor
       class="stimulationstudio_blockvieweditor-container"
       @rest-duration-validity="setNewRestDuration"
     />
-    <StimulationStudioProtocolViewer
-      class="stimulationstudio_protocolviewer-container"
-      :stimulationType="stimulationType"
-    />
+    <StimulationStudioProtocolViewer class="stimulationstudio_protocolviewer-container" />
     <div class="button-background">
       <div v-for="(value, idx) in btnLabels" :id="value" :key="value" @click.exact="handleClick(idx)">
         <div v-b-popover.hover.top="btnHover" :class="getBtnClass(idx)">
@@ -29,7 +25,6 @@
     </div>
   </div>
 </template>
-
 <script>
 import StimulationStudioCreateAndEdit from "@/components/stimulation/StimulationStudioCreateAndEdit.vue";
 import StimulationStudioWidget from "@/components/stimulation/StimulationStudioWidget.vue";
@@ -80,9 +75,6 @@ export default {
         content: "Cannot make changes to stim settings while actively stimulating",
         disabled: !this.disableEdits,
       };
-    },
-    stimulationType: function () {
-      return this.protocolEditor.stimulationType === "C" ? "Current" : "Voltage";
     },
   },
   methods: {

@@ -54,11 +54,7 @@ import InputWidget from "@/components/basic-widgets/InputWidget.vue";
 import ButtonWidget from "@/components/basic-widgets/ButtonWidget.vue";
 import SmallDropDown from "@/components/basic-widgets/SmallDropDown.vue";
 import StimulationStudioColorModal from "@/components/stimulation/StimulationStudioColorModal.vue";
-import {
-  MAX_SUBPROTOCOL_DURATION_MS,
-  MIN_SUBPROTOCOL_DURATION_MS,
-  TIME_CONVERSION_TO_MILLIS,
-} from "@/store/modules/stimulation/enums";
+import { checkDelayPulseValidity } from "@/js-utils/ProtocolValidation";
 
 import Vue from "vue";
 import BootstrapVue from "bootstrap-vue";
@@ -121,14 +117,6 @@ export default {
       currentValue: this.currentDelayInput,
       inputValue: null,
       invalidText: "Required",
-      invalidErrMsg: {
-        numErr: "Must be a (+) number",
-        required: "Required",
-        valid: "",
-        minDuration: `Duration must be >=${MIN_SUBPROTOCOL_DURATION_MS}ms`,
-        maxDuration: "Duration must be <= 24hrs",
-        nonInteger: "Must be a whole number of ms",
-      },
       timeUnits: ["milliseconds", "seconds", "minutes", "hours"],
       timeUnitIdx: 0,
       isEnabledArray: [false, true],
@@ -179,31 +167,14 @@ export default {
     },
     checkValidity(valueStr) {
       this.currentValue = valueStr;
-
-      const value = +valueStr;
-
       const selectedUnit = this.timeUnits[this.timeUnitIdx];
-      const valueInMillis = value * TIME_CONVERSION_TO_MILLIS[selectedUnit];
 
-      if (valueStr === "") {
-        this.invalidText = this.invalidErrMsg.required;
-      } else if (isNaN(value)) {
-        this.invalidText = this.invalidErrMsg.numErr;
-      } else if (valueInMillis < MIN_SUBPROTOCOL_DURATION_MS) {
-        this.invalidText = this.invalidErrMsg.minDuration;
-      } else if (valueInMillis > MAX_SUBPROTOCOL_DURATION_MS) {
-        this.invalidText = this.invalidErrMsg.maxDuration;
-      } else if (!Number.isInteger(valueInMillis)) {
-        this.invalidText = this.invalidErrMsg.nonInteger;
-      } else {
-        this.invalidText = this.invalidErrMsg.valid;
-        // Only want to update inputValue here so it is only ever set to a valid value.
-        // This means that if a user enters an invalid value and then presses cancel, the most recent
-        // valid value will be committed to the store instead of the invalid value
-        this.inputValue = value;
-      }
-
-      this.isValid = this.invalidText === this.invalidErrMsg.valid;
+      this.invalidText = checkDelayPulseValidity(valueStr, selectedUnit);
+      this.isValid = this.invalidText === "";
+      // Only want to update inputValue here so it is only ever set to a valid value.
+      // This means that if a user enters an invalid value and then presses cancel, the most recent
+      // valid value will be committed to the store instead of the invalid value
+      if (this.isValid) this.inputValue = +valueStr;
     },
     handleUnitChange(idx) {
       this.timeUnitIdx = idx;
