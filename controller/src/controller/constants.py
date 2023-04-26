@@ -31,6 +31,7 @@ ConfigSettings = namedtuple("ConfigSettings", ["auto_upload_on_completion", "log
 VALID_CREDENTIAL_TYPES = frozenset(AuthCreds._fields)
 VALID_CONFIG_SETTINGS = frozenset(ConfigSettings._fields)
 
+BARCODE_LEN = 12
 # TODO try replacing all immutabledicts with enums
 BARCODE_HEADERS: immutabledict[str, str] = immutabledict({"plate_barcode": "ML", "stim_barcode": "MS"})
 ALL_VALID_BARCODE_HEADERS = frozenset(BARCODE_HEADERS.values())

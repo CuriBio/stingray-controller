@@ -431,7 +431,7 @@ class FileWriter:
             raise NotImplementedError("_recording_time_idx_bounds.start should never be None here")
 
         for protocol_idx, new_stim_statuses in protocol_statuses.items():
-            # TODO
+            # TODO try to move the chunking into InstrumentComm
             # stim_statuses[1] = np.array(
             #     [
             #         self._convert_subprotocol_idx(protocol_idx, chunked_subprotocol_idx)

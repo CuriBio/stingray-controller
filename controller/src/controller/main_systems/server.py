@@ -12,7 +12,9 @@ from semver import VersionInfo
 import websockets
 from websockets import serve
 from websockets.server import WebSocketServerProtocol
+from pulse3D.constants import MANTARRAY_SERIAL_NUMBER_UUID
 
+from ..utils.validation import check_barcode_for_errors
 from ..constants import DEFAULT_SERVER_PORT_NUMBER
 from ..constants import GENERIC_24_WELL_DEFINITION
 from ..constants import NUM_WELLS
@@ -252,6 +254,53 @@ class Server:
 
         await self._to_monitor_queue.put(comm)
 
+    @mark_handler
+    async def _start_calibration(self, comm: dict[str, Any]) -> None:
+        """TODO"""
+        system_state = self._get_system_state_ro()
+
+        valid_states = (CALIBRATION_NEEDED_STATE, CALIBRATED_STATE)
+
+        if system_state["system_status"] not in valid_states:
+            raise WebsocketCommandError(f"Route cannot be called unless in {valid_states}")
+        if _are_stimulator_checks_running():
+            raise WebsocketCommandError("Cannot calibrate while stimulator checks are running")
+        if _are_any_stim_protocols_running(system_state):
+            raise WebsocketCommandError("Cannot calibrate while stimulation is running")
+
+        await self._to_monitor_queue.put(comm)
+
+    @mark_handler
+    async def _start_data_stream(self, comm: dict[str, Any]) -> None:
+        """TODO"""
+        system_state = self._get_system_state_ro()
+
+        try:
+            plate_barcode = comm["plate_barcode"]
+        except KeyError:
+            raise WebsocketCommandError("Request missing 'plate_barcode' parameter")
+
+        if error_message := check_barcode_for_errors(plate_barcode, "plate_barcode"):
+            raise WebsocketCommandError(f"Plate {error_message}")
+
+        # TODO raise error if data stream is already active
+
+        # TODO import MANTARRAY_SERIAL_NUMBER_UUID as INSTRUMENT_SERIAL_NUMBER_UUID in all files
+        if not system_state["instrument_metadata"][MANTARRAY_SERIAL_NUMBER_UUID]:
+            # TODO make a customer error code for this
+            raise WebsocketCommandError("Mantarray has not been assigned a Serial Number")
+        if _are_stimulator_checks_running():
+            raise WebsocketCommandError("Cannot start data stream while stimulator checks are running")
+
+        await self._to_monitor_queue.put(comm)
+
+    @mark_handler
+    async def _stop_data_stream(self, comm: dict[str, Any]) -> None:
+        """TODO"""
+        system_state = self._get_system_state_ro()
+        # TODO raise error if data stream is not running
+        await self._to_monitor_queue.put(comm)
+
     # TODO consider changing this to "set_stim_info"
     @mark_handler
     async def _set_stim_protocols(self, comm: dict[str, Any]) -> None:
@@ -446,6 +495,18 @@ class Server:
             raise WebsocketCommandError("Stim status not updated")
 
         await self._to_monitor_queue.put(comm)
+
+    @mark_handler
+    async def _start_recording(self, comm: dict[str, Any]) -> None:
+        """TODO"""
+
+    @mark_handler
+    async def _stop_recording(self, comm: dict[str, Any]) -> None:
+        """TODO"""
+
+    @mark_handler
+    async def _update_recording_name(self, comm: dict[str, Any]) -> None:
+        """TODO"""
 
 
 # HELPERS
