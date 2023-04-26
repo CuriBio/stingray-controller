@@ -24,6 +24,10 @@ class InstrumentError(Exception):
     """Generic exception for errors with instrument interaction."""
 
 
+class IncorrectInstrumentConnectedError(InstrumentError):
+    pass
+
+
 class InstrumentConnectionCreationError(InstrumentError):
     """Generic exception for errors caused by connection failures."""
 

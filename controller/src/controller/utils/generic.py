@@ -7,6 +7,7 @@ from semver import VersionInfo
 
 from ..constants import ErrorCodes
 from ..exceptions import FirmwareAndSoftwareNotCompatibleError
+from ..exceptions import IncorrectInstrumentConnectedError
 from ..exceptions import InstrumentBadDataError
 from ..exceptions import InstrumentConnectionCreationError
 from ..exceptions import InstrumentConnectionLostError
@@ -39,6 +40,8 @@ def handle_system_error(exc: BaseException, system_error_future: asyncio.Future[
             error_code = ErrorCodes.INSTRUMENT_FW_INCOMPATIBLE_WITH_SW
         case WebsocketCommandError():
             error_code = ErrorCodes.UI_SENT_BAD_DATA
+        case IncorrectInstrumentConnectedError():
+            error_code = ErrorCodes.INCORRECT_INSTRUMENT_TYPE
         case _:
             error_code = ErrorCodes.UNSPECIFIED
 

@@ -64,19 +64,22 @@ class SystemStatuses(Enum):
     UPDATE_ERROR_STATE = uuid.UUID("33742bfc-d354-4ae5-88b6-2b3cee23aff8")
 
 
-# TODO redo these
+# TODO expand on these
 class ErrorCodes(IntEnum):
+    # 000 - Instrument related
     INSTRUMENT_NOT_FOUND = 1
     INSTRUMENT_CONNECTION_CREATION = 2
     INSTRUMENT_CONNECTION_LOST = 3
-    INSTRUMENT_SENT_BAD_DATA = 4
-    INSTRUMENT_STATUS_CODE = 5
-    INSTRUMENT_FW_INCOMPATIBLE_WITH_SW = 6
-    UI_SENT_BAD_DATA = 7
-    # These by nature cannot be set by the controller itself, and thus are only here for documentation
-    CONTROLLER_CONNECTION_CREATION = 8
-    CONTROLLER_CONNECTION_LOST = 9
-    CONTROLLER_SENT_BAD_DATA = 10
+    INSTRUMENT_STATUS_CODE = 4
+    INSTRUMENT_FW_INCOMPATIBLE_WITH_SW = 5
+    INSTRUMENT_SENT_BAD_DATA = 10
+    INCORRECT_INSTRUMENT_TYPE = 99  # temporary
+    # 100 - Caught in Controller
+    UI_SENT_BAD_DATA = 110
+    # 200 - Caught in UI  # These by nature cannot be set by the controller itself, and thus are only here for documentation
+    CONTROLLER_CONNECTION_CREATION = 202
+    CONTROLLER_CONNECTION_LOST = 203
+    CONTROLLER_SENT_BAD_DATA = 210
     # This ideally should never happen, but creating it just in case
     UNSPECIFIED = 999
 

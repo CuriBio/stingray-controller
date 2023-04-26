@@ -12,19 +12,21 @@ export const SYSTEM_STATUS = {
 };
 
 export const ERROR_CODES = {
-  // set by controller
+  // 000 - Instrument related
   INSTRUMENT_NOT_FOUND: 1,
   INSTRUMENT_CONNECTION_CREATION: 2,
   INSTRUMENT_CONNECTION_LOST: 3,
-  INSTRUMENT_SENT_BAD_DATA: 4,
-  INSTRUMENT_STATUS_CODE: 5,
-  INSTRUMENT_FW_INCOMPATIBLE_WITH_SW: 6,
-  // set by UI
-  UI_SENT_BAD_DATA: 7,
-  CONTROLLER_CONNECTION_CREATION: 8,
-  CONTROLLER_CONNECTION_LOST: 9,
-  CONTROLLER_SENT_BAD_DATA: 10,
-  // this ideally should never happen, but creating it just in case
+  INSTRUMENT_STATUS_CODE: 4,
+  INSTRUMENT_FW_INCOMPATIBLE_WITH_SW: 5,
+  INSTRUMENT_SENT_BAD_DATA: 10,
+  INCORRECT_INSTRUMENT_TYPE: 99, // temporary
+  // 100 - Caught in Controller
+  UI_SENT_BAD_DATA: 110,
+  // 200 - Caught in UI  // These by nature cannot be set by the controller itself, and thus are only here for documentation
+  CONTROLLER_CONNECTION_CREATION: 202,
+  CONTROLLER_CONNECTION_LOST: 203,
+  CONTROLLER_SENT_BAD_DATA: 210,
+  // This ideally should never happen, but creating it just in case
   UNSPECIFIED: 999,
 };
 
@@ -33,8 +35,10 @@ export const ERROR_MESSAGES = {
     "No instrument was detected, please make sure it is plugged in and powered on",
   [ERROR_CODES.INSTRUMENT_CONNECTION_CREATION]: "Unable to establish a connection to the instrument",
   [ERROR_CODES.INSTRUMENT_CONNECTION_LOST]: "The instrument failed to respond to one or more commands",
-  [ERROR_CODES.INSTRUMENT_SENT_BAD_DATA]: "Malformed data received from the instrument",
   [ERROR_CODES.INSTRUMENT_STATUS_CODE]: "An error occurred on the instrument",
   [ERROR_CODES.INSTRUMENT_FW_INCOMPATIBLE_WITH_SW]:
     "The instrument's firmware is not compatible with this version of the Stingray Controller",
+  [ERROR_CODES.INSTRUMENT_SENT_BAD_DATA]: "Malformed data received from the instrument",
+  [ERROR_CODES.INCORRECT_INSTRUMENT_TYPE]:
+    "Mantarray instrument detected. Please connect to a Stingray and restart the software",
 };
