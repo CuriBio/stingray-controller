@@ -33,7 +33,7 @@ describe("store/data", () => {
     let socketServerSide;
 
     beforeAll((done) => {
-      httpServer = http.createServer().listen(4567); // TODO use constant here
+      httpServer = http.createServer().listen(4565); // TODO use constant here
       wsServer = new WebSocketServer({
         httpServer,
         autoAcceptConnections: false,
@@ -59,7 +59,7 @@ describe("store/data", () => {
         // );
         done();
       });
-      //   httpServer = http.createServer().listen(4567); // TODO use constant here
+      //   httpServer = http.createServer().listen(4565); // TODO use constant here
       //   wsServer = io_server(httpServer);
       // wait for connection
       //   wsServer.on("connect", socket => {

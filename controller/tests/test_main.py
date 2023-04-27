@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
+from asyncio import create_task
 import hashlib
 import logging
+import os
 import platform
 from random import choice
 import socket
@@ -12,23 +14,26 @@ from controller.constants import CURRENT_SOFTWARE_VERSION
 from controller.constants import DEFAULT_SERVER_PORT_NUMBER
 from controller.constants import SOFTWARE_RELEASE_CHANNEL
 from controller.constants import SystemStatuses
-from controller.main_systems.server import Server
-from controller.main_systems.system_monitor import SystemMonitor
-from controller.subsystems import instrument_comm
-from controller.subsystems.cloud_comm import CloudComm
-from controller.subsystems.instrument_comm import InstrumentComm
 from controller.utils.logging import redact_sensitive_info_from_path
 import pytest
 
 
-# TODO consider patching __init__ of all subsystems instead
-@pytest.fixture(scope="function", name="patch_ic_event", autouse=True)
-def fixture__patch_ic_event(mocker):
-    # InstrumentComm.__init__ creates an asyncio.Event, so mock it there so this doesn't happen
-    mocker.patch.object(instrument_comm.asyncio, "Event")
+@pytest.fixture(scope="function", name="patch_subsystem_inits", autouse=True)
+def fixture__patch_subsystem_inits(mocker):
+    mocks = {
+        "system_monitor": mocker.patch.object(
+            main.SystemMonitor, "__init__", autospec=True, return_value=None
+        ),
+        "server": mocker.patch.object(main.Server, "__init__", autospec=True, return_value=None),
+        "instrument_comm": mocker.patch.object(
+            main.InstrumentComm, "__init__", autospec=True, return_value=None
+        ),
+        "cloud_comm": mocker.patch.object(main.CloudComm, "__init__", autospec=True, return_value=None),
+    }
+    yield mocks
 
 
-@pytest.fixture(scope="function", name="patch_run_tasks")
+@pytest.fixture(scope="function", name="patch_run_tasks", autouse=True)
 def fixture__patch_run_tasks(mocker):
     def server_run_se(server, system_error_future, server_running_event):
         server_running_event.set()
@@ -44,8 +49,9 @@ def fixture__patch_run_tasks(mocker):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("use_debug_logging", [True, False])
+@pytest.mark.parametrize("base_directory", [None, os.path.join("Users", "Username", "AppData")])
 @pytest.mark.parametrize("log_directory", [None, "some/dir"])
-async def test_main__configures_logging_correctly(use_debug_logging, log_directory, patch_run_tasks, mocker):
+async def test_main__configures_logging_correctly(use_debug_logging, base_directory, log_directory, mocker):
     mocked_configure_logging = mocker.patch.object(main, "configure_logging", autospec=True)
 
     cmd_line_args = []
@@ -53,17 +59,26 @@ async def test_main__configures_logging_correctly(use_debug_logging, log_directo
         cmd_line_args.append("--log-level-debug")
     if log_directory:
         cmd_line_args.append(f"--log-directory={log_directory}")
+    if base_directory:
+        cmd_line_args.append(f"--base-directory={base_directory}")
 
     await main.main(cmd_line_args)
 
+    if base_directory and log_directory:
+        expected_path_to_log_folder = os.path.join(base_directory, log_directory)
+    else:
+        expected_path_to_log_folder = None
+
     expected_log_level = logging.DEBUG if use_debug_logging else logging.INFO
     mocked_configure_logging.assert_called_once_with(
-        path_to_log_folder=log_directory, log_file_prefix="stingray_log", log_level=expected_log_level
+        path_to_log_folder=expected_path_to_log_folder,
+        log_file_prefix="stingray_log",
+        log_level=expected_log_level,
     )
 
 
 @pytest.mark.asyncio
-async def test_main__initial_bootup_logging(patch_run_tasks, mocker):
+async def test_main__initial_bootup_logging(mocker):
     spied_info = mocker.spy(main.logger, "info")
     spied_uuid4 = mocker.spy(main.uuid, "uuid4")
 
@@ -79,8 +94,8 @@ async def test_main__initial_bootup_logging(patch_run_tasks, mocker):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("log_directory", [None, r"Users\Username\AppData"])
-async def test_main__logs_command_line_args(log_directory, patch_run_tasks, mocker):
+@pytest.mark.parametrize("log_directory", [None, "some/dir"])
+async def test_main__logs_command_line_args(log_directory, mocker):
     # mock to avoid looking for non-existent dir
     mocker.patch.object(main, "configure_logging", autospec=True)
 
@@ -110,7 +125,7 @@ async def test_main__logs_command_line_args(log_directory, patch_run_tasks, mock
 
 
 @pytest.mark.asyncio
-async def test_main__logs_system_info(patch_run_tasks, mocker):
+async def test_main__logs_system_info(mocker):
     spied_info = mocker.spy(main.logger, "info")
 
     await main.main([])
@@ -139,7 +154,7 @@ async def test_main__logs_system_info(patch_run_tasks, mocker):
 
 
 @pytest.mark.asyncio
-async def test_main__logs_error_if_port_already_in_use(patch_run_tasks, mocker):
+async def test_main__logs_error_if_port_already_in_use(mocker):
     spied_info = mocker.spy(main.logger, "info")
     spied_exception = mocker.spy(main.logger, "exception")
 
@@ -152,7 +167,7 @@ async def test_main__logs_error_if_port_already_in_use(patch_run_tasks, mocker):
 
 
 @pytest.mark.asyncio
-async def test_main__handles_errors_correctly(patch_run_tasks, mocker):
+async def test_main__handles_errors_correctly(mocker):
     spied_info = mocker.spy(main.logger, "info")
     spied_exception = mocker.spy(main.logger, "exception")
 
@@ -169,19 +184,27 @@ async def test_main__handles_errors_correctly(patch_run_tasks, mocker):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("log_directory", [None, r"Users\Username\AppData"])
+@pytest.mark.parametrize("base_directory", [None, os.path.join("Users", "Username", "AppData")])
+@pytest.mark.parametrize("log_directory", [None, "logs_in_here"])
 @pytest.mark.parametrize("expected_software_version", [None, "1.2.3"])
 @pytest.mark.parametrize("skip_software_version_verification", [True, False])
 async def test_main__initializes_system_state_correctly(
-    log_directory, expected_software_version, skip_software_version_verification, patch_run_tasks, mocker
+    base_directory,
+    log_directory,
+    expected_software_version,
+    skip_software_version_verification,
+    mocker,
 ):
     spied_uuid4 = mocker.spy(main.uuid, "uuid4")
+    mocked_getcwd = mocker.patch.object(main.os, "getcwd", autospec=True)
     # mock to avoid looking for non-existent dir
     mocker.patch.object(main, "configure_logging", autospec=True)
 
     spied_init_state = mocker.spy(main, "_initialize_system_state")
 
     cmd_line_args = []
+    if base_directory:
+        cmd_line_args.append(f"--base-directory={base_directory}")
     if log_directory:
         cmd_line_args.append(f"--log-directory={log_directory}")
     if expected_software_version:
@@ -199,12 +222,14 @@ async def test_main__initializes_system_state_correctly(
         "channel_firmware_update": None,
         "latest_software_version": None,
         "firmware_updates_accepted": None,
+        "firmware_updates_require_download": None,
         "is_user_logged_in": False,
         "instrument_metadata": {},
         "stim_info": {},
         "stimulator_circuit_statuses": {},
         "stim_barcode": None,
         "plate_barcode": None,
+        "base_directory": base_directory if base_directory else mocked_getcwd.return_value,
         "log_file_id": spied_uuid4.spy_return,
     }
 
@@ -219,29 +244,27 @@ async def test_main__initializes_system_state_correctly(
 
 # TODO make sure to add all the run() assertions
 @pytest.mark.asyncio
-async def test_main__creates_SystemMonitor_and_runs_correctly(patch_run_tasks, mocker):
+async def test_main__creates_SystemMonitor_and_runs_correctly(patch_run_tasks, patch_subsystem_inits, mocker):
     spied_ssm = mocker.spy(main, "SystemStateManager")
     spied_create_queues = mocker.spy(main, "create_system_queues")
-
-    spied_spm_init = mocker.spy(SystemMonitor, "__init__")
 
     await main.main([])
 
-    spied_spm_init.assert_called_once_with(mocker.ANY, spied_ssm.spy_return, spied_create_queues.spy_return)
+    patch_subsystem_inits["system_monitor"].assert_called_once_with(
+        mocker.ANY, spied_ssm.spy_return, spied_create_queues.spy_return
+    )
 
 
 @pytest.mark.asyncio
-async def test_main__creates_Server_and_runs_correctly(patch_run_tasks, mocker):
+async def test_main__creates_Server_and_runs_correctly(patch_run_tasks, patch_subsystem_inits, mocker):
     spied_ssm = mocker.spy(main, "SystemStateManager")
     spied_create_queues = mocker.spy(main, "create_system_queues")
-
-    spied_server_init = mocker.spy(Server, "__init__")
 
     await main.main([])
 
     expected_queues = spied_create_queues.spy_return
 
-    spied_server_init.assert_called_once_with(
+    patch_subsystem_inits["server"].assert_called_once_with(
         mocker.ANY,
         spied_ssm.spy_return.get_read_only_copy,
         expected_queues["to"]["server"],
@@ -250,32 +273,30 @@ async def test_main__creates_Server_and_runs_correctly(patch_run_tasks, mocker):
 
 
 @pytest.mark.asyncio
-async def test_main__creates_InstrumentComm_and_runs_correctly(patch_run_tasks, mocker):
+async def test_main__creates_InstrumentComm_and_runs_correctly(
+    patch_run_tasks, patch_subsystem_inits, mocker
+):
     spied_create_queues = mocker.spy(main, "create_system_queues")
-
-    spied_ic_init = mocker.spy(InstrumentComm, "__init__")
 
     await main.main([])
 
     expected_queues = spied_create_queues.spy_return
 
-    spied_ic_init.assert_called_once_with(
+    patch_subsystem_inits["instrument_comm"].assert_called_once_with(
         mocker.ANY, expected_queues["to"]["instrument_comm"], expected_queues["from"]["instrument_comm"]
     )
 
 
 @pytest.mark.asyncio
-async def test_main__creates_CloudComm_and_runs_correctly(patch_run_tasks, mocker):
+async def test_main__creates_CloudComm_and_runs_correctly(patch_run_tasks, patch_subsystem_inits, mocker):
     spied_create_queues = mocker.spy(main, "create_system_queues")
     spied_get_setting = mocker.spy(main, "_get_user_config_settings")
-
-    spied_cc_init = mocker.spy(CloudComm, "__init__")
 
     await main.main([])
 
     expected_queues = spied_create_queues.spy_return
 
-    spied_cc_init.assert_called_once_with(
+    patch_subsystem_inits["cloud_comm"].assert_called_once_with(
         mocker.ANY,
         expected_queues["to"]["cloud_comm"],
         expected_queues["from"]["cloud_comm"],
@@ -283,36 +304,58 @@ async def test_main__creates_CloudComm_and_runs_correctly(patch_run_tasks, mocke
     )
 
 
-# TODO  Wait for WS server to start
-
-
 @pytest.mark.asyncio
-async def test_main__runs_tasks_correctly(mocker):
-    mocked_server = mocker.patch.object(main, "Server")
-    mocked_spm = mocker.patch.object(main, "SystemMonitor")
-    mocked_ic = mocker.patch.object(main, "InstrumentComm")
-    mocked_cc = mocker.patch.object(main, "CloudComm")
+async def test_main__waits_for_server_to_start_before_running_other_subsystems(patch_run_tasks, mocker):
+    mocked_aio_event = mocker.patch.object(main.asyncio, "Event", autospec=True)
 
-    expected_tasks = []
+    was_awaited = False
 
-    def create_task_se(task):
-        expected_tasks.append(task)
-        return task
+    def se(*args):
+        try:
+            mocked_aio_event.return_value.wait.assert_awaited_once_with()
+        except AssertionError:
+            pass
+        else:
+            nonlocal was_awaited
+            was_awaited = True
 
-    mocked_create_task = mocker.patch.object(
-        main.asyncio, "create_task", autospec=True, side_effect=create_task_se
-    )
-
-    # mock to speed up test
-    mocker.patch.object(main.asyncio, "wait_for", autospec=True)
-
-    mocked_wait_tasks_clean = mocker.patch.object(main, "wait_tasks_clean", autospec=True)
+    patch_run_tasks["system_monitor"].side_effect = se
+    patch_run_tasks["instrument_comm"].side_effect = se
+    patch_run_tasks["cloud_comm"].side_effect = se
 
     await main.main([])
 
-    mocked_create_task.assert_any_call(mocked_server().run())
-    mocked_create_task.assert_any_call(mocked_spm().run())
-    mocked_create_task.assert_any_call(mocked_ic().run())
-    mocked_create_task.assert_any_call(mocked_cc().run())
+    assert was_awaited, "Event not awaited before running other tasks"
 
-    mocked_wait_tasks_clean.assert_called_once_with(set(expected_tasks))
+
+@pytest.mark.asyncio
+async def test_main__does_not_run_other_subsystem_if_server_never_starts_running(patch_run_tasks, mocker):
+    # remove side effect so that the event is never sest
+    patch_run_tasks["server"].side_effect = None
+    # patch this value to speed up the test
+    mocker.patch.object(main, "SERVER_BOOT_UP_TIMEOUT_SECONDS", 0)
+
+    await main.main([])
+
+    patch_run_tasks["system_monitor"].assert_not_called()
+    patch_run_tasks["instrument_comm"].assert_not_called()
+    patch_run_tasks["cloud_comm"].assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_main__runs_tasks_correctly(patch_run_tasks, mocker):
+    expected_tasks = []
+
+    def create_task_se(coro):
+        task = create_task(coro)
+        expected_tasks.append(task)
+        return task
+
+    mocker.patch.object(main.asyncio, "create_task", autospec=True, side_effect=create_task_se)
+
+    await main.main([])
+
+    patch_run_tasks["server"].assert_awaited_once()
+    patch_run_tasks["system_monitor"].assert_awaited_once()
+    patch_run_tasks["instrument_comm"].assert_awaited_once()
+    patch_run_tasks["cloud_comm"].assert_awaited_once()
