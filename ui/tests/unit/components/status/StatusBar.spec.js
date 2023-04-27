@@ -52,7 +52,7 @@ describe("StatusWidget.vue", () => {
     ])(
       "Given that /shutdown is mocked to return status 200, When Vuex is mutated to the state %s, Then the status text should update to be: %s",
       async (vuexState, expectedText) => {
-        const shutdownUrl = "http://localhost:4567/shutdown";
+        const shutdownUrl = "http://localhost:4565/shutdown";
         mockedAxios.onGet(shutdownUrl).reply(200, {});
         const propsData = {};
         wrapper = mount(StatusWidget, {

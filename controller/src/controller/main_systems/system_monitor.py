@@ -4,6 +4,7 @@
 
 import asyncio
 import logging
+import os
 from typing import Any
 
 from pulse3D.constants import CHANNEL_FIRMWARE_VERSION_UUID
@@ -11,6 +12,7 @@ from pulse3D.constants import MAIN_FIRMWARE_VERSION_UUID
 from pulse3D.constants import MANTARRAY_SERIAL_NUMBER_UUID as INSTRUMENT_SERIAL_NUMBER_UUID
 
 from ..constants import CURRENT_SOFTWARE_VERSION
+from ..constants import FW_UPDATE_SUBDIR
 from ..constants import StimulatorCircuitStatuses
 from ..constants import SystemStatuses
 from ..utils.aio import wait_tasks_clean
@@ -96,18 +98,27 @@ class SystemMonitor:
                 await self._queues["to"]["cloud_comm"].put(
                     {
                         "command": "check_versions",
+                        "fw_update_dir_path": os.path.join(system_state["base_directory"], FW_UPDATE_SUBDIR),
                         "serial_number": instrument_metadata[INSTRUMENT_SERIAL_NUMBER_UUID],
                         "main_fw_version": instrument_metadata[MAIN_FIRMWARE_VERSION_UUID],
                     }
                 )
             case SystemStatuses.UPDATES_NEEDED_STATE if system_state["firmware_updates_accepted"]:
-                if system_state["is_user_logged_in"]:
+                if not system_state["firmware_updates_require_download"] or system_state["is_user_logged_in"]:
                     new_system_status = SystemStatuses.DOWNLOADING_UPDATES_STATE
+
+                    fw_update_dir_path = (
+                        None
+                        if system_state["firmware_updates_require_download"]
+                        else os.path.join(system_state["base_directory"], FW_UPDATE_SUBDIR)
+                    )
+
                     await self._queues["to"]["cloud_comm"].put(
                         {
                             "command": "download_firmware_updates",
                             "main": system_state["main_firmware_update"],
                             "channel": system_state["channel_firmware_update"],
+                            "fw_update_dir_path": fw_update_dir_path,
                         }
                     )
                 else:
@@ -163,6 +174,7 @@ class SystemMonitor:
                     try:
                         software_update_available = semver_gt(version, CURRENT_SOFTWARE_VERSION)
                     except ValueError:
+                        # CURRENT_SOFTWARE_VERSION will not be a valid semver in dev mode
                         software_update_available = False
                     await self._queues["to"]["server"].put(
                         {
@@ -249,7 +261,17 @@ class SystemMonitor:
                 case {"command": "get_metadata", **metadata}:
                     system_state_updates["instrument_metadata"] = metadata
                 case {"command": "firmware_update_complete", "firmware_type": firmware_type}:
-                    system_state_updates[f"{firmware_type}_firmware_update"] = None
+                    key = f"{firmware_type}_firmware_update"
+                    fw_version = system_state[key]
+                    # also delete the local files if necessary
+                    if not system_state["firmware_updates_require_download"]:
+                        fw_file_path = os.path.join(
+                            system_state["base_directory"],
+                            FW_UPDATE_SUBDIR,
+                            f"{firmware_type}-{fw_version}.bin",
+                        )
+                        os.remove(fw_file_path)
+                    system_state_updates[key] = None
                 case invalid_comm:
                     raise NotImplementedError(f"Invalid communication from InstrumentComm: {invalid_comm}")
 
@@ -277,6 +299,8 @@ class SystemMonitor:
                     # error will be logged by cloud comm
                     system_state_updates["system_status"] = SystemStatuses.IDLE_READY_STATE
                 case {"command": "check_versions"}:
+                    system_state_updates["firmware_updates_require_download"] = communication["download"]
+
                     required_sw_for_fw = communication["latest_versions"]["sw"]
                     latest_main_fw = communication["latest_versions"]["main-fw"]
                     latest_channel_fw = communication["latest_versions"]["channel-fw"]

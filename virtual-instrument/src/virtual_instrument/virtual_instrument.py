@@ -131,7 +131,7 @@ class MantarrayMcSimulator(InfiniteProcess):
             MAIN_FIRMWARE_VERSION_UUID: default_main_firmware_version,
             CHANNEL_FIRMWARE_VERSION_UUID: default_channel_firmware_version,
             INITIAL_MAGNET_FINDING_PARAMS_UUID: initial_magnet_finding_params,
-            "is_stingray": False,
+            "is_stingray": True,
         }
     )
     default_adc_reading = 0xFF00

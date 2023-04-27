@@ -71,7 +71,7 @@ describe("store/system", () => {
   //   let socketServerSide;
 
   //   beforeAll((done) => {
-  //     httpServer = http.createServer().listen(4567); // TODO use constant here
+  //     httpServer = http.createServer().listen(4565); // TODO use constant here
   //     wsServer = ioServer(httpServer);
   //     // wait for connection
   //     wsServer.on("connect", (socket) => {

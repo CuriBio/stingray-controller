@@ -58,9 +58,12 @@ const redactUsernameFromLogs = (dirPath) => {
   return dirPath.replace(username, "****");
 };
 
-const getFlaskLogsFullPath = function (electronStore) {
-  const electronStoreDir = path.dirname(electronStore.path);
-  return path.join(electronStoreDir, "stingray_logs", FILENAME_PREFIX);
+const getLogSubdir = () => {
+  return path.join("stingray_logs", FILENAME_PREFIX);
+};
+
+const getLogDir = (electronStore) => {
+  return path.join(path.dirname(electronStore.path), getLogSubdir());
 };
 
 /**
@@ -72,9 +75,10 @@ const getFlaskLogsFullPath = function (electronStore) {
  */
 const generateFlaskCommandLineArgs = function (electronStore) {
   console.log("node env: " + process.env.NODE_ENV); // allow-log
-  const flaskLogsFullPath = getFlaskLogsFullPath(electronStore);
+  const flaskLogsFullPath = getLogDir(electronStore);
 
   const args = [];
+  args.push("--base-directory=" + path.dirname(electronStore.path));
   args.push("--log-directory=" + flaskLogsFullPath);
   args.push("--expected-software-version=" + exportFunctions.getCurrentAppVersion());
 
@@ -83,7 +87,7 @@ const generateFlaskCommandLineArgs = function (electronStore) {
 
 // Eli (1/15/21): making spying/mocking with Jest easier. https://medium.com/@DavideRama/mock-spy-exported-functions-within-a-single-module-in-jest-cdf2b61af642
 const exportFunctions = {
-  getFlaskLogsFullPath,
+  getLogDir,
   generateFlaskCommandLineArgs,
   createStore,
   getCurrentAppVersion,

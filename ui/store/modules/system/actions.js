@@ -14,7 +14,7 @@ export default {
     // guarding to be extra safe
     if (state.socket !== null) return;
 
-    const socket = new W3CWebSocket("ws://localhost:4567");
+    const socket = new W3CWebSocket("ws://localhost:4565");
 
     socket.onerror = function () {
       const baseLogMsg = "Error connecting to controller. ";

@@ -6,7 +6,7 @@ import mutations from "./mutations";
 import { SYSTEM_STATUS } from "./enums";
 
 const defaultState = {
-  port: 4567, // http://localhost:4567/
+  port: 4565, // http://localhost:4565/
   statusUuid: SYSTEM_STATUS.SERVER_INITIALIZING_STATE,
   simulationMode: false,
   barcodeManualMode: false,

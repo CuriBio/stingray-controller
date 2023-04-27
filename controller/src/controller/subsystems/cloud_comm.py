@@ -2,9 +2,7 @@
 
 
 import asyncio
-import base64
 import copy
-import hashlib
 import logging
 import os
 import tempfile
@@ -30,6 +28,8 @@ from ..exceptions import RefreshFailedError
 from ..exceptions import RequestFailedError
 from ..utils.aio import clean_up_tasks
 from ..utils.aio import wait_tasks_clean
+from ..utils.files import check_for_local_firmware_versions
+from ..utils.files import get_file_md5
 from ..utils.generic import handle_system_error
 
 
@@ -42,21 +42,17 @@ def _get_tokens(response_json: dict[str, Any]) -> AuthTokens:
     return AuthTokens(access=response_json["access"]["token"], refresh=response_json["refresh"]["token"])
 
 
-# TODO move this to a utils module
-def get_file_md5(file_path: str) -> str:
-    """Generate md5 of zip file.
+def _load_fw_files(command: dict[str, Any]) -> dict[str, bytes]:
+    fw_update_dir_path = command["fw_update_dir_path"]
 
-    Args:
-        file_path: path to zip file.
-    """
-    with open(file_path, "rb") as file_to_read:
-        contents = file_to_read.read()
-        md5 = hashlib.md5(  # nosec B324 B303 # Tanner (2/4/21): Bandit blacklisted this hash function for cryptographic security reasons that do not apply to the desktop app.
-            contents
-        ).digest()
-        md5s = base64.b64encode(md5).decode()
+    subtask_res = {}
 
-    return md5s
+    for fw_type in ("main", "channel"):
+        if version := command[fw_type]:
+            with open(os.path.join(fw_update_dir_path, f"{fw_type}-{version}.bin"), "rb") as fw_file:
+                subtask_res[f"{fw_type}_firmware_contents"] = fw_file.read()
+
+    return subtask_res
 
 
 class CloudComm:
@@ -194,7 +190,14 @@ class CloudComm:
         return subtask_res
 
     # TODO make sure entire FW update process (including InstrumentComm portion) has sufficient logging
-    async def _check_versions(self, command: dict[str, str]) -> dict[str, str]:
+    async def _check_versions(self, command: dict[str, str]) -> dict[str, Any]:
+        try:
+            if local_firmware_versions := check_for_local_firmware_versions(command["fw_update_dir_path"]):
+                return local_firmware_versions
+        except Exception:  # nosec B110
+            # catch all errors here to avoid user error preventing the next checks
+            pass
+
         check_sw_response = await self._request(
             "get",
             f"https://{CLOUD_API_ENDPOINT}/mantarray/software-range/{command['main_fw_version']}",
@@ -217,10 +220,13 @@ class CloudComm:
             auth_required=False,
             error_message="Error getting latest firmware versions",
         )
-        return {"latest_versions": get_versions_response.json()["latest_versions"]}
+        return {"latest_versions": get_versions_response.json()["latest_versions"], "download": True}
 
     async def _download_firmware_updates(self, command: dict[str, str]) -> dict[str, bytes]:
         try:
+            if command["fw_update_dir_path"]:
+                return _load_fw_files(command)
+
             presigned_urls = {}
 
             # get presigned download URL(s)

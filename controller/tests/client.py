@@ -65,4 +65,4 @@ async def consumer(websocket):
         print(f"response: {res}")  # allow-print
 
 
-asyncio.run(client("ws://localhost:4567"))
+asyncio.run(client("ws://localhost:4565"))
