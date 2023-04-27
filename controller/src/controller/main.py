@@ -98,7 +98,9 @@ async def main(command_line_args: list[str]) -> None:
 
         try:
             await asyncio.wait_for(server_running_event.wait(), SERVER_BOOT_UP_TIMEOUT_SECONDS)
-        except asyncio.CancelledError:
+        except asyncio.TimeoutError:
+            for task in tasks:
+                task.cancel()
             logger.error(f"Server failed to boot up before {SERVER_BOOT_UP_TIMEOUT_SECONDS} second timeout")
         else:
             logger.info("Creating remaining subsystems")

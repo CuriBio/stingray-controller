@@ -288,6 +288,7 @@ class CloudComm:
                 "username": username,
                 "password": password,
                 "service": "pulse3d",
+                "client_type": f"stingray:{CURRENT_SOFTWARE_VERSION}",
             },
         )
 
