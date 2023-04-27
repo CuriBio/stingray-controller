@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import hashlib
 import logging
+import os
 import platform
 from random import choice
 import socket
@@ -44,8 +45,11 @@ def fixture__patch_run_tasks(mocker):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("use_debug_logging", [True, False])
+@pytest.mark.parametrize("base_directory", [None, os.path.join("Users", "Username", "AppData")])
 @pytest.mark.parametrize("log_directory", [None, "some/dir"])
-async def test_main__configures_logging_correctly(use_debug_logging, log_directory, patch_run_tasks, mocker):
+async def test_main__configures_logging_correctly(
+    use_debug_logging, base_directory, log_directory, patch_run_tasks, mocker
+):
     mocked_configure_logging = mocker.patch.object(main, "configure_logging", autospec=True)
 
     cmd_line_args = []
@@ -53,12 +57,21 @@ async def test_main__configures_logging_correctly(use_debug_logging, log_directo
         cmd_line_args.append("--log-level-debug")
     if log_directory:
         cmd_line_args.append(f"--log-directory={log_directory}")
+    if base_directory:
+        cmd_line_args.append(f"--base-directory={base_directory}")
 
     await main.main(cmd_line_args)
 
+    if base_directory and log_directory:
+        expected_path_to_log_folder = os.path.join(base_directory, log_directory)
+    else:
+        expected_path_to_log_folder = None
+
     expected_log_level = logging.DEBUG if use_debug_logging else logging.INFO
     mocked_configure_logging.assert_called_once_with(
-        path_to_log_folder=log_directory, log_file_prefix="stingray_log", log_level=expected_log_level
+        path_to_log_folder=expected_path_to_log_folder,
+        log_file_prefix="stingray_log",
+        log_level=expected_log_level,
     )
 
 
@@ -79,7 +92,7 @@ async def test_main__initial_bootup_logging(patch_run_tasks, mocker):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("log_directory", [None, r"Users\Username\AppData"])
+@pytest.mark.parametrize("log_directory", [None, "some/dir"])
 async def test_main__logs_command_line_args(log_directory, patch_run_tasks, mocker):
     # mock to avoid looking for non-existent dir
     mocker.patch.object(main, "configure_logging", autospec=True)
@@ -169,19 +182,28 @@ async def test_main__handles_errors_correctly(patch_run_tasks, mocker):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("log_directory", [None, r"Users\Username\AppData"])
+@pytest.mark.parametrize("base_directory", [None, os.path.join("Users", "Username", "AppData")])
+@pytest.mark.parametrize("log_directory", [None, "logs_in_here"])
 @pytest.mark.parametrize("expected_software_version", [None, "1.2.3"])
 @pytest.mark.parametrize("skip_software_version_verification", [True, False])
 async def test_main__initializes_system_state_correctly(
-    log_directory, expected_software_version, skip_software_version_verification, patch_run_tasks, mocker
+    base_directory,
+    log_directory,
+    expected_software_version,
+    skip_software_version_verification,
+    patch_run_tasks,
+    mocker,
 ):
     spied_uuid4 = mocker.spy(main.uuid, "uuid4")
+    mocked_getcwd = mocker.patch.object(main.os, "getcwd", autospec=True)
     # mock to avoid looking for non-existent dir
     mocker.patch.object(main, "configure_logging", autospec=True)
 
     spied_init_state = mocker.spy(main, "_initialize_system_state")
 
     cmd_line_args = []
+    if base_directory:
+        cmd_line_args.append(f"--base-directory={base_directory}")
     if log_directory:
         cmd_line_args.append(f"--log-directory={log_directory}")
     if expected_software_version:
@@ -199,12 +221,14 @@ async def test_main__initializes_system_state_correctly(
         "channel_firmware_update": None,
         "latest_software_version": None,
         "firmware_updates_accepted": None,
+        "firmware_updates_require_download": None,
         "is_user_logged_in": False,
         "instrument_metadata": {},
         "stim_info": {},
         "stimulator_circuit_statuses": {},
         "stim_barcode": None,
         "plate_barcode": None,
+        "base_directory": base_directory if base_directory else mocked_getcwd.return_value,
         "log_file_id": spied_uuid4.spy_return,
     }
 
