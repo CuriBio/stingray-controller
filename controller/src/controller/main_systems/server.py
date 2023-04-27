@@ -12,9 +12,7 @@ from semver import VersionInfo
 import websockets
 from websockets import serve
 from websockets.server import WebSocketServerProtocol
-from pulse3D.constants import MANTARRAY_SERIAL_NUMBER_UUID
 
-from ..utils.validation import check_barcode_for_errors
 from ..constants import DEFAULT_SERVER_PORT_NUMBER
 from ..constants import GENERIC_24_WELL_DEFINITION
 from ..constants import NUM_WELLS
@@ -37,6 +35,7 @@ from ..utils.logging import get_redacted_string
 from ..utils.state_management import ReadOnlyDict
 from ..utils.stimulation import get_pulse_dur_us
 from ..utils.stimulation import get_pulse_duty_cycle_dur_us
+from ..utils.validation import check_barcode_for_errors
 
 logger = logging.getLogger(__name__)
 
@@ -256,14 +255,14 @@ class Server:
 
     @mark_handler
     async def _start_calibration(self, comm: dict[str, Any]) -> None:
-        """TODO"""
+        """Begin magnetometer calibration recording."""
         system_state = self._get_system_state_ro()
 
-        valid_states = (CALIBRATION_NEEDED_STATE, CALIBRATED_STATE)
+        valid_states = (SystemStatuses.CALIBRATION_NEEDED_STATE, SystemStatuses.IDLE_READY_STATE)
 
         if system_state["system_status"] not in valid_states:
             raise WebsocketCommandError(f"Route cannot be called unless in {valid_states}")
-        if _are_stimulator_checks_running():
+        if _are_stimulator_checks_running(system_state):
             raise WebsocketCommandError("Cannot calibrate while stimulator checks are running")
         if _are_any_stim_protocols_running(system_state):
             raise WebsocketCommandError("Cannot calibrate while stimulation is running")
@@ -272,7 +271,7 @@ class Server:
 
     @mark_handler
     async def _start_data_stream(self, comm: dict[str, Any]) -> None:
-        """TODO"""
+        """Begin magnetometer data stream."""
         system_state = self._get_system_state_ro()
 
         try:
@@ -285,19 +284,19 @@ class Server:
 
         # TODO raise error if data stream is already active
 
-        # TODO import MANTARRAY_SERIAL_NUMBER_UUID as INSTRUMENT_SERIAL_NUMBER_UUID in all files
-        if not system_state["instrument_metadata"][MANTARRAY_SERIAL_NUMBER_UUID]:
-            # TODO make a customer error code for this
-            raise WebsocketCommandError("Mantarray has not been assigned a Serial Number")
-        if _are_stimulator_checks_running():
+        # TODO import MANTARRAY_SERIAL_NUMBER_UUID as INSTRUMENT_SERIAL_NUMBER_UUID in all files. Same for nickname constant
+        if not all(system_state["instrument_metadata"].values()):  # TODO test this
+            # TODO make a custom error code for this
+            raise WebsocketCommandError("Instrument metadata is missing")
+        if _are_stimulator_checks_running(system_state):
             raise WebsocketCommandError("Cannot start data stream while stimulator checks are running")
 
         await self._to_monitor_queue.put(comm)
 
     @mark_handler
     async def _stop_data_stream(self, comm: dict[str, Any]) -> None:
-        """TODO"""
-        system_state = self._get_system_state_ro()
+        """Stop magnetometer data stream."""
+        # system_state = self._get_system_state_ro()
         # TODO raise error if data stream is not running
         await self._to_monitor_queue.put(comm)
 
