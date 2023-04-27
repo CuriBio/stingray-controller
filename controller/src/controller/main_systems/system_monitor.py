@@ -10,10 +10,13 @@ from pulse3D.constants import CHANNEL_FIRMWARE_VERSION_UUID
 from pulse3D.constants import MAIN_FIRMWARE_VERSION_UUID
 from pulse3D.constants import MANTARRAY_SERIAL_NUMBER_UUID as INSTRUMENT_SERIAL_NUMBER_UUID
 
+from ..constants import CALIBRATION_RECORDING_DUR_SECONDS
 from ..constants import CURRENT_SOFTWARE_VERSION
+from ..constants import MICRO_TO_BASE_CONVERSION
 from ..constants import StimulatorCircuitStatuses
 from ..constants import SystemStatuses
 from ..utils.aio import wait_tasks_clean
+from ..utils.commands import create_start_recording_command
 from ..utils.generic import handle_system_error
 from ..utils.generic import semver_gt
 from ..utils.state_management import ReadOnlyDict
@@ -152,6 +155,7 @@ class SystemMonitor:
         while True:
             communication = await self._queues["from"]["server"].get()
 
+            system_state = self._system_state_manager.data
             system_state_updates: dict[str, Any] = {}
 
             match communication:
@@ -174,6 +178,37 @@ class SystemMonitor:
                     action = "accepted" if update_accepted else "declined"
                     logger.info(f"User {action} firmware update(s)")
                     system_state_updates["firmware_updates_accepted"] = update_accepted
+                case {"command": "start_calibration"}:
+                    system_state_updates["system_status"] = SystemStatuses.CALIBRATING_STATE
+                    # TODO !!!!!!!!!! handle switching out of SystemStatuses.CALIBRATING_STATE status
+                    await self._queues["to"]["file_writer"].put(
+                        create_start_recording_command(
+                            system_state,
+                            # TODO
+                            start_recording_time_index=communication["start_timepoint"],
+                            platemap_info=communication["platemap_info"],
+                            is_calibration_recording=True,
+                        )
+                    )
+                    await self._queues["to"]["file_writer"].put(
+                        {
+                            "command": "stop_recording",
+                            "stop_timepoint": CALIBRATION_RECORDING_DUR_SECONDS * MICRO_TO_BASE_CONVERSION,
+                        }
+                    )
+
+                    await self._queues["to"]["instrument_comm"].put({"command": "start_data_stream"})
+                case {"command": "start_data_stream"}:
+                    # it's fine to switch the status here since buffering isn't a status directly related to the instrument
+                    system_state_updates["system_status"] = SystemStatuses.BUFFERING_STATE
+                    # TODO handle command responses?
+                    await self._queues["to"]["file_writer"].put(communication)
+                    await self._queues["to"]["instrument_comm"].put(communication)
+                case {"command": "stop_data_stream"}:
+                    # need to wait for the data stream to actually stop before transitiontion back to idle ready, so no status transition here
+                    # TODO handle command responses?
+                    await self._queues["to"]["file_writer"].put(communication)
+                    await self._queues["to"]["instrument_comm"].put(communication)
                 case {"command": "set_stim_status", "running": status}:
                     await self._queues["to"]["instrument_comm"].put(
                         {"command": "start_stimulation" if status else "stop_stimulation"}
@@ -204,7 +239,6 @@ class SystemMonitor:
             communication = await self._queues["from"]["instrument_comm"].get()
 
             system_state = self._system_state_manager.data
-
             system_state_updates: dict[str, Any] = {}
 
             match communication:
@@ -262,7 +296,6 @@ class SystemMonitor:
             communication = await self._queues["from"]["cloud_comm"].get()
 
             system_state = self._system_state_manager.data
-
             system_state_updates: dict[str, Any] = {}
 
             match communication:
