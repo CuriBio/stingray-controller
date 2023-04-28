@@ -1,51 +1,12 @@
 import { mount, createLocalVue } from "@vue/test-utils";
 import StimulationStudioBlockViewEditor from "@/components/stimulation/StimulationStudioBlockViewEditor.vue";
 import Vuex from "vuex";
+import { TEST_PROTOCOL_LIST_2 } from "@/tests/sample-stim-protocols/stim-protocols";
 
 const localVue = createLocalVue();
 localVue.use(Vuex);
 let NuxtStore;
 let store;
-
-const testProtocolList = [
-  { letter: "", color: "", label: "Create New" },
-  {
-    letter: "A",
-    color: "#118075",
-    label: "Tester",
-    protocol: {
-      name: "Tester",
-      stimulationType: "V",
-      restDuration: 20,
-      timeUnit: "milliseconds",
-      runUntilStopped: true,
-      subprotocols: [
-        {
-          type: "Delay",
-          duration: 15,
-          unit: "seconds",
-        },
-        {
-          type: "Delay",
-          duration: 20,
-          unit: "milliseconds",
-        },
-      ],
-      detailedSubprotocols: [
-        {
-          type: "Delay",
-          src: "/delay-tile.png",
-          nestedProtocols: [],
-          repeat: { color: "d822f9", numberOfRepeats: 0 },
-          settings: {
-            duration: 15,
-            unit: "seconds",
-          },
-        },
-      ],
-    },
-  },
-];
 
 describe("StimulationStudioDragAndDropPanel.vue", () => {
   beforeAll(async () => {
@@ -55,7 +16,7 @@ describe("StimulationStudioDragAndDropPanel.vue", () => {
 
   beforeEach(async () => {
     store = await NuxtStore.createStore();
-    store.state.stimulation.protocolList = JSON.parse(JSON.stringify(testProtocolList));
+    store.state.stimulation.protocolList = JSON.parse(JSON.stringify(TEST_PROTOCOL_LIST_2));
   });
 
   test("When mounting StimulationStudioDragAndDropPanel from the component file, Then default tab displayed should be basic, but can toggle with clicking each tab", async () => {
@@ -84,7 +45,7 @@ describe("StimulationStudioDragAndDropPanel.vue", () => {
       protocol: {
         name: "mockTester",
         stimulationType: "C",
-        runUntilStopped: false,
+        runUntilStopped: true,
         restDuration: 40,
         timeUnit: "milliseconds",
         subprotocols: [],
@@ -93,18 +54,16 @@ describe("StimulationStudioDragAndDropPanel.vue", () => {
     };
 
     await store.dispatch("stimulation/editSelectedProtocol", testParam1);
-    expect(wrapper.vm.stimulationTypeIdx).toBe(1);
     expect(wrapper.vm.currentLetter).toBe(testParam1.letter);
     expect(wrapper.vm.restDuration).toBe("20");
-    expect(wrapper.vm.stopOptionIdx).toBe(0);
-    expect(wrapper.vm.disabledTime).toBe(false);
-
-    await store.dispatch("stimulation/editSelectedProtocol", testParam2);
-    expect(wrapper.vm.stimulationTypeIdx).toBe(0);
-    expect(wrapper.vm.currentLetter).toBe(testParam2.letter);
-    expect(wrapper.vm.restDuration).toBe("40");
     expect(wrapper.vm.stopOptionIdx).toBe(1);
     expect(wrapper.vm.disabledTime).toBe(true);
+
+    await store.dispatch("stimulation/editSelectedProtocol", testParam2);
+    expect(wrapper.vm.currentLetter).toBe(testParam2.letter);
+    expect(wrapper.vm.restDuration).toBe("40");
+    expect(wrapper.vm.stopOptionIdx).toBe(0);
+    expect(wrapper.vm.disabledTime).toBe(false);
   });
 
   test("When a user adds input to frequency input, Then the change will be recorded in data", async () => {

@@ -51,7 +51,7 @@
       id="cmpDf2d0dbfd2edb4ffa3b8615863fa1b9a7"
       class="span__stimulationstudio-current-settings-label-left"
       :style="'top: 179.5px;'"
-      >{{ stimulationType }}</span
+      >Current</span
     >
     <div
       id="cmpDf6ba8560cb2fbd91276a29c46743e99a"
@@ -73,7 +73,7 @@
       id="cmpD7695902a49c6eaeb81d267812f0a90cd"
       class="span__stimulationstudio-current-settings-label-right"
       :style="'top: 179.5px;'"
-      >{{ stimUnit }}</span
+      >mA</span
     >
     <div v-if="pulseType === 'Biphasic'">
       <canvas id="cmpDefb479b0caa166978ebed24ab8c44baf" :style="'top: 246px;'" />
@@ -142,7 +142,7 @@
         id="cmpDdd1b9fc6423c3af17206292a54489078"
         class="span__stimulationstudio-current-settings-label-left"
         :style="'top: 466.5px;'"
-        >{{ stimulationType }}</span
+        >Current</span
       >
       <div
         id="cmpD8ecdf9c4a418509adff741b988ad0676"
@@ -164,7 +164,7 @@
         id="cmpDbc629158eb67226e3134f41509394ec9"
         class="span__stimulationstudio-current-settings-label-right"
         :style="'top: 466.5px;'"
-        >{{ stimUnit }}</span
+        >mA</span
       >
     </div>
     <canvas :style="pulseType === 'Monophasic' ? 'top: 240px;' : 'top: 533px;'" />
@@ -270,7 +270,7 @@
     <div class="div__waveform-preview-title">Waveform Preview</div>
     <div class="div__pulse-diagram-container">
       <img
-        :src="require(`@/assets/img/${pulseType}-diagram-${stimulationType}.png`)"
+        :src="require(`@/assets/img/${pulseType}-diagram-Current.png`)"
         :class="pulseType === 'Monophasic' ? 'img__mononphasic-diagram' : 'None'"
       />
     </div>
@@ -305,14 +305,14 @@ import CheckBoxWidget from "@/components/basic-widgets/CheckBoxWidget.vue";
 import StimulationStudioColorModal from "@/components/stimulation/StimulationStudioColorModal.vue";
 import ButtonWidget from "@/components/basic-widgets/ButtonWidget.vue";
 import {
-  MIN_SUBPROTOCOL_DURATION_MS,
-  MAX_SUBPROTOCOL_DURATION_MS,
-  TIME_CONVERSION_TO_MILLIS,
-  MIN_CHARGE_MA,
-  MAX_CHARGE_MA,
-  MIN_PHASE_DURATION_US,
-} from "@/store/modules/stimulation/enums";
-
+  checkNumCyclesValidity,
+  checkPulseChargeValidity,
+  checkPulseDurationValidity,
+  checkActiveDurationValidity,
+  checkPulseFrequencyValidity,
+  getMaxPulseDurationForFreq,
+} from "@/js-utils/ProtocolValidation";
+import { TIME_CONVERSION_TO_MILLIS } from "@/store/modules/stimulation/enums";
 import Vue from "vue";
 import { library } from "@fortawesome/fontawesome-svg-core";
 import { faBalanceScale, faQuestionCircle } from "@fortawesome/free-solid-svg-icons";
@@ -327,7 +327,6 @@ Vue.directive("popover", VBPopover);
 library.add(faBalanceScale, faQuestionCircle);
 
 /**
- * @vue-props {String} stimulationType - Current type of stimulation
  * @vue-props {String} pulseType - Type of pulse for modal
  * @vue-props {Object} selectedPulseSettings - Settings passed to modal if it's selected to edit
  * @vue-props {Object} selectedPulseSettings - Stim block settings passed to modal if it's selected to edit
@@ -366,7 +365,6 @@ export default {
     StimulationStudioColorModal,
   },
   props: {
-    stimulationType: { type: String, default: "Current" },
     pulseType: { type: String, default: "Biphasic" },
     modalOpenForEdit: { type: Boolean, default: false },
     selectedPulseSettings: {
@@ -382,19 +380,6 @@ export default {
     return {
       popoverMessage: "Not Editable: This data is displayed for informational purposes only.",
       pulseSettings: {},
-      invalidErrMsg: {
-        numErr: "Must be a number",
-        minPulseDuration: `Duration must be >= ${MIN_PHASE_DURATION_US}μs`,
-        minInterphaseDuration: `Duration must be 0ms or >= ${MIN_PHASE_DURATION_US}μs`,
-        required: "Required",
-        maxPulseDuration: "Duration must be <= 50ms",
-        minActiveDuration: "Duration must be >= 100ms",
-        valid: "",
-        maxMinCurrent: `Must be within [-${MIN_CHARGE_MA}, -${MAX_CHARGE_MA}] or [${MIN_CHARGE_MA}, ${MAX_CHARGE_MA}]`,
-        maxVoltage: "Must be within +/- 1200",
-        frequency: "Must be a non-zero value <= 100",
-        numCycles: "Must be a whole number > 0",
-      },
       errMsgs: {
         phaseOneDuration: "",
         phaseOneCharge: "",
@@ -412,13 +397,13 @@ export default {
       inputPulseFrequency: "",
       maxPulseDurationForFreq: 50,
       diagramKeys: {
-        Monophasic: ["A. Phase Duration", `B. Phase ${this.stimulationType}`, "C. Total Active Duration"],
+        Monophasic: ["A. Phase Duration", `B. Phase Current`, "C. Total Active Duration"],
         Biphasic: [
           "A. Phase 1 Duration",
-          `B. Phase 1 ${this.stimulationType}`,
+          "B. Phase 1 Current",
           "C. Interphase Interval",
           "D. Phase 2 Duration",
-          `E. Phase 2 ${this.stimulationType}`,
+          "E. Phase 2 Current",
           "F. Total Active Duration",
         ],
       },
@@ -443,9 +428,6 @@ export default {
     calculatedDelay: function () {
       const totalDelay = 1000 - this.inputPulseFrequency * this.totalPulseDuration;
       return totalDelay / this.inputPulseFrequency;
-    },
-    stimUnit: function () {
-      return this.stimulationType.includes("C") ? "mA" : "V";
     },
     buttonHoverColors: function () {
       return this.modalOpenForEdit ? ["#19ac8a", "#19ac8a", "#bd4932", "#bd4932"] : ["#19ac8a", "#bd4932"];
@@ -587,7 +569,7 @@ export default {
         }
 
         if (label.includes("Duration") || label.includes("Interval")) {
-          this.checkPulseDurationValidity();
+          this.handlePulseDurationValidity();
           this.checkActiveDuration();
         } else if (label.includes("Charge")) {
           this.checkChargeValidity(value, label);
@@ -598,7 +580,7 @@ export default {
       }
       this.handleAllValid();
     },
-    checkPulseDurationValidity() {
+    handlePulseDurationValidity() {
       this.checkPulseDuration("phaseOneDuration");
       if (this.pulseType === "Biphasic") {
         this.checkPulseDuration("phaseTwoDuration");
@@ -616,97 +598,52 @@ export default {
     },
     checkPulseDuration(label) {
       const valueStr = this.pulseSettings[label];
-      const value = +valueStr;
       const isInterphaseDur = label === "interphaseInterval";
-      const isValueLessThanMin = value < MIN_PHASE_DURATION_US / 1000;
-
-      if (valueStr === "") {
-        this.errMsgs[label] = this.invalidErrMsg.required;
-      } else if (isNaN(value)) {
-        this.errMsgs[label] = this.invalidErrMsg.numErr;
-      } else if (isValueLessThanMin && !isInterphaseDur) {
-        this.errMsgs[label] = this.invalidErrMsg.minPulseDuration;
-      } else if (isValueLessThanMin && value !== 0 && isInterphaseDur) {
-        this.errMsgs[label] = this.invalidErrMsg.minInterphaseDuration;
-      } else if (this.totalPulseDuration > this.maxPulseDurationForFreq) {
-        this.errMsgs[label] = this.invalidErrMsg.maxPulseDuration;
-      } else {
-        this.errMsgs[label] = this.invalidErrMsg.valid;
-        this.pulseSettings[label] = value;
-      }
+      this.errMsgs[label] = checkPulseDurationValidity(
+        valueStr,
+        isInterphaseDur,
+        this.maxPulseDurationForFreq,
+        this.totalPulseDuration
+      );
+      const isValid = this.errMsgs[label] === "";
+      if (isValid) this.pulseSettings[label] = +valueStr;
     },
     checkActiveDuration() {
       const valueStr = this.pulseSettings.totalActiveDuration.duration;
-      const value = +valueStr;
       const selectedUnit = this.timeUnits[this.activeDurationIdx];
-      const valueInMillis = value * TIME_CONVERSION_TO_MILLIS[selectedUnit];
-      // if user continues with letter in one of the duration input fields, totalPulseDuration will be NaN, so change it to 0
-      const minDurAllowed = Math.max(MIN_SUBPROTOCOL_DURATION_MS, this.totalPulseDuration || 0);
-
-      const label = "totalActiveDuration";
-
-      if (valueStr === "") {
-        this.errMsgs[label] = this.invalidErrMsg.required;
-      } else if (isNaN(value)) {
-        this.errMsgs[label] = "Invalid number";
-      } else if (valueInMillis < minDurAllowed) {
-        this.errMsgs[label] = `Must be >= ${minDurAllowed}ms`;
-      } else if (valueInMillis > MAX_SUBPROTOCOL_DURATION_MS) {
-        const maxInHrs = MAX_SUBPROTOCOL_DURATION_MS / TIME_CONVERSION_TO_MILLIS.hours;
-        this.errMsgs[label] = `Must be <= ${maxInHrs}hrs`;
-      } else {
-        this.errMsgs[label] = this.invalidErrMsg.valid;
-        this.pulseSettings[label].duration = value;
-        this.pulseSettings[label].unit = this.timeUnits[this.activeDurationIdx];
+      this.errMsgs.totalActiveDuration = checkActiveDurationValidity(
+        valueStr,
+        selectedUnit,
+        this.totalPulseDuration
+      );
+      const isValid = this.errMsgs.totalActiveDuration === "";
+      if (isValid) {
+        this.pulseSettings.totalActiveDuration.duration = +valueStr;
+        this.pulseSettings.totalActiveDuration.unit = this.timeUnits[this.activeDurationIdx];
       }
     },
     checkPulseFrequency() {
-      const label = "pulseFrequency";
-
       const valueStr = this.inputPulseFrequency;
-      const value = +valueStr;
+      const maxPulseDurForFreq = getMaxPulseDurationForFreq(this.inputPulseFrequency);
+      this.errMsgs.pulseFrequency = checkPulseFrequencyValidity(valueStr, maxPulseDurForFreq);
 
-      if (valueStr === "") {
-        this.errMsgs[label] = this.invalidErrMsg.required;
-      } else if (isNaN(value) || value <= 0 || value > 100) {
-        this.errMsgs[label] = this.invalidErrMsg.frequency;
-      } else {
-        this.errMsgs[label] = this.invalidErrMsg.valid;
-        this.inputPulseFrequency = value;
-        this.maxPulseDurationForFreq = Math.min(50, Math.trunc((1000 / this.inputPulseFrequency) * 0.8));
-
-        this.invalidErrMsg.maxPulseDuration = `Duration must be <= ${this.maxPulseDurationForFreq}ms`;
-        this.checkPulseDurationValidity(); // Need to recheck pulse dur after a new valid frequency is entered
+      const isValid = this.errMsgs.pulseFrequency === "";
+      if (isValid) {
+        this.inputPulseFrequency = +valueStr;
+        this.maxPulseDurationForFreq = maxPulseDurForFreq;
+        this.handlePulseDurationValidity(); // Need to recheck pulse dur after a new valid frequency is entered
       }
     },
     checkChargeValidity(valueStr, label) {
-      const value = +valueStr;
-      if (valueStr === "") {
-        this.errMsgs[label] = this.invalidErrMsg.required;
-      } else if (isNaN(value)) {
-        this.errMsgs[label] = this.invalidErrMsg.numErr;
-      } else if (
-        this.stimulationType.includes("C") &&
-        (Math.abs(value) > MAX_CHARGE_MA || Math.abs(value) < MIN_CHARGE_MA)
-      ) {
-        this.errMsgs[label] = this.invalidErrMsg.maxMinCurrent;
-      } else if (this.stimulationType.includes("V") && Math.abs(value) > 1200) {
-        this.errMsgs[label] = this.invalidErrMsg.maxVoltage;
-      } else {
-        this.errMsgs[label] = this.invalidErrMsg.valid;
-        this.pulseSettings[label] = value;
-      }
+      this.errMsgs[label] = checkPulseChargeValidity(valueStr);
+      const isValid = this.errMsgs[label] === "";
+      if (isValid) this.pulseSettings[label] = +valueStr;
     },
     checkNumCycles() {
       const numCyclesAsNum = +this.numCycles;
-      let errorMsgLabel;
-      if (this.numCycles === "" || !Number.isInteger(numCyclesAsNum) || numCyclesAsNum <= 0) {
-        errorMsgLabel = "numCycles";
-      } else {
-        errorMsgLabel = "valid";
-        this.numCycles = numCyclesAsNum;
-      }
-      this.errMsgs["numCycles"] = this.invalidErrMsg[errorMsgLabel];
+      this.errMsgs.numCycles = checkNumCyclesValidity(this.numCycles);
+      const isValid = this.errMsgs.numCycles === "";
+      if (isValid) this.numCycles = numCyclesAsNum;
     },
     handleTotalDurationUnitChange(idx) {
       this.activeDurationIdx = idx;

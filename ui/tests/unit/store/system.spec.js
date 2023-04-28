@@ -71,7 +71,7 @@ describe("store/system", () => {
   //   let socketServerSide;
 
   //   beforeAll((done) => {
-  //     httpServer = http.createServer().listen(4567); // TODO use constant here
+  //     httpServer = http.createServer().listen(4565); // TODO use constant here
   //     wsServer = ioServer(httpServer);
   //     // wait for connection
   //     wsServer.on("connect", (socket) => {
@@ -183,14 +183,14 @@ describe("store/system", () => {
   //     };
 
   //     // confirm precondition
-  //     expect(store.state.system.allowSWUpdateInstall).toBe(false);
+  //     expect(store.state.system.allowSwUpdateInstall).toBe(false);
 
   //     await new Promise((resolve) => {
   //       socketServerSide.emit("swUpdate", JSON.stringify(message), (ack) => {
   //         resolve(ack);
   //       });
   //     });
-  //     expect(store.state.system.allowSWUpdateInstall).toBe(true);
+  //     expect(store.state.system.allowSwUpdateInstall).toBe(true);
   //   });
   //   test("When backend emits swUpdate message with softwareUpdateAvailable value, Then ws client commits value to store", async () => {
   //     const message = {

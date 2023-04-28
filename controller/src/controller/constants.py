@@ -17,12 +17,14 @@ CURRENT_SOFTWARE_VERSION = "REPLACETHISWITHVERSIONDURINGBUILD"
 COMPILED_EXE_BUILD_TIMESTAMP = "REPLACETHISWITHTIMESTAMPDURINGBUILD"
 SOFTWARE_RELEASE_CHANNEL = "REPLACETHISWITHRELEASECHANNELDURINGBUILD"
 
-DEFAULT_SERVER_PORT_NUMBER = 4567
+DEFAULT_SERVER_PORT_NUMBER = 4565
 
 CURRENT_RECORDING_FILE_VERSION = "2.0.0"
 
 NUM_WELLS = 24
 GENERIC_24_WELL_DEFINITION = LabwareDefinition(row_count=4, column_count=6)
+
+FW_UPDATE_SUBDIR = "firmware_updates"
 
 AuthTokens = namedtuple("AuthTokens", ["access", "refresh"])
 AuthCreds = namedtuple("AuthCreds", ["customer_id", "username", "password"])
@@ -75,19 +77,22 @@ class SystemStatuses(Enum):
     UPDATE_ERROR_STATE = uuid.UUID("33742bfc-d354-4ae5-88b6-2b3cee23aff8")
 
 
-# TODO redo these
+# TODO expand on these
 class ErrorCodes(IntEnum):
+    # 000 - Instrument related
     INSTRUMENT_NOT_FOUND = 1
     INSTRUMENT_CONNECTION_CREATION = 2
     INSTRUMENT_CONNECTION_LOST = 3
-    INSTRUMENT_SENT_BAD_DATA = 4
-    INSTRUMENT_STATUS_CODE = 5
-    INSTRUMENT_FW_INCOMPATIBLE_WITH_SW = 6
-    UI_SENT_BAD_DATA = 7
-    # These by nature cannot be set by the controller itself, and thus are only here for documentation
-    CONTROLLER_CONNECTION_CREATION = 8
-    CONTROLLER_CONNECTION_LOST = 9
-    CONTROLLER_SENT_BAD_DATA = 10
+    INSTRUMENT_STATUS_CODE = 4
+    INSTRUMENT_FW_INCOMPATIBLE_WITH_SW = 5
+    INSTRUMENT_SENT_BAD_DATA = 10
+    INCORRECT_INSTRUMENT_TYPE = 99  # temporary
+    # 100 - Caught in Controller
+    UI_SENT_BAD_DATA = 110
+    # 200 - Caught in UI  # These by nature cannot be set by the controller itself, and thus are only here for documentation
+    CONTROLLER_CONNECTION_CREATION = 202
+    CONTROLLER_CONNECTION_LOST = 203
+    CONTROLLER_SENT_BAD_DATA = 210
     # This ideally should never happen, but creating it just in case
     UNSPECIFIED = 999
 

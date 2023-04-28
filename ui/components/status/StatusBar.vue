@@ -201,7 +201,7 @@ export default {
     ...mapState("system", [
       "systemErrorCode",
       "softwareUpdateAvailable",
-      "allowSWUpdateInstall",
+      "allowSwUpdateInstall",
       "firmwareUpdateDurMins",
       "confirmationRequest",
       "statusUuid",
@@ -359,7 +359,7 @@ export default {
       this.closeModalsById(["ops-closure-warning", "fw-closure-warning"], false);
 
       // if a SW update is available, show message before confirming closure
-      if (idx === 1 && this.softwareUpdateAvailable && this.allowSWUpdateInstall) {
+      if (idx === 1 && this.softwareUpdateAvailable && this.allowSwUpdateInstall) {
         this.$bvModal.show("sw-update-message");
       } else {
         if (idx === 1 && this.isConnectedToController) {

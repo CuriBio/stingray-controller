@@ -30,7 +30,6 @@ export default {
   },
   setStimulationType({ protocolEditor }, type) {
     if (type[0] === "C") protocolEditor.stimulationType = "C";
-    if (type[0] === "V") protocolEditor.stimulationType = "V";
   },
   setRepeatColorAssignments(state, assignments) {
     state.repeatColors = assignments;
@@ -147,5 +146,8 @@ export default {
   },
   setTimeUnit({ protocolEditor }, unit) {
     protocolEditor.timeUnit = unit;
+  },
+  setInvalidImportedProtocols(state, protocols) {
+    state.invalidImportedProtocols = [...protocols];
   },
 };

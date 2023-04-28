@@ -125,10 +125,11 @@ def parse_metadata_bytes(metadata_bytes: bytes) -> dict[UUID | str, Any]:
             "Z": int.from_bytes(metadata_bytes[60:61], byteorder="little", signed=True),
             "REMN": int.from_bytes(metadata_bytes[61:63], byteorder="little", signed=True),
         },
+        "is_stingray": bool(metadata_bytes[63]),
     }
 
 
-def convert_metadata_to_bytes(metadata_dict: dict[UUID, Any]) -> bytes:
+def convert_metadata_to_bytes(metadata_dict: dict[UUID | str, Any]) -> bytes:
     metadata_bytes = (
         bytes([metadata_dict[BOOT_FLAGS_UUID]])
         + bytes(metadata_dict[MANTARRAY_NICKNAME_UUID], encoding="utf-8")
@@ -143,6 +144,7 @@ def convert_metadata_to_bytes(metadata_dict: dict[UUID, Any]) -> bytes:
         + metadata_dict[INITIAL_MAGNET_FINDING_PARAMS_UUID]["REMN"].to_bytes(
             2, byteorder="little", signed=True
         )
+        + bytes([metadata_dict["is_stingray"]])
     )
     # append empty bytes so the result length is always a multiple of 32
     metadata_bytes += bytes(math.ceil(len(metadata_bytes) / 32) * 32 - len(metadata_bytes))

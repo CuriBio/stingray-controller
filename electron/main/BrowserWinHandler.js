@@ -9,7 +9,7 @@ import mainUtils from "./utils.js"; // Eli (1/15/21): helping to be able to spy 
 
 const createStore = mainUtils.createStore;
 let store = createStore();
-const getFlaskLogsFullPath = mainUtils.getFlaskLogsFullPath;
+const getLogDir = mainUtils.getLogDir;
 
 export default class BrowserWinHandler {
   /**
@@ -117,7 +117,7 @@ export default class BrowserWinHandler {
       });
     });
     ipcMain.once("logsFlaskDirRequest", (event) => {
-      event.reply("logsFlaskDirResponse", getFlaskLogsFullPath(store));
+      event.reply("logsFlaskDirResponse", getLogDir(store));
     });
   }
 

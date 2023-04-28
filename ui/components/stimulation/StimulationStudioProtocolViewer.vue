@@ -7,7 +7,7 @@
       :plotAreaPixelHeight="160"
       :plotAreaPixelWidth="dynamicPlotWidth"
       :dataPoints="datapoints"
-      :yAxisLabel="stimulationType"
+      :yAxisLabel="'Current'"
       :xAxisLabel="xAxisLabel"
       :repeatColors="repeatColors"
       :delayBlocks="delayBlocks"
@@ -38,9 +38,6 @@ export default {
   name: "StimulationStudioProtocolViewer",
   components: {
     StimulationStudioWaveform,
-  },
-  props: {
-    stimulationType: { type: String, default: "Voltage" },
   },
   data() {
     return {

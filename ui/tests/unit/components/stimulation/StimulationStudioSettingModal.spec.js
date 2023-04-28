@@ -2,6 +2,11 @@ import { mount, shallowMount, createLocalVue } from "@vue/test-utils";
 import StimulationStudioWaveformSettingModal from "@/components/stimulation/StimulationStudioWaveformSettingModal.vue";
 import { StimulationStudioWaveformSettingModal as dist_StimulationStudioWaveformSettingModal } from "@/dist/stingray.common";
 import { MIN_SUBPROTOCOL_DURATION_MS } from "@/store/modules/stimulation/enums";
+import {
+  TEST_MONOPHASIC_PULSE_SETTINGS,
+  TEST_BIPHASIC_PULSE_SETTINGS,
+} from "@/tests/sample-stim-protocols/stim-protocols";
+
 import Vuex from "vuex";
 
 let wrapper = null;
@@ -11,33 +16,6 @@ localVue.use(Vuex);
 let NuxtStore;
 let store;
 
-const testBiphasicPulseSettings = {
-  phaseOneDuration: "",
-  phaseOneCharge: "",
-  interphaseInterval: "",
-  phaseTwoDuration: "",
-  phaseTwoCharge: "",
-  postphaseInterval: "",
-  totalActiveDuration: {
-    duration: "",
-    unit: "milliseconds",
-  },
-  numCycles: 0,
-  frequency: "",
-};
-
-const testMonophasicPulseSettings = {
-  phaseOneDuration: "",
-  phaseOneCharge: "",
-  postphaseInterval: "",
-  totalActiveDuration: {
-    duration: "",
-    unit: "milliseconds",
-  },
-  numCycles: 0,
-  frequency: "",
-};
-
 describe("StimulationStudioWaveformSettingModal.vue", () => {
   beforeAll(async () => {
     const storePath = `${process.env.buildDir}/store.js`;
@@ -46,6 +24,11 @@ describe("StimulationStudioWaveformSettingModal.vue", () => {
 
   beforeEach(async () => {
     store = await NuxtStore.createStore();
+  });
+
+  afterEach(() => {
+    wrapper.destroy();
+    jest.restoreAllMocks();
   });
 
   test("When mounting StimulationStudioWaveformSettingModal from the build dist file, Then the title text `Biphasic Pulse Details` loads correctly and initial error messages for each input", () => {
@@ -63,7 +46,7 @@ describe("StimulationStudioWaveformSettingModal.vue", () => {
       store,
       localVue,
       propsData: {
-        selectedPulseSettings: testBiphasicPulseSettings,
+        selectedPulseSettings: TEST_BIPHASIC_PULSE_SETTINGS,
         frequency: 0,
         currentColor: "hsla(100, 100%, 50%, 1)",
       },
@@ -79,7 +62,7 @@ describe("StimulationStudioWaveformSettingModal.vue", () => {
       store,
       localVue,
       propsData: {
-        selectedPulseSettings: testBiphasicPulseSettings,
+        selectedPulseSettings: TEST_BIPHASIC_PULSE_SETTINGS,
         frequency: 0,
         currentColor: "hsla(100, 100%, 50%, 1)",
       },
@@ -87,12 +70,46 @@ describe("StimulationStudioWaveformSettingModal.vue", () => {
     const targetSpan = wrapper.find(".span__stimulationstudio-current-settings-title");
     expect(targetSpan).toBeTruthy();
   });
+  test.each([
+    ["phaseOneDuration", "duration", "test", "Must be a number"],
+    ["phaseOneDuration", "duration", "1500", "Duration must be <= 50ms"],
+    ["phaseOneDuration", "duration", "", "Required"],
+    ["phaseOneDuration", "duration", "0.01", "Duration must be >= 20μs"],
+    ["phaseOneDuration", "duration", "50", ""],
+    ["interphaseInterval", "interphase", "0.01", "Duration must be 0ms or >= 20μs"],
+    ["interphaseInterval", "interphase", "test", "Must be a number"],
+    ["interphaseInterval", "interphase", "0.02", ""],
+    ["interphaseInterval", "interphase", "0", ""],
+    ["interphaseInterval", "interphase", "", "Required"],
+    ["interphaseInterval", "interphase", "100", "Duration must be <= 50ms"],
+    ["phaseOneCharge", "charge", "test", "Must be a number"],
+    ["phaseOneCharge", "charge", "", "Required"],
+    ["phaseOneCharge", "charge", "0", "Must be within [-1, -100] or [1, 100]"],
+    ["phaseOneCharge", "charge", "101", "Must be within [-1, -100] or [1, 100]"],
+    ["phaseOneCharge", "charge", "50", ""],
+  ])(
+    "When a user adds a value to an input field for %s, Then the correct error message will be presented upon validity checks to input",
+    async (inputType, suffix, value, errorMsg) => {
+      const wrapper = mount(StimulationStudioWaveformSettingModal, {
+        store,
+        localVue,
+        propsData: {
+          pulseType: "Biphasic",
+          selectedPulseSettings: TEST_BIPHASIC_PULSE_SETTINGS,
+          currentColor: "hsla(100, 100%, 50%, 1)",
+        },
+      });
+      const targetInputField = wrapper.find(`#input-widget-field-${suffix}`);
+      await targetInputField.setValue(value);
+      expect(wrapper.vm.errMsgs[inputType]).toBe(errorMsg);
+    }
+  );
   test("When clicking on either button, Then the modal successfully closes by emitting the close() function to parent component", async () => {
     const wrapper = mount(StimulationStudioWaveformSettingModal, {
       store,
       localVue,
       propsData: {
-        selectedPulseSettings: testBiphasicPulseSettings,
+        selectedPulseSettings: TEST_BIPHASIC_PULSE_SETTINGS,
         frequency: 0,
         currentColor: "hsla(100, 100%, 50%, 1)",
       },
@@ -100,32 +117,14 @@ describe("StimulationStudioWaveformSettingModal.vue", () => {
     await wrapper.vm.close(0);
     expect(wrapper.emitted("close", "Save")).toBeTruthy();
   });
-  test("When Voltage and Biphasic props is passed down, Then the correct labels should be present in modal and not default", async () => {
-    const wrapper = shallowMount(StimulationStudioWaveformSettingModal, {
-      store,
-      localVue,
-      propsData: {
-        stimulationType: "Voltage",
-        pulseType: "Biphasic",
-        selectedPulseSettings: testBiphasicPulseSettings,
-        frequency: 0,
-        currentColor: "hsla(100, 100%, 50%, 1)",
-      },
-    });
-    const title = wrapper.findAll("span").at(6).text();
-    expect(title).toBe("Voltage");
-    const interphaseLabel = wrapper.findAll("span").at(8);
-    expect(interphaseLabel).toBeTruthy();
-  });
 
   test("When a user opens the pulse settings modal, Then the user can only save the settings if all inputs pass the validity checks", async () => {
     const wrapper = mount(StimulationStudioWaveformSettingModal, {
       store,
       localVue,
       propsData: {
-        stimulationType: "Current",
         pulseType: "Monophasic",
-        selectedPulseSettings: testMonophasicPulseSettings,
+        selectedPulseSettings: TEST_MONOPHASIC_PULSE_SETTINGS,
         currentColor: "hsla(100, 100%, 50%, 1)",
       },
     });
@@ -157,9 +156,8 @@ describe("StimulationStudioWaveformSettingModal.vue", () => {
       store,
       localVue,
       propsData: {
-        stimulationType: "Voltage",
         pulseType: "Monophasic",
-        selectedPulseSettings: testMonophasicPulseSettings,
+        selectedPulseSettings: TEST_MONOPHASIC_PULSE_SETTINGS,
         currentColor: "hsla(100, 100%, 50%, 1)",
       },
     });
@@ -176,7 +174,6 @@ describe("StimulationStudioWaveformSettingModal.vue", () => {
       store,
       localVue,
       propsData: {
-        stimulationType: "Voltage",
         pulseType: "Biphasic",
         selectedPulseSettings: {
           phaseOneDuration: 10,
@@ -215,7 +212,6 @@ describe("StimulationStudioWaveformSettingModal.vue", () => {
       store,
       localVue,
       propsData: {
-        stimulationType: "Voltage",
         pulseType: "Biphasic",
         selectedPulseSettings: {
           phaseOneDuration: 5,
@@ -251,9 +247,8 @@ describe("StimulationStudioWaveformSettingModal.vue", () => {
       store,
       localVue,
       propsData: {
-        stimulationType: "Voltage",
         pulseType: "Monophasic",
-        selectedPulseSettings: testMonophasicPulseSettings,
+        selectedPulseSettings: TEST_MONOPHASIC_PULSE_SETTINGS,
         currentColor: "hsla(100, 100%, 50%, 1)",
       },
     });
@@ -313,9 +308,8 @@ describe("StimulationStudioWaveformSettingModal.vue", () => {
       store,
       localVue,
       propsData: {
-        stimulationType: "Voltage",
         pulseType: "Monophasic",
-        selectedPulseSettings: testMonophasicPulseSettings,
+        selectedPulseSettings: TEST_MONOPHASIC_PULSE_SETTINGS,
         currentColor: "hsla(100, 100%, 50%, 1)",
       },
     });
@@ -332,7 +326,6 @@ describe("StimulationStudioWaveformSettingModal.vue", () => {
       store,
       localVue,
       propsData: {
-        stimulationType: "Voltage",
         pulseType: "Biphasic",
         selectedPulseSettings: {
           phaseOneDuration: 5,
@@ -362,39 +355,4 @@ describe("StimulationStudioWaveformSettingModal.vue", () => {
     await wrapper.find("#input-widget-field-num-cycles").setValue("5");
     expect(wrapper.vm.calculatedActiveDur).toBe(2.5);
   });
-  test.each([
-    ["phaseOneDuration", "duration", "test", "Must be a number"],
-    ["phaseOneDuration", "duration", "1500", "Duration must be <= 50ms"],
-    ["phaseOneDuration", "duration", "", "Required"],
-    ["phaseOneDuration", "duration", "0.01", "Duration must be >= 20μs"],
-    ["phaseOneDuration", "duration", "50", ""],
-    ["interphaseInterval", "interphase", "0.01", "Duration must be 0ms or >= 20μs"],
-    ["interphaseInterval", "interphase", "test", "Must be a number"],
-    ["interphaseInterval", "interphase", "0.02", ""],
-    ["interphaseInterval", "interphase", "0", ""],
-    ["interphaseInterval", "interphase", "", "Required"],
-    ["interphaseInterval", "interphase", "100", "Duration must be <= 50ms"],
-    ["phaseOneCharge", "charge", "test", "Must be a number"],
-    ["phaseOneCharge", "charge", "", "Required"],
-    ["phaseOneCharge", "charge", "0", "Must be within [-1, -100] or [1, 100]"],
-    ["phaseOneCharge", "charge", "101", "Must be within [-1, -100] or [1, 100]"],
-    ["phaseOneCharge", "charge", "50", ""],
-  ])(
-    "When a user adds a value to an input field, Then the correct error message will be presented upon validity checks to input",
-    async (inputType, suffix, value, errorMsg) => {
-      const wrapper = mount(StimulationStudioWaveformSettingModal, {
-        store,
-        localVue,
-        propsData: {
-          stimulationType: "Current",
-          pulseType: "Biphasic",
-          selectedPulseSettings: testBiphasicPulseSettings,
-          currentColor: "hsla(100, 100%, 50%, 1)",
-        },
-      });
-      const targetInputField = wrapper.find(`#input-widget-field-${suffix}`);
-      await targetInputField.setValue(value);
-      expect(wrapper.vm.errMsgs[inputType]).toBe(errorMsg);
-    }
-  );
 });

@@ -5,13 +5,12 @@
 import argparse
 import asyncio
 import logging
+import os
 import platform
 import sys
 from typing import Any
 import uuid
 
-from controller.utils.generic import get_hash_of_computer_name
-from stdlib_utils import configure_logging
 from stdlib_utils import is_port_in_use
 
 from .constants import COMPILED_EXE_BUILD_TIMESTAMP
@@ -27,6 +26,8 @@ from .main_systems.system_monitor import SystemMonitor
 from .subsystems.cloud_comm import CloudComm
 from .subsystems.instrument_comm import InstrumentComm
 from .utils.aio import wait_tasks_clean
+from .utils.generic import get_hash_of_computer_name
+from .utils.logging import configure_logging
 from .utils.logging import redact_sensitive_info_from_path
 from .utils.state_management import SystemStateManager
 
@@ -41,11 +42,14 @@ async def main(command_line_args: list[str]) -> None:
 
     try:
         parsed_args = _parse_cmd_line_args(command_line_args)
+
         log_level = logging.DEBUG if parsed_args["log_level_debug"] else logging.INFO
+        if parsed_args["base_directory"] is not None and parsed_args["log_directory"] is not None:
+            path_to_log_folder = os.path.join(parsed_args["base_directory"], parsed_args["log_directory"])
+        else:
+            path_to_log_folder = None
         configure_logging(
-            path_to_log_folder=parsed_args["log_directory"],
-            log_file_prefix="stingray_log",
-            log_level=log_level,
+            path_to_log_folder=path_to_log_folder, log_file_prefix="stingray_log", log_level=log_level
         )
 
         logger.info(f"Stingray Controller v{CURRENT_SOFTWARE_VERSION} started")
@@ -57,11 +61,6 @@ async def main(command_line_args: list[str]) -> None:
 
         _log_cmd_line_args(parsed_args)
         _log_system_info()
-
-        # TODO ?
-        # if parsed_args.test:
-        #     logger.info(f"Successfully opened and closed application v{CURRENT_SOFTWARE_VERSION}")
-        #     return
 
         logger.info(f"Using server port number: {DEFAULT_SERVER_PORT_NUMBER}")
 
@@ -98,7 +97,9 @@ async def main(command_line_args: list[str]) -> None:
 
         try:
             await asyncio.wait_for(server_running_event.wait(), SERVER_BOOT_UP_TIMEOUT_SECONDS)
-        except asyncio.CancelledError:
+        except asyncio.TimeoutError:
+            for task in tasks:
+                task.cancel()
             logger.error(f"Server failed to boot up before {SERVER_BOOT_UP_TIMEOUT_SECONDS} second timeout")
         else:
             logger.info("Creating remaining subsystems")
@@ -127,20 +128,20 @@ def create_system_queues() -> dict[str, Any]:
 
 def _parse_cmd_line_args(command_line_args: list[str]) -> dict[str, Any]:
     parser = argparse.ArgumentParser()
-    # parser.add_argument(
-    #     "--test",
-    #     action="store_true",
-    #     help="simple test to run after building executable to confirm libraries are linked/imported correctly",
-    # )
     parser.add_argument(
         "--log-level-debug",
         action="store_true",
         help="sets the loggers to be more verbose and log DEBUG level pieces of information",
     )
     parser.add_argument(
+        "--base-directory",
+        type=str,
+        help="allow manual setting of the directory in which files should be saved",
+    )
+    parser.add_argument(
         "--log-directory",
         type=str,
-        help="allow manual setting of the directory in which log files will be stored",
+        help="allow manual setting of the sub-directory in which the log file should be created",
     )
     parser.add_argument(
         "--expected-software-version",
@@ -169,6 +170,10 @@ def _log_cmd_line_args(parsed_args: dict[str, Any]) -> None:
 
 # TODO make this function reusable in tests
 def _initialize_system_state(parsed_args: dict[str, Any], log_file_id: uuid.UUID) -> dict[str, Any]:
+    base_directory = (
+        parsed_args["base_directory"] if parsed_args["base_directory"] is not None else os.getcwd()
+    )
+
     system_state = {
         # main
         "system_status": SystemStatuses.SERVER_INITIALIZING_STATE,
@@ -179,6 +184,7 @@ def _initialize_system_state(parsed_args: dict[str, Any], log_file_id: uuid.UUID
         "channel_firmware_update": None,
         "latest_software_version": None,
         "firmware_updates_accepted": None,
+        "firmware_updates_require_download": None,
         "is_user_logged_in": False,
         # instrument
         "instrument_metadata": {},
@@ -187,6 +193,7 @@ def _initialize_system_state(parsed_args: dict[str, Any], log_file_id: uuid.UUID
         "stim_barcode": None,
         "plate_barcode": None,
         # misc
+        "base_directory": base_directory,
         "log_file_id": log_file_id,
     }
 

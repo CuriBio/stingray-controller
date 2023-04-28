@@ -1,6 +1,7 @@
 import { mount, createLocalVue } from "@vue/test-utils";
 import StimulationStudioCreateAndEdit from "@/components/stimulation/StimulationStudioCreateAndEdit.vue";
 import SelectDropDown from "@/components/basic-widgets/SelectDropDown.vue";
+import { TEST_PROTOCOL_LIST_2 } from "@/tests/sample-stim-protocols/stim-protocols";
 
 import Vuex from "vuex";
 
@@ -8,59 +9,6 @@ const localVue = createLocalVue();
 localVue.use(Vuex);
 let NuxtStore;
 let store;
-
-const testProtocolList = [
-  { letter: "", color: "", label: "Create New" },
-  {
-    letter: "A",
-    color: "#118075",
-    label: "Tester",
-    protocol: {
-      name: "Tester",
-      stimulationType: "V",
-      restDuration: 20,
-      timeUnit: "milliseconds",
-      subprotocols: [
-        {
-          phaseOneDuration: 15,
-          phaseOneCharge: 0,
-          interphaseInterval: 0,
-          phaseTwoDuration: 0,
-          phaseTwoCharge: 0,
-        },
-        {
-          phaseOneDuration: 20,
-          phaseOneCharge: 0,
-          interphaseInterval: 0,
-          phaseTwoDuration: 0,
-          phaseTwoCharge: 0,
-        },
-      ],
-      detailedSubprotocols: [
-        {
-          type: "Delay",
-          src: "/delay-tile.png",
-          nestedProtocols: [],
-          repeat: { color: "d822f9", numberOfRepeats: 1 },
-          settings: {
-            phaseOneDuration: 15000,
-            phaseOneCharge: 0,
-            interphaseInterval: 0,
-            phaseTwoDuration: 0,
-            phaseTwoCharge: 0,
-          },
-          stimSettings: {
-            postphaseInterval: 0,
-            totalActiveDuration: {
-              unit: "milliseconds",
-              duration: 15000,
-            },
-          },
-        },
-      ],
-    },
-  },
-];
 
 describe("StimulationStudioCreateAndEdit.vue", () => {
   beforeAll(async () => {
@@ -70,7 +18,7 @@ describe("StimulationStudioCreateAndEdit.vue", () => {
 
   beforeEach(async () => {
     store = await NuxtStore.createStore();
-    store.state.stimulation.protocolList = JSON.parse(JSON.stringify(testProtocolList));
+    store.state.stimulation.protocolList = JSON.parse(JSON.stringify(TEST_PROTOCOL_LIST_2));
   });
 
   afterEach(() => {
@@ -188,10 +136,12 @@ describe("StimulationStudioCreateAndEdit.vue", () => {
     const wrapper = mount(StimulationStudioCreateAndEdit, {
       store,
       localVue,
+      attachToDocument: true,
     });
 
-    await wrapper.findAll("input").at(0).trigger("change");
-
+    await wrapper.findAll("#importExportButton").at(0).trigger("click");
+    // calling directly here because input element gets removed before it can be manually clicked here on the wrapper
+    wrapper.vm.handleImport([new File([new Blob()], "testFilename")]);
     expect(importSpy).toHaveBeenCalledTimes(1);
   });
 
