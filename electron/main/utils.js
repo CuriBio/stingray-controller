@@ -58,12 +58,12 @@ const redactUsernameFromLogs = (dirPath) => {
   return dirPath.replace(username, "****");
 };
 
-const getLogSubdir = () => {
+const getLogSubDir = () => {
   return path.join("stingray_logs", FILENAME_PREFIX);
 };
 
 const getLogDir = (electronStore) => {
-  return path.join(path.dirname(electronStore.path), getLogSubdir());
+  return path.join(path.dirname(electronStore.path), getLogSubDir());
 };
 
 /**
@@ -75,7 +75,7 @@ const getLogDir = (electronStore) => {
  */
 const generateFlaskCommandLineArgs = function (electronStore) {
   console.log("node env: " + process.env.NODE_ENV); // allow-log
-  const flaskLogsFullPath = getLogDir(electronStore);
+  const flaskLogsFullPath = getLogSubDir(electronStore);
 
   const args = [];
   args.push("--base-directory=" + path.dirname(electronStore.path));
