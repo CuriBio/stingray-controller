@@ -185,7 +185,7 @@ cpdef dict sort_serial_packets(unsigned char [:] read_bytes):
             "raw_bytes": mag_data_packet_bytes[:mag_data_packet_byte_idx],
             "num_packets": num_mag_data_packets,
         },
-        "stim_stream_info": {
+        "stimulation_stream_info": {
             "raw_bytes": stim_packet_bytes[:stim_packet_byte_idx],
             "num_packets": num_stim_packets,
         },

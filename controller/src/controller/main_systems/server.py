@@ -287,7 +287,7 @@ class Server:
         # TODO import MANTARRAY_SERIAL_NUMBER_UUID as INSTRUMENT_SERIAL_NUMBER_UUID in all files. Same for nickname constant
         if not all(system_state["instrument_metadata"].values()):  # TODO test this
             # TODO make a custom error code for this
-            raise WebsocketCommandError("Instrument metadata is missing")
+            raise WebsocketCommandError("Instrument metadata is incomplete")
         if _are_stimulator_checks_running(system_state):
             raise WebsocketCommandError("Cannot start data stream while stimulator checks are running")
 
@@ -299,6 +299,18 @@ class Server:
         # system_state = self._get_system_state_ro()
         # TODO raise error if data stream is not running
         await self._to_monitor_queue.put(comm)
+
+    @mark_handler
+    async def _start_recording(self, comm: dict[str, Any]) -> None:
+        """TODO"""
+
+    @mark_handler
+    async def _stop_recording(self, comm: dict[str, Any]) -> None:
+        """TODO"""
+
+    @mark_handler
+    async def _update_recording_name(self, comm: dict[str, Any]) -> None:
+        """TODO"""
 
     # TODO consider changing this to "set_stim_info"
     @mark_handler
@@ -494,18 +506,6 @@ class Server:
             raise WebsocketCommandError("Stim status not updated")
 
         await self._to_monitor_queue.put(comm)
-
-    @mark_handler
-    async def _start_recording(self, comm: dict[str, Any]) -> None:
-        """TODO"""
-
-    @mark_handler
-    async def _stop_recording(self, comm: dict[str, Any]) -> None:
-        """TODO"""
-
-    @mark_handler
-    async def _update_recording_name(self, comm: dict[str, Any]) -> None:
-        """TODO"""
 
 
 # HELPERS

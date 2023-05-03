@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import asyncio
-import datetime
+from collections import namedtuple
 import logging
 import struct
 from typing import Any
@@ -8,6 +8,8 @@ from zlib import crc32
 
 from aioserial import AioSerial
 from immutabledict import immutabledict
+from nptyping import NDArray
+import numpy as np
 from pulse3D.constants import BOOT_FLAGS_UUID
 from pulse3D.constants import CHANNEL_FIRMWARE_VERSION_UUID
 from pulse3D.constants import INITIAL_MAGNET_FINDING_PARAMS_UUID
@@ -119,6 +121,7 @@ class InstrumentComm:
         self,
         from_monitor_queue: asyncio.Queue[dict[str, Any]],
         to_monitor_queue: asyncio.Queue[dict[str, Any]],
+        to_file_writer_queue: asyncio.Queue[dict[str, Any]],
         hardware_test_mode: bool = False,
     ) -> None:
         # comm queues
@@ -132,12 +135,11 @@ class InstrumentComm:
         # instrument comm
         self._serial_packet_cache = bytes(0)
         self._command_tracker = CommandTracker()
+        # data stream
+        self._data_stream_manager = DataStreamManager(to_file_writer_queue)
         # instrument status
         self._is_waiting_for_reboot = False
         self._status_beacon_received_event = asyncio.Event()
-        # stimulation values
-        self._num_stim_protocols: int = 0
-        self._protocols_running: set[int] = set()
         # firmware updating
         self._firmware_update_manager: FirmwareUpdateManager | None = None
 
@@ -150,17 +152,6 @@ class InstrumentComm:
     @property
     def _instrument_in_sensitive_state(self) -> bool:
         return self._is_waiting_for_reboot or self._is_updating_firmware
-
-    @property
-    def _is_stimulating(self) -> bool:
-        return len(self._protocols_running) > 0
-
-    @_is_stimulating.setter
-    def _is_stimulating(self, value: bool) -> None:
-        if value:
-            self._protocols_running = set(range(self._num_stim_protocols))
-        else:
-            self._protocols_running = set()
 
     # ONE-SHOT TASKS
 
@@ -308,6 +299,10 @@ class InstrumentComm:
             packet_type: int | None = None
 
             match comm_from_monitor:
+                case {"command": "start_data_stream"}:
+                    packet_type = SerialCommPacketTypes.START_DATA_STREAMING
+                case {"command": "stop_data_stream"}:
+                    packet_type = SerialCommPacketTypes.STOP_DATA_STREAMING
                 case {"command": "start_stim_checks", "well_indices": well_indices}:
                     packet_type = SerialCommPacketTypes.STIM_IMPEDANCE_CHECK
                     bytes_to_send = struct.pack(
@@ -320,9 +315,9 @@ class InstrumentComm:
                 case {"command": "set_stim_protocols", "stim_info": stim_info}:
                     packet_type = SerialCommPacketTypes.SET_STIM_PROTOCOL
                     bytes_to_send = convert_stim_dict_to_bytes(stim_info)
-                    if self._is_stimulating and not self._hardware_test_mode:
+                    if self._data_stream_manager.is_stimulating and not self._hardware_test_mode:
                         raise StimulationProtocolUpdateWhileStimulatingError()
-                    self._num_stim_protocols = len(stim_info["protocols"])
+                    self._data_stream_manager.num_stim_protocols = len(stim_info["protocols"])
                 case {"command": "start_stimulation"}:
                     packet_type = SerialCommPacketTypes.START_STIM
                 case {"command": "stop_stimulation"}:
@@ -407,9 +402,7 @@ class InstrumentComm:
                         f"Timestamp: {timestamp}, Packet Type: {packet_type}, Payload: {packet_payload}"
                     ) from e
 
-            # Tanner (2/28/23): there is currently no data stream, so magnetometer packets can be completely ignored.
-
-            await self._process_stim_packets(sorted_packet_dict["stim_stream_info"])
+            await self._data_stream_manager.push(sorted_packet_dict)
 
     # TEMPORARY TASKS
 
@@ -503,6 +496,23 @@ class InstrumentComm:
                 if not metadata_dict.pop("is_stingray"):
                     raise IncorrectInstrumentConnectedError()
                 prev_command_info.update(metadata_dict)  # type: ignore [arg-type]  # mypy doesn't like that the keys are UUIDs here
+            case "start_data_stream":
+                if response_data[0]:
+                    if not self._hardware_test_mode:
+                        # TODO make all these command failure errors subclass a parent error and make a custom error code for that
+                        raise InstrumentDataStreamingAlreadyStartedError()
+                    logger.debug("Data stream already started")  # pragma: no cover
+                else:
+                    base_global_time_of_data_stream = int.from_bytes(response_data[1:9], byteorder="little")
+                    await self._data_stream_manager.activate(base_global_time_of_data_stream)
+                    # TODO if _is_data_streaming is needed, make it a property tied to something in self._data_stream_manager
+            case "stop_data_stream":
+                if response_data[0]:
+                    if not self._hardware_test_mode:
+                        raise InstrumentDataStreamingAlreadyStoppedError()
+                    logger.debug("Data stream already stopped")  # pragma: no cover
+                else:
+                    await self._data_stream_manager.deactivate()
             case "start_stim_checks":
                 stimulator_check_dict = convert_stimulator_check_bytes_to_dict(response_data)
 
@@ -525,21 +535,20 @@ class InstrumentComm:
                 if response_data[0]:
                     if not self._hardware_test_mode:
                         raise StimulationProtocolUpdateFailedError()
-                    prev_command_info["hardware_test_message"] = "Command failed"  # pragma: no cover
+                    logger.debug("set_protocols command failed")  # pragma: no cover
             case "start_stimulation":
                 # Tanner (10/25/21): if needed, can save _base_global_time_of_data_stream here
                 if response_data[0]:
                     if not self._hardware_test_mode:
                         raise StimulationStatusUpdateFailedError("start_stimulation")
-                    prev_command_info["hardware_test_message"] = "Command failed"  # pragma: no cover
-                prev_command_info["timestamp"] = datetime.datetime.utcnow()
-                self._is_stimulating = True
+                    logger.debug("start_stimulation command failed")  # pragma: no cover
+                self._data_stream_manager.is_stimulating = True
             case "stop_stimulation":
                 if response_data[0]:
                     if not self._hardware_test_mode:
                         raise StimulationStatusUpdateFailedError("stop_stimulation")
-                    prev_command_info["hardware_test_message"] = "Command failed"  # pragma: no cover
-                self._is_stimulating = False
+                    logger.debug("stop_stimulation command failed")  # pragma: no cover
+                self._data_stream_manager.is_stimulating = False
             case command if command in INTERMEDIATE_FIRMWARE_UPDATE_COMMANDS:
                 if self._firmware_update_manager is None:
                     raise NotImplementedError("_firmware_update_manager should never be None here")
@@ -548,24 +557,70 @@ class InstrumentComm:
         if prev_command_info["command"] not in INTERMEDIATE_FIRMWARE_UPDATE_COMMANDS:
             await self._to_monitor_queue.put(prev_command_info)
 
-    async def _process_stim_packets(self, stim_stream_info: dict[str, bytes | int]) -> None:
-        if not stim_stream_info["num_packets"]:
+    async def _process_mag_data_packets(self, mag_stream_info: dict[str, bytes | int]) -> None:
+        # TODO refactor
+        # TODO move this entire function to DataStreamManager?
+
+        # don't update cache if not streaming or there are no packets to add
+        if not (self._is_data_streaming and mag_stream_info["num_packets"]):
+            return
+        # update cache values
+        for key, value in mag_stream_info.items():
+            self._mag_data_cache_dict[key] += value  # type: ignore
+
+        # don't parse and send to file writer unless there is at least 1 second worth of data
+        if self._mag_data_cache_dict["num_packets"] < self._num_mag_packets_per_second:  # type: ignore
             return
 
-        # Tanner (2/28/23): there is currently no data stream, so only need to check for protocols that have completed
+        new_performance_tracking_values: Dict[str, Any] = dict()
 
-        protocol_statuses: dict[int, Any] = parse_stim_data(*stim_stream_info.values())
+        if self._timepoints_of_prev_actions["mag_data_parse"] is not None:
+            new_performance_tracking_values[
+                "period_between_mag_data_parsing"
+            ] = _get_secs_since_last_mag_data_parse(self._timepoints_of_prev_actions["mag_data_parse"])
+        self._timepoints_of_prev_actions["mag_data_parse"] = perf_counter()
+        # parse magnetometer data
+        parsed_mag_data_dict = parse_magnetometer_data(
+            *self._mag_data_cache_dict.values(), self._base_global_time_of_data_stream
+        )
+        new_performance_tracking_values["mag_data_parsing_duration"] = _get_dur_of_mag_data_parse_secs(
+            self._timepoints_of_prev_actions["mag_data_parse"]  # type: ignore
+        )
 
-        protocols_completed = [
-            protocol_idx
-            for protocol_idx, status_updates_arr in protocol_statuses.items()
-            if status_updates_arr[1][-1] == STIM_COMPLETE_SUBPROTOCOL_IDX
-        ]
-        if protocols_completed:
-            self._protocols_running -= set(protocols_completed)
-            await self._to_monitor_queue.put(
-                {"command": "stim_status_update", "protocols_completed": protocols_completed}
-            )
+        time_indices, time_offsets, data = parsed_mag_data_dict.values()
+
+        new_performance_tracking_values["num_mag_packets_parsed"] = len(time_indices)
+
+        is_first_packet = not self._has_data_packet_been_sent
+        data_start_idx = NUM_INITIAL_PACKETS_TO_DROP if is_first_packet else 0
+        data_slice = slice(data_start_idx, self._mag_data_cache_dict["num_packets"])
+
+        mag_data_packet: Dict[Any, Any] = {
+            "data_type": "magnetometer",
+            "time_indices": time_indices[data_slice],
+            "is_first_packet_of_stream": is_first_packet,
+        }
+
+        time_offset_idx = 0
+        for module_id in range(self._num_wells):
+            time_offset_slice = slice(time_offset_idx, time_offset_idx + SERIAL_COMM_NUM_SENSORS_PER_WELL)
+            time_offset_idx += SERIAL_COMM_NUM_SENSORS_PER_WELL
+
+            well_dict: Dict[Any, Any] = {"time_offsets": time_offsets[time_offset_slice, data_slice]}
+
+            data_idx = module_id * SERIAL_COMM_NUM_DATA_CHANNELS
+            for channel_idx in range(SERIAL_COMM_NUM_DATA_CHANNELS):
+                well_dict[channel_idx] = data[data_idx + channel_idx, data_slice]
+
+            well_idx = SERIAL_COMM_MODULE_ID_TO_WELL_IDX[module_id]
+            mag_data_packet[well_idx] = well_dict
+
+        self._dump_mag_data_packet(mag_data_packet)
+
+        # reset cache now that all mag data has been parsed
+        self._reset_mag_data_cache()
+
+        self._update_performance_metrics(new_performance_tracking_values)
 
     async def _process_status_beacon(self, packet_payload: bytes) -> None:
         status_codes_dict = convert_status_code_bytes_to_dict(
@@ -582,6 +637,159 @@ class InstrumentComm:
             await self._send_data_packet(SerialCommPacketTypes.ERROR_ACK)
             raise InstrumentFirmwareError(status_codes_msg)
         logger.debug(status_codes_msg)
+
+
+def _create_stim_data_packet(protocol_statuses: NDArray[(2, Any), int]) -> dict[str, Any]:
+    return {"data_type": "stimulation", "protocol_statuses": protocol_statuses}
+
+
+FirstPacketTracker = namedtuple("FirstPacketTracker", ["magnetometer", "stimulation"])
+
+
+class DataStreamManager:
+    def __init__(
+        self,
+        to_monitor_queue: asyncio.Queue[dict[str, Any]],
+        to_file_writer_queue: asyncio.Queue[dict[str, Any]],
+    ) -> None:
+        self._to_file_writer_queue = to_file_writer_queue
+        self._to_monitor_queue = to_monitor_queue
+
+        self._base_global_time_of_data_stream: int | None = None
+        self._has_packet_been_sent = FirstPacketTracker(magnetometer=False, stimulation=False)
+
+        # TODO make this a dict or namedtuple containing "stimulation" and "magnetometer" as top level keys
+        self._stim_status_buffers: dict[int, NDArray[(2, Any), int]] = {}
+        self.protocols_running: set[int] = set()
+
+    @property
+    def is_streaming(self) -> bool:
+        return self._base_global_time_of_data_stream is not None
+
+    @property
+    def is_stimulating(self) -> bool:
+        return len(self.protocols_running) > 0
+
+    @is_stimulating.setter
+    def is_stimulating(self, value: bool) -> None:
+        if value:
+            self.protocols_running = set(range(self.num_stim_protocols))
+        else:
+            self.protocols_running = set()
+
+    @property
+    def num_stim_protocols(self) -> int:
+        return len(self._stim_status_buffers)
+
+    @num_stim_protocols.setter
+    def num_stim_protocols(self, num: int) -> None:
+        self._stim_status_buffers = {protocol_idx: np.empty((2, 0)) for protocol_idx in range(num)}
+
+    async def activate(self, base_global_time_of_data_stream: int) -> None:
+        self._base_global_time_of_data_stream = base_global_time_of_data_stream
+        self._has_packet_been_sent = FirstPacketTracker(magnetometer=False, stimulation=False)
+
+        # send any buffered stim statuses
+        protocol_statuses: dict[int, Any] = {}
+        for protocol_idx, stim_statuses in self._stim_status_buffers.items():
+            if stim_statuses.shape[1] > 0 and stim_statuses[1][-1] != STIM_COMPLETE_SUBPROTOCOL_IDX:
+                protocol_statuses[protocol_idx] = stim_statuses
+
+        if protocol_statuses:
+            await self._dump_packet(_create_stim_data_packet(protocol_statuses))
+
+    async def deactivate(self) -> None:
+        self._base_global_time_of_data_stream = None
+        # TODO anything else?
+
+    async def push(self, sorted_packets: dict[str, Any]) -> None:
+        # TODO make a constant or enum for these?
+        for data_type in ("magnetometer", "stimulation"):
+            await getattr(self, f"_push_{data_type}")(sorted_packets[f"{data_type}_stream_info"])
+
+    async def _push_magnetometer(self, stream_info: dict[str, Any]) -> None:
+        # if not streaming or no packets, then nothing to do
+        if not self.is_streaming or not stream_info["num_packets"]:
+            return
+
+        # TODO refactor all of this
+        # update cache values
+        for key, value in stream_info.items():
+            self._mag_data_cache_dict[key] += value  # type: ignore
+
+        # don't parse and send to file writer unless there is at least 1 second worth of data
+        if self._mag_data_cache_dict["num_packets"] < self._num_mag_packets_per_second:  # type: ignore
+            return
+
+        # parse magnetometer data
+        parsed_mag_data_dict = parse_magnetometer_data(
+            *self._mag_data_cache_dict.values(), self._base_global_time_of_data_stream
+        )
+
+        time_indices, time_offsets, data = parsed_mag_data_dict.values()
+
+        is_first_packet = not self._has_data_packet_been_sent
+        data_start_idx = NUM_INITIAL_PACKETS_TO_DROP if is_first_packet else 0
+        data_slice = slice(data_start_idx, self._mag_data_cache_dict["num_packets"])
+
+        mag_data_packet: dict[Any, Any] = {
+            "data_type": "magnetometer",
+            "time_indices": time_indices[data_slice],
+            "is_first_packet_of_stream": is_first_packet,
+        }
+
+        time_offset_idx = 0
+        for module_id in range(NUM_WELLS):
+            time_offset_slice = slice(time_offset_idx, time_offset_idx + SERIAL_COMM_NUM_SENSORS_PER_WELL)
+            time_offset_idx += SERIAL_COMM_NUM_SENSORS_PER_WELL
+
+            well_dict: Dict[Any, Any] = {"time_offsets": time_offsets[time_offset_slice, data_slice]}
+
+            data_idx = module_id * SERIAL_COMM_NUM_DATA_CHANNELS
+            for channel_idx in range(SERIAL_COMM_NUM_DATA_CHANNELS):
+                well_dict[channel_idx] = data[data_idx + channel_idx, data_slice]
+
+            well_idx = SERIAL_COMM_MODULE_ID_TO_WELL_IDX[module_id]
+            mag_data_packet[well_idx] = well_dict
+
+        self._dump_mag_data_packet(mag_data_packet)
+
+        # reset cache now that all mag data has been parsed
+        self._reset_mag_data_cache()
+
+    async def _push_stimulation(self, stream_info: dict[str, Any]) -> None:
+        if not stream_info["num_packets"]:
+            return
+
+        protocol_statuses: dict[int, Any] = parse_stim_data(*stream_info.values())
+
+        # TODO handling buffering and dumping this
+        _create_stim_data_packet(protocol_statuses)
+
+        protocols_completed = [
+            protocol_idx
+            for protocol_idx, status_updates_arr in protocol_statuses.items()
+            if status_updates_arr[1][-1] == STIM_COMPLETE_SUBPROTOCOL_IDX
+        ]
+        if protocols_completed:
+            self.protocols_running -= set(protocols_completed)
+            await self._to_monitor_queue.put(
+                {"command": "stim_status_update", "protocols_completed": protocols_completed}
+            )
+
+    async def _dump_packet(self, data_packet: dict[str, Any]) -> None:
+        data_type = data_packet["data_type"]
+        data_packet["is_first_packet_of_stream"] = not self._has_packet_been_sent._asdict()[data_type]
+
+        match data_type:
+            case "magnetometer":
+                pass  # TODO
+            case "stimulation":
+                for protocol_statuses in data_packet["protocol_statuses"].values():
+                    protocol_statuses[0] -= self._base_global_time_of_data_stream
+
+        await self._to_file_writer_queue.put(data_packet)
+        self._has_packet_been_sent._replace(**{data_type: True})
 
 
 FirmwareUpdateItems = tuple[int, bytes, dict[str, Any]]
