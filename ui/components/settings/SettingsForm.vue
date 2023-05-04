@@ -1,104 +1,89 @@
 <template>
   <div>
     <div class="div__settingsform-controls">
-      <span class="span__settingsform-title">Settings</span>
-      <span class="span__settingsform-user-sub-title">Select&nbsp;<wbr />User</span>
-
+      <span class="span__settingsform-title">User Settings</span>
+      <canvas class="canvas__settings-title-separator" />
       <div class="div__settingsform-editor-input">
         <InputDropDown
-          :titleLabel="labelUser"
-          :placeholder="keyPlaceholderUser"
-          :invalidText="errorTextUser"
-          :value.sync="entrykeyUser"
-          :inputWidth="entryWidthUser"
-          :disabled="disallowEntryUser"
-          :optionsText="getUsernames"
-          :messageIfInvalid="!userFound"
-          :optionsId="'user-account-'"
+          :titleLabel="'Select Customer ID'"
+          :placeholder="'ba86b8f0-6fdf-4944-87a0-8a491a19490e'"
+          :invalidText="errorText.customerId"
+          :inputWidth="400"
+          :value:sync="userDetails.customerId"
+          :optionsText="[storedCustomerId]"
+          :optionsId="'customer-id-'"
+          @update:value="onUpdateInput($event, 'customerId')"
         />
       </div>
-      <div class="div__settingsform-user-edit-btn" width="88" height="45">
-        <span v-show="!disableEditUser" class="span__settingsform-user-edit-btn-txt">
-          <b-button
-            id="edit-a-user"
-            v-b-modal.edit-user
-            squared
-            class="w-100 h-100 edit-id"
-            style="background-color: #3f3f3f; border: 0px; color: #ececed"
-            >Edit&nbsp;<wbr />User
-          </b-button>
-          <b-modal id="edit-user" size="sm" hide-footer hide-header hide-header-close>
-            <EditUser
-              :dialogdata="userAccounts[userFocusIdx]"
-              :openForInvalidCreds="openForInvalidCreds"
-              @cancel-id="cancelUserUpdate"
-              @save-id="applyUserUpdate"
-              @delete-id="deleteUser"
-            />
-          </b-modal>
-        </span>
-        <span v-show="disableEditUser" class="span__settingsform-user-edit-btn-txt-disable"
-          >Edit&nbsp;<wbr />User</span
+      <div class="div__settingsform-editor-input">
+        <InputDropDown
+          :titleLabel="'Select User'"
+          :placeholder="'user account 1'"
+          :invalidText="errorText.user"
+          :inputWidth="400"
+          :value:sync="userDetails.user"
+          :optionsText="storedUsernames"
+          :optionsId="'user-account-'"
+          @update:value="onUpdateInput($event, 'user')"
+        />
+      </div>
+      <div class="div__settingsform-editor-input">
+        <InputWidget
+          :titleLabel="'Enter Password'"
+          :placeholder="'****'"
+          :invalidText="errorText.password"
+          :type="'password'"
+          :spellcheck="false"
+          :initialValue="''"
+          :containerBackgroundColor="'rgba(0, 0, 0)'"
+          :inputBackgroundColor="'#1c1c1c'"
+          :inputWidth="400"
+          :domIdSuffix="'passkey-id'"
+          @update:value="onUpdateInput($event, 'password')"
+        />
+      </div>
+      <div
+        class="div__settings-login-btn"
+        :class="[
+          isLoginEnabled
+            ? 'div__settings-tool-tip-login-btn-enable'
+            : 'div__settings-tool-tip-login-btn-disable'
+        ]"
+      >
+        <span
+          class="span__settings-tool-tip-login-btn-txt"
+          :class="[
+            isLoginEnabled
+              ? 'span__settings-tool-tip-login-btn-txt-enable'
+              : 'span__settings-tool-tip-login-btn-txt-disable'
+          ]"
+          @click="loginUser"
+          >Login</span
         >
       </div>
     </div>
-    <div class="div__settingsform-user-add-btn" width="285" height="45">
-      <span class="span__settingsform-user-add-btn_txt">
-        <b-button
-          id="add-a-user"
-          v-b-modal.add-user
-          squared
-          class="w-100 h-100 edit-id"
-          style="background-color: #3f3f3f; border: 0px; color: #ececed"
-        >
-          Add&nbsp;<wbr />New&nbsp;<wbr />User</b-button
-        >
-        <b-modal id="add-user" size="sm" hide-footer hide-header hide-header-close>
-          <AddUser @cancel-id="cancelAddingUser" @save-id="saveNewUser" />
-        </b-modal>
-      </span>
+    <div v-if="isUserLoggedIn" class="div__logged-in-text">
+      <FontAwesomeIcon :icon="['fa', 'check']" style="margin-right: 7px" />Success
     </div>
-    <canvas class="canvas__settings-title-separator" width="510" height="20" />
-    <canvas class="canvas__settings-button-separator" width="512" height="22" />
-    <div class="div__settings-tool-tip-cancel-btn" width="180" height="55" @click="cancelChanges">
-      <span class="span__settings-tool-tip-cancel-btn-txt">Cancel</span>
-    </div>
-    <div
-      class="div__settings-tool-tip-reset-btn"
-      :class="[
-        userFound ? 'div__settings-tool-tip-reset-btn-enable' : 'div__settings-tool-tip-reset-btn-disable',
-      ]"
-      width="180"
-      height="55"
-    >
-      <span
-        class="span__settings-tool-tip-reset-btn-txt"
-        :class="[
-          userFound
-            ? 'span__settings-tool-tip-reset-btn-txt-enable'
-            : 'span__settings-tool-tip-reset-btn-txt-disable',
-        ]"
-        @click="resetChanges()"
-        >Reset&nbsp;<wbr />to&nbsp;<wbr />Defaults</span
-      >
+    <canvas class="canvas__settings-file-upload-separator" />
+    <div class="div__settings-tool-tip-cancel-btn" @click="cancelChanges">
+      <span class="span__settings-tool-tip-cancel-btn-txt">Close</span>
     </div>
     <div
       class="div__settings-tool-tip-save-btn"
       :class="[
-        userFound ? 'div__settings-tool-tip-save-btn-enable' : 'div__settings-tool-tip-save-btn-disable',
+        isUserLoggedIn ? 'div__settings-tool-tip-save-btn-enable' : 'div__settings-tool-tip-save-btn-disable'
       ]"
-      width="180"
-      height="55"
     >
-      <canvas class="canvas__settings-tool-tip-save-btn" width="180" height="55"> </canvas>
+      <canvas class="canvas__settings-tool-tip-save-btn" />
       <span
         class="span__settings-tool-tip-save-btn-txt"
         :class="[
-          userFound
+          isUserLoggedIn
             ? 'span__settings-tool-tip-save-btn-txt-enable'
-            : 'span__settings-tool-tip-save-btn-txt-disable',
+            : 'span__settings-tool-tip-save-btn-txt-disable'
         ]"
-        @click="saveChanges()"
+        @click="saveChanges"
         >Save&nbsp;<wbr />Changes</span
       >
     </div>
@@ -120,11 +105,15 @@ import { BFormInput } from "bootstrap-vue";
 import AddUser from "@/components/settings/AddUser.vue";
 import EditUser from "@/components/settings/EditUser.vue";
 import InputDropDown from "@/components/basic-widgets/InputDropDown.vue";
+import { library } from "@fortawesome/fontawesome-svg-core";
+import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
+import { faCheck } from "@fortawesome/free-solid-svg-icons";
 
 Vue.use(BootstrapVue);
 Vue.component("BButton", BButton);
 Vue.component("BModal", BModal);
 Vue.component("BFormInput", BFormInput);
+library.add(faCheck);
 
 export default {
   name: "SettingsForm",
@@ -132,38 +121,44 @@ export default {
     AddUser,
     EditUser,
     InputDropDown,
+    FontAwesomeIcon
   },
   data() {
     return {
-      userFocusIdx: 0,
-      disableEditUser: true,
-      labelUser: "User Selection",
-      entrykeyUser: "",
-      keyPlaceholderUser: "Select User",
-      errorTextUser: "An ID is required",
-      entryWidthUser: 283,
-      disallowEntryUser: false,
-      userFound: false,
-      openForInvalidCreds: false,
+      disableSettings: true,
+      invalidCredsFound: false,
+      userDetails: {
+        customerId: "",
+        password: "",
+        user: ""
+      }
     };
   },
   computed: {
-    ...mapState("settings", ["userAccounts", "activeUserIndex", "storedCustomerId"]),
+    ...mapState("settings", ["userAccount", "storedCustomerId", "storedUsernames"]),
     ...mapState("system", ["loginAttemptStatus"]),
-    getUsernames: function () {
-      return this.userAccounts.map((userAccount) => userAccount.username);
+    isLoginEnabled: function() {
+      return !Object.values(this.errorText).some(val => val !== "");
     },
+    errorText: function() {
+      return this.invalidCredsFound
+        ? {
+            customerId: "Invalid Customer ID, Username, or Password",
+            user: "Invalid Customer ID, Username, or Password",
+            password: "Invalid Customer ID, Username, or Password"
+          }
+        : {
+            customerId: this.userDetails.customerId && this.userDetails.customerId !== "" ? "" : "Required",
+            user: this.userDetails.user && this.userDetails.user !== "" ? "" : "Required",
+            password: this.userDetails.password && this.userDetails.password !== "" ? "" : "Required"
+          };
+    },
+    isUserLoggedIn: function() {
+      return this.userAccount.customerId && this.userAccount.customerId !== "";
+    }
   },
   watch: {
-    entrykeyUser: function () {
-      const userFocusIdx = this.getUsernames.indexOf(this.entrykeyUser);
-      this.userFound = this.entrykeyUser !== "" && userFocusIdx !== -1;
-      if (this.userFound) {
-        this.userFocusIdx = userFocusIdx;
-      }
-      this.modifyBtnStates();
-    },
-    loginAttemptStatus: function (status) {
+    loginAttemptStatus: function(status) {
       if (status) {
         this.$emit("close-modal", true);
       } else if (status === false) {
@@ -174,14 +169,6 @@ export default {
       } // else {
       //   this.resetChanges();
       // }
-    },
-  },
-  created: function () {
-    if (this.activeUserIndex != null) {
-      this.entrykeyUser = this.userAccounts[this.activeUserIndex].username;
-      this.userFocusIdx = this.activeUserIndex;
-      this.disableEditUser = false;
-      this.userFound = true;
     }
   },
   methods: {
@@ -230,8 +217,8 @@ export default {
     },
     handleToggleState(state, label) {
       this[label] = state;
-    },
-  },
+    }
+  }
 };
 </script>
 <style scoped>
