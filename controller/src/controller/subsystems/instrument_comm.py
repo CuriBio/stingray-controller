@@ -37,6 +37,7 @@ from ..constants import StimulatorCircuitStatuses
 from ..constants import STM_VID
 from ..exceptions import FirmwareGoingDormantError
 from ..exceptions import FirmwareUpdateCommandFailedError
+from ..exceptions import IncorrectInstrumentConnectedError
 from ..exceptions import InstrumentFirmwareError
 from ..exceptions import NoInstrumentDetectedError
 from ..exceptions import SerialCommCommandProcessingError
@@ -386,6 +387,7 @@ class InstrumentComm:
                 try:
                     await self._process_comm_from_instrument(packet_type, packet_payload)
                 except (
+                    IncorrectInstrumentConnectedError,
                     InstrumentFirmwareError,
                     FirmwareGoingDormantError,
                     SerialCommIncorrectChecksumFromPCError,
@@ -492,6 +494,8 @@ class InstrumentComm:
                     METADATA_TAGS_FOR_LOGGING.get(key, key): val for key, val in metadata_dict.items()
                 }
                 logger.info(f"Instrument metadata received: {metadata_dict_for_logging}")
+                if not metadata_dict.pop("is_stingray"):
+                    raise IncorrectInstrumentConnectedError()
                 prev_command_info.update(metadata_dict)  # type: ignore [arg-type]  # mypy doesn't like that the keys are UUIDs here
             case "start_stim_checks":
                 stimulator_check_dict = convert_stimulator_check_bytes_to_dict(response_data)

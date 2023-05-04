@@ -24,6 +24,10 @@ class InstrumentError(Exception):
     """Generic exception for errors with instrument interaction."""
 
 
+class IncorrectInstrumentConnectedError(InstrumentError):
+    pass
+
+
 class InstrumentConnectionCreationError(InstrumentError):
     """Generic exception for errors caused by connection failures."""
 
@@ -120,9 +124,6 @@ class FirmwareGoingDormantError(Exception):
 
 class CloudAuthFailedError(Exception):
     """Base class for cloud auth related errors."""
-
-    def __init__(self, status_code: int):
-        super().__init__(f"Status Code: {status_code}")
 
 
 class LoginFailedError(CloudAuthFailedError):
