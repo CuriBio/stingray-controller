@@ -64,7 +64,7 @@ export default {
   computed: {
     ...mapState("stimulation", ["stimPlayState"]),
     ...mapState("system", ["statusUuid", "allowSwUpdateInstall", "isConnectedToController"]),
-    ...mapState("settings", ["userAccounts", "activeUserIndex"]),
+    ...mapState("settings", ["userAccount"]),
   },
   watch: {
     allowSwUpdateInstall: function () {
@@ -143,7 +143,7 @@ export default {
     },
     saveAccountInfo: function () {
       // this gets called before any vuex actions/muts to store account details so logic to username is in electron main process
-      const { customerId, username } = this.userAccounts[this.activeUserIndex];
+      const { customerId, username } = this.userAccount;
 
       ipcRenderer.invoke("saveAccountInfoRequest", { customerId, username }).then((response) => {
         this.$store.commit("settings/setStoredAccounts", response);
