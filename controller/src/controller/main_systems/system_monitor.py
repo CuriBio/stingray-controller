@@ -268,8 +268,7 @@ class SystemMonitor:
                 case {"command": "get_metadata", **metadata}:
                     system_state_updates["instrument_metadata"] = metadata
                 case {"command": "start_data_stream"}:
-                    if not communication.get("is_calibration_recording"):
-                        system_state_updates["system_status"] = SystemStatuses.LIVE_VIEW_ACTIVE_STATE
+                    pass  # system will switch into live view active state once enough data packets have been sent to the UI
                 case {"command": "stop_data_stream"}:
                     system_state_updates["system_status"] = SystemStatuses.IDLE_READY_STATE
                 case {"command": "set_stim_protocols"}:
