@@ -37,8 +37,6 @@ export { default as CheckBoxWidget } from "./components/basic-widgets/CheckBoxWi
 export { default as StimulationStudioPlateWell } from "./components/stimulation/StimulationStudioPlateWell.vue";
 
 // Settings related
-export { default as AddUser } from "./components/settings/AddUser.vue";
-export { default as EditUser } from "./components/settings/EditUser.vue";
 export { default as SettingsButton } from "./components/settings/SettingsButton.vue";
 export { default as SettingsForm } from "./components/settings/SettingsForm.vue";
 

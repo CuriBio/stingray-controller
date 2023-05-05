@@ -1,9 +1,6 @@
 <template>
   <div>
-    <div
-      class="div__input-background"
-      :style="`width: ${inputWidthBackground}px; height: ${inputHeightBackground}px;`"
-    >
+    <div class="div__input-background" :style="containerBackgroundStyle">
       <span v-if="titleLabel !== ''" class="span__input-content-label" :style="`width: ${inputWidth}px;`">
         {{ titleLabel }}
       </span>
@@ -15,7 +12,7 @@
             ? 'div__input-controls-content-widget--invalid'
             : 'div__input-controls-content-widget--valid',
         ]"
-        :style="`width: ${inputWidth}px; height: ${inputHeight}px; top: ${inputWidgetTop}px;`"
+        :style="inputWidgetStyle"
       >
         <span
           class="span__input-controls-content-input-txt-widget"
@@ -32,7 +29,7 @@
             :onpaste="disablePaste"
             :type="type"
             class="w-100 h-100 edit-id"
-            style="border-radius: 0; color: rgb(255, 255, 255); background-color: #3f3f3f; border: 0px"
+            :style="inputBackgroundStyle"
             @input="onBFormInput"
           />
         </span>
@@ -72,6 +69,8 @@ export default {
     displayTextMessage: { type: Boolean, default: true }, // displayTextMessage (boolean) if set to false would not render invalidText
     disablePaste: { type: Boolean, default: false }, // disablePaste (boolean) if set to true would prevent cut and paste of text into input
     type: { type: String, default: "text" },
+    containerBackgroundColor: { type: String, default: "rgb(17, 17, 17)" },
+    inputBackgroundColor: { type: String, default: "#3f3f3f" },
   },
   data() {
     return {
@@ -92,6 +91,19 @@ export default {
     },
     inputFeedbackTop: function () {
       return this.inputHeight + this.topAdjust + 4 + (this.titleLabel !== "" ? 40 : 0);
+    },
+    containerBackgroundStyle: function () {
+      const inputWidthBackground = this.inputWidth + 4;
+      return (
+        `width: ${inputWidthBackground}px; height: ${this.inputHeightBackground}px;` +
+        `background: ${this.containerBackgroundColor}; border: 2px solid ${this.containerBackgroundColor};`
+      );
+    },
+    inputWidgetStyle: function () {
+      return `width: ${this.inputWidth}px; height: ${this.inputHeight}px; top: ${this.inputWidgetTop}px;`;
+    },
+    inputBackgroundStyle: function () {
+      return `border-radius: 0; border: 0px; color: rgb(255, 255, 255); background: ${this.inputBackgroundColor};`;
     },
   },
   watch: {
@@ -124,12 +136,10 @@ body {
   box-sizing: border-box;
   padding: 0px;
   margin: 0px;
-  background: rgb(17, 17, 17);
   position: absolute;
   top: 0px;
   left: 0px;
   visibility: visible;
-  border: 2px solid rgb(17, 17, 17);
   border-radius: 0px;
   box-shadow: none;
   z-index: 3;
@@ -176,7 +186,6 @@ body {
   text-decoration: none;
   font-size: 17px;
   color: rgb(255, 255, 255);
-  background-color: #2f2f2f;
 }
 
 .div__input-controls-content-widget {
@@ -187,7 +196,6 @@ body {
   left: 0px;
   visibility: visible;
   z-index: 7;
-  background-color: #1c1c1c;
 }
 
 .div__input-controls-content-widget--invalid {

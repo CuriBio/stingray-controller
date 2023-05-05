@@ -7,10 +7,9 @@ const defaultState = {
   logPath: "C:\\Users\\username\\AppData\\Roaming\\StingrayController\\stingray_logs",
   rootDownloadsPath: "C:\\Users\\username\\Downloads",
   userCredInputNeeded: false,
-  userAccounts: [],
+  userAccount: { customerId: "", username: "", password: "" },
   storedCustomerId: null,
   storedUsernames: [],
-  activeUserIndex: null,
 };
 
 const state = () => JSON.parse(JSON.stringify(defaultState));
