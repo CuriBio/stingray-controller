@@ -261,7 +261,7 @@ class Server:
         valid_states = (SystemStatuses.CALIBRATION_NEEDED_STATE, SystemStatuses.IDLE_READY_STATE)
 
         if system_state["system_status"] not in valid_states:
-            raise WebsocketCommandError(f"Route cannot be called unless in {valid_states}")
+            raise WebsocketCommandError(f"Command cannot be sent unless in {valid_states}")
         if _are_stimulator_checks_running(system_state):
             raise WebsocketCommandError("Cannot calibrate while stimulator checks are running")
         if _are_any_stim_protocols_running(system_state):
@@ -271,18 +271,22 @@ class Server:
 
     @mark_handler
     async def _start_data_stream(self, comm: dict[str, Any]) -> None:
-        """Begin magnetometer data stream."""
+        """Start magnetometer data stream."""
         system_state = self._get_system_state_ro()
+        system_status = system_state["system_status"]
+
+        if system_status != SystemStatuses.IDLE_READY_STATE:
+            raise WebsocketCommandError(f"Cannot start data stream while in {system_status.name}")
 
         try:
             plate_barcode = comm["plate_barcode"]
         except KeyError:
-            raise WebsocketCommandError("Request missing 'plate_barcode' parameter")
+            raise WebsocketCommandError("Command missing 'plate_barcode' value")
+        if not plate_barcode:
+            raise WebsocketCommandError("Cannot start data stream without a plate barcode present")
 
         if error_message := check_barcode_for_errors(plate_barcode, "plate_barcode"):
             raise WebsocketCommandError(f"Plate {error_message}")
-
-        # TODO raise error if data stream is already active
 
         # TODO import MANTARRAY_SERIAL_NUMBER_UUID as INSTRUMENT_SERIAL_NUMBER_UUID in all files. Same for nickname constant
         if not all(system_state["instrument_metadata"].values()):  # TODO test this
@@ -296,8 +300,12 @@ class Server:
     @mark_handler
     async def _stop_data_stream(self, comm: dict[str, Any]) -> None:
         """Stop magnetometer data stream."""
-        # system_state = self._get_system_state_ro()
-        # TODO raise error if data stream is not running
+        system_state = self._get_system_state_ro()
+        system_status = system_state["system_status"]
+
+        if system_status not in (SystemStatuses.BUFFERING_STATE, SystemStatuses.LIVE_VIEW_ACTIVE_STATE):
+            raise WebsocketCommandError(f"Cannot stop data stream while in {system_status.name}")
+
         await self._to_monitor_queue.put(comm)
 
     @mark_handler
@@ -316,15 +324,20 @@ class Server:
     @mark_handler
     async def _set_stim_protocols(self, comm: dict[str, Any]) -> None:
         """Set stimulation protocols in program memory and send to instrument."""
-        # TODO make sure the UI includes a stim barcode in this msg
+
+        try:
+            if not comm["stim_barcode"]:
+                raise WebsocketCommandError("Cannot set stim protocols without a stim barcode present")
+        except KeyError:
+            raise WebsocketCommandError("Command missing 'stim_barcode' value")
 
         system_state = self._get_system_state_ro()
         system_status = system_state["system_status"]
 
         if _are_any_stim_protocols_running(system_state):
-            raise WebsocketCommandError("Cannot change protocols while stimulation is running")
+            raise WebsocketCommandError("Cannot set stim protocols while stimulation is running")
         if system_status != SystemStatuses.IDLE_READY_STATE:
-            raise WebsocketCommandError(f"Cannot change protocols while in {system_status.name}")
+            raise WebsocketCommandError(f"Cannot set stim protocols while in {system_status.name}")
 
         stim_info = comm["stim_info"]
 
@@ -445,7 +458,6 @@ class Server:
     @mark_handler
     async def _start_stim_checks(self, comm: dict[str, Any]) -> None:
         """Start the stimulator impedence checks on the instrument."""
-        # TODO make sure the UI includes a stim barcode in this msg
 
         system_state = self._get_system_state_ro()
         if system_state["system_status"] != SystemStatuses.IDLE_READY_STATE:
@@ -463,12 +475,13 @@ class Server:
         except KeyError:
             raise WebsocketCommandError("Request body missing 'well_indices'")
 
-        # TODO figure out if the well idxs are still strings
-        comm["well_indices"] = [int(idx) for idx in comm["well_indices"]]
-
         # check if barcodes were manually entered and match
         for barcode_type in ("plate_barcode", "stim_barcode"):
-            barcode = comm.get(barcode_type)
+            try:
+                barcode = comm[barcode_type]
+            except KeyError:
+                raise WebsocketCommandError(f"Command missing '{barcode_type}' value")
+
             comm[f"{barcode_type}_is_from_scanner"] = barcode == system_state[barcode_type]
 
         await self._to_monitor_queue.put(comm)
@@ -476,12 +489,18 @@ class Server:
     @mark_handler
     async def _set_stim_status(self, comm: dict[str, Any]) -> None:
         """Start or stop stimulation on the instrument."""
-        # TODO make sure the UI includes a stim barcode in this msg
 
         try:
             stim_status = comm["running"]
         except KeyError:
-            raise WebsocketCommandError("Missing 'running' parameter")
+            raise WebsocketCommandError("Command missing 'running' value")
+
+        for barcode_type in ("plate_barcode", "stim_barcode"):
+            try:
+                if not comm[barcode_type] and stim_status:
+                    raise WebsocketCommandError(f"Cannot start stimulation without a {barcode_type} present")
+            except KeyError:
+                raise WebsocketCommandError(f"Command missing '{barcode_type}' value")
 
         system_state = self._get_system_state_ro()
 

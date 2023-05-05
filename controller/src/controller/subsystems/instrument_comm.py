@@ -136,7 +136,7 @@ class InstrumentComm:
         self._serial_packet_cache = bytes(0)
         self._command_tracker = CommandTracker()
         # data stream
-        self._data_stream_manager = DataStreamManager(to_file_writer_queue)
+        self._data_stream_manager = DataStreamManager(to_monitor_queue, to_file_writer_queue)
         # instrument status
         self._is_waiting_for_reboot = False
         self._status_beacon_received_event = asyncio.Event()

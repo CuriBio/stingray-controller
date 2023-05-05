@@ -246,7 +246,7 @@ async def test_main__initializes_system_state_correctly(
 @pytest.mark.asyncio
 async def test_main__creates_SystemMonitor_and_runs_correctly(patch_run_tasks, patch_subsystem_inits, mocker):
     spied_ssm = mocker.spy(main, "SystemStateManager")
-    spied_create_queues = mocker.spy(main, "create_system_queues")
+    spied_create_queues = mocker.spy(main, "create_system_comm_queues")
 
     await main.main([])
 
@@ -258,7 +258,7 @@ async def test_main__creates_SystemMonitor_and_runs_correctly(patch_run_tasks, p
 @pytest.mark.asyncio
 async def test_main__creates_Server_and_runs_correctly(patch_run_tasks, patch_subsystem_inits, mocker):
     spied_ssm = mocker.spy(main, "SystemStateManager")
-    spied_create_queues = mocker.spy(main, "create_system_queues")
+    spied_create_queues = mocker.spy(main, "create_system_comm_queues")
 
     await main.main([])
 
@@ -276,7 +276,7 @@ async def test_main__creates_Server_and_runs_correctly(patch_run_tasks, patch_su
 async def test_main__creates_InstrumentComm_and_runs_correctly(
     patch_run_tasks, patch_subsystem_inits, mocker
 ):
-    spied_create_queues = mocker.spy(main, "create_system_queues")
+    spied_create_queues = mocker.spy(main, "create_system_comm_queues")
 
     await main.main([])
 
@@ -289,7 +289,7 @@ async def test_main__creates_InstrumentComm_and_runs_correctly(
 
 @pytest.mark.asyncio
 async def test_main__creates_CloudComm_and_runs_correctly(patch_run_tasks, patch_subsystem_inits, mocker):
-    spied_create_queues = mocker.spy(main, "create_system_queues")
+    spied_create_queues = mocker.spy(main, "create_system_comm_queues")
     spied_get_setting = mocker.spy(main, "_get_user_config_settings")
 
     await main.main([])

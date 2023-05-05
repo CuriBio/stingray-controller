@@ -72,18 +72,25 @@ async def main(command_line_args: list[str]) -> None:
         system_state_manager = SystemStateManager()
         await system_state_manager.update(_initialize_system_state(parsed_args, log_file_id))
 
-        queues = create_system_queues()
+        comm_queues = create_system_comm_queues()
+        data_queues = create_system_data_queues()
 
         # create subsystems
-        system_monitor = SystemMonitor(system_state_manager, queues)
+        system_monitor = SystemMonitor(system_state_manager, comm_queues)
         server = Server(
-            system_state_manager.get_read_only_copy, queues["to"]["server"], queues["from"]["server"]
+            system_state_manager.get_read_only_copy,
+            comm_queues["to"]["server"],
+            comm_queues["from"]["server"],
         )
         instrument_comm_subsystem = InstrumentComm(
-            queues["to"]["instrument_comm"], queues["from"]["instrument_comm"]
+            comm_queues["to"]["instrument_comm"],
+            comm_queues["from"]["instrument_comm"],
+            data_queues["file_writer"],
         )
         cloud_comm_subsystem = CloudComm(
-            queues["to"]["cloud_comm"], queues["from"]["cloud_comm"], **_get_user_config_settings(parsed_args)
+            comm_queues["to"]["cloud_comm"],
+            comm_queues["from"]["cloud_comm"],
+            **_get_user_config_settings(parsed_args),
         )
 
         # future for subsystems to set if they experience an error. The server will report the error in the future to the UI
@@ -118,11 +125,21 @@ async def main(command_line_args: list[str]) -> None:
         logger.info("Program exiting")
 
 
-# TODO consider moving this to a different file
-def create_system_queues() -> dict[str, Any]:
+# TODO consider moving these two to a different file
+def create_system_comm_queues() -> dict[str, Any]:
     return {
-        direction: {subsystem: asyncio.Queue() for subsystem in ("server", "instrument_comm", "cloud_comm")}
+        direction: {
+            subsystem: asyncio.Queue()
+            for subsystem in ("server", "instrument_comm", "cloud_comm", "file_writer")
+        }
         for direction in ("to", "from")
+    }
+
+
+def create_system_data_queues() -> dict[str, Any]:
+    return {
+        receiving_subsystem: asyncio.Queue()
+        for receiving_subsystem in ("file_writer", "data_analyzer", "main")
     }
 
 
