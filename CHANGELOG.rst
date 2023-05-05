@@ -15,6 +15,10 @@ Fixed:
 - Issue with firmware versions always reported as being incompatible
 - Prevent connection to Mantarray instruments
 
+Changed:
+^^^^^^^^
+- New login flow
+
 
 0.1.0 (2023-04-13)
 ------------------
