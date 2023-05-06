@@ -567,6 +567,9 @@ body {
   top: 26px;
   left: 60px;
   position: absolute;
+  overflow: hidden;
+  height: 50px;
+  width: 50px;
 }
 
 .svg__waveform-icon {

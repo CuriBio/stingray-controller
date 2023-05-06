@@ -237,12 +237,12 @@
         :initialSelected="checkboxState"
         @checkbox-selected="setUseNumCycles"
       />
-      <span>Use Num Cycles instead of Active Duration</span>
+      <span>Use Number of Cycles</span>
     </div>
     <span
       class="span__stimulationstudio-current-settings-label-left"
       :style="pulseType === 'Monophasic' ? 'top: 446px;' : 'top: 730px;'"
-      >Num Cycles</span
+      >Number of Cycles</span
     >
     <div
       class="div__stimulationstudio-input-container"
@@ -500,7 +500,7 @@ export default {
       }
     },
     updateCalculatedActivateDur() {
-      const defaultValue = "-";
+      const defaultValue = "";
 
       const isNumCyclesMissing = this.numCycles === "";
       const isFreqMissing = this.inputPulseFrequency === "";
@@ -525,7 +525,7 @@ export default {
       this.calculatedActiveDur = updatedVal;
     },
     updateCalculatedNumCycles() {
-      const defaultValue = "-";
+      const defaultValue = "";
 
       const isActiveDurMissing =
         !this.pulseSettings.totalActiveDuration || this.pulseSettings.totalActiveDuration.duration === "";
@@ -789,7 +789,7 @@ canvas {
   transform: rotate(0deg);
   overflow: visible;
   position: absolute;
-  width: 365px;
+  width: 213px;
   height: 30px;
   left: calc(900px - 852px);
   padding: 5px;
