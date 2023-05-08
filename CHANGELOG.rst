@@ -8,7 +8,7 @@ Added:
 ^^^^^^
 - Offline FW updating
 - Protocol validation checks on import in Stimulation Studio
-- Diabled sidebar controls before connection to instrument is made
+- Disabled sidebar controls before connection to instrument is made
 
 Fixed:
 ^^^^^^
