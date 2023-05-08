@@ -103,7 +103,9 @@ export default {
       return `width: ${this.inputWidth}px; height: ${this.inputHeight}px; top: ${this.inputWidgetTop}px;`;
     },
     inputBackgroundStyle: function () {
-      return `border-radius: 0; border: 0px; color: rgb(255, 255, 255); background: ${this.inputBackgroundColor};`;
+      return this.disabled
+        ? `border-radius: 0; border: 0px; background: rgb(31, 29, 29);`
+        : `border-radius: 0; border: 0px; color: rgb(255, 255, 255); background: ${this.inputBackgroundColor};`;
     },
   },
   watch: {
