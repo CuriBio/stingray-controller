@@ -247,7 +247,7 @@ export default {
         buttonNames: ["Okay"],
       },
       stim24hrTimer: null,
-      disabledToolTip: "Controls disabled while connecting to instrument.",
+      disabledToolTip: "Controls disabled until connected to instrument.",
       disabled: true,
     };
   },
