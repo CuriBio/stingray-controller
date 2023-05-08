@@ -249,7 +249,6 @@ export default {
       },
       stim24hrTimer: null,
       disabled_tool_tip: "Controlls disabled while connecting to instrument.",
-      connection_complete_message: "009301eb-625c-4dc4-9e92-1a4d0762465f",
       disabled: true
     };
   },
@@ -388,7 +387,7 @@ export default {
       if (this.invalidImportedProtocols.length > 0) this.$bvModal.show("invalid-imported-protocols");
     },
     statusUuid: function(new_status) {
-      if (new_status == this.connection_complete_message) {
+      if (new_status == SYSTEM_STATUS.IDLE_READY_STATE) {
         this.disabled = false;
         this.disabled_tool_tip = "";
       }
