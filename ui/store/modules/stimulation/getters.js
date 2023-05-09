@@ -3,7 +3,7 @@ import { COLOR_PALETTE, ALPHABET } from "./enums";
 export function getDefaultProtocolEditorState() {
   return {
     name: "",
-    runUntilStopped: true,
+    runUntilStopped: false,
     stimulationType: "C",
     restDuration: 0,
     timeUnit: "milliseconds",

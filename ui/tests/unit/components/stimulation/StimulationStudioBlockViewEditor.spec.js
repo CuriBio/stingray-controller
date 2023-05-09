@@ -56,13 +56,13 @@ describe("StimulationStudioDragAndDropPanel.vue", () => {
     await store.dispatch("stimulation/editSelectedProtocol", testParam1);
     expect(wrapper.vm.currentLetter).toBe(testParam1.letter);
     expect(wrapper.vm.restDuration).toBe("20");
-    expect(wrapper.vm.stopOptionIdx).toBe(1);
+    expect(wrapper.vm.stopOptionIdx).toBe(0);
     expect(wrapper.vm.disabledTime).toBe(true);
 
     await store.dispatch("stimulation/editSelectedProtocol", testParam2);
     expect(wrapper.vm.currentLetter).toBe(testParam2.letter);
     expect(wrapper.vm.restDuration).toBe("40");
-    expect(wrapper.vm.stopOptionIdx).toBe(0);
+    expect(wrapper.vm.stopOptionIdx).toBe(1);
     expect(wrapper.vm.disabledTime).toBe(false);
   });
 
@@ -71,6 +71,7 @@ describe("StimulationStudioDragAndDropPanel.vue", () => {
       store,
       localVue,
     });
+    await wrapper.find("#stopOptions_1").trigger("click");
 
     await wrapper.find("#input-widget-field-protocol-rest").setValue("5");
     expect(wrapper.vm.restDuration).toBe("5");
@@ -139,13 +140,12 @@ describe("StimulationStudioDragAndDropPanel.vue", () => {
       localVue,
     });
     const toggleStopOptions = wrapper.find("#smallDropdown_stopOptions");
-    const visibleOption = wrapper.find("#stopOptions_1");
-
+    await toggleStopOptions.trigger("click");
+    await wrapper.find("#stopOptions_1").trigger("click");
     expect(wrapper.vm.disabledTime).toBe(false);
 
     await toggleStopOptions.trigger("click");
-    await visibleOption.trigger("click");
-
+    await wrapper.find("#stopOptions_0").trigger("click");
     expect(wrapper.vm.disabledTime).toBe(true);
   });
 

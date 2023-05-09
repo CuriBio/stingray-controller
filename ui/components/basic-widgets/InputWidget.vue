@@ -110,9 +110,7 @@ export default {
   },
   watch: {
     initialValue() {
-      const specialIdSuffix =
-        this.domIdSuffix.includes("heatmap") || this.domIdSuffix.includes("protocol-rest");
-      this.inputValue = specialIdSuffix && isNaN(this.initialValue) ? "" : this.initialValue;
+      this.inputValue = this.initialValue;
       this.$emit("update:value", this.inputValue);
     },
     disabled(bool) {

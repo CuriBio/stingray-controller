@@ -145,11 +145,11 @@ export default {
   data() {
     return {
       activeTab: "Basic",
-      disabledTime: false,
+      disabledTime: true,
       currentLetter: "",
       currentColor: "",
       stimulationTypesArray: ["Current Controlled Stimulation", "(Not Yet Available)"],
-      stopOptionsArray: ["Stimulate Until Stopped", "Stimulate Until Complete"],
+      stopOptionsArray: ["Stimulate Until Complete", "Stimulate Until Stopped"],
       protocolName: "",
       stopOptionIdx: 0,
       restDuration: "",
@@ -177,6 +177,9 @@ export default {
     restTimeUnit: function () {
       return this.protocolEditor.restTimeUnit;
     },
+    stateRestDuration: function () {
+      return this.protocolEditor.restDuration;
+    },
     editModeStatus: function () {
       return this.editMode.status;
     },
@@ -195,6 +198,9 @@ export default {
       if (!this.disabledTime) {
         this.handleRestDuration(this.restDuration);
       }
+    },
+    stateRestDuration() {
+      this.restDuration = this.stateRestDuration.toString();
     },
     editModeStatus: function () {
       this.setProtocolForEdit();
@@ -234,7 +240,7 @@ export default {
 
       this.protocolName = name;
       this.restDuration = JSON.stringify(restDuration);
-      this.stopOptionIdx = +!runUntilStopped;
+      this.stopOptionIdx = +runUntilStopped;
       this.disabledTime = !runUntilStopped;
     },
     toggleTab(tab) {
@@ -250,7 +256,7 @@ export default {
     handleStopSetting(idx) {
       const setting = this.stopOptionsArray[idx];
       this.stopOptionIdx = idx;
-      this.disabledTime = idx === 1;
+      this.disabledTime = idx === 0;
 
       if (this.disabledTime) this.handleRestDuration("0");
 
@@ -259,6 +265,7 @@ export default {
     handleRestDuration(time) {
       const timeInt = +time;
       this.restDuration = time;
+
       if (isNaN(timeInt) || timeInt < 0) {
         this.invalidRestDurText = "Must be a (+) number";
       } else if (this.getDurInMs(timeInt) > MAX_SUBPROTOCOL_DURATION_MS) {

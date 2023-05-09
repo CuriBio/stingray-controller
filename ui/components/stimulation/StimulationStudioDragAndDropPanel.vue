@@ -22,7 +22,7 @@
         <SmallDropDown
           class="dropdown-container"
           :inputHeight="25"
-          :disable="disableDropdown"
+          :disableToggle="disableDropdown"
           :inputWidth="100"
           :optionsText="timeUnitsArray"
           :optionsIdx="timeUnitsIdx"
@@ -133,7 +133,7 @@ export default {
       newClonedIdx: null,
       modalOpenForEdit: false, // TODO Luci, clean up state management and constant names
       timeUnitsIdx: 0,
-      disableDropdown: false,
+      disableDropdown: true,
       isDragging: false,
       selectedColor: null,
     };
@@ -158,6 +158,9 @@ export default {
     },
     runUntilStopped: function () {
       this.disableDropdown = !this.runUntilStopped;
+      if (!this.runUntilStopped) {
+        this.timeUnitsIdx = 0;
+      }
     },
   },
   methods: {
