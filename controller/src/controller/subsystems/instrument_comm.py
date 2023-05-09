@@ -341,6 +341,7 @@ class InstrumentComm:
     async def _handle_sending_handshakes(self) -> None:
         # Tanner (3/17/23): handshakes are not tracked as commands
         while True:
+            logger.debug("Sending handshake")
             await self._send_data_packet(SerialCommPacketTypes.HANDSHAKE)
             await asyncio.sleep(SERIAL_COMM_HANDSHAKE_PERIOD_SECONDS)
 
@@ -550,6 +551,8 @@ class InstrumentComm:
 
         protocol_statuses: dict[int, Any] = parse_stim_data(*stim_stream_info.values())
 
+        logger.debug("Stim statuses received: %s", protocol_statuses)
+
         protocols_completed = [
             protocol_idx
             for protocol_idx, status_updates_arr in protocol_statuses.items()
@@ -678,11 +681,10 @@ class VirtualInstrumentConnection:
             # TODO make sure to add a unit test confirming this can be cancelled correctly
             # TODO raise a different error here?
             return bytes(0)
-        logger.debug(f"RECV: {data}")  # type: ignore
+        logger.debug("RECV: %s", list(data))
         return data
 
     async def write_async(self, data: bytearray | bytes | memoryview) -> None:
-        logger.debug(f"SEND: {data}")  # type: ignore
         try:
             self.writer.write(data)
             await self.writer.drain()
@@ -690,3 +692,5 @@ class VirtualInstrumentConnection:
             # TODO make sure to add a unit test confirming this can be cancelled correctly
             # TODO raise a different error here?
             pass
+        else:
+            logger.debug("SEND: %s", list(data))
