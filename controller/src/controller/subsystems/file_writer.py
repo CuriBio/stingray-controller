@@ -396,7 +396,6 @@ class FileWriter:
         if self._recording_time_idx_bounds.start is None:  # check needed for mypy to be happy
             raise NotImplementedError("_recording_time_idx_bounds.start should never be None here")
 
-        # TODO swap in H5 dataset labels here in other subsystems too
         time_indices = data_packet[TIME_INDICES]
 
         if time_indices[-1] < self._recording_time_idx_bounds.start:

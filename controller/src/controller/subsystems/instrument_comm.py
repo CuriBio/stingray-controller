@@ -12,19 +12,24 @@ from nptyping import NDArray
 import numpy as np
 from pulse3D.constants import BOOT_FLAGS_UUID
 from pulse3D.constants import CHANNEL_FIRMWARE_VERSION_UUID
-from pulse3D.constants import INITIAL_MAGNET_FINDING_PARAMS_UUID
+from pulse3D.constants import (
+    INITIAL_MAGNET_FINDING_PARAMS_UUID,
+    TIME_INDICES,
+    TIME_OFFSETS,
+    TISSUE_SENSOR_READINGS,
+)
 from pulse3D.constants import MAIN_FIRMWARE_VERSION_UUID
 from pulse3D.constants import MANTARRAY_NICKNAME_UUID
 from pulse3D.constants import MANTARRAY_SERIAL_NUMBER_UUID
 import serial
 import serial.tools.list_ports as list_ports
 
-from ..constants import CURI_VID
+from ..constants import CURI_VID, DEFAULT_MAG_SAMPLING_PERIOD, MICRO_TO_BASE_CONVERSION
 from ..constants import NUM_WELLS
 from ..constants import SERIAL_COMM_BAUD_RATE
 from ..constants import SERIAL_COMM_BYTESIZE
 from ..constants import SERIAL_COMM_HANDSHAKE_PERIOD_SECONDS
-from ..constants import SERIAL_COMM_MAGIC_WORD_BYTES
+from ..constants import SERIAL_COMM_MAGIC_WORD_BYTES, NUM_INITIAL_MAG_PACKETS_TO_DROP
 from ..constants import SERIAL_COMM_MAX_FULL_PACKET_LENGTH_BYTES
 from ..constants import SERIAL_COMM_MAX_PAYLOAD_LENGTH_BYTES
 from ..constants import SERIAL_COMM_PACKET_METADATA_LENGTH_BYTES
@@ -55,7 +60,7 @@ from ..exceptions import StimulationStatusUpdateFailedError
 from ..utils.aio import wait_tasks_clean
 from ..utils.command_tracking import CommandTracker
 from ..utils.data_parsing_cy import parse_stim_data
-from ..utils.data_parsing_cy import sort_serial_packets
+from ..utils.data_parsing_cy import sort_serial_packets, parse_magnetometer_data
 from ..utils.generic import handle_system_error
 from ..utils.serial_comm import convert_semver_str_to_bytes
 from ..utils.serial_comm import convert_status_code_bytes_to_dict
@@ -557,71 +562,6 @@ class InstrumentComm:
         if prev_command_info["command"] not in INTERMEDIATE_FIRMWARE_UPDATE_COMMANDS:
             await self._to_monitor_queue.put(prev_command_info)
 
-    async def _process_mag_data_packets(self, mag_stream_info: dict[str, bytes | int]) -> None:
-        # TODO refactor
-        # TODO move this entire function to DataStreamManager?
-
-        # don't update cache if not streaming or there are no packets to add
-        if not (self._is_data_streaming and mag_stream_info["num_packets"]):
-            return
-        # update cache values
-        for key, value in mag_stream_info.items():
-            self._mag_data_cache_dict[key] += value  # type: ignore
-
-        # don't parse and send to file writer unless there is at least 1 second worth of data
-        if self._mag_data_cache_dict["num_packets"] < self._num_mag_packets_per_second:  # type: ignore
-            return
-
-        new_performance_tracking_values: Dict[str, Any] = dict()
-
-        if self._timepoints_of_prev_actions["mag_data_parse"] is not None:
-            new_performance_tracking_values[
-                "period_between_mag_data_parsing"
-            ] = _get_secs_since_last_mag_data_parse(self._timepoints_of_prev_actions["mag_data_parse"])
-        self._timepoints_of_prev_actions["mag_data_parse"] = perf_counter()
-        # parse magnetometer data
-        parsed_mag_data_dict = parse_magnetometer_data(
-            *self._mag_data_cache_dict.values(), self._base_global_time_of_data_stream
-        )
-        new_performance_tracking_values["mag_data_parsing_duration"] = _get_dur_of_mag_data_parse_secs(
-            self._timepoints_of_prev_actions["mag_data_parse"]  # type: ignore
-        )
-
-        time_indices, time_offsets, data = parsed_mag_data_dict.values()
-
-        new_performance_tracking_values["num_mag_packets_parsed"] = len(time_indices)
-
-        is_first_packet = not self._has_data_packet_been_sent
-        data_start_idx = NUM_INITIAL_PACKETS_TO_DROP if is_first_packet else 0
-        data_slice = slice(data_start_idx, self._mag_data_cache_dict["num_packets"])
-
-        mag_data_packet: Dict[Any, Any] = {
-            "data_type": "magnetometer",
-            "time_indices": time_indices[data_slice],
-            "is_first_packet_of_stream": is_first_packet,
-        }
-
-        time_offset_idx = 0
-        for module_id in range(self._num_wells):
-            time_offset_slice = slice(time_offset_idx, time_offset_idx + SERIAL_COMM_NUM_SENSORS_PER_WELL)
-            time_offset_idx += SERIAL_COMM_NUM_SENSORS_PER_WELL
-
-            well_dict: Dict[Any, Any] = {"time_offsets": time_offsets[time_offset_slice, data_slice]}
-
-            data_idx = module_id * SERIAL_COMM_NUM_DATA_CHANNELS
-            for channel_idx in range(SERIAL_COMM_NUM_DATA_CHANNELS):
-                well_dict[channel_idx] = data[data_idx + channel_idx, data_slice]
-
-            well_idx = SERIAL_COMM_MODULE_ID_TO_WELL_IDX[module_id]
-            mag_data_packet[well_idx] = well_dict
-
-        self._dump_mag_data_packet(mag_data_packet)
-
-        # reset cache now that all mag data has been parsed
-        self._reset_mag_data_cache()
-
-        self._update_performance_metrics(new_performance_tracking_values)
-
     async def _process_status_beacon(self, packet_payload: bytes) -> None:
         status_codes_dict = convert_status_code_bytes_to_dict(
             packet_payload[:SERIAL_COMM_STATUS_CODE_LENGTH_BYTES]
@@ -658,9 +598,15 @@ class DataStreamManager:
         self._base_global_time_of_data_stream: int | None = None
         self._has_packet_been_sent = FirstPacketTracker(magnetometer=False, stimulation=False)
 
-        # TODO make this a dict or namedtuple containing "stimulation" and "magnetometer" as top level keys
+        # TODO combine these two into a dict or namedtuple containing "stimulation" and "magnetometer" as top level keys
+        self._mag_data_buffers = {}
         self._stim_status_buffers: dict[int, NDArray[(2, Any), int]] = {}
         self.protocols_running: set[int] = set()
+
+        self._reset_mag_data_buffers()
+
+    def _reset_mag_data_buffers(self) -> None:
+        self._mag_data_buffers = {"raw_bytes": bytearray(0), "num_packets": 0}
 
     @property
     def is_streaming(self) -> bool:
@@ -705,57 +651,35 @@ class DataStreamManager:
     async def push(self, sorted_packets: dict[str, Any]) -> None:
         # TODO make a constant or enum for these?
         for data_type in ("magnetometer", "stimulation"):
-            await getattr(self, f"_push_{data_type}")(sorted_packets[f"{data_type}_stream_info"])
+            handler_fn = getattr(self, f"_push_{data_type}")
+            await handler_fn(sorted_packets[f"{data_type}_stream_info"])
 
     async def _push_magnetometer(self, stream_info: dict[str, Any]) -> None:
         # if not streaming or no packets, then nothing to do
         if not self.is_streaming or not stream_info["num_packets"]:
             return
 
-        # TODO refactor all of this
         # update cache values
         for key, value in stream_info.items():
             self._mag_data_cache_dict[key] += value  # type: ignore
 
+        current_num_packets = self._mag_data_buffers["num_packets"]
+
         # don't parse and send to file writer unless there is at least 1 second worth of data
-        if self._mag_data_cache_dict["num_packets"] < self._num_mag_packets_per_second:  # type: ignore
+        # TODO make this a constant so it's not recalculated each time
+        if current_num_packets < (MICRO_TO_BASE_CONVERSION // DEFAULT_MAG_SAMPLING_PERIOD):
             return
 
         # parse magnetometer data
+        # TODO make sure that parse_magnetometer_data maps from module ID to well idx correctly
         parsed_mag_data_dict = parse_magnetometer_data(
-            *self._mag_data_cache_dict.values(), self._base_global_time_of_data_stream
+            *self._mag_data_buffers.values(), self._base_global_time_of_data_stream
         )
 
-        time_indices, time_offsets, data = parsed_mag_data_dict.values()
-
-        is_first_packet = not self._has_data_packet_been_sent
-        data_start_idx = NUM_INITIAL_PACKETS_TO_DROP if is_first_packet else 0
-        data_slice = slice(data_start_idx, self._mag_data_cache_dict["num_packets"])
-
-        mag_data_packet: dict[Any, Any] = {
-            "data_type": "magnetometer",
-            "time_indices": time_indices[data_slice],
-            "is_first_packet_of_stream": is_first_packet,
-        }
-
-        time_offset_idx = 0
-        for module_id in range(NUM_WELLS):
-            time_offset_slice = slice(time_offset_idx, time_offset_idx + SERIAL_COMM_NUM_SENSORS_PER_WELL)
-            time_offset_idx += SERIAL_COMM_NUM_SENSORS_PER_WELL
-
-            well_dict: Dict[Any, Any] = {"time_offsets": time_offsets[time_offset_slice, data_slice]}
-
-            data_idx = module_id * SERIAL_COMM_NUM_DATA_CHANNELS
-            for channel_idx in range(SERIAL_COMM_NUM_DATA_CHANNELS):
-                well_dict[channel_idx] = data[data_idx + channel_idx, data_slice]
-
-            well_idx = SERIAL_COMM_MODULE_ID_TO_WELL_IDX[module_id]
-            mag_data_packet[well_idx] = well_dict
-
-        self._dump_mag_data_packet(mag_data_packet)
+        self._dump_packet({"data_type": "magnetometer", **parsed_mag_data_dict})
 
         # reset cache now that all mag data has been parsed
-        self._reset_mag_data_cache()
+        self._reset_mag_data_buffers()
 
     async def _push_stimulation(self, stream_info: dict[str, Any]) -> None:
         if not stream_info["num_packets"]:
@@ -783,7 +707,9 @@ class DataStreamManager:
 
         match data_type:
             case "magnetometer":
-                pass  # TODO
+                if data_packet["is_first_packet_of_stream"]:
+                    for data_type in (TIME_INDICES, TIME_OFFSETS, TISSUE_SENSOR_READINGS):
+                        data_packet = data_packet[..., NUM_INITIAL_MAG_PACKETS_TO_DROP:]
             case "stimulation":
                 for protocol_statuses in data_packet["protocol_statuses"].values():
                     protocol_statuses[0] -= self._base_global_time_of_data_stream

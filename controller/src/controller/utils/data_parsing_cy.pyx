@@ -194,6 +194,63 @@ cpdef dict sort_serial_packets(unsigned char [:] read_bytes):
     }
 
 
+cpdef dict parse_magnetometer_data(
+    unsigned char [:] mag_data_packet_bytes,
+    int num_mag_data_packets,
+    uint64_t base_global_time,
+):
+    mag_data_packet_bytes = mag_data_packet_bytes.copy()  # make sure data is C contiguous
+    cdef int magnetometer_data_packet_len = len(mag_data_packet_bytes) // num_mag_data_packets
+
+    cdef int num_time_offsets = TOTAL_NUM_SENSORS_C_INT
+    cdef int num_data_channels = TOTAL_NUM_SENSORS_C_INT * SERIAL_COMM_NUM_CHANNELS_PER_SENSOR_C_INT
+
+    # arrays for storing parsed data
+    time_indices = np.empty(num_mag_data_packets, dtype=np.uint64, order="C")
+    time_offsets = np.empty((num_time_offsets, num_mag_data_packets), dtype=np.uint16, order="C")
+    data = np.empty((num_data_channels, num_mag_data_packets), dtype=np.uint16, order="C")
+    # get memory views of numpy arrays for faster operations
+    cdef uint64_t [::1] time_indices_view = time_indices
+    cdef uint16_t [:, ::1] time_offsets_view = time_offsets
+    cdef uint16_t [:, ::1] data_view = data
+
+    # loop vars
+    cdef int bytes_idx = 0
+    cdef int data_packet_idx
+    cdef int time_offset_arr_idx, channel_arr_idx
+    cdef MagnetometerData * data_packet_ptr
+    cdef SensorData * sensor_data_ptr
+    cdef int sensor, channel
+
+    for data_packet_idx in range(num_mag_data_packets):
+        data_packet_ptr = <MagnetometerData *> &mag_data_packet_bytes[bytes_idx]
+        # add to time index array
+        time_indices_view[data_packet_idx] = (<uint64_t *> &data_packet_ptr.time_index)[0]
+        # add next data points to data array
+        sensor_data_ptr = &data_packet_ptr.sensor_data
+        channel_arr_idx = 0
+        time_offset_arr_idx = 0
+        for sensor in range(TOTAL_NUM_SENSORS_C_INT):
+            time_offsets_view[time_offset_arr_idx, data_packet_idx] = sensor_data_ptr.time_offset
+            time_offset_arr_idx += 1
+            for channel in range(SERIAL_COMM_NUM_CHANNELS_PER_SENSOR_C_INT):
+                data_view[channel_arr_idx, data_packet_idx] = sensor_data_ptr.data_points[channel]
+                channel_arr_idx += 1
+            # shift SensorData ptr by appropriate amount
+            sensor_data_ptr = <SensorData *> (
+                (<uint8_t *> sensor_data_ptr)
+                + SERIAL_COMM_TIME_OFFSET_LENGTH_BYTES_C_INT
+                + (SERIAL_COMM_NUM_CHANNELS_PER_SENSOR_C_INT * SERIAL_COMM_DATA_SAMPLE_LENGTH_BYTES_C_INT)
+            )
+        # increment idxs
+        bytes_idx += magnetometer_data_packet_len
+        data_packet_idx += 1
+
+    time_indices -= base_global_time
+
+    return {"time_indices": time_indices, "time_offsets": time_offsets, "data": data}
+
+
 cpdef dict parse_stim_data(unsigned char [:] stim_packet_bytes, int num_stim_packets):
     cdef dict stim_data_dict = {}  # dict for storing stim statuses
 
