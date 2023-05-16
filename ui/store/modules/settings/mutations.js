@@ -10,6 +10,7 @@ export default {
   },
   setStoredAccounts(state, { customerId, usernames }) {
     state.storedCustomerId = customerId;
+    state.userAccount.customerId = customerId;
     state.storedUsernames = usernames;
   },
   setUserCredInputNeeded(state, bool) {
