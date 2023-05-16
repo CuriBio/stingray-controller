@@ -4,14 +4,15 @@
       <span class="span__settingsform-title">User Settings</span>
       <canvas class="canvas__settingsform-separator" />
       <div class="div__settingsform-editor-input">
-        <InputDropDown
+        <InputWidget
           :titleLabel="'Select Customer ID'"
           :placeholder="'ba86b8f0-6fdf-4944-87a0-8a491a19490e'"
           :invalidText="errorText.customerId"
           :inputWidth="400"
-          :value="userDetails.customerId"
-          :optionsText="[storedCustomerId]"
-          :optionsId="'customer-id-'"
+          :initialValue="userDetails.customerId"
+          :containerBackgroundColor="'rgba(0, 0, 0)'"
+          :inputBackgroundColor="'#1c1c1c'"
+          :domIdSuffix="'customer-id'"
           @update:value="onUpdateInput($event, 'customerId')"
         />
       </div>
@@ -112,7 +113,7 @@ export default {
           };
     },
     isUserLoggedIn: function () {
-      return this.userAccount.customerId && this.userAccount.customerId !== "";
+      return this.userAccount.username && this.userAccount.username !== "";
     },
   },
   watch: {
@@ -125,6 +126,9 @@ export default {
         // if login fails, prompt user to re-enter their credentials
         this.invalidCredsFound = true;
       }
+    },
+    storedCustomerId: function () {
+      this.userDetails.customerId = this.storedCustomerId;
     },
   },
   methods: {
