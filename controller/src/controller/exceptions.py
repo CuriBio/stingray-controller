@@ -21,7 +21,7 @@ class NoInstrumentDetectedError(Exception):
 
 
 class InstrumentError(Exception):
-    """Generic exception for errors with instrument interaction."""
+    """Base exception for errors with instrument interaction."""
 
 
 class IncorrectInstrumentConnectedError(InstrumentError):
@@ -29,7 +29,7 @@ class IncorrectInstrumentConnectedError(InstrumentError):
 
 
 class InstrumentConnectionCreationError(InstrumentError):
-    """Generic exception for errors caused by connection failures."""
+    """Base exception for errors caused by connection failures."""
 
 
 class SerialCommPacketRegistrationTimeoutError(InstrumentConnectionCreationError):
@@ -45,7 +45,7 @@ class SerialCommPacketRegistrationSearchExhaustedError(InstrumentConnectionCreat
 
 
 class InstrumentConnectionLostError(InstrumentError):
-    """Generic exception for errors caused by response timeouts."""
+    """Base exception for errors caused by response timeouts."""
 
 
 class SerialCommStatusBeaconTimeoutError(InstrumentConnectionLostError):
@@ -56,9 +56,13 @@ class SerialCommCommandResponseTimeoutError(InstrumentConnectionLostError):
     pass
 
 
+class FirmwareGoingDormantError(InstrumentError):
+    pass
+
+
 # TODO change this to be an issue processing comm from instrument, rather than explicitly bad data from it
 class InstrumentBadDataError(InstrumentError):
-    """Generic exception for errors caused by malformed data."""
+    """Base exception for errors caused by malformed data."""
 
 
 class SerialCommIncorrectMagicWordFromInstrumentError(InstrumentBadDataError):
@@ -78,44 +82,35 @@ class InstrumentFirmwareError(InstrumentError):
     """Generic exception representing errors in the instrument's firmware."""
 
 
-# Misc Instrument comm related errors
-class SerialCommIncorrectChecksumFromPCError(Exception):
+class InstrumentInvalidMetadataError(InstrumentError):
+    """Generic exception representing errors in the instrument's firmware."""
+
+
+class InstrumentRebootTimeoutError(InstrumentFirmwareError):
     pass
 
 
-class SerialCommUntrackedCommandResponseError(Exception):
+class FirmwareUpdateTimeoutError(InstrumentFirmwareError):
     pass
 
 
-class InstrumentRebootTimeoutError(Exception):
+class InstrumentCommandResponseError(InstrumentError):
+    """Base exception for errors resulting from command responses from the instrument"""
+
+
+class SerialCommUntrackedCommandResponseError(InstrumentCommandResponseError):
     pass
 
 
-class StimulationProtocolUpdateWhileStimulatingError(Exception):
+class InstrumentCommandAttemptError(InstrumentError):
+    """Base exception for errors resulting from attempting to send a command to the instrument incorrectly"""
+
+
+class SerialCommIncorrectChecksumFromPCError(InstrumentCommandAttemptError):
     pass
 
 
-class StimulationProtocolUpdateFailedError(Exception):
-    pass
-
-
-class StimulationStatusUpdateFailedError(Exception):
-    pass
-
-
-class FirmwareUpdateCommandFailedError(Exception):
-    pass
-
-
-class FirmwareUpdateTimeoutError(Exception):
-    pass
-
-
-class FirmwareAndSoftwareNotCompatibleError(Exception):
-    pass
-
-
-class FirmwareGoingDormantError(Exception):
+class FirmwareAndSoftwareNotCompatibleError(InstrumentError):
     pass
 
 
@@ -123,7 +118,7 @@ class FirmwareGoingDormantError(Exception):
 
 
 class CloudAuthFailedError(Exception):
-    """Base class for cloud auth related errors."""
+    """Base exception for cloud auth related errors."""
 
 
 class LoginFailedError(CloudAuthFailedError):

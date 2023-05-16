@@ -64,7 +64,6 @@ class SystemStatuses(Enum):
     DOWNLOADING_UPDATES_STATE = uuid.UUID("b623c5fa-af01-46d3-9282-748e19fe374c")
     INSTALLING_UPDATES_STATE = uuid.UUID("19c9c2d6-0de4-4334-8cb3-a4c7ab0eab00")
     UPDATES_COMPLETE_STATE = uuid.UUID("31f8fbc9-9b41-4191-8598-6462b7490789")
-    UPDATE_ERROR_STATE = uuid.UUID("33742bfc-d354-4ae5-88b6-2b3cee23aff8")
 
 
 class StimulationStates(Enum):
@@ -74,7 +73,6 @@ class StimulationStates(Enum):
     STOPPING = auto()
 
 
-# TODO expand on these
 class ErrorCodes(IntEnum):
     # 000 - Instrument related
     INSTRUMENT_NOT_FOUND = 1
@@ -82,16 +80,23 @@ class ErrorCodes(IntEnum):
     INSTRUMENT_CONNECTION_LOST = 3
     INSTRUMENT_STATUS_CODE = 4
     INSTRUMENT_FW_INCOMPATIBLE_WITH_SW = 5
+    INCORRECT_INSTRUMENT_TYPE = 6
+    INVALID_INSTRUMENT_METADATA = 7
     INSTRUMENT_SENT_BAD_DATA = 10
-    INCORRECT_INSTRUMENT_TYPE = 99  # temporary
+    INSTRUMENT_INITIATED_DISCONNECTION = 11
+    INSTRUMENT_COMMAND_FAILED = 12
+    INSTRUMENT_COMMAND_ATTEMPT = 13
     # 100 - Caught in Controller
     UI_SENT_BAD_DATA = 110
+    FIRMWARE_DOWNLOAD_ERROR = 180
+    UNSPECIFIED_CONTROLLER_ERROR = (
+        199  # Catch all error. This ideally should never happen, but created just in case
+    )
     # 200 - Caught in UI  # These by nature cannot be set by the controller itself, and thus are only here for documentation
     CONTROLLER_CONNECTION_CREATION = 202
     CONTROLLER_CONNECTION_LOST = 203
     CONTROLLER_SENT_BAD_DATA = 210
-    # This ideally should never happen, but creating it just in case
-    UNSPECIFIED = 999
+    UNSPECIFIED_UI_ERROR = 299  # Catch all error. This ideally should never happen, but created just in case
 
 
 # Serial Communication Values

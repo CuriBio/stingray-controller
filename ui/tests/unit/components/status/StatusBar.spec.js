@@ -48,7 +48,6 @@ describe("StatusWidget.vue", () => {
       ["DOWNLOADING_UPDATES_STATE", "Status: Downloading Firmware Updates..."],
       ["INSTALLING_UPDATES_STATE", "Status: Installing Firmware Updates..."],
       ["UPDATES_COMPLETE_STATE", "Status: Firmware Updates Complete"],
-      ["UPDATE_ERROR_STATE", "Status: Error During Firmware Update"],
     ])(
       "Given that /shutdown is mocked to return status 200, When Vuex is mutated to the state %s, Then the status text should update to be: %s",
       async (vuexState, expectedText) => {
@@ -122,38 +121,12 @@ describe("StatusWidget.vue", () => {
       expect(wrapper.find(textSelector).text()).toBe("Status: 3dbb8814-09f1-44db-b7d5-7a9f702beac4");
     });
 
-    test("When Vuex is mutated to an UPDATE ERROR UUID, Then the status text should update as 'Error During Firmware Update' and the the dialog of ErrorCatchWidget is visible", async () => {
-      const propsData = {};
-      wrapper = mount(StatusWidget, {
-        propsData,
-        store,
-        localVue,
-        attachToDocument: true,
-      });
-
-      expect(wrapper.contains("#error-catch")).toBe(true);
-      const modal = wrapper.find("#error-catch");
-
-      store.commit("system/setStatusUuid", SYSTEM_STATUS.UPDATE_ERROR_STATE);
-      await wrapper.vm.$nextTick(); // wait for update
-      expect(wrapper.find(textSelector).text()).toBe("Status: Error During Firmware Update");
-      Vue.nextTick(() => {
-        expect(modal.isVisible()).toBe(true);
-      });
-
-      wrapper.vm.closeModalsById(["error-catch"]); // the event of ok-clicked got invoked.
-
-      Vue.nextTick(() => {
-        expect(modal.isVisible()).toBe(false);
-      });
-    });
     test.each([
       "SERVER_INITIALIZING_STATE",
       "SERVER_READY_STATE",
       "INITIALIZING_INSTRUMENT_STATE",
       "UPDATES_NEEDED_STATE",
       "UPDATES_COMPLETE_STATE",
-      "UPDATE_ERROR_STATE",
       "ERROR_STATE",
     ])(
       "When a user wants to exit the desktop app, Then the closure warning modals should not appear if there are no active processes or fw update",

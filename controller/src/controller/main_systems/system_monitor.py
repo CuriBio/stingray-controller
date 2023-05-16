@@ -379,8 +379,6 @@ class SystemMonitor:
                         system_state_updates["system_status"] = SystemStatuses.IDLE_READY_STATE
                         # since no updates available, also enable auto install of SW update
                         await self._send_enable_sw_auto_install_message()
-                case {"command": "download_firmware_updates", "error": _}:
-                    system_state_updates["system_status"] = SystemStatuses.UPDATE_ERROR_STATE
                 case {"command": "download_firmware_updates"}:
                     system_state_updates["system_status"] = SystemStatuses.INSTALLING_UPDATES_STATE
                     # Tanner (1/13/22): send both firmware update commands at once, and make sure channel is sent first.

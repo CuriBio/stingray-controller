@@ -338,10 +338,6 @@ export default {
           this.closeModalsById(["fw-updates-in-progress-message", "fw-closure-warning"]);
           this.$bvModal.show("fw-updates-complete-message");
           break;
-        case SYSTEM_STATUS.UPDATE_ERROR_STATE:
-          this.alertTxt = `Error During Firmware Update`;
-          this.closeModalsById(["fw-updates-in-progress-message", "fw-closure-warning"]);
-          break;
         default:
           this.alertTxt = status;
           break;
