@@ -66,28 +66,63 @@ export default {
     };
 
     await newSubprotocolOrder.map(async (pulse) => {
-      const { color } = pulse;
-      let settings = pulse.pulseSettings;
+      if (pulse.type !== "loop") {
+        const { color } = pulse;
+        let settings = pulse.pulseSettings;
+        const startingRepeatIdx = xValues.length - 1;
 
-      const startingRepeatIdx = xValues.length - 1;
+        settings = {
+          type: pulse.type,
+          ...settings,
+        };
 
-      settings = {
-        type: pulse.type,
-        ...settings,
-      };
+        subprotocols.push(settings);
 
-      subprotocols.push(settings);
+        // numCycles defaults to 0 and delay will never update unless run through once
+        let remainingPulseCycles = pulse.type === "Delay" ? 1 : settings.numCycles;
 
-      // numCycles defaults to 0 and delay will never update unless run through once
-      let remainingPulseCycles = pulse.type === "Delay" ? 1 : settings.numCycles;
+        while (remainingPulseCycles > 0) {
+          helper(settings, pulse.type);
+          remainingPulseCycles--;
+        }
 
-      while (remainingPulseCycles > 0) {
-        helper(settings, pulse.type);
-        remainingPulseCycles--;
+        const endingRepeatIdx = xValues.length;
+        colorAssignments.push([color, [startingRepeatIdx, endingRepeatIdx]]);
+      } else {
+        const pulseCopy = JSON.parse(JSON.stringify(pulse));
+        for (const _ of Array(pulse.numRepeats).fill()) {
+          pulseCopy.subprotocols.map((pulse) => {
+            const { color } = pulse;
+            let settings = pulse.pulseSettings;
+            const startingRepeatIdx = xValues.length - 1;
+
+            settings = {
+              type: pulse.type,
+              ...settings,
+            };
+
+            let remainingPulseCycles = pulse.type === "Delay" ? 1 : settings.numCycles;
+
+            while (remainingPulseCycles > 0) {
+              helper(settings, pulse.type);
+              remainingPulseCycles--;
+            }
+
+            const endingRepeatIdx = xValues.length;
+            colorAssignments.push([color, [startingRepeatIdx, endingRepeatIdx]]);
+          });
+        }
+
+        pulseCopy.subprotocols = pulseCopy.subprotocols.map((loopedPulse) => {
+          const settings = loopedPulse.pulseSettings;
+          return {
+            type: pulse.type,
+            ...settings,
+          };
+        });
+
+        subprotocols.push(pulseCopy);
       }
-
-      const endingRepeatIdx = xValues.length;
-      colorAssignments.push([color, [startingRepeatIdx, endingRepeatIdx]]);
     });
 
     // convert xValues to correct unit

@@ -1,5 +1,5 @@
 import { mount, createLocalVue } from "@vue/test-utils";
-import StimulationStudioDelayModal from "@/components/stimulation/StimulationStudioDelayModal.vue";
+import StimulationStudioInputModal from "@/components/stimulation/StimulationStudioInputModal.vue";
 import { MIN_SUBPROTOCOL_DURATION_MS, MAX_SUBPROTOCOL_DURATION_MS } from "@/store/modules/stimulation/enums";
 import Vuex from "vuex";
 
@@ -8,7 +8,7 @@ localVue.use(Vuex);
 let NuxtStore;
 let store;
 
-describe("StimulationStudioDelayModal.vue", () => {
+describe("StimulationStudioInputModal.vue", () => {
   beforeAll(async () => {
     const storePath = `${process.env.buildDir}/store.js`;
     NuxtStore = await import(storePath);
@@ -19,7 +19,7 @@ describe("StimulationStudioDelayModal.vue", () => {
   });
 
   test("When a user closes delay modal, Then button label and new delay value should be emitted to parent component", async () => {
-    const wrapper = mount(StimulationStudioDelayModal, {
+    const wrapper = mount(StimulationStudioInputModal, {
       store,
       localVue,
       propsData: {
@@ -39,7 +39,7 @@ describe("StimulationStudioDelayModal.vue", () => {
   ])(
     "When a user opens the delay modal and editing is %s, Then button labels should be %s",
     async (modalOpenForEdit, expectedButtonLabels) => {
-      const buttonLabels = StimulationStudioDelayModal.computed.buttonLabels.call({
+      const buttonLabels = StimulationStudioInputModal.computed.buttonLabels.call({
         modalOpenForEdit,
       });
       expect(buttonLabels).toStrictEqual(expectedButtonLabels);
@@ -52,7 +52,7 @@ describe("StimulationStudioDelayModal.vue", () => {
   ])(
     "When a user opens the delay modal and editing is %s, Then button hover colors should be %s",
     async (modalOpenForEdit, expectedButtonColors) => {
-      const buttonLabels = StimulationStudioDelayModal.computed.buttonHoverColors.call({
+      const buttonLabels = StimulationStudioInputModal.computed.buttonHoverColors.call({
         modalOpenForEdit,
       });
       expect(buttonLabels).toStrictEqual(expectedButtonColors);
@@ -60,7 +60,7 @@ describe("StimulationStudioDelayModal.vue", () => {
   );
 
   test("When a user adds a value to an input field, Then the correct error message will be presented upon validity checks to input", async () => {
-    const wrapper = mount(StimulationStudioDelayModal, {
+    const wrapper = mount(StimulationStudioInputModal, {
       store,
       localVue,
       propsData: {
@@ -94,7 +94,7 @@ describe("StimulationStudioDelayModal.vue", () => {
   });
 
   test("When a user wants to save the delay/repeat value, Then it will only be possible once a all validation checks pass for input", async () => {
-    const wrapper = mount(StimulationStudioDelayModal, {
+    const wrapper = mount(StimulationStudioInputModal, {
       store,
       localVue,
       propsData: {
@@ -109,7 +109,7 @@ describe("StimulationStudioDelayModal.vue", () => {
     expect(wrapper.vm.isValid).toBe(false);
   });
   test("When a user selects a different time unit from the dropdown, Then the index will be saved to state", async () => {
-    const wrapper = mount(StimulationStudioDelayModal, {
+    const wrapper = mount(StimulationStudioInputModal, {
       store,
       localVue,
       propsData: {
@@ -124,7 +124,7 @@ describe("StimulationStudioDelayModal.vue", () => {
   });
 
   test("When a user clicks on a new color for delay block, Then the color will be set to state to be emitted to parent component", async () => {
-    const wrapper = mount(StimulationStudioDelayModal, {
+    const wrapper = mount(StimulationStudioInputModal, {
       store,
       localVue,
       propsData: {
