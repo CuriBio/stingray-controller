@@ -179,7 +179,7 @@ def _initialize_system_state(parsed_args: dict[str, Any], log_file_id: uuid.UUID
         # main
         "system_status": SystemStatuses.SERVER_INITIALIZING_STATE,
         "in_simulation_mode": False,
-        "stimulation_protocols_running": [],
+        "stimulation_protocol_statuses": [],
         # updating
         "main_firmware_update": None,
         "channel_firmware_update": None,

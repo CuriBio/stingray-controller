@@ -404,7 +404,7 @@ class InstrumentComm:
 
             # Tanner (2/28/23): there is currently no data stream, so magnetometer packets can be completely ignored.
 
-            await self._process_stim_packets(sorted_packet_dict["stim_stream_info"])
+            await self._process_stim_packets(sorted_packet_dict["stimulation_stream_info"])
 
     # TEMPORARY TASKS
 

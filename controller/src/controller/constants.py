@@ -2,6 +2,7 @@
 """Constants for the Stingray Controller."""
 from collections import namedtuple
 import datetime
+from enum import auto
 from enum import Enum
 from enum import IntEnum
 import uuid
@@ -64,6 +65,13 @@ class SystemStatuses(Enum):
     INSTALLING_UPDATES_STATE = uuid.UUID("19c9c2d6-0de4-4334-8cb3-a4c7ab0eab00")
     UPDATES_COMPLETE_STATE = uuid.UUID("31f8fbc9-9b41-4191-8598-6462b7490789")
     UPDATE_ERROR_STATE = uuid.UUID("33742bfc-d354-4ae5-88b6-2b3cee23aff8")
+
+
+class StimulationStates(Enum):
+    INACTIVE = auto()
+    STARTING = auto()
+    RUNNING = auto()
+    STOPPING = auto()
 
 
 # TODO expand on these
