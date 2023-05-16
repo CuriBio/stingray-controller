@@ -19,9 +19,13 @@ export const ERROR_CODES = {
   INSTRUMENT_FW_INCOMPATIBLE_WITH_SW: 5,
   INCORRECT_INSTRUMENT_TYPE: 6,
   INSTRUMENT_SENT_BAD_DATA: 10,
+  INVALID_INSTRUMENT_METADATA: 7,
   INSTRUMENT_INITIATED_DISCONNECTION: 11,
+  INSTRUMENT_COMMAND_FAILED: 12,
+  INSTRUMENT_COMMAND_ATTEMPT: 13,
   // 100 - Caught in Controller  // These by nature cannot be set by the UI itself, and thus are only here for documentation
   UI_SENT_BAD_DATA: 110,
+  FIRMWARE_DOWNLOAD_ERROR: 180,
   UNSPECIFIED_CONTROLLER_ERROR: 199, // Catch all error. This ideally should never happen, but created just in case
   // 200 - Caught in UI
   CONTROLLER_CONNECTION_CREATION: 202,
