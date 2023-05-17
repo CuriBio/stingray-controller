@@ -18,6 +18,7 @@ Fixed:
 
 Changed:
 ^^^^^^^^
+- Error codes
 - New login flow
 
 
