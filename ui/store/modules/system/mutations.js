@@ -35,8 +35,6 @@ export default {
     if (msg.latest_compatible_sw_version) {
       state.systemErrorMessage = "Please download the installer for the correct version here:";
       state.installerLink = `https://downloads.curibio.com/software/StingrayController-Setup-prod-${msg.latest_compatible_sw_version}.exe`;
-    } else if (state.statusUuid === SYSTEM_STATUS.UPDATE_ERROR_STATE) {
-      state.systemErrorMessage = "Error during firmware update.";
     } else {
       state.systemErrorMessage =
         ERROR_MESSAGES[msg.error_code] || "Stingray Controller is about to shutdown.";
