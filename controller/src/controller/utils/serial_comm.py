@@ -10,6 +10,7 @@ from typing import Union
 from uuid import UUID
 from zlib import crc32
 
+from controller.exceptions import InstrumentInvalidMetadataError
 from immutabledict import immutabledict
 import numpy as np
 from pulse3D.constants import BOOT_FLAGS_UUID
@@ -57,6 +58,17 @@ METADATA_TYPES: immutabledict[UUID, str] = immutabledict(
         BOOTUP_COUNTER_UUID: int,
         PCB_SERIAL_NUMBER_UUID: str,
         BOOT_FLAGS_UUID: int,
+    }
+)
+
+METADATA_TAGS_FOR_LOGGING = immutabledict(
+    {
+        BOOT_FLAGS_UUID: "Boot flags",
+        MANTARRAY_NICKNAME_UUID: "Instrument nickname",
+        MANTARRAY_SERIAL_NUMBER_UUID: "Serial Number",
+        MAIN_FIRMWARE_VERSION_UUID: "Main micro firmware version",
+        CHANNEL_FIRMWARE_VERSION_UUID: "Channel micro firmware version",
+        INITIAL_MAGNET_FINDING_PARAMS_UUID: "Initial magnet position estimate",
     }
 )
 
@@ -116,7 +128,7 @@ def parse_metadata_bytes(metadata_bytes: bytes) -> dict[UUID | str, Any]:
         MANTARRAY_NICKNAME_UUID: metadata_bytes[1:14].decode("utf-8"),
         MANTARRAY_SERIAL_NUMBER_UUID: metadata_bytes[14:26].decode("ascii"),
         MAIN_FIRMWARE_VERSION_UUID: convert_semver_bytes_to_str(metadata_bytes[26:29]),
-        CHANNEL_FIRMWARE_VERSION_UUID: convert_semver_bytes_to_str(metadata_bytes[29:32]),
+        CHANNEL_FIRMWARE_VERSION_UUID: convert_semver_bytes_to_str(metadata_bytes[26:29]),
         # this key is only necessary for logging at the moment
         "Status codes prior to reboot": convert_status_code_bytes_to_dict(metadata_bytes[32:58]),
         INITIAL_MAGNET_FINDING_PARAMS_UUID: {
@@ -149,6 +161,16 @@ def convert_metadata_to_bytes(metadata_dict: dict[UUID | str, Any]) -> bytes:
     # append empty bytes so the result length is always a multiple of 32
     metadata_bytes += bytes(math.ceil(len(metadata_bytes) / 32) * 32 - len(metadata_bytes))
     return metadata_bytes  # type: ignore
+
+
+def validate_instrument_metadata(metadata_dict: dict[UUID | str, Any]) -> None:
+    for key in (MANTARRAY_SERIAL_NUMBER_UUID, MANTARRAY_NICKNAME_UUID):
+        if all(ch == "\x00" for ch in metadata_dict[key]):
+            raise InstrumentInvalidMetadataError(METADATA_TAGS_FOR_LOGGING[key])
+    for key in (MAIN_FIRMWARE_VERSION_UUID, CHANNEL_FIRMWARE_VERSION_UUID):
+        if metadata_dict[key] == "0.0.0":
+            raise InstrumentInvalidMetadataError(METADATA_TAGS_FOR_LOGGING[key])
+    # TODO validate metadata_dict[INITIAL_MAGNET_FINDING_PARAMS_UUID]
 
 
 def convert_semver_bytes_to_str(semver_bytes: bytes) -> str:

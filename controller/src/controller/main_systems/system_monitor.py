@@ -13,6 +13,7 @@ from pulse3D.constants import MANTARRAY_SERIAL_NUMBER_UUID as INSTRUMENT_SERIAL_
 
 from ..constants import CURRENT_SOFTWARE_VERSION
 from ..constants import FW_UPDATE_SUBDIR
+from ..constants import StimulationStates
 from ..constants import StimulatorCircuitStatuses
 from ..constants import SystemStatuses
 from ..utils.aio import wait_tasks_clean
@@ -143,25 +144,50 @@ class SystemMonitor:
             await self._system_state_manager.update(system_status_dict)
 
     async def _push_system_status_update(self, update_details: ReadOnlyDict) -> None:
-        if status_update_details := {
+        status_update_details = {
             status_name: new_system_status
-            for status_name in ("system_status", "stimulation_protocols_running", "in_simulation_mode")
+            for status_name in ("system_status", "stimulation_protocol_statuses", "in_simulation_mode")
             if (new_system_status := update_details.get(status_name))
-        }:
-            logger.info(f"System status update: {status_update_details}")
-            # want to have system_status logged as an enum, so afterwards need to convert it to a string so it can be json serialized later
-            if system_status := status_update_details.get("system_status"):
-                status_update_details["system_status"] = str(system_status.value)
+        }
+        if not status_update_details:
+            return
 
-            await self._queues["to"]["server"].put(
-                {"communication_type": "status_update", **status_update_details}
-            )
+        logger.info(f"System status update: {status_update_details}")
+
+        # starting/stopping states should be logged, but don't need to be sent to the UI, so remove them
+        try:
+            new_stim_statuses = status_update_details.pop("stimulation_protocol_statuses")
+        except KeyError:
+            pass
+        else:
+            if not (
+                # if either of these are present then assume stim will either start or stop on every well soon so wait for that to happen before sending an update
+                StimulationStates.STARTING in new_stim_statuses
+                or StimulationStates.STOPPING in new_stim_statuses
+            ):
+                status_update_details["stimulation_protocols_running"] = [
+                    stim_status == StimulationStates.RUNNING for stim_status in new_stim_statuses
+                ]
+
+        # this will happen if the only update was starting/stopping stim, in which case nothing needs to be sent to the UI
+        if not status_update_details:
+            return
+
+        # want to have system_status logged as an enum, so afterwards need to convert it to a string so it can be json serialized later
+        if system_status := status_update_details.get("system_status"):
+            status_update_details["system_status"] = str(system_status.value)
+
+        await self._queues["to"]["server"].put(
+            {"communication_type": "status_update", **status_update_details}
+        )
 
     # COMM HANDLERS
 
     async def _handle_comm_from_server(self) -> None:
         while True:
             communication = await self._queues["from"]["server"].get()
+
+            system_state = self._system_state_manager.data
 
             system_state_updates: dict[str, Any] = {}
 
@@ -187,9 +213,20 @@ class SystemMonitor:
                     logger.info(f"User {action} firmware update(s)")
                     system_state_updates["firmware_updates_accepted"] = update_accepted
                 case {"command": "set_stim_status", "running": status}:
-                    await self._queues["to"]["instrument_comm"].put(
-                        {"command": "start_stimulation" if status else "stop_stimulation"}
-                    )
+                    num_protocols = len(system_state["stim_info"]["protocols"])
+                    if status:
+                        command = "start_stimulation"
+                        stim_status_updates = [StimulationStates.STARTING] * num_protocols
+                    else:
+                        command = "stop_stimulation"
+                        stim_status_updates = [
+                            StimulationStates.STOPPING
+                            if current_status in (StimulationStates.STARTING, StimulationStates.RUNNING)
+                            else current_status
+                            for current_status in system_state["stimulation_protocol_statuses"]
+                        ]
+                    system_state_updates["stimulation_protocol_statuses"] = stim_status_updates
+                    await self._queues["to"]["instrument_comm"].put({"command": command})
                 case {"command": "set_stim_protocols", "stim_info": stim_info}:
                     system_state_updates["stim_info"] = stim_info
                     chunked_stim_info, *_ = chunk_protocols_in_stim_info(stim_info)
@@ -223,17 +260,19 @@ class SystemMonitor:
                 case {"command": "set_stim_protocols"}:
                     pass  # nothing to do here
                 case {"command": "start_stimulation"}:
-                    system_state_updates["stimulation_protocols_running"] = [True] * len(
+                    system_state_updates["stimulation_protocol_statuses"] = [StimulationStates.RUNNING] * len(
                         system_state["stim_info"]["protocols"]
                     )
                 case {"command": "stop_stimulation"}:
                     pass  # Tanner (3/31/23): let the stim status updates handle setting all the running statuses back to False
                 case {"command": "stim_status_update", "protocols_completed": protocols_completed}:
-                    system_state_updates["stimulation_protocols_running"] = list(
-                        system_state["stimulation_protocols_running"]
+                    system_state_updates["stimulation_protocol_statuses"] = list(
+                        system_state["stimulation_protocol_statuses"]
                     )
                     for protocol_idx in protocols_completed:
-                        system_state_updates["stimulation_protocols_running"][protocol_idx] = False
+                        system_state_updates["stimulation_protocol_statuses"][
+                            protocol_idx
+                        ] = StimulationStates.INACTIVE
                 case {
                     "command": "start_stim_checks",
                     "stimulator_circuit_statuses": stimulator_circuit_statuses,
@@ -340,8 +379,6 @@ class SystemMonitor:
                         system_state_updates["system_status"] = SystemStatuses.IDLE_READY_STATE
                         # since no updates available, also enable auto install of SW update
                         await self._send_enable_sw_auto_install_message()
-                case {"command": "download_firmware_updates", "error": _}:
-                    system_state_updates["system_status"] = SystemStatuses.UPDATE_ERROR_STATE
                 case {"command": "download_firmware_updates"}:
                     system_state_updates["system_status"] = SystemStatuses.INSTALLING_UPDATES_STATE
                     # Tanner (1/13/22): send both firmware update commands at once, and make sure channel is sent first.

@@ -7,13 +7,6 @@ from typing import Any
 from zlib import crc32
 
 from aioserial import AioSerial
-from immutabledict import immutabledict
-from pulse3D.constants import BOOT_FLAGS_UUID
-from pulse3D.constants import CHANNEL_FIRMWARE_VERSION_UUID
-from pulse3D.constants import INITIAL_MAGNET_FINDING_PARAMS_UUID
-from pulse3D.constants import MAIN_FIRMWARE_VERSION_UUID
-from pulse3D.constants import MANTARRAY_NICKNAME_UUID
-from pulse3D.constants import MANTARRAY_SERIAL_NUMBER_UUID
 import serial
 import serial.tools.list_ports as list_ports
 
@@ -36,8 +29,10 @@ from ..constants import STIM_MODULE_ID_TO_WELL_IDX
 from ..constants import StimulatorCircuitStatuses
 from ..constants import STM_VID
 from ..exceptions import FirmwareGoingDormantError
-from ..exceptions import FirmwareUpdateCommandFailedError
 from ..exceptions import IncorrectInstrumentConnectedError
+from ..exceptions import InstrumentCommandAttemptError
+from ..exceptions import InstrumentCommandResponseError
+from ..exceptions import InstrumentError
 from ..exceptions import InstrumentFirmwareError
 from ..exceptions import NoInstrumentDetectedError
 from ..exceptions import SerialCommCommandProcessingError
@@ -47,9 +42,6 @@ from ..exceptions import SerialCommPacketRegistrationReadEmptyError
 from ..exceptions import SerialCommPacketRegistrationSearchExhaustedError
 from ..exceptions import SerialCommStatusBeaconTimeoutError
 from ..exceptions import SerialCommUntrackedCommandResponseError
-from ..exceptions import StimulationProtocolUpdateFailedError
-from ..exceptions import StimulationProtocolUpdateWhileStimulatingError
-from ..exceptions import StimulationStatusUpdateFailedError
 from ..utils.aio import wait_tasks_clean
 from ..utils.command_tracking import CommandTracker
 from ..utils.data_parsing_cy import parse_stim_data
@@ -61,7 +53,9 @@ from ..utils.serial_comm import convert_stim_dict_to_bytes
 from ..utils.serial_comm import convert_stimulator_check_bytes_to_dict
 from ..utils.serial_comm import create_data_packet
 from ..utils.serial_comm import get_serial_comm_timestamp
+from ..utils.serial_comm import METADATA_TAGS_FOR_LOGGING
 from ..utils.serial_comm import parse_metadata_bytes
+from ..utils.serial_comm import validate_instrument_metadata
 
 
 logger = logging.getLogger(__name__)
@@ -84,18 +78,6 @@ COMMAND_PACKET_TYPES = frozenset(
         SerialCommPacketTypes.FIRMWARE_UPDATE,
         SerialCommPacketTypes.END_FIRMWARE_UPDATE,
     ]
-)
-
-
-METADATA_TAGS_FOR_LOGGING = immutabledict(
-    {
-        BOOT_FLAGS_UUID: "Boot flags",
-        MANTARRAY_NICKNAME_UUID: "Instrument nickname",
-        MANTARRAY_SERIAL_NUMBER_UUID: "Instrument nickname",
-        MAIN_FIRMWARE_VERSION_UUID: "Main micro firmware version",
-        CHANNEL_FIRMWARE_VERSION_UUID: "Channel micro firmware version",
-        INITIAL_MAGNET_FINDING_PARAMS_UUID: "Initial magnet position estimate",
-    }
 )
 
 
@@ -315,7 +297,9 @@ class InstrumentComm:
                     packet_type = SerialCommPacketTypes.SET_STIM_PROTOCOL
                     bytes_to_send = convert_stim_dict_to_bytes(stim_info)
                     if self._is_stimulating and not self._hardware_test_mode:
-                        raise StimulationProtocolUpdateWhileStimulatingError()
+                        raise InstrumentCommandAttemptError(
+                            "Cannot update stimulation protocols while stimulating"
+                        )
                     self._num_stim_protocols = len(stim_info["protocols"])
                 case {"command": "start_stimulation"}:
                     packet_type = SerialCommPacketTypes.START_STIM
@@ -387,24 +371,16 @@ class InstrumentComm:
                 timestamp, packet_type, packet_payload = other_packet_info
                 try:
                     await self._process_comm_from_instrument(packet_type, packet_payload)
-                except (
-                    IncorrectInstrumentConnectedError,
-                    InstrumentFirmwareError,
-                    FirmwareGoingDormantError,
-                    SerialCommIncorrectChecksumFromPCError,
-                    StimulationProtocolUpdateFailedError,
-                    StimulationStatusUpdateFailedError,
-                    FirmwareUpdateCommandFailedError,
-                ):
+                except InstrumentError:
                     raise
-                except BaseException as e:
+                except Exception as e:
                     raise SerialCommCommandProcessingError(
                         f"Timestamp: {timestamp}, Packet Type: {packet_type}, Payload: {packet_payload}"
                     ) from e
 
             # Tanner (2/28/23): there is currently no data stream, so magnetometer packets can be completely ignored.
 
-            await self._process_stim_packets(sorted_packet_dict["stim_stream_info"])
+            await self._process_stim_packets(sorted_packet_dict["stimulation_stream_info"])
 
     # TEMPORARY TASKS
 
@@ -495,6 +471,8 @@ class InstrumentComm:
                     METADATA_TAGS_FOR_LOGGING.get(key, key): val for key, val in metadata_dict.items()
                 }
                 logger.info(f"Instrument metadata received: {metadata_dict_for_logging}")
+                # validate after logging so that every value still gets loggedin case of a bad value
+                validate_instrument_metadata(metadata_dict)
                 if not metadata_dict.pop("is_stingray"):
                     raise IncorrectInstrumentConnectedError()
                 prev_command_info.update(metadata_dict)  # type: ignore [arg-type]  # mypy doesn't like that the keys are UUIDs here
@@ -519,20 +497,20 @@ class InstrumentComm:
             case "set_protocols":
                 if response_data[0]:
                     if not self._hardware_test_mode:
-                        raise StimulationProtocolUpdateFailedError()
+                        raise InstrumentCommandResponseError("set_protocols")
                     prev_command_info["hardware_test_message"] = "Command failed"  # pragma: no cover
             case "start_stimulation":
                 # Tanner (10/25/21): if needed, can save _base_global_time_of_data_stream here
                 if response_data[0]:
                     if not self._hardware_test_mode:
-                        raise StimulationStatusUpdateFailedError("start_stimulation")
+                        raise InstrumentCommandResponseError("start_stimulation")
                     prev_command_info["hardware_test_message"] = "Command failed"  # pragma: no cover
                 prev_command_info["timestamp"] = datetime.datetime.utcnow()
                 self._is_stimulating = True
             case "stop_stimulation":
                 if response_data[0]:
                     if not self._hardware_test_mode:
-                        raise StimulationStatusUpdateFailedError("stop_stimulation")
+                        raise InstrumentCommandResponseError("stop_stimulation")
                     prev_command_info["hardware_test_message"] = "Command failed"  # pragma: no cover
                 self._is_stimulating = False
             case command if command in INTERMEDIATE_FIRMWARE_UPDATE_COMMANDS:
@@ -620,7 +598,7 @@ class FirmwareUpdateManager:
             error_msg = command
             if command == "send_firmware_data":
                 error_msg += f", packet index: {self._packet_idx}"
-            raise FirmwareUpdateCommandFailedError(error_msg)
+            raise InstrumentCommandResponseError(error_msg)
 
         if command != "end_of_firmware_update":
             if command == "send_firmware_data":

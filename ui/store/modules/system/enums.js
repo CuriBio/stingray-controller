@@ -8,7 +8,6 @@ export const SYSTEM_STATUS = {
   DOWNLOADING_UPDATES_STATE: "b623c5fa-af01-46d3-9282-748e19fe374c",
   INSTALLING_UPDATES_STATE: "19c9c2d6-0de4-4334-8cb3-a4c7ab0eab00",
   UPDATES_COMPLETE_STATE: "31f8fbc9-9b41-4191-8598-6462b7490789",
-  UPDATE_ERROR_STATE: "33742bfc-d354-4ae5-88b6-2b3cee23aff8",
 };
 
 export const ERROR_CODES = {
@@ -18,16 +17,21 @@ export const ERROR_CODES = {
   INSTRUMENT_CONNECTION_LOST: 3,
   INSTRUMENT_STATUS_CODE: 4,
   INSTRUMENT_FW_INCOMPATIBLE_WITH_SW: 5,
+  INCORRECT_INSTRUMENT_TYPE: 6,
   INSTRUMENT_SENT_BAD_DATA: 10,
-  INCORRECT_INSTRUMENT_TYPE: 99, // temporary
-  // 100 - Caught in Controller
+  INVALID_INSTRUMENT_METADATA: 7,
+  INSTRUMENT_INITIATED_DISCONNECTION: 11,
+  INSTRUMENT_COMMAND_FAILED: 12,
+  INSTRUMENT_COMMAND_ATTEMPT: 13,
+  // 100 - Caught in Controller  // These by nature cannot be set by the UI itself, and thus are only here for documentation
   UI_SENT_BAD_DATA: 110,
-  // 200 - Caught in UI  // These by nature cannot be set by the controller itself, and thus are only here for documentation
+  FIRMWARE_DOWNLOAD_ERROR: 180,
+  UNSPECIFIED_CONTROLLER_ERROR: 199, // Catch all error. This ideally should never happen, but created just in case
+  // 200 - Caught in UI
   CONTROLLER_CONNECTION_CREATION: 202,
   CONTROLLER_CONNECTION_LOST: 203,
   CONTROLLER_SENT_BAD_DATA: 210,
-  // This ideally should never happen, but creating it just in case
-  UNSPECIFIED: 999,
+  UNSPECIFIED_UI_ERROR: 299, // Catch all error. This ideally should never happen, but created just in case
 };
 
 export const ERROR_MESSAGES = {

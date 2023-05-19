@@ -22,6 +22,7 @@ from ..constants import STIM_MAX_DUTY_CYCLE_DURATION_MICROSECONDS
 from ..constants import STIM_MAX_DUTY_CYCLE_PERCENTAGE
 from ..constants import STIM_MAX_SUBPROTOCOL_DURATION_MICROSECONDS
 from ..constants import STIM_MIN_SUBPROTOCOL_DURATION_MICROSECONDS
+from ..constants import StimulationStates
 from ..constants import StimulatorCircuitStatuses
 from ..constants import SystemStatuses
 from ..constants import VALID_CREDENTIAL_TYPES
@@ -333,14 +334,16 @@ class Server:
         # TODO make sure the UI includes a stim barcode in this msg
 
         system_state = self._get_system_state_ro()
+
+        if _are_stimulator_checks_running(system_state):
+            return  # nothing to do here
+
         if system_state["system_status"] != SystemStatuses.IDLE_READY_STATE:
             raise WebsocketCommandError(
                 f"Cannot start stim check unless in {SystemStatuses.IDLE_READY_STATE.name}"
             )
         if _are_any_stim_protocols_running(system_state):
             raise WebsocketCommandError("Cannot perform stimulator checks while stimulation is running")
-        if _are_stimulator_checks_running(system_state):
-            raise WebsocketCommandError("Stimulator checks already running")
 
         try:
             if not comm["well_indices"]:
@@ -370,6 +373,9 @@ class Server:
 
         system_state = self._get_system_state_ro()
 
+        if stim_status is _are_any_stim_protocols_running(system_state):
+            return  # nothing to do here
+
         if not system_state["stim_info"]:
             raise WebsocketCommandError("Protocols have not been set")
 
@@ -387,9 +393,6 @@ class Server:
             if _are_any_stimulator_circuits_short(system_state):
                 raise WebsocketCommandError("Cannot start stimulation when a stimulator has a short circuit")
 
-        if stim_status is _are_any_stim_protocols_running(system_state):
-            raise WebsocketCommandError("Stim status not updated")
-
         await self._to_monitor_queue.put(comm)
 
 
@@ -397,7 +400,8 @@ class Server:
 
 
 def _are_any_stim_protocols_running(system_state: ReadOnlyDict) -> bool:
-    return any(system_state["stimulation_protocols_running"])
+    stim_statuses = system_state["stimulation_protocol_statuses"]
+    return any(status in (StimulationStates.STARTING, StimulationStates.RUNNING) for status in stim_statuses)
 
 
 def _are_stimulator_checks_running(system_state: ReadOnlyDict) -> bool:
