@@ -93,20 +93,20 @@ export default {
 
         // eslint-disable-next-line  no-unused-vars
         for (const _ of Array(pulse.numRepeats).fill()) {
-          pulseCopy.subprotocols.map((pulse) => {
-            const { color } = pulse;
-            let settings = pulse.pulseSettings;
+          pulseCopy.subprotocols.map((innerPulse) => {
+            const { color } = innerPulse;
+            let settings = innerPulse.pulseSettings;
             const startingRepeatIdx = xValues.length - 1;
 
             settings = {
-              type: pulse.type,
+              type: innerPulse.type,
               ...settings,
             };
 
-            let remainingPulseCycles = pulse.type === "Delay" ? 1 : settings.numCycles;
+            let remainingPulseCycles = innerPulse.type === "Delay" ? 1 : settings.numCycles;
 
             while (remainingPulseCycles > 0) {
-              helper(settings, pulse.type);
+              helper(settings, innerPulse.type);
               remainingPulseCycles--;
             }
 
@@ -118,7 +118,7 @@ export default {
         pulseCopy.subprotocols = pulseCopy.subprotocols.map((loopedPulse) => {
           const settings = loopedPulse.pulseSettings;
           return {
-            type: pulse.type,
+            type: loopedPulse.type,
             ...settings,
           };
         });
@@ -316,14 +316,14 @@ export default {
       // remove open circuit wells
       if (!stimulatorCircuitStatuses.includes(Number(well))) {
         const { stimulationType, subprotocols, runUntilStopped } = protocolAssignments[well].protocol;
-
         const { letter } = protocolAssignments[well];
 
         // add protocol to list of unique protocols if it has not been entered yet
         if (!uniqueProtocolIds.has(letter)) {
           uniqueProtocolIds.add(letter);
           // this needs to be converted before sent because stim type changes independently of pulse settings
-          const convertedSubprotocols = await _getConvertedSettings(subprotocols);
+          const convertedSubprotocols = _getConvertedSettings(subprotocols);
+          console.log(convertedSubprotocols);
           const protocolModel = {
             protocol_id: letter,
             stimulation_type: stimulationType,
@@ -338,7 +338,7 @@ export default {
         message.protocol_assignments[wellNumber] = letter;
       }
     }
-
+    console.log(message);
     const wsProtocolMessage = JSON.stringify({ command: "set_stim_protocols", stim_info: message });
     this.state.system.socket.send(wsProtocolMessage);
 
@@ -485,9 +485,14 @@ const _getConvertedSettings = async (subprotocols) => {
   const milliToMicro = 1e3;
   const chargeConversion = milliToMicro;
 
-  return subprotocols.map((pulse) => {
+  return await subprotocols.map(async (pulse) => {
     let typeSpecificSettings = {};
-    if (pulse.type === "Delay")
+    if (pulse.type === "loop") {
+      typeSpecificSettings = {
+        numRepeats: pulse.numRepeats,
+        subprotocols: await _getConvertedSettings(pulse.subprotocols),
+      };
+    } else if (pulse.type === "Delay")
       typeSpecificSettings.duration = pulse.duration * TIME_CONVERSION_TO_MILLIS[pulse.unit] * milliToMicro;
     else
       typeSpecificSettings = {

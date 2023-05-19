@@ -311,13 +311,16 @@ export default {
           editedNestedPulse.color = selectedColor;
           break;
         case "Duplicate":
+          // next conditional checks if pulse is not last in loop
           if (numSubprotocols - 1 > this.dblClickPulseNestedIdx)
             nextHue = this.getPulseHue(this.dblClickPulseIdx, this.dblClickPulseNestedIdx + 1);
+          // else take next pulse outside of loop to prevent duplciate colors in a row
           else if (
             numSubprotocols - 1 == this.dblClickPulseNestedIdx &&
             this.dblClickPulseIdx < this.protocolOrder.length - 1
           )
             nextHue = this.getPulseHue(this.dblClickPulseIdx + 1);
+          // else no need to consider next in order
 
           editedNestedPulseCopy.color = generateRandomColor(true, previousHue, nextHue);
           editedPulse.subprotocols.splice(this.dblClickPulseNestedIdx + 1, 0, editedNestedPulseCopy);
@@ -334,10 +337,14 @@ export default {
     closeRepeatModal(button, value) {
       this.openRepeatModal = false;
       this.currentInput = null;
+      // create loop object to replace at index in protocol order
       const loopPulse = {
         type: "loop",
         numRepeats: value,
-        subprotocols: [this.protocolOrder[this.dblClickPulseIdx], this.selectedPulseSettings],
+        subprotocols: [
+          { ...this.protocolOrder[this.dblClickPulseIdx], subprotocols: [] },
+          this.selectedPulseSettings,
+        ],
       };
 
       switch (button) {
@@ -566,7 +573,7 @@ img {
 }
 
 .dragArea {
-  height: 100px;
+  height: 98px;
   display: flex;
   padding-top: 4px;
 }
