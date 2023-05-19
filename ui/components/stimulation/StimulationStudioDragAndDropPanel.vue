@@ -65,20 +65,23 @@
               />
               <!-- Below is nested dropzone, can be disabled if needed -->
               <draggable
-                v-model="protocolOrder"
+                v-model="pulse.subprotocols"
                 class="dropzone"
-                style="height: 100px; display: flex"
                 :group="{ name: 'order' }"
                 :ghost-class="'ghost'"
                 :emptyInsertThreshold="40"
-                :disabled="false"
+                :disabled="(isDragging && pulse.type === 'loop') || cloned"
                 @change="handleProtocolLoop($event, idx)"
+                @start="isDragging = true"
+                @end="isDragging = false"
               >
                 <div
                   v-for="(nestedPulse, nestedIdx) in pulse.subprotocols"
                   :key="nestedIdx"
                   :style="'position: relative;'"
                   @dblclick="openModalForEdit(nestedPulse.type, idx, nestedIdx)"
+                  @mouseenter="onPulseEnter(idx, nestedIdx)"
+                  @mouseleave="onPulseLeave"
                 >
                   <img :src="require(`@/assets/img/${nestedPulse.type}.png`)" :style="'margin-top: 4px;'" />
                 </div>
@@ -112,7 +115,7 @@
         :currentInput="currentInput"
         :inputLabel="'Number of Loops:'"
         :includeUnits="false"
-        :modalTitle="'Repeat'"
+        :modalTitle="'Repeat Setup'"
         @input-close="closeRepeatModal"
       />
     </div>
@@ -134,7 +137,7 @@ import { mapState, mapActions, mapMutations } from "vuex";
  * @vue-data {Array} protocolOrder -  This is the complete order of pulses/delays/repeats in the entire new protocol
  * @vue-data {String} modalType - Tracks which modal should open based on pulse type
  * @vue-data {String} settingType - This is the stimulation type that user selects from drop down in settings panel
- * @vue-data {Int} shiftClickImgIdx - Index of selected pulse to edit in order to save new settings to correct pulse
+ * @vue-data {Int} dblClickPulseIdx - Index of selected pulse to edit in order to save new settings to correct pulse
  * @vue-data {String} openDelayModal - Tracks which modal should open based on if it is a repeat or delay
  * @vue-data {String} currentInput - Saved input for a delay block that changes depending on which delay block is opened for edit
  * @vue-data {Boolean} cloned - Determines if a placed tile in protocol order is new and needs a modal to open appear to set settings or just an order rearrangement of existing tiles
@@ -168,19 +171,20 @@ export default {
       protocolOrder: [],
       modalType: null,
       settingType: "Current",
-      shiftClickImgIdx: null,
+      dblClickPulseIdx: null,
       openDelayModal: false,
       currentInput: null,
       currentDelayUnit: "milliseconds",
       cloned: false,
       newClonedIdx: null,
-      modalOpenForEdit: false, // TODO Luci, clean up state management and constant names
+      modalOpenForEdit: false,
       timeUnitsIdx: 0,
       disableDropdown: false,
       isDragging: false,
       selectedColor: null,
       includeInputUnits: true,
       openRepeatModal: false,
+      dblClickPulseNestedIdx: null,
     };
   },
   computed: {
@@ -204,9 +208,6 @@ export default {
     runUntilStopped: function () {
       this.disableDropdown = !this.runUntilStopped;
     },
-    // protocolOrder: function() {
-    //   console.log(this.protocolOrder);
-    // }
   },
   methods: {
     ...mapActions("stimulation", ["handleProtocolOrder", "onPulseMouseenter"]),
@@ -218,101 +219,164 @@ export default {
         this.newClonedIdx = newIndex;
         this.selectedPulseSettings = element.pulseSettings;
         this.selectedColor = element.color;
-        if (element.type === "Monophasic") this.modalType = "Monophasic";
-        else if (element.type === "Biphasic") this.modalType = "Biphasic";
+        if (["Monophasic", "Biphasic"].includes(element.type)) this.modalType = element.type;
         else if (element.type === "Delay") this.openDelayModal = true;
       } else if (e.removed) {
         this.selectedPulseSettings = e.removed.element;
       }
 
-      if ((e.added && !this.cloned) || e.moved || e.removed) this.handleProtocolOrder(this.protocolOrder);
+      if ((e.added && !this.cloned) || e.moved || e.removed) {
+        // if the first index of a loop gets removed from the loop, it gets added here with subprotocols, need to remove
+        if (e.added) this.protocolOrder[e.added.newIndex].subprotocols = [];
+        this.handleProtocolOrder(this.protocolOrder);
+      }
       // reset
       this.cloned = false;
     },
     onModalClose(button, pulseSettings, selectedColor) {
       this.modalType = null;
-      this.openDelayModal = false;
-      this.modalOpenForEdit = false;
       this.currentInput = null;
       this.currentDelayUnit = "milliseconds";
       this.selectedColor = null;
 
+      if (this.newClonedIdx !== null) {
+        this.handleNewSettings(button, pulseSettings, selectedColor);
+      } else if (isNaN(this.dblClickPulseNestedIdx)) {
+        this.handleEditedSettings(button, pulseSettings, selectedColor);
+      } else {
+        this.handleNestedSettings(button, pulseSettings, selectedColor);
+      }
+
+      // dispatch vuex state changes
+      this.handleProtocolOrder(this.protocolOrder);
+    },
+    handleNewSettings(button, pulseSettings, selectedColor) {
+      const newPulse = this.protocolOrder[this.newClonedIdx];
+
       switch (button) {
         case "Save":
-          if (this.newClonedIdx !== null) {
-            const newPulse = this.protocolOrder[this.newClonedIdx];
-            newPulse.pulseSettings = pulseSettings;
-            newPulse.color = selectedColor;
-            Object.assign(this.protocolOrder[this.newClonedIdx], newPulse);
-          }
-          if (this.shiftClickImgIdx !== null) {
-            const editedPulse = this.protocolOrder[this.shiftClickImgIdx];
-
-            Object.assign(editedPulse.pulseSettings, pulseSettings);
-            Object.assign(this.protocolOrder[this.shiftClickImgIdx], editedPulse);
-            editedPulse.color = selectedColor;
-          }
-          break;
-        case "Duplicate":
-          // eslint-disable-next-line no-case-declarations
-          const duplicatePulse = // needs to not edit original pulse, editedPulse does
-            this.shiftClickImgIdx !== null
-              ? JSON.parse(JSON.stringify(this.protocolOrder[this.shiftClickImgIdx]))
-              : null;
-
-          // change color and insert after original pulse
-          // eslint-disable-next-line no-case-declarations
-          const previousHue = this.getPulseHue(this.shiftClickImgIdx);
-          // eslint-disable-next-line no-case-declarations
-          const nextHue =
-            this.shiftClickImgIdx < this.protocolOrder.length - 1
-              ? this.getPulseHue(this.shiftClickImgIdx + 1)
-              : undefined;
-
-          duplicatePulse.color = generateRandomColor(true, previousHue, nextHue);
-          this.protocolOrder.splice(this.shiftClickImgIdx + 1, 0, duplicatePulse);
-          break;
-        case "Delete":
-          this.protocolOrder.splice(this.shiftClickImgIdx, 1);
+          newPulse.color = selectedColor;
+          Object.assign(newPulse.pulseSettings, pulseSettings);
           break;
         case "Cancel":
-          if (this.newClonedIdx !== null) {
-            this.protocolOrder.splice(this.newClonedIdx, 1);
-          }
+          this.protocolOrder.splice(this.newClonedIdx, 1);
       }
+
       this.newClonedIdx = null;
-      this.shiftClickImgIdx = null;
-      this.handleProtocolOrder(this.protocolOrder);
+      this.openDelayModal = false;
+    },
+    handleEditedSettings(button, pulseSettings, selectedColor) {
+      const editedPulse = this.protocolOrder[this.dblClickPulseIdx];
+      const duplicatePulse = JSON.parse(JSON.stringify(editedPulse));
+
+      // change color and insert after original pulse
+      const previousHue = this.getPulseHue(this.dblClickPulseIdx);
+      const nextHue =
+        this.dblClickPulseIdx < this.protocolOrder.length - 1
+          ? this.getPulseHue(this.dblClickPulseIdx + 1)
+          : undefined;
+
+      switch (button) {
+        case "Save":
+          Object.assign(editedPulse.pulseSettings, pulseSettings);
+          editedPulse.color = selectedColor;
+          break;
+        case "Duplicate":
+          duplicatePulse.color = generateRandomColor(true, previousHue, nextHue);
+          this.protocolOrder.splice(this.dblClickPulseIdx + 1, 0, duplicatePulse);
+          break;
+        case "Delete":
+          this.protocolOrder.splice(this.dblClickPulseIdx, 1);
+          break;
+      }
+
+      this.dblClickPulseIdx = null;
+      this.openDelayModal = false;
+      this.modalOpenForEdit = false;
+    },
+    handleNestedSettings(button, pulseSettings, selectedColor) {
+      const editedPulse = this.protocolOrder[this.dblClickPulseIdx];
+      const { subprotocols } = editedPulse;
+      // needs to not edit original pulse, editedPulse does
+      const editedNestedPulse = subprotocols[this.dblClickPulseNestedIdx];
+      const editedNestedPulseCopy = JSON.parse(JSON.stringify(editedNestedPulse));
+      const numSubprotocols = subprotocols.length;
+      const previousHue = this.getPulseHue(this.dblClickPulseIdx, this.dblClickPulseNestedIdx);
+      // intentionally set to undefined if neither of the following conditionals are met
+      let nextHue;
+
+      switch (button) {
+        case "Save":
+          Object.assign(editedNestedPulse.pulseSettings, pulseSettings);
+          editedNestedPulse.color = selectedColor;
+          break;
+        case "Duplicate":
+          if (numSubprotocols - 1 > this.dblClickPulseNestedIdx)
+            nextHue = this.getPulseHue(this.dblClickPulseIdx, this.dblClickPulseNestedIdx + 1);
+          else if (
+            numSubprotocols - 1 == this.dblClickPulseNestedIdx &&
+            this.dblClickPulseIdx < this.protocolOrder.length - 1
+          )
+            nextHue = this.getPulseHue(this.dblClickPulseIdx + 1);
+
+          editedNestedPulseCopy.color = generateRandomColor(true, previousHue, nextHue);
+          editedPulse.subprotocols.splice(this.dblClickPulseNestedIdx + 1, 0, editedNestedPulseCopy);
+          break;
+        case "Delete":
+          editedPulse.subprotocols.splice(this.dblClickPulseNestedIdx, 1);
+          break;
+      }
+
+      this.dblClickPulseNestedIdx = null;
+      this.openDelayModal = false;
+      this.modalOpenForEdit = false;
     },
     closeRepeatModal(button, value) {
       this.openRepeatModal = false;
-      this.modalOpenForEdit = false;
       this.currentInput = null;
+      const loopPulse = {
+        type: "loop",
+        numRepeats: value,
+        subprotocols: [this.protocolOrder[this.dblClickPulseIdx], this.selectedPulseSettings],
+      };
 
       switch (button) {
         case "Save":
-          const loopPulse = {
-            type: "loop",
-            numRepeats: value,
-            subprotocols: [this.protocolOrder[this.shiftClickImgIdx], this.selectedPulseSettings],
-          };
-
-          this.protocolOrder.splice(this.shiftClickImgIdx, 1, loopPulse);
+          if (this.modalOpenForEdit) {
+            this.protocolOrder[this.dblClickPulseIdx].numRepeats = value;
+          } else {
+            this.protocolOrder.splice(this.dblClickPulseIdx, 1, loopPulse);
+          }
+          break;
+        case "Duplicate":
+          this.protocolOrder.splice(this.dblClickPulseIdx, 0, this.protocolOrder[this.dblClickPulseIdx]);
+          break;
+        case "Delete":
+          this.protocolOrder.splice(this.dblClickPulseIdx, 1);
+          break;
+        case "Cancel":
+          if (!this.modalOpenForEdit) {
+            this.protocolOrder[this.dblClickPulseIdx].subprotocols = [];
+            this.protocolOrder.splice(this.dblClickPulseIdx + 1, 0, this.selectedPulseSettings);
+          }
       }
+
       this.handleProtocolOrder(this.protocolOrder);
-      this.shiftClickImgIdx = null;
+      this.modalOpenForEdit = false;
+      this.dblClickPulseIdx = null;
     },
-    openModalForEdit(type, idx) {
-      const pulse = this.protocolOrder[idx];
-      this.shiftClickImgIdx = idx;
+    openModalForEdit(type, idx, nestedIdx) {
+      const pulse =
+        nestedIdx >= 0 ? this.protocolOrder[idx].subprotocols[nestedIdx] : this.protocolOrder[idx];
+
+      this.dblClickPulseIdx = idx;
+      this.dblClickPulseNestedIdx = nestedIdx;
       this.modalOpenForEdit = true;
       this.selectedPulseSettings = pulse.pulseSettings;
       this.selectedColor = pulse.color;
 
-      if (type === "Monophasic") {
-        this.modalType = "Monophasic";
-      } else if (type === "Biphasic") {
-        this.modalType = "Biphasic";
+      if (["Monophasic", "Biphasic"].includes(type)) {
+        this.modalType = type;
       } else if (type === "Delay") {
         const { duration, unit } = this.selectedPulseSettings;
         this.currentInput = duration.toString();
@@ -320,9 +384,9 @@ export default {
         this.openDelayModal = true;
       }
     },
-    onPulseEnter(idx) {
+    onPulseEnter(idx, nestedIdx) {
       // if tile is being dragged, the pulse underneath the dragged tile will highlight even though the user is dragging a different tile
-      if (!this.isDragging) this.onPulseMouseenter(idx);
+      if (!this.isDragging) this.onPulseMouseenter({ idx, nestedIdx });
     },
     onPulseLeave() {
       this.onPulseMouseleave();
@@ -333,10 +397,17 @@ export default {
       this.setTimeUnit(unit);
       this.handleProtocolOrder(this.protocolOrder);
     },
-    getPulseHue(idx) {
+    getPulseHue(idx, nestedIdx) {
       // duplicated pulses are not always in last index
       const pulseIdx = idx ? idx : this.protocolOrder.length - 1;
-      const lastPulseHsla = this.protocolOrder[pulseIdx].color;
+      const selectedPulse = this.protocolOrder[pulseIdx];
+      const { subprotocols } = selectedPulse;
+
+      const lastPulseHsla =
+        selectedPulse.type !== "loop"
+          ? selectedPulse.color
+          : subprotocols[nestedIdx >= 0 ? nestedIdx : subprotocols.length - 1].color;
+
       return lastPulseHsla.split("(")[1].split(",")[0];
     },
     getBorderStyle(type) {
@@ -355,7 +426,7 @@ export default {
 
       this.selectedColor = randomColor;
 
-      const typeSpecificSettings =
+      let typeSpecificSettings =
         type === "Delay"
           ? { duration: "", unit: "milliseconds" }
           : // for both monophasic and biphasic
@@ -383,22 +454,35 @@ export default {
         type,
         color: randomColor,
         pulseSettings: typeSpecificSettings,
+        subprotocols: [],
       };
     },
     openRepeatModalForEdit(number, idx) {
-      this.shiftClickImgIdx = idx;
-      this.currentInput = number;
+      this.dblClickPulseIdx = idx;
+      this.currentInput = number.toString();
+      this.modalOpenForEdit = true;
       this.openRepeatModal = true;
-      this.openModalForEdit = true;
     },
     handleProtocolLoop(e, idx) {
-      console.log(idx, this.protocolOrder[idx]);
       if (e.added) {
-        this.shiftClickImgIdx = idx;
-        this.openRepeatModal = true;
+        if (this.protocolOrder[idx].type !== "loop") {
+          this.dblClickPulseIdx = idx;
+          this.openRepeatModal = true;
+        } else {
+          this.handleProtocolOrder(this.protocolOrder);
+        }
+      } else if (e.moved) {
+        this.handleProtocolOrder(this.protocolOrder);
       } else if (e.removed) {
-        this.protocolOrder[idx].loops = 0;
-        this.handleProtocolOrder(this.protocol_order);
+        const { subprotocols } = this.protocolOrder[idx];
+        const subprotocolsLeft = subprotocols.length;
+
+        if (subprotocolsLeft === 1) {
+          this.protocolOrder.splice(idx, 1, subprotocols[0]);
+          this.protocolOrder[idx].subprotocols = [];
+        }
+
+        this.handleProtocolOrder(this.protocolOrder);
       }
     },
   },
@@ -432,6 +516,10 @@ export default {
 .div__repeat-container {
   display: flex;
   align-items: center;
+}
+
+.div__repeat-container:hover {
+  background-color: rgb(17, 17, 17);
 }
 
 .span__repeat-label {
@@ -572,6 +660,8 @@ img {
 
 .dropzone {
   visibility: visible;
+  height: 100px;
+  display: flex;
 }
 
 .delay-container,

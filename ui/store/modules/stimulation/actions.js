@@ -90,6 +90,8 @@ export default {
         colorAssignments.push([color, [startingRepeatIdx, endingRepeatIdx]]);
       } else {
         const pulseCopy = JSON.parse(JSON.stringify(pulse));
+
+        // eslint-disable-next-line  no-unused-vars
         for (const _ of Array(pulse.numRepeats).fill()) {
           pulseCopy.subprotocols.map((pulse) => {
             const { color } = pulse;
@@ -410,14 +412,51 @@ export default {
     this.state.system.socket.send(wsMessage);
     commit("setStimStatus", STIM_STATUS.CONFIG_CHECK_IN_PROGRESS);
   },
-  async onPulseMouseenter({ state }, idx) {
-    const hoveredPulse = state.repeatColors[idx];
+  async onPulseMouseenter({ state }, { idx, nestedIdx }) {
+    const originalPulse = state.protocolEditor.detailedSubprotocols[idx];
+    let hoveredPulses = [];
 
-    state.hoveredPulse = {
-      idx,
-      indices: hoveredPulse[1],
-      color: hoveredPulse[0],
-    };
+    if (nestedIdx >= 0) {
+      // find the starting index by expanding any loops to find corresponding index in repeatColors
+      const startingIdx = state.protocolEditor.detailedSubprotocols
+        // filter any unnecessary indices after hovered over index
+        .filter((_, i) => i < idx)
+        // reduce to get index
+        .reduce((acc, pulse) => {
+          const val = pulse.type === "loop" ? pulse.subprotocols.length * pulse.numRepeats : 1;
+          return acc + val;
+        }, 0);
+
+      // loop through subprotocols x amount of times to highlight every instance in a loop
+      hoveredPulses = [...Array(originalPulse.numRepeats).keys()].map((i) => {
+        const numSubprotocols = originalPulse.subprotocols.length;
+        const idxToUse = startingIdx + nestedIdx + i * numSubprotocols;
+        return {
+          idx: idxToUse,
+          indices: state.repeatColors[idxToUse][1],
+          color: state.repeatColors[idxToUse][0],
+        };
+      });
+    } else {
+      //  find the index by expanding any loops to find corresponding index in repeatColors
+      const idxToUse = state.protocolEditor.detailedSubprotocols
+        .filter((_, i) => i <= idx)
+        .reduce((acc, pulse, i) => {
+          let val = pulse.type === "loop" ? pulse.subprotocols.length * pulse.numRepeats : 1;
+          if (i === 0) val = val-- < 0 ? 0 : val--;
+          return acc + val;
+        }, 0);
+
+      hoveredPulses = [
+        {
+          idx,
+          indices: state.repeatColors[idxToUse][1],
+          color: state.repeatColors[idxToUse][0],
+        },
+      ];
+    }
+    // needs to be array [{}, ... ]
+    state.hoveredPulse = hoveredPulses;
   },
 
   checkStimulatorCircuitStatuses({ commit }, stimulatorStatusesObj) {

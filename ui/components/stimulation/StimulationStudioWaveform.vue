@@ -155,35 +155,37 @@ export default {
 
       this.renderPlot();
     },
-    hoveredPulse: function (newPulse) {
+    hoveredPulse: function (newPulses) {
       this.highlightLineNode.selectAll("*").remove();
       const xAxisScale = this.xAxisScale;
       const yAxisScale = this.yAxisScale;
 
-      if (newPulse.idx != null) {
-        const startingX = this.dataPoints[newPulse.indices[0]][0];
-        const endingX = this.dataPoints[newPulse.indices[1] - 1][0];
+      if (newPulses.length > 0) {
+        for (const pulse of newPulses) {
+          const startingX = this.dataPoints[pulse.indices[0]][0];
+          const endingX = this.dataPoints[pulse.indices[1] - 1][0];
 
-        const startingCoord = [startingX, this.yMax];
-        const endingCoord = [endingX, this.yMax];
-        // in order to fill entire height of graph, need minimum y to max y
-        const dataToFill = [[startingX, this.yMin], startingCoord, endingCoord, [endingX, this.yMin]];
-        this.highlightLineNode
-          .append("path")
-          .datum(dataToFill)
-          .attr("fill", newPulse.color)
-          .attr("stroke", newPulse.color)
-          .attr("opacity", ".15")
-          .attr(
-            "d",
-            d3Line()
-              .x(function (d) {
-                return xAxisScale(d[0]);
-              })
-              .y(function (d) {
-                return yAxisScale(d[1]);
-              })
-          );
+          const startingCoord = [startingX, this.yMax];
+          const endingCoord = [endingX, this.yMax];
+          // in order to fill entire height of graph, need minimum y to max y
+          const dataToFill = [[startingX, this.yMin], startingCoord, endingCoord, [endingX, this.yMin]];
+          this.highlightLineNode
+            .append("path")
+            .datum(dataToFill)
+            .attr("fill", pulse.color)
+            .attr("stroke", pulse.color)
+            .attr("opacity", ".15")
+            .attr(
+              "d",
+              d3Line()
+                .x(function (d) {
+                  return xAxisScale(d[0]);
+                })
+                .y(function (d) {
+                  return yAxisScale(d[1]);
+                })
+            );
+        }
       }
     },
   },
