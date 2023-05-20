@@ -63,7 +63,6 @@ describe("store/data", () => {
       //   wsServer = io_server(httpServer);
       // wait for connection
       //   wsServer.on("connect", socket => {
-      //     console.log("LUC: ", socket);
       //     socketServerSide = socket;
       //     done();
       //   });

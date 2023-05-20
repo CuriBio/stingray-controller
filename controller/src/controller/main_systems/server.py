@@ -16,26 +16,19 @@ from websockets.server import WebSocketServerProtocol
 from ..constants import DEFAULT_SERVER_PORT_NUMBER
 from ..constants import GENERIC_24_WELL_DEFINITION
 from ..constants import NUM_WELLS
-from ..constants import STIM_MAX_ABSOLUTE_CURRENT_MICROAMPS
-from ..constants import STIM_MAX_ABSOLUTE_VOLTAGE_MILLIVOLTS
-from ..constants import STIM_MAX_DUTY_CYCLE_DURATION_MICROSECONDS
-from ..constants import STIM_MAX_DUTY_CYCLE_PERCENTAGE
-from ..constants import STIM_MAX_SUBPROTOCOL_DURATION_MICROSECONDS
-from ..constants import STIM_MIN_SUBPROTOCOL_DURATION_MICROSECONDS
 from ..constants import StimulationStates
 from ..constants import StimulatorCircuitStatuses
 from ..constants import SystemStatuses
 from ..constants import VALID_CREDENTIAL_TYPES
 from ..constants import VALID_STIMULATION_TYPES
-from ..constants import VALID_SUBPROTOCOL_TYPES
 from ..exceptions import WebsocketCommandError
 from ..utils.aio import clean_up_tasks
 from ..utils.aio import wait_tasks_clean
 from ..utils.generic import handle_system_error
 from ..utils.logging import get_redacted_string
 from ..utils.state_management import ReadOnlyDict
-from ..utils.stimulation import get_pulse_dur_us
-from ..utils.stimulation import get_pulse_duty_cycle_dur_us
+from ..utils.stimulation import check_subprotocol_type
+from ..utils.stimulation import validate_stim_subprotocol
 
 logger = logging.getLogger(__name__)
 
@@ -289,18 +282,21 @@ class Server:
                 raise WebsocketCommandError(f"Protocol {protocol_id}, Invalid stimulation type: {stim_type}")
 
             # validate subprotocol dictionaries
-            for idx, subprotocol in enumerate(protocol["subprotocols"]):
-                subprotocol_type = _check_subprotocol_type(subprotocol, protocol_id, idx)
-                if subprotocol_type == "loop":
-                    for nested_subprotocol in subprotocol["subprotocols"]:
-                        nested_subprotocol_type = _check_subprotocol_type(
-                            nested_subprotocol, protocol_id, idx
-                        )
-                        _validate_stim_subprotocol(
-                            nested_subprotocol, nested_subprotocol_type, stim_type, protocol_id, idx
-                        )
-                else:
-                    _validate_stim_subprotocol(subprotocol, subprotocol_type, stim_type, protocol_id, idx)
+            try:
+                for idx, subprotocol in enumerate(protocol["subprotocols"]):
+                    subprotocol_type = check_subprotocol_type(subprotocol, protocol_id, idx)
+                    if subprotocol_type == "loop":
+                        for nested_subprotocol in subprotocol["subprotocols"]:
+                            nested_subprotocol_type = check_subprotocol_type(
+                                nested_subprotocol, protocol_id, idx
+                            )
+                            validate_stim_subprotocol(
+                                nested_subprotocol, nested_subprotocol_type, stim_type, protocol_id, idx
+                            )
+                    else:
+                        validate_stim_subprotocol(subprotocol, subprotocol_type, stim_type, protocol_id, idx)
+            except WebsocketCommandError:
+                raise
 
         protocol_assignments_dict = stim_info["protocol_assignments"]
         # make sure protocol assignments are not missing any wells and do not contain any invalid wells
@@ -323,7 +319,6 @@ class Server:
             )
 
         comm["command_processed_event"] = asyncio.Event()
-
         await self._to_monitor_queue.put(comm)
 
         await comm["command_processed_event"].wait()
@@ -420,74 +415,3 @@ def _are_any_stimulator_circuits_short(system_state: ReadOnlyDict) -> bool:
         status == StimulatorCircuitStatuses.SHORT.name.lower()
         for status in system_state["stimulator_circuit_statuses"].values()
     )
-
-
-def _check_subprotocol_type(subprotocol, protocol_id, idx):
-    subprotocol["type"] = subprotocol_type = subprotocol["type"].lower()
-    # validate subprotocol type
-    if subprotocol_type not in VALID_SUBPROTOCOL_TYPES:
-        raise WebsocketCommandError(
-            f"Protocol {protocol_id}, Subprotocol {idx}, Invalid subprotocol type: {subprotocol_type}"
-        )
-
-    return subprotocol_type
-
-
-def _validate_stim_subprotocol(subprotocol, subprotocol_type, stim_type, protocol_id, idx):
-    # validate subprotocol components
-    if subprotocol_type == "delay":
-        # make sure this value is not a float
-        subprotocol["duration"] = int(subprotocol["duration"])
-        total_subprotocol_duration_us = subprotocol["duration"]
-    else:  # monophasic and biphasic
-        max_abs_charge = (
-            STIM_MAX_ABSOLUTE_VOLTAGE_MILLIVOLTS if stim_type == "V" else STIM_MAX_ABSOLUTE_CURRENT_MICROAMPS
-        )
-
-        subprotocol_component_validators = {
-            "phase_one_duration": lambda n: n > 0,
-            "phase_one_charge": lambda n: abs(n) <= max_abs_charge,
-            "postphase_interval": lambda n: n >= 0,
-        }
-        if subprotocol_type == "biphasic":
-            subprotocol_component_validators.update(
-                {
-                    "phase_two_duration": lambda n: n > 0,
-                    "phase_two_charge": lambda n: abs(n) <= max_abs_charge,
-                    "interphase_interval": lambda n: n >= 0,
-                }
-            )
-        for component_name, validator in subprotocol_component_validators.items():
-            if not validator(component_value := subprotocol[component_name]):  # type: ignore
-                component_name = component_name.replace("_", " ")
-                raise WebsocketCommandError(
-                    f"Protocol {protocol_id}, Subprotocol {idx}, Invalid {component_name}: {component_value}"
-                )
-
-        duty_cycle_dur_us = get_pulse_duty_cycle_dur_us(subprotocol)
-
-        # make sure duty cycle duration is not too long
-        if duty_cycle_dur_us > STIM_MAX_DUTY_CYCLE_DURATION_MICROSECONDS:
-            raise WebsocketCommandError(
-                f"Protocol {protocol_id}, Subprotocol {idx}, Duty cycle duration too long"
-            )
-
-        total_subprotocol_duration_us = (duty_cycle_dur_us + subprotocol["postphase_interval"]) * subprotocol[
-            "num_cycles"
-        ]
-
-        # make sure duty cycle percentage is not too high
-        if duty_cycle_dur_us > get_pulse_dur_us(subprotocol) * STIM_MAX_DUTY_CYCLE_PERCENTAGE:
-            raise WebsocketCommandError(
-                f"Protocol {protocol_id}, Subprotocol {idx}, Duty cycle exceeds {int(STIM_MAX_DUTY_CYCLE_PERCENTAGE * 100)}%"
-            )
-
-    # make sure subprotocol duration is within the acceptable limits
-    if total_subprotocol_duration_us < STIM_MIN_SUBPROTOCOL_DURATION_MICROSECONDS:
-        raise WebsocketCommandError(
-            f"Protocol {protocol_id}, Subprotocol {idx}, Subprotocol duration not long enough"
-        )
-    if total_subprotocol_duration_us > STIM_MAX_SUBPROTOCOL_DURATION_MICROSECONDS:
-        raise WebsocketCommandError(
-            f"Protocol {protocol_id}, Subprotocol {idx}, Subprotocol duration too long"
-        )
