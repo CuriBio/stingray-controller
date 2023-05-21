@@ -3,6 +3,7 @@
 
 import copy
 from typing import Any
+from typing import Optional
 
 from ..constants import STIM_MAX_ABSOLUTE_CURRENT_MICROAMPS
 from ..constants import STIM_MAX_ABSOLUTE_VOLTAGE_MILLIVOLTS
@@ -121,7 +122,7 @@ def chunk_protocols_in_stim_info(
     return chunked_stim_info, subprotocol_idx_mappings, max_subprotocol_idx_counts
 
 
-def check_subprotocol_type(subprotocol, protocol_id, idx):
+def check_subprotocol_type(subprotocol: dict[str, Any], protocol_id: int, idx: int) -> Any:
     subprotocol["type"] = subprotocol_type = subprotocol["type"].lower()
     # validate subprotocol type
     if subprotocol_type not in VALID_SUBPROTOCOL_TYPES:
@@ -132,7 +133,9 @@ def check_subprotocol_type(subprotocol, protocol_id, idx):
     return subprotocol_type
 
 
-def validate_stim_subprotocol(subprotocol, subprotocol_type, stim_type, protocol_id, idx):
+def validate_stim_subprotocol(
+    subprotocol: dict[str, Any], subprotocol_type: Optional[str], stim_type: str, protocol_id: int, idx: int
+) -> None:
     # validate subprotocol components
     if subprotocol_type == "delay":
         # make sure this value is not a float
