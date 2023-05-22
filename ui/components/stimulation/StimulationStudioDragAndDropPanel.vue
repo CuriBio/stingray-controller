@@ -40,7 +40,7 @@
             :group="{ name: 'order' }"
             :ghost-class="'ghost'"
             @change="checkType($event)"
-            @start="isDragging = true"
+            @start="startDragging"
             @end="isDragging = false"
           >
             <div
@@ -72,7 +72,7 @@
                 :group="{ name: 'order' }"
                 :ghost-class="'ghost'"
                 :emptyInsertThreshold="40"
-                :disabled="isDragging && pulse.type === 'loop' && cloned"
+                :disabled="isNestingDisabled"
                 @change="handleProtocolLoop($event, idx)"
                 @start="isDragging = true"
                 @end="isDragging = false"
@@ -195,6 +195,15 @@ export default {
       runUntilStopped: (state) => state.protocolEditor.runUntilStopped,
       detailedSubprotocols: (state) => state.protocolEditor.detailedSubprotocols,
     }),
+    isNestingDisabled: function () {
+      // disable nesting if the dragged pulse is a nested loop already to prevent deep nesting
+      // OR a new pulse is being placed
+      const selectedPulse = this.protocolOrder[this.isDragging];
+
+      return (
+        (Number.isInteger(this.isDragging) && selectedPulse && selectedPulse.type === "loop") || this.cloned
+      );
+    },
   },
   watch: {
     isDragging: function () {
@@ -261,6 +270,9 @@ export default {
 
       // dispatch vuex state changes
       this.handleProtocolOrder(this.protocolOrder);
+    },
+    startDragging({ oldIndex }) {
+      this.isDragging = oldIndex;
     },
     handleNewSettings(button, pulseSettings, selectedColor) {
       const newPulse = this.protocolOrder[this.newClonedIdx];
@@ -401,7 +413,8 @@ export default {
     },
     onPulseEnter(idx, nestedIdx) {
       // if tile is being dragged, the pulse underneath the dragged tile will highlight even though the user is dragging a different tile
-      if (!this.isDragging) this.onPulseMouseenter({ idx, nestedIdx });
+      // 0 index is considered falsy
+      if (!this.isDragging && this.isDragging !== 0) this.onPulseMouseenter({ idx, nestedIdx });
     },
     onPulseLeave() {
       this.onPulseMouseleave();
@@ -492,9 +505,10 @@ export default {
         const { subprotocols } = this.protocolOrder[idx];
         const subprotocolsLeft = subprotocols.length;
 
+        // if last nested subprotocol is removed from loop so there is only one left,
+        // then replace loop object with last subprotocol object
         if (subprotocolsLeft === 1) {
           this.protocolOrder.splice(idx, 1, subprotocols[0]);
-          // this.protocolOrder[idx].subprotocols = [];
         }
 
         this.handleProtocolOrder(this.protocolOrder);
