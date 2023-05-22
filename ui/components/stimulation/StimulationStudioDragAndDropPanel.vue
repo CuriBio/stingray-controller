@@ -50,10 +50,10 @@
               :style="getBorderStyle(pulse)"
             >
               <!-- Only display circular icon when nested loop, icon displays number of loops -->
-              <div v-if="pulse.numInterations" :class="'div__repeat-label-container'">
-                <div class="div__circle" @dblclick="openRepeatModalForEdit(pulse.numInterations, idx)">
+              <div v-if="pulse.numIterations" :class="'div__repeat-label-container'">
+                <div class="div__circle" @dblclick="openRepeatModalForEdit(pulse.numIterations, idx)">
                   <span :class="'span__repeat-label'">
-                    {{ pulse.numInterations }}
+                    {{ pulse.numIterations }}
                   </span>
                 </div>
               </div>
@@ -160,10 +160,10 @@ export default {
     draggable,
     StimulationStudioWaveformSettingModal,
     StimulationStudioInputModal,
-    SmallDropDown,
+    SmallDropDown
   },
   props: {
-    disableEdits: { type: Boolean, default: false },
+    disableEdits: { type: Boolean, default: false }
   },
   data() {
     return {
@@ -184,18 +184,17 @@ export default {
       disableDropdown: false,
       isDragging: false,
       selectedColor: null,
-      includeInputUnits: true,
       openRepeatModal: false,
-      dblClickPulseNestedIdx: null,
+      dblClickPulseNestedIdx: null
     };
   },
   computed: {
     ...mapState("stimulation", {
-      timeUnit: (state) => state.protocolEditor.timeUnit,
-      runUntilStopped: (state) => state.protocolEditor.runUntilStopped,
-      detailedSubprotocols: (state) => state.protocolEditor.detailedSubprotocols,
+      timeUnit: state => state.protocolEditor.timeUnit,
+      runUntilStopped: state => state.protocolEditor.runUntilStopped,
+      detailedSubprotocols: state => state.protocolEditor.detailedSubprotocols
     }),
-    isNestingDisabled: function () {
+    isNestingDisabled: function() {
       // disable nesting if the dragged pulse is a nested loop already to prevent deep nesting
       // OR a new pulse is being placed
       const selectedPulse = this.protocolOrder[this.isDragging];
@@ -203,33 +202,33 @@ export default {
       return (
         (Number.isInteger(this.isDragging) && selectedPulse && selectedPulse.type === "loop") || this.cloned
       );
-    },
+    }
   },
   watch: {
-    isDragging: function () {
+    isDragging: function() {
       // reset so old position/idx isn't highlighted once moved
       this.onPulseMouseleave();
     },
-    detailedSubprotocols: function () {
+    detailedSubprotocols: function() {
       this.protocolOrder = JSON.parse(
         JSON.stringify(
-          this.detailedSubprotocols.map((protocol) =>
+          this.detailedSubprotocols.map(protocol =>
             protocol.type !== "loop"
               ? {
                   ...protocol,
-                  subprotocols: [],
+                  subprotocols: []
                 }
               : protocol
           )
         )
       );
     },
-    timeUnit: function () {
+    timeUnit: function() {
       this.timeUnitsIdx = this.timeUnitsArray.indexOf(this.timeUnit);
     },
-    runUntilStopped: function () {
+    runUntilStopped: function() {
       this.disableDropdown = !this.runUntilStopped;
-    },
+    }
   },
   methods: {
     ...mapActions("stimulation", ["handleProtocolOrder", "onPulseMouseenter"]),
@@ -248,7 +247,6 @@ export default {
       }
 
       if ((e.added && !this.cloned) || e.moved || e.removed) {
-        // if the first index of a loop gets removed from the loop, it gets added here with subprotocols, need to remove
         this.handleProtocolOrder(this.protocolOrder);
       }
       // reset
@@ -364,14 +362,14 @@ export default {
       // create loop object to replace at index in protocol order
       const loopPulse = {
         type: "loop",
-        numInterations: value,
-        subprotocols: [this.protocolOrder[this.dblClickPulseIdx], this.selectedPulseSettings],
+        numIterations: value,
+        subprotocols: [this.protocolOrder[this.dblClickPulseIdx], this.selectedPulseSettings]
       };
 
       switch (button) {
         case "Save":
           if (this.modalOpenForEdit) {
-            this.protocolOrder[this.dblClickPulseIdx].numInterations = value;
+            this.protocolOrder[this.dblClickPulseIdx].numIterations = value;
           } else {
             this.protocolOrder.splice(this.dblClickPulseIdx, 1, loopPulse);
           }
@@ -462,12 +460,12 @@ export default {
               frequency: "",
               totalActiveDuration: {
                 duration: "",
-                unit: "milliseconds",
+                unit: "milliseconds"
               },
               numCycles: 0,
               postphaseInterval: "",
               phaseOneDuration: "",
-              phaseOneCharge: "",
+              phaseOneCharge: ""
             };
 
       if (type === "Biphasic")
@@ -475,14 +473,14 @@ export default {
           ...typeSpecificSettings,
           interphaseInterval: "",
           phaseTwoCharge: "",
-          phaseTwoDuration: "",
+          phaseTwoDuration: ""
         };
 
       return {
         type,
         color: randomColor,
         pulseSettings: typeSpecificSettings,
-        subprotocols: [],
+        subprotocols: []
       };
     },
     openRepeatModalForEdit(number, idx) {
@@ -513,8 +511,8 @@ export default {
 
         this.handleProtocolOrder(this.protocolOrder);
       }
-    },
-  },
+    }
+  }
 };
 </script>
 <style scoped>
@@ -686,8 +684,10 @@ img {
 
 .dropzone {
   visibility: visible;
-  height: 101px;
+  height: 85px;
   display: flex;
+  right: 31px;
+  position: relative;
 }
 
 .delay-container,
