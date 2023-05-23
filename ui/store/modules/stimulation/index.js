@@ -19,13 +19,9 @@ const state = () => ({
   xAxisTimeIdx: 0,
   editMode: { status: false, protocol: "", label: "", color: "" },
   stimStatus: STIM_STATUS.NO_PROTOCOLS_ASSIGNED,
-  hoveredPulse: {
-    idx: null,
-    indices: [],
-    color: null,
-  },
+  hoveredPulses: [],
   stimulatorCircuitStatuses: [],
-  invalidImportedProtocols: [],
+  invalidImportedProtocols: []
 });
 
 export default {
@@ -34,5 +30,5 @@ export default {
   mutations,
   getters,
   actions,
-  STIM_STATUS,
+  STIM_STATUS
 };

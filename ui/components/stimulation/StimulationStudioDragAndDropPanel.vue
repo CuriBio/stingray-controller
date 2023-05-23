@@ -1,15 +1,15 @@
 <template>
   <div>
-    <div :class="modalType !== null || openDelayModal || openRepeatModal ? 'modal_overlay' : null">
+    <div :class="modalType !== null || openDelayModal || openRepeatModal ? 'div__modal-overlay' : null">
       <div>
-        <div class="div__DragAndDdrop-panel">
+        <div class="div__drag-and-drop-panel">
           <span class="span__stimulationstudio-drag-drop-header-label">Drag/Drop Waveforms</span>
           <canvas class="canvas__stimulationstudio-header-separator" />
           <div v-if="disableEdits" v-b-popover.hover.bottom="sidebarBlockLabel" class="div__sidebar-block" />
           <draggable
             v-model="iconTypes"
             tag="div"
-            class="draggable_tile_container"
+            class="draggable__tile-container"
             :disabled="disableEdits"
             :group="{ name: 'order', pull: 'clone', put: false }"
             :clone="clone"
@@ -69,6 +69,7 @@
               <draggable
                 v-model="pulse.subprotocols"
                 class="dropzone"
+                :style="pulse.type === 'loop' && 'margin-right: -31px'"
                 :group="{ name: 'order' }"
                 :ghost-class="'ghost'"
                 :emptyInsertThreshold="40"
@@ -93,7 +94,7 @@
         </div>
       </div>
     </div>
-    <div v-if="modalType !== null" class="modal-container">
+    <div v-if="modalType !== null" class="div__modal-container">
       <StimulationStudioWaveformSettingModal
         :pulseType="modalType"
         :modalOpenForEdit="modalOpenForEdit"
@@ -102,7 +103,7 @@
         @close="onModalClose"
       />
     </div>
-    <div v-if="openDelayModal" class="modal-container delay-container">
+    <div v-if="openDelayModal" class="div__modal-container delay-container">
       <StimulationStudioInputModal
         :modalOpenForEdit="modalOpenForEdit"
         :currentUnit="currentDelayUnit"
@@ -111,7 +112,7 @@
         @input-close="onModalClose"
       />
     </div>
-    <div v-if="openRepeatModal" class="modal-container repeat-container">
+    <div v-if="openRepeatModal" class="div__modal-container repeat-container">
       <StimulationStudioInputModal
         :modalOpenForEdit="modalOpenForEdit"
         :currentInput="currentInput"
@@ -265,9 +266,6 @@ export default {
       } else {
         this.handleNestedSettings(button, pulseSettings, selectedColor);
       }
-
-      // dispatch vuex state changes
-      this.handleProtocolOrder(this.protocolOrder);
     },
     startDragging({ oldIndex }) {
       this.isDragging = oldIndex;
@@ -286,6 +284,8 @@ export default {
 
       this.newClonedIdx = null;
       this.openDelayModal = false;
+      // dispatch vuex state changes
+      this.handleProtocolOrder(this.protocolOrder);
     },
     handleEditedSettings(button, pulseSettings, selectedColor) {
       const editedPulse = this.protocolOrder[this.dblClickPulseIdx];
@@ -315,6 +315,8 @@ export default {
       this.dblClickPulseIdx = null;
       this.openDelayModal = false;
       this.modalOpenForEdit = false;
+      // dispatch vuex state changes
+      this.handleProtocolOrder(this.protocolOrder);
     },
     handleNestedSettings(button, pulseSettings, selectedColor) {
       const editedPulse = this.protocolOrder[this.dblClickPulseIdx];
@@ -348,13 +350,19 @@ export default {
           editedPulse.subprotocols.splice(this.dblClickPulseNestedIdx + 1, 0, editedNestedPulseCopy);
           break;
         case "Delete":
-          editedPulse.subprotocols.splice(this.dblClickPulseNestedIdx, 1);
+          if (numSubprotocols - 1 === 1) {
+            this.protocolOrder.splice(this.dblClickPulseIdx, 1, subprotocols[0]);
+          } else {
+            editedPulse.subprotocols.splice(this.dblClickPulseNestedIdx, 1);
+          }
           break;
       }
 
       this.dblClickPulseNestedIdx = null;
       this.openDelayModal = false;
       this.modalOpenForEdit = false;
+      // dispatch vuex state changes
+      this.handleProtocolOrder(this.protocolOrder);
     },
     closeRepeatModal(button, value) {
       this.openRepeatModal = false;
@@ -528,7 +536,7 @@ export default {
   left: 0px;
 }
 
-.div__DragAndDdrop-panel {
+.div__drag-and-drop-panel {
   background: rgb(17, 17, 17);
   position: absolute;
   width: 300px;
@@ -559,6 +567,7 @@ export default {
   align-items: center;
   justify-content: center;
   width: 50px;
+  margin-right: 31px;
 }
 
 .img__icon-container {
@@ -577,7 +586,7 @@ img {
   padding: 0 7px;
 }
 
-.modal-container {
+.div__modal-container {
   left: 22%;
   position: absolute;
 }
@@ -607,7 +616,7 @@ img {
   cursor: pointer;
 }
 
-.draggable_tile_container {
+.draggable__tile-container {
   display: grid;
   width: 80%;
   grid-template-columns: 50% 50%;
@@ -617,7 +626,7 @@ img {
   margin-top: 80px;
 }
 
-.modal_overlay {
+.div__modal-overlay {
   width: 1629px;
   height: 885px;
   position: absolute;
@@ -684,7 +693,7 @@ img {
 
 .dropzone {
   visibility: visible;
-  height: 85px;
+  height: 102px;
   display: flex;
   right: 31px;
   position: relative;

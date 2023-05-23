@@ -454,7 +454,7 @@ export default {
       ];
     }
     // needs to be array [{}, ... ]
-    state.hoveredPulse = hoveredPulses;
+    state.hoveredPulses = hoveredPulses;
   },
 
   checkStimulatorCircuitStatuses({ commit }, stimulatorStatusesObj) {

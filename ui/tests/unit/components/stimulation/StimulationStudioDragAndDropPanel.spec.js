@@ -4,7 +4,7 @@ import {
   MONOPHASIC_DROP_ELEMENT,
   BIPHASIC_DROP_ELEMENT,
   TEST_PROTOCOL_LIST_2,
-  TEST_PROTOCOL_ORDER_3,
+  TEST_PROTOCOL_ORDER_3
 } from "@/tests/sample-stim-protocols/stim-protocols";
 
 import Vuex from "vuex";
@@ -33,7 +33,7 @@ describe("StimulationStudioDragAndDropPanel.vue", () => {
   test("When mounting StimulationStudioDragAndDropPanel from the component file, Then there should be no waveforms in the new protocol container", () => {
     wrapper = mount(StimulationStudioDragAndDropPanel, {
       store,
-      localVue,
+      localVue
     });
     const protocolList = wrapper.vm.protocolOrder;
     expect(protocolList).toStrictEqual([]);
@@ -42,7 +42,7 @@ describe("StimulationStudioDragAndDropPanel.vue", () => {
   test("When a user clicks on trash icons to delete protocol, Then the protocol order in StimulationStudioDragAndDropPanel should empty from the mutation in state", async () => {
     wrapper = mount(StimulationStudioDragAndDropPanel, {
       store,
-      localVue,
+      localVue
     });
     wrapper.vm.protocolOrder = ["Biphasic", "Monophasic", "Monophasic"];
     await store.commit("stimulation/resetState");
@@ -52,15 +52,15 @@ describe("StimulationStudioDragAndDropPanel.vue", () => {
   test("When a user drops a waveform to the block editor, Then the corresponding modal to should pop up", async () => {
     wrapper = shallowMount(StimulationStudioDragAndDropPanel, {
       store,
-      localVue,
+      localVue
     });
 
     await wrapper.vm.clone({ type: "Monophasic", src: "test" });
     await wrapper.vm.checkType({
       added: {
         element: MONOPHASIC_DROP_ELEMENT,
-        newIndex: 4,
-      },
+        newIndex: 4
+      }
     });
     expect(wrapper.vm.modalType).toBe("Monophasic");
 
@@ -76,10 +76,10 @@ describe("StimulationStudioDragAndDropPanel.vue", () => {
         element: {
           type: "Delay",
           color: "hsla(45, 100%, 50%, 1)",
-          pulseSettings: { duration: "", unit: "milliseconds" },
+          pulseSettings: { duration: "", unit: "milliseconds" }
         },
-        newIndex: 4,
-      },
+        newIndex: 4
+      }
     });
 
     expect(wrapper.vm.selectedPulseSettings).toStrictEqual({ duration: "", unit: "milliseconds" });
@@ -95,7 +95,7 @@ describe("StimulationStudioDragAndDropPanel.vue", () => {
   test("When a user opens a modal to delete waveform, Then when delete is clicked, it will delete", async () => {
     wrapper = mount(StimulationStudioDragAndDropPanel, {
       store,
-      localVue,
+      localVue
     });
 
     await wrapper.setData({ protocolOrder: JSON.parse(JSON.stringify(TEST_PROTOCOL_ORDER_3)) });
@@ -113,7 +113,7 @@ describe("StimulationStudioDragAndDropPanel.vue", () => {
   test("When a user selects a protocol to edit, Then the DragAndDropPanel component should get the selected pulse order and unit of time to display for edit", async () => {
     wrapper = mount(StimulationStudioDragAndDropPanel, {
       store,
-      localVue,
+      localVue
     });
 
     const expectedIdx = 0;
@@ -128,7 +128,7 @@ describe("StimulationStudioDragAndDropPanel.vue", () => {
   test("When a user adds a new waveform to the protocol editor and cancels the addition, Then the modal should only appear when it's been cloned and should remove new waveform when cancelled", async () => {
     wrapper = mount(StimulationStudioDragAndDropPanel, {
       store,
-      localVue,
+      localVue
     });
     await wrapper.setData({ protocolOrder: JSON.parse(JSON.stringify(TEST_PROTOCOL_ORDER_3)) });
     expect(wrapper.vm.protocolOrder).toHaveLength(4);
@@ -138,8 +138,8 @@ describe("StimulationStudioDragAndDropPanel.vue", () => {
     await wrapper.vm.checkType({
       added: {
         element: BIPHASIC_DROP_ELEMENT,
-        newIndex: 4,
-      },
+        newIndex: 4
+      }
     });
 
     expect(wrapper.vm.modalType).toBe("Biphasic");
@@ -152,7 +152,7 @@ describe("StimulationStudioDragAndDropPanel.vue", () => {
   test("When changes the order of waveform tiles in scrollable component, Then no modal should appear", async () => {
     wrapper = mount(StimulationStudioDragAndDropPanel, {
       store,
-      localVue,
+      localVue
     });
     await wrapper.setData({ protocolOrder: JSON.parse(JSON.stringify(TEST_PROTOCOL_ORDER_3)) });
     expect(wrapper.vm.protocolOrder).toHaveLength(4);
@@ -160,8 +160,8 @@ describe("StimulationStudioDragAndDropPanel.vue", () => {
     await wrapper.vm.checkType({
       moved: {
         element: {},
-        newIndex: 2,
-      },
+        newIndex: 2
+      }
     });
 
     expect(wrapper.vm.modalType).toBeNull();
@@ -173,20 +173,20 @@ describe("StimulationStudioDragAndDropPanel.vue", () => {
       postphaseInterval: "",
       totalActiveDuration: {
         duration: "",
-        unit: "milliseconds",
-      },
+        unit: "milliseconds"
+      }
     };
     const wrapper = mount(StimulationStudioDragAndDropPanel, {
       store,
-      localVue,
+      localVue
     });
     wrapper.vm.protocolOrder = [
       {
         type: "Biphasic",
         src: "test",
         color: "b7b7b7",
-        nestedProtocols: [],
-      },
+        nestedProtocols: []
+      }
     ];
     wrapper.vm.newClonedIdx = 0;
     wrapper.vm.modalType = "Biphasic";
@@ -198,74 +198,74 @@ describe("StimulationStudioDragAndDropPanel.vue", () => {
   test("When a user hovers over a waveform tile, Then the pulse settings will be added to state", async () => {
     wrapper = mount(StimulationStudioDragAndDropPanel, {
       store,
-      localVue,
+      localVue
     });
 
-    expect(store.state.stimulation.hoveredPulse).toStrictEqual({
+    expect(store.state.stimulation.hoveredPulses).toStrictEqual({
       idx: null,
       indices: [],
-      color: null,
+      color: null
     });
 
     await wrapper.setData({ protocolOrder: JSON.parse(JSON.stringify(TEST_PROTOCOL_ORDER_3)) });
     await store.dispatch("stimulation/handleProtocolOrder", TEST_PROTOCOL_ORDER_3);
     await wrapper.vm.onPulseEnter(1);
 
-    expect(store.state.stimulation.hoveredPulse).toStrictEqual({
+    expect(store.state.stimulation.hoveredPulses).toStrictEqual({
       idx: 1,
       indices: [9, 20],
-      color: "hsla(205, 100%, 50%, 1)",
+      color: "hsla(205, 100%, 50%, 1)"
     });
   });
 
   test("When a user hovers over a waveform tile, but it's because the user is dragging a tile above, Then the pulse settings not be added", async () => {
     wrapper = mount(StimulationStudioDragAndDropPanel, {
       store,
-      localVue,
+      localVue
     });
     const defaultState = {
       idx: null,
       indices: [],
-      color: null,
+      color: null
     };
-    expect(store.state.stimulation.hoveredPulse).toStrictEqual(defaultState);
+    expect(store.state.stimulation.hoveredPulses).toStrictEqual(defaultState);
 
     await wrapper.setData({
       protocolOrder: JSON.parse(JSON.stringify(TEST_PROTOCOL_ORDER_3)),
-      isDragging: true,
+      isDragging: true
     });
     await store.dispatch("stimulation/handleProtocolOrder", TEST_PROTOCOL_ORDER_3);
     await wrapper.vm.onPulseEnter(1);
 
-    expect(store.state.stimulation.hoveredPulse).toStrictEqual(defaultState);
+    expect(store.state.stimulation.hoveredPulses).toStrictEqual(defaultState);
   });
 
   test("When a user leaves hover over a waveform tile, Then the pulse settings will be reset", async () => {
     wrapper = mount(StimulationStudioDragAndDropPanel, {
       store,
-      localVue,
+      localVue
     });
 
     await store.dispatch("stimulation/handleProtocolOrder", TEST_PROTOCOL_ORDER_3);
     await wrapper.vm.onPulseEnter(1);
-    expect(store.state.stimulation.hoveredPulse).toStrictEqual({
+    expect(store.state.stimulation.hoveredPulses).toStrictEqual({
       idx: 1,
       indices: [9, 20],
-      color: "hsla(205, 100%, 50%, 1)",
+      color: "hsla(205, 100%, 50%, 1)"
     });
 
     await wrapper.vm.onPulseLeave();
-    expect(store.state.stimulation.hoveredPulse).toStrictEqual({
+    expect(store.state.stimulation.hoveredPulses).toStrictEqual({
       idx: null,
       indices: [],
-      color: null,
+      color: null
     });
   });
 
   test("When a user selects 'Duplicate' in  waveform modal, Then the current pulse settings will be added into the pulse order right after selected pulse", async () => {
     wrapper = mount(StimulationStudioDragAndDropPanel, {
       store,
-      localVue,
+      localVue
     });
 
     await wrapper.setData({ protocolOrder: JSON.parse(JSON.stringify(TEST_PROTOCOL_ORDER_3)) });
@@ -281,11 +281,11 @@ describe("StimulationStudioDragAndDropPanel.vue", () => {
   test("When a selects the Stimulate Until Complete option in the protocol editor, Then the time unit dropdown should become disabled", async () => {
     const testSettings = {
       complete: false,
-      stopped: true,
+      stopped: true
     };
     const wrapper = mount(StimulationStudioDragAndDropPanel, {
       store,
-      localVue,
+      localVue
     });
 
     await store.commit("stimulation/setStopSetting", testSettings.complete);
@@ -297,14 +297,14 @@ describe("StimulationStudioDragAndDropPanel.vue", () => {
   test("When a user double clicks a delay block to edit duration, Then the new value should be saved upon close", async () => {
     const wrapper = mount(StimulationStudioDragAndDropPanel, {
       store,
-      localVue,
+      localVue
     });
 
     const idx = 2;
 
     const delaySettings = {
       duration: 5,
-      unit: "seconds",
+      unit: "seconds"
     };
 
     await wrapper.setData({ protocolOrder: TEST_PROTOCOL_ORDER_3 });
