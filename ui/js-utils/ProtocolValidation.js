@@ -4,7 +4,7 @@ import {
   MAX_SUBPROTOCOL_DURATION_MS,
   MIN_CHARGE_MA,
   MAX_CHARGE_MA,
-  MIN_PHASE_DURATION_US
+  MIN_PHASE_DURATION_US,
 } from "@/store/modules/stimulation/enums";
 
 const invalidErrMsg = {
@@ -21,17 +21,17 @@ const invalidErrMsg = {
   minDelayDuration: `Duration must be >=${MIN_SUBPROTOCOL_DURATION_MS}ms`,
   maxDelayDuration: "Duration must be <= 24hrs",
   delayNumErr: "Must be a (+) number",
-  nonInteger: "Must be a whole number of ms"
+  nonInteger: "Must be a whole number of ms",
 };
 
-export const checkNumCyclesValidity = numCycles => {
+export const checkNumCyclesValidity = (numCycles) => {
   // check if value is a whole number greater than 0
   const errorMsgLabel =
     numCycles === "" || !Number.isInteger(+numCycles) || +numCycles <= 0 ? "numCycles" : "valid";
   return invalidErrMsg[errorMsgLabel];
 };
 
-export const checkPulseChargeValidity = valueStr => {
+export const checkPulseChargeValidity = (valueStr) => {
   let errorMessage;
   // if empty
   if (valueStr === "") {
@@ -146,7 +146,7 @@ export const checkDelayPulseValidity = (valueStr, selectedUnit) => {
   return errorMessage;
 };
 
-export const getMaxPulseDurationForFreq = freq => {
+export const getMaxPulseDurationForFreq = (freq) => {
   return Math.min(50, Math.trunc((1000 / freq) * 0.8));
 };
 
@@ -156,14 +156,14 @@ export const getTotalActiveDuration = (type, protocol) => {
     : +protocol.phaseOneDuration + +protocol.phaseTwoDuration + +protocol.interphaseInterval;
 };
 
-export const areValidPulses = input => {
-  return input.some(proto => {
+export const areValidPulses = (input) => {
+  return input.some((proto) => {
     if (proto.type === "loop") return areValidPulses(proto.subprotocols);
     else return proto.type === "Delay" ? _isValidDelayPulse(proto) : _isValidSinglePulse(proto);
   });
 };
 
-export const _isValidSinglePulse = protocol => {
+export const _isValidSinglePulse = (protocol) => {
   const { duration, unit } = protocol.totalActiveDuration;
   const isMonophasic = protocol.type === "Monophasic";
   const chargesToCheck = isMonophasic ? ["phaseOneCharge"] : ["phaseOneCharge", "phaseTwoCharge"];
@@ -177,7 +177,7 @@ export const _isValidSinglePulse = protocol => {
   // first check all durations are within max and min bounds
   const durationsAreValid =
     durationsToCheck.filter(
-      duration =>
+      (duration) =>
         checkPulseDurationValidity(
           protocol[duration],
           duration === "interphaseInterval",
@@ -188,7 +188,7 @@ export const _isValidSinglePulse = protocol => {
 
   // check if charges are within max and min bounds
   const chargesAreValid =
-    chargesToCheck.filter(charge => checkPulseChargeValidity(protocol[charge]) !== "").length === 0;
+    chargesToCheck.filter((charge) => checkPulseChargeValidity(protocol[charge]) !== "").length === 0;
 
   const completePulseValidity =
     checkPulseFrequencyValidity(protocol.frequency, maxPulseDurationForFreq) === "" &&
@@ -198,7 +198,7 @@ export const _isValidSinglePulse = protocol => {
   return durationsAreValid && chargesAreValid && completePulseValidity;
 };
 
-export const _isValidDelayPulse = protocol => {
+export const _isValidDelayPulse = (protocol) => {
   const { duration, unit } = protocol;
   return checkDelayPulseValidity(duration, unit) === "";
 };
@@ -222,22 +222,22 @@ export const convertProtocolCasing = (input, conversionFn) => {
   return input;
 };
 
-const _isObject = input => typeof input === "object";
+const _isObject = (input) => typeof input === "object";
 
-export const _convertObjToCamelCase = obj => {
+export const _convertObjToCamelCase = (obj) => {
   const convertedObj = {};
   for (const [key, value] of Object.entries(obj)) {
-    const camelCaseKey = key.replace(/_([a-z])/g, matchedLetter => matchedLetter[1].toUpperCase());
+    const camelCaseKey = key.replace(/_([a-z])/g, (matchedLetter) => matchedLetter[1].toUpperCase());
     convertedObj[camelCaseKey] = value;
   }
 
   return convertedObj;
 };
 
-export const _convertObjToSnakeCase = obj => {
+export const _convertObjToSnakeCase = (obj) => {
   const convertedObj = {};
   for (const [key, value] of Object.entries(obj)) {
-    const snakeCaseKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+    const snakeCaseKey = key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
     convertedObj[snakeCaseKey] = value;
   }
 

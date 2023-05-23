@@ -6,7 +6,7 @@ export default {
     state.selectedWells = wells;
   },
   applySelectedProtocol(state, protocol) {
-    state.selectedWells.map(well => {
+    state.selectedWells.map((well) => {
       state.protocolAssignments[well] = protocol;
     });
 
@@ -19,7 +19,7 @@ export default {
       state.stimStatus = STIM_STATUS.CONFIG_CHECK_NEEDED;
   },
   clearSelectedProtocol(state) {
-    state.selectedWells.map(well => delete state.protocolAssignments[well]);
+    state.selectedWells.map((well) => delete state.protocolAssignments[well]);
     state.protocolAssignments = { ...state.protocolAssignments };
     state.selectedWells = [];
     if (Object.keys(state.protocolAssignments).length === 0)
@@ -51,7 +51,7 @@ export default {
       yAxisScale: 120,
       delayBlocks: [],
       xAxisTimeIdx: 0,
-      editMode: { status: false, letter: "", label: "" }
+      editMode: { status: false, letter: "", label: "" },
     };
     Object.assign(state, replaceState);
   },
@@ -68,7 +68,7 @@ export default {
       delayBlocks: [],
       xAxisTimeIdx: 0,
       stimStatus: STIM_STATUS.NO_PROTOCOLS_ASSIGNED,
-      editMode: { status: false, letter: "", label: "" }
+      editMode: { status: false, letter: "", label: "" },
     };
     Object.assign(state, replaceState);
   },
@@ -82,7 +82,7 @@ export default {
     const delayPulseModel = {
       type: "Delay",
       duration: restDuration,
-      unit: timeUnit
+      unit: timeUnit,
     };
     state.delayBlocks = [delay];
     if (!isNaN(convertedDelayDuration) && convertedDelayDuration !== 0) subprotocols.push(delayPulseModel);
@@ -145,5 +145,5 @@ export default {
   },
   setInvalidImportedProtocols(state, protocols) {
     state.invalidImportedProtocols = [...protocols];
-  }
+  },
 };

@@ -21,7 +21,7 @@ const state = () => ({
   stimStatus: STIM_STATUS.NO_PROTOCOLS_ASSIGNED,
   hoveredPulses: [],
   stimulatorCircuitStatuses: [],
-  invalidImportedProtocols: []
+  invalidImportedProtocols: [],
 });
 
 export default {
@@ -30,5 +30,5 @@ export default {
   mutations,
   getters,
   actions,
-  STIM_STATUS
+  STIM_STATUS,
 };

@@ -75,39 +75,39 @@ export default {
     xAxisLabel: { type: String, default: "Time" },
     dataPoints: {
       type: Array, // exactly the format D3 accepts: 2D array of [[x1,y1],[x2,y2],...]
-      default: function() {
+      default: function () {
         return [];
-      }
+      },
     },
     lineColor: { type: String, default: "#00c465" },
     margin: {
       type: Object,
-      default: function() {
+      default: function () {
         return { top: 0, right: 20, bottom: 50, left: 60 };
-      }
+      },
     },
     plotAreaPixelHeight: {
       type: Number,
-      default: 352
+      default: 352,
     },
     plotAreaPixelWidth: {
       type: Number,
-      default: 1200
+      default: 1200,
     },
     repeatColors: {
       type: Array,
-      default: function() {
+      default: function () {
         return [];
-      }
+      },
     },
     delayBlocks: {
       type: Array,
-      default: function() {
+      default: function () {
         return [];
-      }
-    }
+      },
+    },
   },
-  data: function() {
+  data: function () {
     return {
       theSvg: null,
       xAxisNode: null,
@@ -118,17 +118,17 @@ export default {
       highlightLineNode: null,
       frequencyOfYTicks: 5,
       timeUnits: ["milliseconds", "seconds"],
-      activeDurationIdx: 0
+      activeDurationIdx: 0,
     };
   },
   computed: {
     ...mapState("stimulation", ["hoveredPulses", "xAxisTimeIdx"]),
-    div__waveformGraph_dynamicStyle: function() {
+    div__waveformGraph_dynamicStyle: function () {
       return { width: this.plotAreaPixelWidth + this.margin.left + this.margin.right + "px" };
     },
-    frequencyOfXTicks: function() {
+    frequencyOfXTicks: function () {
       return (this.plotAreaPixelWidth / 1200) * 10;
-    }
+    },
   },
   watch: {
     xAxisSampleLength() {
@@ -155,7 +155,7 @@ export default {
 
       this.renderPlot();
     },
-    hoveredPulses: function(newPulses) {
+    hoveredPulses: function (newPulses) {
       this.highlightLineNode.selectAll("*").remove();
       const xAxisScale = this.xAxisScale;
       const yAxisScale = this.yAxisScale;
@@ -178,18 +178,18 @@ export default {
             .attr(
               "d",
               d3Line()
-                .x(function(d) {
+                .x(function (d) {
                   return xAxisScale(d[0]);
                 })
-                .y(function(d) {
+                .y(function (d) {
                   return yAxisScale(d[1]);
                 })
             );
         }
       }
-    }
+    },
   },
-  mounted: function() {
+  mounted: function () {
     // Eli (2/2/2020): having the svg be appended in the `data` function didn't work, so moved it to here
     this.theSvg = d3Select(this.$el)
       .select(".div__waveform-graph")
@@ -268,7 +268,7 @@ export default {
       const unitName = this.timeUnits[idx];
       this.$store.dispatch("stimulation/handleXAxisUnit", { idx, unitName });
     },
-    renderPlot: function() {
+    renderPlot: function () {
       this.createXAxisScale();
       this.createYAxisScale();
 
@@ -276,29 +276,25 @@ export default {
       this.displayYAxis();
       this.plotData();
     },
-    zoomOutXAxis: function() {
+    zoomOutXAxis: function () {
       this.$emit("zoom-out");
     },
-    zoomInXAxis: function() {
+    zoomInXAxis: function () {
       this.$emit("zoom-in");
     },
-    createXAxisScale: function() {
-      this.xAxisScale = scaleLinear()
-        .domain([0, this.xAxisSampleLength])
-        .range([0, this.plotAreaPixelWidth]);
+    createXAxisScale: function () {
+      this.xAxisScale = scaleLinear().domain([0, this.xAxisSampleLength]).range([0, this.plotAreaPixelWidth]);
     },
-    createYAxisScale: function() {
-      this.yAxisScale = scaleLinear()
-        .domain([this.yMin, this.yMax])
-        .range([this.plotAreaPixelHeight, 0]);
+    createYAxisScale: function () {
+      this.yAxisScale = scaleLinear().domain([this.yMin, this.yMax]).range([this.plotAreaPixelHeight, 0]);
     },
-    displayXAxis: function() {
+    displayXAxis: function () {
       this.xAxisNode.call(axisBottom(this.xAxisScale).ticks(this.frequencyOfXTicks));
     },
-    displayYAxis: function() {
+    displayYAxis: function () {
       this.yAxisNode.call(axisLeft(this.yAxisScale).ticks(this.frequencyOfYTicks));
     },
-    plotData: function() {
+    plotData: function () {
       const dataToPlot = this.dataPoints;
       const xAxisScale = this.xAxisScale;
       const yAxisScale = this.yAxisScale;
@@ -319,10 +315,10 @@ export default {
           .attr(
             "d",
             d3Line()
-              .x(function(d) {
+              .x(function (d) {
                 return xAxisScale(d[0]);
               })
-              .y(function(d) {
+              .y(function (d) {
                 return yAxisScale(d[1]);
               })
           );
@@ -333,12 +329,12 @@ export default {
           const startingIdx = block[0];
           const startLine = [
             [startingIdx, this.yMin],
-            [startingIdx, this.yMax]
+            [startingIdx, this.yMax],
           ];
           const endingIdx = block[1];
           const endLine = [
             [endingIdx, this.yMin],
-            [endingIdx, this.yMax]
+            [endingIdx, this.yMax],
           ];
 
           this.waveformLineNode
@@ -350,10 +346,10 @@ export default {
             .attr(
               "d",
               d3Line()
-                .x(function(d) {
+                .x(function (d) {
                   return xAxisScale(d[0]);
                 })
-                .y(function(d) {
+                .y(function (d) {
                   return yAxisScale(d[1]);
                 })
             );
@@ -366,17 +362,17 @@ export default {
             .attr(
               "d",
               d3Line()
-                .x(function(d) {
+                .x(function (d) {
                   return xAxisScale(d[0]);
                 })
-                .y(function(d) {
+                .y(function (d) {
                   return yAxisScale(d[1]);
                 })
             );
         }
       }
-    }
-  }
+    },
+  },
 };
 </script>
 

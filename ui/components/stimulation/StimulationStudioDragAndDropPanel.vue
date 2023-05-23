@@ -161,10 +161,10 @@ export default {
     draggable,
     StimulationStudioWaveformSettingModal,
     StimulationStudioInputModal,
-    SmallDropDown
+    SmallDropDown,
   },
   props: {
-    disableEdits: { type: Boolean, default: false }
+    disableEdits: { type: Boolean, default: false },
   },
   data() {
     return {
@@ -186,16 +186,16 @@ export default {
       isDragging: false,
       selectedColor: null,
       openRepeatModal: false,
-      dblClickPulseNestedIdx: null
+      dblClickPulseNestedIdx: null,
     };
   },
   computed: {
     ...mapState("stimulation", {
-      timeUnit: state => state.protocolEditor.timeUnit,
-      runUntilStopped: state => state.protocolEditor.runUntilStopped,
-      detailedSubprotocols: state => state.protocolEditor.detailedSubprotocols
+      timeUnit: (state) => state.protocolEditor.timeUnit,
+      runUntilStopped: (state) => state.protocolEditor.runUntilStopped,
+      detailedSubprotocols: (state) => state.protocolEditor.detailedSubprotocols,
     }),
-    isNestingDisabled: function() {
+    isNestingDisabled: function () {
       // disable nesting if the dragged pulse is a nested loop already to prevent deep nesting
       // OR a new pulse is being placed
       const selectedPulse = this.protocolOrder[this.isDragging];
@@ -203,33 +203,33 @@ export default {
       return (
         (Number.isInteger(this.isDragging) && selectedPulse && selectedPulse.type === "loop") || this.cloned
       );
-    }
+    },
   },
   watch: {
-    isDragging: function() {
+    isDragging: function () {
       // reset so old position/idx isn't highlighted once moved
       this.onPulseMouseleave();
     },
-    detailedSubprotocols: function() {
+    detailedSubprotocols: function () {
       this.protocolOrder = JSON.parse(
         JSON.stringify(
-          this.detailedSubprotocols.map(protocol =>
+          this.detailedSubprotocols.map((protocol) =>
             protocol.type !== "loop"
               ? {
                   ...protocol,
-                  subprotocols: []
+                  subprotocols: [],
                 }
               : protocol
           )
         )
       );
     },
-    timeUnit: function() {
+    timeUnit: function () {
       this.timeUnitsIdx = this.timeUnitsArray.indexOf(this.timeUnit);
     },
-    runUntilStopped: function() {
+    runUntilStopped: function () {
       this.disableDropdown = !this.runUntilStopped;
-    }
+    },
   },
   methods: {
     ...mapActions("stimulation", ["handleProtocolOrder", "onPulseMouseenter"]),
@@ -371,7 +371,7 @@ export default {
       const loopPulse = {
         type: "loop",
         numIterations: value,
-        subprotocols: [this.protocolOrder[this.dblClickPulseIdx], this.selectedPulseSettings]
+        subprotocols: [this.protocolOrder[this.dblClickPulseIdx], this.selectedPulseSettings],
       };
 
       switch (button) {
@@ -468,12 +468,12 @@ export default {
               frequency: "",
               totalActiveDuration: {
                 duration: "",
-                unit: "milliseconds"
+                unit: "milliseconds",
               },
               numCycles: 0,
               postphaseInterval: "",
               phaseOneDuration: "",
-              phaseOneCharge: ""
+              phaseOneCharge: "",
             };
 
       if (type === "Biphasic")
@@ -481,14 +481,14 @@ export default {
           ...typeSpecificSettings,
           interphaseInterval: "",
           phaseTwoCharge: "",
-          phaseTwoDuration: ""
+          phaseTwoDuration: "",
         };
 
       return {
         type,
         color: randomColor,
         pulseSettings: typeSpecificSettings,
-        subprotocols: []
+        subprotocols: [],
       };
     },
     openRepeatModalForEdit(number, idx) {
@@ -519,8 +519,8 @@ export default {
 
         this.handleProtocolOrder(this.protocolOrder);
       }
-    }
-  }
+    },
+  },
 };
 </script>
 <style scoped>
