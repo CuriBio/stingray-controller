@@ -185,7 +185,7 @@ describe("StimulationStudioDragAndDropPanel.vue", () => {
         type: "Biphasic",
         src: "test",
         color: "b7b7b7",
-        nestedProtocols: [],
+        pulseSettings: {},
       },
     ];
     wrapper.vm.newClonedIdx = 0;
@@ -201,7 +201,7 @@ describe("StimulationStudioDragAndDropPanel.vue", () => {
       localVue,
     });
 
-    expect(store.state.stimulation.hoveredPulses).toStrictEqual({
+    expect(store.state.stimulation.hoveredPulse).toStrictEqual({
       idx: null,
       indices: [],
       color: null,
@@ -211,9 +211,9 @@ describe("StimulationStudioDragAndDropPanel.vue", () => {
     await store.dispatch("stimulation/handleProtocolOrder", TEST_PROTOCOL_ORDER_3);
     await wrapper.vm.onPulseEnter(1);
 
-    expect(store.state.stimulation.hoveredPulses).toStrictEqual({
+    expect(store.state.stimulation.hoveredPulse).toStrictEqual({
       idx: 1,
-      indices: [9, 20],
+      indices: [[9, 20]],
       color: "hsla(205, 100%, 50%, 1)",
     });
   });
@@ -228,7 +228,7 @@ describe("StimulationStudioDragAndDropPanel.vue", () => {
       indices: [],
       color: null,
     };
-    expect(store.state.stimulation.hoveredPulses).toStrictEqual(defaultState);
+    expect(store.state.stimulation.hoveredPulse).toStrictEqual(defaultState);
 
     await wrapper.setData({
       protocolOrder: JSON.parse(JSON.stringify(TEST_PROTOCOL_ORDER_3)),
@@ -237,7 +237,7 @@ describe("StimulationStudioDragAndDropPanel.vue", () => {
     await store.dispatch("stimulation/handleProtocolOrder", TEST_PROTOCOL_ORDER_3);
     await wrapper.vm.onPulseEnter(1);
 
-    expect(store.state.stimulation.hoveredPulses).toStrictEqual(defaultState);
+    expect(store.state.stimulation.hoveredPulse).toStrictEqual(defaultState);
   });
 
   test("When a user leaves hover over a waveform tile, Then the pulse settings will be reset", async () => {
@@ -248,14 +248,14 @@ describe("StimulationStudioDragAndDropPanel.vue", () => {
 
     await store.dispatch("stimulation/handleProtocolOrder", TEST_PROTOCOL_ORDER_3);
     await wrapper.vm.onPulseEnter(1);
-    expect(store.state.stimulation.hoveredPulses).toStrictEqual({
+    expect(store.state.stimulation.hoveredPulse).toStrictEqual({
       idx: 1,
-      indices: [9, 20],
+      indices: [[9, 20]],
       color: "hsla(205, 100%, 50%, 1)",
     });
 
     await wrapper.vm.onPulseLeave();
-    expect(store.state.stimulation.hoveredPulses).toStrictEqual({
+    expect(store.state.stimulation.hoveredPulse).toStrictEqual({
       idx: null,
       indices: [],
       color: null,

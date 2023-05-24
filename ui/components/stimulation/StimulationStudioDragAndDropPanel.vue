@@ -116,9 +116,9 @@
       <StimulationStudioInputModal
         :modalOpenForEdit="modalOpenForEdit"
         :currentInput="currentInput"
-        :inputLabel="'Number of Loops:'"
+        :inputLabel="'Number of Iterations:'"
         :includeUnits="false"
-        :modalTitle="'Repeat Setup'"
+        :modalTitle="'Setup Subprotocol Loop'"
         @input-close="closeRepeatModal"
       />
     </div>
@@ -161,10 +161,10 @@ export default {
     draggable,
     StimulationStudioWaveformSettingModal,
     StimulationStudioInputModal,
-    SmallDropDown,
+    SmallDropDown
   },
   props: {
-    disableEdits: { type: Boolean, default: false },
+    disableEdits: { type: Boolean, default: false }
   },
   data() {
     return {
@@ -186,16 +186,16 @@ export default {
       isDragging: false,
       selectedColor: null,
       openRepeatModal: false,
-      dblClickPulseNestedIdx: null,
+      dblClickPulseNestedIdx: null
     };
   },
   computed: {
     ...mapState("stimulation", {
-      timeUnit: (state) => state.protocolEditor.timeUnit,
-      runUntilStopped: (state) => state.protocolEditor.runUntilStopped,
-      detailedSubprotocols: (state) => state.protocolEditor.detailedSubprotocols,
+      timeUnit: state => state.protocolEditor.timeUnit,
+      runUntilStopped: state => state.protocolEditor.runUntilStopped,
+      detailedSubprotocols: state => state.protocolEditor.detailedSubprotocols
     }),
-    isNestingDisabled: function () {
+    isNestingDisabled: function() {
       // disable nesting if the dragged pulse is a nested loop already to prevent deep nesting
       // OR a new pulse is being placed
       const selectedPulse = this.protocolOrder[this.isDragging];
@@ -203,33 +203,33 @@ export default {
       return (
         (Number.isInteger(this.isDragging) && selectedPulse && selectedPulse.type === "loop") || this.cloned
       );
-    },
+    }
   },
   watch: {
-    isDragging: function () {
+    isDragging: function() {
       // reset so old position/idx isn't highlighted once moved
       this.onPulseMouseleave();
     },
-    detailedSubprotocols: function () {
+    detailedSubprotocols: function() {
       this.protocolOrder = JSON.parse(
         JSON.stringify(
-          this.detailedSubprotocols.map((protocol) =>
+          this.detailedSubprotocols.map(protocol =>
             protocol.type !== "loop"
               ? {
                   ...protocol,
-                  subprotocols: [],
+                  subprotocols: []
                 }
               : protocol
           )
         )
       );
     },
-    timeUnit: function () {
+    timeUnit: function() {
       this.timeUnitsIdx = this.timeUnitsArray.indexOf(this.timeUnit);
     },
-    runUntilStopped: function () {
+    runUntilStopped: function() {
       this.disableDropdown = !this.runUntilStopped;
-    },
+    }
   },
   methods: {
     ...mapActions("stimulation", ["handleProtocolOrder", "onPulseMouseenter"]),
@@ -325,9 +325,6 @@ export default {
       const editedNestedPulse = subprotocols[this.dblClickPulseNestedIdx];
       const editedNestedPulseCopy = JSON.parse(JSON.stringify(editedNestedPulse));
       const numSubprotocols = subprotocols.length;
-      const previousHue = this.getPulseHue(this.dblClickPulseIdx, this.dblClickPulseNestedIdx);
-      // intentionally set to undefined if neither of the following conditionals are met
-      let nextHue;
 
       switch (button) {
         case "Save":
@@ -335,20 +332,18 @@ export default {
           editedNestedPulse.color = selectedColor;
           break;
         case "Duplicate":
-          // next conditional checks if pulse is not last in loop
-          if (numSubprotocols - 1 > this.dblClickPulseNestedIdx)
-            nextHue = this.getPulseHue(this.dblClickPulseIdx, this.dblClickPulseNestedIdx + 1);
-          // else take next pulse outside of loop to prevent duplciate colors in a row
-          else if (
-            numSubprotocols - 1 == this.dblClickPulseNestedIdx &&
-            this.dblClickPulseIdx < this.protocolOrder.length - 1
-          )
-            nextHue = this.getPulseHue(this.dblClickPulseIdx + 1);
-          // else no need to consider next in order
+          // generate color considering previous and next pulses colors
+          editedNestedPulseCopy.color = generateRandomColor(
+            true,
+            this.getPulseHue(this.dblClickPulseIdx, this.dblClickPulseNestedIdx),
+            this.dblClickPulseNestedIdx + 1 < numSubprotocols - 1
+              ? this.getPulseHue(this.dblClickPulseIdx, this.dblClickPulseNestedIdx + 1)
+              : undefined
+          );
 
-          editedNestedPulseCopy.color = generateRandomColor(true, previousHue, nextHue);
           editedPulse.subprotocols.splice(this.dblClickPulseNestedIdx + 1, 0, editedNestedPulseCopy);
           break;
+
         case "Delete":
           if (numSubprotocols - 1 === 1) {
             this.protocolOrder.splice(this.dblClickPulseIdx, 1, subprotocols[0]);
@@ -371,7 +366,7 @@ export default {
       const loopPulse = {
         type: "loop",
         numIterations: value,
-        subprotocols: [this.protocolOrder[this.dblClickPulseIdx], this.selectedPulseSettings],
+        subprotocols: [this.protocolOrder[this.dblClickPulseIdx], this.selectedPulseSettings]
       };
 
       switch (button) {
@@ -468,12 +463,12 @@ export default {
               frequency: "",
               totalActiveDuration: {
                 duration: "",
-                unit: "milliseconds",
+                unit: "milliseconds"
               },
               numCycles: 0,
               postphaseInterval: "",
               phaseOneDuration: "",
-              phaseOneCharge: "",
+              phaseOneCharge: ""
             };
 
       if (type === "Biphasic")
@@ -481,14 +476,14 @@ export default {
           ...typeSpecificSettings,
           interphaseInterval: "",
           phaseTwoCharge: "",
-          phaseTwoDuration: "",
+          phaseTwoDuration: ""
         };
 
       return {
         type,
         color: randomColor,
         pulseSettings: typeSpecificSettings,
-        subprotocols: [],
+        subprotocols: []
       };
     },
     openRepeatModalForEdit(number, idx) {
@@ -519,8 +514,8 @@ export default {
 
         this.handleProtocolOrder(this.protocolOrder);
       }
-    },
-  },
+    }
+  }
 };
 </script>
 <style scoped>
@@ -552,6 +547,7 @@ export default {
   display: flex;
   align-items: center;
   padding-left: 1px;
+  overflow: hidden;
 }
 
 .span__repeat-label {

@@ -282,6 +282,7 @@ export default {
             protocol: protocolEditor,
           };
       });
+
       await commit("setProtocolList", protocolListCopy);
       await commit("setEditModeOff");
       await dispatch("updateProtocolAssignments", updatedProtocol);
@@ -412,7 +413,6 @@ export default {
   },
   async onPulseMouseenter({ state }, { idx, nestedIdx }) {
     const originalPulse = state.protocolEditor.detailedSubprotocols[idx];
-    let hoveredPulses = [];
 
     if (nestedIdx >= 0) {
       // find the starting index by expanding any loops to find corresponding index in repeatColors
@@ -426,15 +426,16 @@ export default {
         }, 0);
 
       // loop through subprotocols x amount of times to highlight every instance in a loop
-      hoveredPulses = [...Array(originalPulse.numIterations).keys()].map((i) => {
+      const indicesToUse = [...Array(originalPulse.numIterations).keys()].map((i) => {
         const numSubprotocols = originalPulse.subprotocols.length;
         const idxToUse = startingIdx + nestedIdx + i * numSubprotocols;
-        return {
-          idx: idxToUse,
-          indices: state.repeatColors[idxToUse][1],
-          color: state.repeatColors[idxToUse][0],
-        };
+        return state.repeatColors[idxToUse][1];
       });
+      state.hoveredPulse = {
+        idx,
+        color: state.repeatColors[startingIdx + nestedIdx][0],
+        indices: indicesToUse,
+      };
     } else {
       //  find the index by expanding any loops to find corresponding index in repeatColors
       const idxToUse = state.protocolEditor.detailedSubprotocols
@@ -445,16 +446,12 @@ export default {
           return acc + val;
         }, 0);
 
-      hoveredPulses = [
-        {
-          idx,
-          indices: state.repeatColors[idxToUse][1],
-          color: state.repeatColors[idxToUse][0],
-        },
-      ];
+      state.hoveredPulse = {
+        idx,
+        indices: [state.repeatColors[idxToUse][1]],
+        color: state.repeatColors[idxToUse][0],
+      };
     }
-    // needs to be array [{}, ... ]
-    state.hoveredPulses = hoveredPulses;
   },
 
   checkStimulatorCircuitStatuses({ commit }, stimulatorStatusesObj) {

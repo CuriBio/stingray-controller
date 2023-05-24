@@ -135,7 +135,7 @@ export default {
     state.xAxisTimeIdx = idx;
   },
   onPulseMouseleave(state) {
-    state.hoveredPulses = [];
+    state.hoveredPulse = { idx: null, color: null, indices: [] };
   },
   setStimulatorCircuitStatuses(state, stimulatorStatuses) {
     state.stimulatorCircuitStatuses = [...stimulatorStatuses];

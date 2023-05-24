@@ -53,7 +53,7 @@ import { axisBottom, axisLeft, line as d3Line, select as d3Select, scaleLinear }
  * @vue-data {Object} yAxisScale        - An Object which is used to process the Y Axis scale
  * @vue-data {Object} waveformLineNode  - An Object which is used to plot the line graph
  * @vue-data {Object} highlightLineNode - An Object which is used to plot the line graph to fill when hovered over
- * @vue-computed {Object}hoveredPulses       - State Object used to fill background of hovered over pulse in stim studio
+ * @vue-computed {Object}hoveredPulse       - State Object used to fill background of hovered over pulse in stim studio
  * @vue-computed {Object} div_WaveformGraph_DynamicStyle - An CSS property to hold the dynamic value
  * @vue-event {Event} xAxisMin           - A Function  is invoked when xAxisMin prop is modified
  * @vue-event {Event} xAxisSampleLength - A Function  is invoked when xAxisSampleLength prop is modified
@@ -122,7 +122,7 @@ export default {
     };
   },
   computed: {
-    ...mapState("stimulation", ["hoveredPulses", "xAxisTimeIdx"]),
+    ...mapState("stimulation", ["hoveredPulse", "xAxisTimeIdx"]),
     div__waveformGraph_dynamicStyle: function () {
       return { width: this.plotAreaPixelWidth + this.margin.left + this.margin.right + "px" };
     },
@@ -155,15 +155,15 @@ export default {
 
       this.renderPlot();
     },
-    hoveredPulses: function (newPulses) {
+    hoveredPulse: function (newPulse) {
       this.highlightLineNode.selectAll("*").remove();
       const xAxisScale = this.xAxisScale;
       const yAxisScale = this.yAxisScale;
 
-      if (newPulses.length > 0) {
-        for (const pulse of newPulses) {
-          const startingX = this.dataPoints[pulse.indices[0]][0];
-          const endingX = this.dataPoints[pulse.indices[1] - 1][0];
+      if (newPulse.indices.length > 0) {
+        for (const pulse of newPulse.indices) {
+          const startingX = this.dataPoints[pulse[0]][0];
+          const endingX = this.dataPoints[pulse[1] - 1][0];
 
           const startingCoord = [startingX, this.yMax];
           const endingCoord = [endingX, this.yMax];
@@ -172,8 +172,8 @@ export default {
           this.highlightLineNode
             .append("path")
             .datum(dataToFill)
-            .attr("fill", pulse.color)
-            .attr("stroke", pulse.color)
+            .attr("fill", newPulse.color)
+            .attr("stroke", newPulse.color)
             .attr("opacity", ".15")
             .attr(
               "d",
