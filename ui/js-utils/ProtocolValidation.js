@@ -156,7 +156,14 @@ export const getTotalActiveDuration = (type, protocol) => {
     : +protocol.phaseOneDuration + +protocol.phaseTwoDuration + +protocol.interphaseInterval;
 };
 
-export const isValidSinglePulse = (protocol) => {
+export const areValidPulses = (input) => {
+  return input.some((proto) => {
+    if (proto.type === "loop") return areValidPulses(proto.subprotocols);
+    else return proto.type === "Delay" ? _isValidDelayPulse(proto) : _isValidSinglePulse(proto);
+  });
+};
+
+export const _isValidSinglePulse = (protocol) => {
   const { duration, unit } = protocol.totalActiveDuration;
   const isMonophasic = protocol.type === "Monophasic";
   const chargesToCheck = isMonophasic ? ["phaseOneCharge"] : ["phaseOneCharge", "phaseTwoCharge"];
@@ -191,17 +198,17 @@ export const isValidSinglePulse = (protocol) => {
   return durationsAreValid && chargesAreValid && completePulseValidity;
 };
 
-export const isValidDelayPulse = (protocol) => {
+export const _isValidDelayPulse = (protocol) => {
   const { duration, unit } = protocol;
   return checkDelayPulseValidity(duration, unit) === "";
 };
 
 export const convertProtocolCasing = (input, conversionFn) => {
-  if (typeof input === "object") {
+  if (_isObject(input)) {
     if (!Array.isArray(input)) {
       input = conversionFn(input);
       for (const key in input) {
-        if (input[key].length > 0) {
+        if (_isObject(input[key])) {
           input[key] = convertProtocolCasing(input[key], conversionFn);
         }
       }
@@ -214,6 +221,8 @@ export const convertProtocolCasing = (input, conversionFn) => {
   }
   return input;
 };
+
+const _isObject = (input) => typeof input === "object";
 
 export const _convertObjToCamelCase = (obj) => {
   const convertedObj = {};
@@ -272,4 +281,14 @@ export const _convertObjToSnakeCase = (obj) => {
     duration
     type
     unit
+
+  */
+
+/*
+    LOOP
+    ^^^^^
+    numIterations: int
+    type
+    subprotocols: []
+
   */

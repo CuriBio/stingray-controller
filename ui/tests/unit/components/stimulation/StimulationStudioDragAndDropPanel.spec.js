@@ -185,7 +185,7 @@ describe("StimulationStudioDragAndDropPanel.vue", () => {
         type: "Biphasic",
         src: "test",
         color: "b7b7b7",
-        nestedProtocols: [],
+        pulseSettings: {},
       },
     ];
     wrapper.vm.newClonedIdx = 0;
@@ -213,7 +213,7 @@ describe("StimulationStudioDragAndDropPanel.vue", () => {
 
     expect(store.state.stimulation.hoveredPulse).toStrictEqual({
       idx: 1,
-      indices: [9, 20],
+      indices: [[9, 20]],
       color: "hsla(205, 100%, 50%, 1)",
     });
   });
@@ -250,7 +250,7 @@ describe("StimulationStudioDragAndDropPanel.vue", () => {
     await wrapper.vm.onPulseEnter(1);
     expect(store.state.stimulation.hoveredPulse).toStrictEqual({
       idx: 1,
-      indices: [9, 20],
+      indices: [[9, 20]],
       color: "hsla(205, 100%, 50%, 1)",
     });
 

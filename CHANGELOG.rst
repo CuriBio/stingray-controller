@@ -9,6 +9,7 @@ Added:
 - Offline FW updating
 - Protocol validation checks on import in Stimulation Studio
 - Disabled sidebar controls before connection to instrument is made
+- Ability to loop subprotocols in stimulation studio
 
 Fixed:
 ^^^^^^
@@ -20,6 +21,8 @@ Changed:
 ^^^^^^^^
 - Error codes
 - New login flow
+- Minimum phase duration is now 25μs instead of 20μs
+
 
 
 0.1.0 (2023-04-13)

@@ -10,7 +10,7 @@
       <span :style="'grid-column: 1/2; align-self: center;'">{{ xAxisLabel }}</span>
       <SmallDropDown
         :style="'grid-column: 2/3;'"
-        :inputHeight="9"
+        :inputHeight="25"
         :inputWidth="110"
         :optionsText="timeUnits"
         :optionsIdx="activeDurationIdx"
@@ -160,30 +160,32 @@ export default {
       const xAxisScale = this.xAxisScale;
       const yAxisScale = this.yAxisScale;
 
-      if (newPulse.idx != null) {
-        const startingX = this.dataPoints[newPulse.indices[0]][0];
-        const endingX = this.dataPoints[newPulse.indices[1] - 1][0];
+      if (newPulse.indices.length > 0) {
+        for (const pulse of newPulse.indices) {
+          const startingX = this.dataPoints[pulse[0]][0];
+          const endingX = this.dataPoints[pulse[1] - 1][0];
 
-        const startingCoord = [startingX, this.yMax];
-        const endingCoord = [endingX, this.yMax];
-        // in order to fill entire height of graph, need minimum y to max y
-        const dataToFill = [[startingX, this.yMin], startingCoord, endingCoord, [endingX, this.yMin]];
-        this.highlightLineNode
-          .append("path")
-          .datum(dataToFill)
-          .attr("fill", newPulse.color)
-          .attr("stroke", newPulse.color)
-          .attr("opacity", ".15")
-          .attr(
-            "d",
-            d3Line()
-              .x(function (d) {
-                return xAxisScale(d[0]);
-              })
-              .y(function (d) {
-                return yAxisScale(d[1]);
-              })
-          );
+          const startingCoord = [startingX, this.yMax];
+          const endingCoord = [endingX, this.yMax];
+          // in order to fill entire height of graph, need minimum y to max y
+          const dataToFill = [[startingX, this.yMin], startingCoord, endingCoord, [endingX, this.yMin]];
+          this.highlightLineNode
+            .append("path")
+            .datum(dataToFill)
+            .attr("fill", newPulse.color)
+            .attr("stroke", newPulse.color)
+            .attr("opacity", ".25")
+            .attr(
+              "d",
+              d3Line()
+                .x(function (d) {
+                  return xAxisScale(d[0]);
+                })
+                .y(function (d) {
+                  return yAxisScale(d[1]);
+                })
+            );
+        }
       }
     },
   },

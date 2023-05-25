@@ -2,8 +2,10 @@
   <div class="div__stimulationstudio-current-settings-background">
     <span class="span__stimulationstudio-current-settings-title"
       >{{ modalTitle }}
-      <div class="div__color-block" :style="colorToDisplay" />
-      <div class="div__color-label" @click="$bvModal.show('change-color-modal-two')">Change color</div></span
+      <div v-if="includeUnits" class="div__color-block" :style="colorToDisplay" />
+      <div v-if="includeUnits" class="div__color-label" @click="$bvModal.show('change-color-modal-two')">
+        Change color
+      </div></span
     >
     <span>
       <b-modal id="change-color-modal-two" size="sm" hide-footer hide-header hide-header-close :static="true">
@@ -12,18 +14,18 @@
     </span>
     <canvas class="canvas__stimulationstudio-horizontal-line-separator"> </canvas>
     <div class="div__stimulationstudio-body-container">
-      <span>{{ inputDescription }}</span>
+      <span>{{ inputLabel }}</span>
       <span class="input_container">
         <InputWidget
           :placeholder="'0'"
-          :domIdSuffix="'delay'"
+          :domIdSuffix="'stim-input'"
           :invalidText="invalidText"
           :inputWidth="100"
           :initialValue="currentValue !== null ? currentValue : ''"
           @update:value="checkValidity($event)"
         />
       </span>
-      <span>
+      <span v-if="includeUnits">
         <SmallDropDown
           :optionsText="timeUnits"
           :optionsIdx="timeUnitIdx"
@@ -66,7 +68,7 @@ Vue.component("BModal", BModal);
 Vue.use(BootstrapVue);
 /**
  * @vue-props {String} currentValue - Current input if modal is open for editing
- * @vue-props {String} currentDelayUnit - The current unit selected when a delay block is opened to edit
+ * @vue-props {String} currentUnit - The current unit selected when a delay block is opened to edit
  * @vue-props {String} modalType - Determines if delay or repeat styling is assigned to modal
  * @vue-props {Boolean} modalOpenForEdit - States if delay modal is open for editing
  * @vue-data {String} inputValue - Value input into modal
@@ -79,7 +81,7 @@ Vue.use(BootstrapVue);
  * @vue-data {Object} invalidErrMsg - Object containing all error messages for validation checks of inputs
  * @vue-watch {Boolean} isValid - True if input passes the validation check and allows Save button to become enabled
  * @vue-data {String} modalTitle - Title
- * @vue-data {String} inputDescription - Subtitle
+ * @vue-data {String} inputLabel - Subtitle
  * @vue-computed {Array} buttonLabels - Button array dependent on if its a reedit or not
  * @vue-method {event} close - emits close of modal and data to parent component
  * @vue-method {event} checkValidity - checks if inputs are valid numbers only and not empty
@@ -87,7 +89,7 @@ Vue.use(BootstrapVue);
  */
 
 export default {
-  name: "StimulationStudioDelayModal",
+  name: "StimulationStudioInputModal",
   components: {
     InputWidget,
     ButtonWidget,
@@ -95,11 +97,11 @@ export default {
     StimulationStudioColorModal,
   },
   props: {
-    currentDelayInput: {
+    currentInput: {
       type: String,
       default: null,
     },
-    currentDelayUnit: {
+    currentUnit: {
       type: String,
       default: "milliseconds",
     },
@@ -109,20 +111,30 @@ export default {
     },
     currentColor: {
       type: String,
-      default: null,
+      default: "#b7b7b7",
+    },
+    modalTitle: {
+      type: String,
+      default: "Delay",
+    },
+    inputLabel: {
+      type: String,
+      default: "Duration:",
+    },
+    includeUnits: {
+      type: Boolean,
+      default: true,
     },
   },
   data() {
     return {
-      currentValue: this.currentDelayInput,
+      currentValue: this.currentInput,
       inputValue: null,
       invalidText: "Required",
       timeUnits: ["milliseconds", "seconds", "minutes", "hours"],
       timeUnitIdx: 0,
       isEnabledArray: [false, true],
       isValid: false,
-      modalTitle: "Delay",
-      inputDescription: "Duration:",
       selectedColor: this.currentColor,
     };
   },
@@ -147,29 +159,36 @@ export default {
   },
   created() {
     this.inputValue = this.currentValue;
-
-    this.timeUnitIdx = this.timeUnits.indexOf(this.currentDelayUnit);
+    this.timeUnitIdx = this.timeUnits.indexOf(this.currentUnit);
     this.isEnabledArray = this.modalOpenForEdit ? [true, true, true, true] : [false, true];
+
     if (this.currentValue !== null) this.checkValidity(this.inputValue);
   },
   methods: {
     close(idx) {
       const buttonLabel = this.buttonLabels[idx];
+      const value = +this.inputValue;
 
-      const selectedUnit = this.timeUnits[this.timeUnitIdx];
-      const convertedInput = Number(this.inputValue);
-      const delaySettings = {
-        duration: convertedInput,
-        unit: selectedUnit,
-      };
+      if (this.modalTitle === "Delay") {
+        const unit = this.timeUnits[this.timeUnitIdx];
+        const delaySettings = { duration: value, unit };
 
-      this.$emit("delayClose", buttonLabel, delaySettings, this.selectedColor);
+        this.$emit("input-close", buttonLabel, delaySettings, this.selectedColor);
+      } else {
+        this.$emit("input-close", buttonLabel, value);
+      }
     },
     checkValidity(valueStr) {
       this.currentValue = valueStr;
-      const selectedUnit = this.timeUnits[this.timeUnitIdx];
 
-      this.invalidText = checkDelayPulseValidity(valueStr, selectedUnit);
+      if (this.modalTitle === "Delay") {
+        const selectedUnit = this.timeUnits[this.timeUnitIdx];
+        this.invalidText = checkDelayPulseValidity(valueStr, selectedUnit);
+      } else {
+        const isInt = Number.isInteger(+valueStr);
+        this.invalidText = !isInt ? "Must be a whole (+) number" : "";
+      }
+
       this.isValid = this.invalidText === "";
       // Only want to update inputValue here so it is only ever set to a valid value.
       // This means that if a user enters an invalid value and then presses cancel, the most recent
