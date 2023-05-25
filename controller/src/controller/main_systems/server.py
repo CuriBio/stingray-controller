@@ -27,7 +27,6 @@ from ..utils.aio import wait_tasks_clean
 from ..utils.generic import handle_system_error
 from ..utils.logging import get_redacted_string
 from ..utils.state_management import ReadOnlyDict
-from ..utils.stimulation import check_subprotocol_type
 from ..utils.stimulation import validate_stim_subprotocol
 
 logger = logging.getLogger(__name__)
@@ -284,17 +283,7 @@ class Server:
             # validate subprotocol dictionaries
             try:
                 for idx, subprotocol in enumerate(protocol["subprotocols"]):
-                    subprotocol_type = check_subprotocol_type(subprotocol, protocol_id, idx)
-                    if subprotocol_type == "loop":
-                        for nested_subprotocol in subprotocol["subprotocols"]:
-                            nested_subprotocol_type = check_subprotocol_type(
-                                nested_subprotocol, protocol_id, idx
-                            )
-                            validate_stim_subprotocol(
-                                nested_subprotocol, nested_subprotocol_type, stim_type, protocol_id, idx
-                            )
-                    else:
-                        validate_stim_subprotocol(subprotocol, subprotocol_type, stim_type, protocol_id, idx)
+                    validate_stim_subprotocol(subprotocol, stim_type, protocol_id, idx)
             except WebsocketCommandError:
                 raise
 
