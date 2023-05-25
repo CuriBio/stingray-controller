@@ -70,8 +70,6 @@ export default {
     datapoints: function () {
       if (this.lastXValue === 0) this.xAxisSampleLength = 100;
       else this.xAxisSampleLength = this.lastXValue + 50;
-
-      if (this.xAxisSampleLength > 10000 && this.dynamicPlotWidth === 1200) this.dynamicPlotWidth *= 25;
     },
     protocolEditor: function () {
       this.xAxisSampleLength = 100;
