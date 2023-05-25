@@ -10,7 +10,7 @@
       <span :style="'grid-column: 1/2; align-self: center;'">{{ xAxisLabel }}</span>
       <SmallDropDown
         :style="'grid-column: 2/3;'"
-        :inputHeight="9"
+        :inputHeight="25"
         :inputWidth="110"
         :optionsText="timeUnits"
         :optionsIdx="activeDurationIdx"
@@ -174,7 +174,7 @@ export default {
             .datum(dataToFill)
             .attr("fill", newPulse.color)
             .attr("stroke", newPulse.color)
-            .attr("opacity", ".15")
+            .attr("opacity", ".25")
             .attr(
               "d",
               d3Line()
