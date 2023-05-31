@@ -55,7 +55,7 @@ describe("StimulationStudioDragAndDropPanel.vue", () => {
       localVue,
     });
 
-    await wrapper.vm.clone({ type: "Monophasic", src: "test" });
+    await wrapper.vm.clone("Monophasic");
     await wrapper.vm.checkType({
       added: {
         element: MONOPHASIC_DROP_ELEMENT,
@@ -64,13 +64,13 @@ describe("StimulationStudioDragAndDropPanel.vue", () => {
     });
     expect(wrapper.vm.modalType).toBe("Monophasic");
 
-    const modalContainer = wrapper.find(".modal-container");
+    const modalContainer = wrapper.find(".div__modal-container");
     expect(modalContainer.isVisible()).toBeTruthy();
 
     await wrapper.vm.onModalClose("Cancel");
     expect(wrapper.vm.modalType).toBeNull();
 
-    await wrapper.vm.clone({ type: "Delay", src: "test" });
+    await wrapper.vm.clone("Delay");
     await wrapper.vm.checkType({
       added: {
         element: {
@@ -101,7 +101,7 @@ describe("StimulationStudioDragAndDropPanel.vue", () => {
     await wrapper.setData({ protocolOrder: JSON.parse(JSON.stringify(TEST_PROTOCOL_ORDER_3)) });
     await wrapper.vm.openModalForEdit("Biphasic", 0);
     expect(wrapper.vm.modalType).toBe("Biphasic");
-    expect(wrapper.vm.shiftClickImgIdx).toBe(0);
+    expect(wrapper.vm.dblClickPulseIdx).toBe(0);
     expect(wrapper.find(".modalOverlay")).toBeTruthy();
 
     const modalButtons = wrapper.findAll(".span__button-label");
@@ -133,7 +133,7 @@ describe("StimulationStudioDragAndDropPanel.vue", () => {
     await wrapper.setData({ protocolOrder: JSON.parse(JSON.stringify(TEST_PROTOCOL_ORDER_3)) });
     expect(wrapper.vm.protocolOrder).toHaveLength(4);
 
-    await wrapper.vm.clone({ type: "Biphasic", src: "test" });
+    await wrapper.vm.clone("Biphasic");
     expect(wrapper.vm.cloned).toBe(true);
     await wrapper.vm.checkType({
       added: {
@@ -168,7 +168,12 @@ describe("StimulationStudioDragAndDropPanel.vue", () => {
   });
 
   test("When a user clicks save on the settings for a waveform, Then the setting should save to the corresponding index depending on if it is a new waveform or an edited", async () => {
-    const testSettings = "test";
+    const testPulse = {
+      type: "Biphasic",
+      color: "b7b7b7",
+      pulseSettings: {},
+    };
+
     const testStimSettings = {
       postphaseInterval: "",
       totalActiveDuration: {
@@ -180,19 +185,13 @@ describe("StimulationStudioDragAndDropPanel.vue", () => {
       store,
       localVue,
     });
-    wrapper.vm.protocolOrder = [
-      {
-        type: "Biphasic",
-        src: "test",
-        color: "b7b7b7",
-        pulseSettings: {},
-      },
-    ];
+
+    wrapper.vm.protocolOrder = [testPulse];
     wrapper.vm.newClonedIdx = 0;
     wrapper.vm.modalType = "Biphasic";
 
-    await wrapper.vm.onModalClose("Save", testSettings, testStimSettings);
-    expect(wrapper.vm.protocolOrder[0].pulseSettings).toBe(testSettings);
+    await wrapper.vm.onModalClose("Save", testStimSettings);
+    expect(wrapper.vm.protocolOrder[0].pulseSettings).toStrictEqual(testStimSettings);
   });
 
   test("When a user hovers over a waveform tile, Then the pulse settings will be added to state", async () => {

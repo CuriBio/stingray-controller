@@ -74,11 +74,11 @@ describe("StimulationStudioWaveformSettingModal.vue", () => {
     ["phaseOneDuration", "duration", "test", "Must be a number"],
     ["phaseOneDuration", "duration", "1500", "Duration must be <= 50ms"],
     ["phaseOneDuration", "duration", "", "Required"],
-    ["phaseOneDuration", "duration", "0.01", "Duration must be >= 20μs"],
+    ["phaseOneDuration", "duration", "0.01", "Duration must be >= 25μs"],
     ["phaseOneDuration", "duration", "50", ""],
-    ["interphaseInterval", "interphase", "0.01", "Duration must be 0ms or >= 20μs"],
+    ["interphaseInterval", "interphase", "0.01", "Duration must be 0ms or >= 25μs"],
     ["interphaseInterval", "interphase", "test", "Must be a number"],
-    ["interphaseInterval", "interphase", "0.02", ""],
+    ["interphaseInterval", "interphase", "0.025", ""],
     ["interphaseInterval", "interphase", "0", ""],
     ["interphaseInterval", "interphase", "", "Required"],
     ["interphaseInterval", "interphase", "100", "Duration must be <= 50ms"],
@@ -134,6 +134,7 @@ describe("StimulationStudioWaveformSettingModal.vue", () => {
       phaseOneDuration: 10,
       phaseOneCharge: 50,
     };
+
     await wrapper.find("#input-widget-field-duration").setValue("10");
     await wrapper.find("#input-widget-field-charge").setValue("50");
     await wrapper.find("#input-widget-field-pulse-frequency").setValue("20");

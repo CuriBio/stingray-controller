@@ -29,12 +29,14 @@ export const MONOPHASIC_DROP_ELEMENT = {
   type: "Monophasic",
   color: "",
   pulseSettings: TEST_MONOPHASIC_PULSE_SETTINGS,
+  subprotocols: [],
 };
 
 export const BIPHASIC_DROP_ELEMENT = {
   type: "Biphasic",
   color: "",
   pulseSettings: TEST_BIPHASIC_PULSE_SETTINGS,
+  subprotocols: [],
 };
 
 export const VALID_STIM_JSON = JSON.stringify({
@@ -64,6 +66,7 @@ export const VALID_STIM_JSON = JSON.stringify({
               duration: 333,
               unit: "milliseconds",
             },
+            subprotocols: [],
           },
         ],
       },
@@ -93,6 +96,7 @@ export const VALID_STIM_JSON = JSON.stringify({
               duration: 15000,
               unit: "milliseconds",
             },
+            subprotocols: [],
           },
         ],
       },
@@ -153,6 +157,7 @@ export const INVALID_STIM_JSON = JSON.stringify({
               duration: 0,
               unit: "milliseconds",
             },
+            subprotocols: [],
           },
         ],
       },
@@ -200,6 +205,7 @@ export const INVALID_STIM_JSON = JSON.stringify({
               },
               numCycles: 1,
             },
+            subprotocols: [],
           },
         ],
       },
@@ -241,6 +247,7 @@ export const INVALID_STIM_JSON = JSON.stringify({
               },
               numCycles: 1,
             },
+            subprotocols: [],
           },
         ],
       },
@@ -292,7 +299,7 @@ export const TEST_PROTOCOL_ORDER = [
       },
       numCycles: 1,
     },
-    nestedProtocols: [],
+    subprotocols: [],
   },
 ];
 
@@ -314,6 +321,7 @@ export const TEST_PROTOCOL_ORDER_2 = [
       },
       numCycles: 2,
     },
+    subprotocols: [],
   },
   {
     type: "Monophasic",
@@ -329,6 +337,7 @@ export const TEST_PROTOCOL_ORDER_2 = [
       },
       numCycles: 1,
     },
+    subprotocols: [],
   },
   {
     type: "Delay",
@@ -338,6 +347,7 @@ export const TEST_PROTOCOL_ORDER_2 = [
       duration: 1300,
       unit: "seconds",
     },
+    subprotocols: [],
   },
   {
     type: "Monophasic",
@@ -353,6 +363,7 @@ export const TEST_PROTOCOL_ORDER_2 = [
       },
       numCycles: 2,
     },
+    subprotocols: [],
   },
 ];
 
@@ -386,6 +397,7 @@ export const TEST_PROTOCOL_LIST = [
           nestedProtocols: [],
           color: "hsla(99, 60%, 40%, 1)",
           pulseSettings: { duration: 15, unit: "seconds" },
+          subprotocols: [],
         },
       ],
     },
@@ -411,6 +423,7 @@ export const TEST_PROTOCOL_B = {
     detailedSubprotocols: [
       {
         color: "hsla(45, 90%, 40%, 1)",
+        subprotocols: [],
       },
     ],
   },
@@ -437,6 +450,7 @@ export const TEST_PROTOCOL_D = {
     detailedSubprotocols: [
       {
         color: "hsla(309, 50%, 60%, 1)",
+        subprotocols: [],
       },
     ],
   },
@@ -479,6 +493,7 @@ export const TEST_PROTOCOL_ORDER_3 = [
       numCycles: 2,
       frequency: 1,
     },
+    subprotocols: [],
   },
   {
     type: "Delay",
@@ -489,6 +504,7 @@ export const TEST_PROTOCOL_ORDER_3 = [
       duration: 300,
       unit: "seconds",
     },
+    subprotocols: [],
   },
   {
     type: "Monophasic",
@@ -506,6 +522,7 @@ export const TEST_PROTOCOL_ORDER_3 = [
       numCycles: 4,
       frequency: 5,
     },
+    subprotocols: [],
   },
 ];
 
@@ -543,8 +560,128 @@ export const TEST_PROTOCOL_LIST_2 = [
             pduration: 15000,
             unit: "milliseconds",
           },
+          subprotocols: [],
         },
       ],
     },
   },
 ];
+
+export const INCOMPATIBLE_PROTOCOL_EXPORT_MULTI = {
+  protocols: [
+    {
+      color: "hsla(281, 99%, 56%, 1)",
+      letter: "A",
+      label: "",
+      protocol: {
+        name: "Export Protocol",
+        stop_setting: "Stimulate Until Stopped",
+        stimulation_type: "C",
+        rest_duration: 0,
+        time_unit: "milliseconds",
+        pulses: [
+          {
+            phase_one_duration: 1000,
+            phase_one_charge: 0,
+            interphase_interval: 0,
+            phase_two_duration: 0,
+            phase_two_charge: 0,
+            repeat_delay_interval: 0,
+            total_active_duration: 1000,
+          },
+          {
+            phase_one_duration: 10,
+            phase_one_charge: 100,
+            interphase_interval: 0,
+            phase_two_duration: 0,
+            phase_two_charge: 0,
+            repeat_delay_interval: 90,
+            total_active_duration: 1000,
+          },
+          {
+            phase_one_duration: 10,
+            phase_one_charge: 100,
+            interphase_interval: 0,
+            phase_two_duration: 10,
+            phase_two_charge: -100,
+            repeat_delay_interval: 980,
+            total_active_duration: 2000,
+          },
+        ],
+        detailed_pulses: [
+          {
+            type: "Delay",
+            repeat: { color: "hsla(281, 91%, 41%, 1)", number_of_repeats: 1 },
+            pulse_settings: {
+              phase_one_duration: 1000,
+              phase_one_charge: 0,
+              interphase_interval: 0,
+              phase_two_duration: 0,
+              phase_two_charge: 0,
+            },
+            stim_settings: {
+              repeat_delay_interval: 0,
+              total_active_duration: { duration: 1000, unit: "milliseconds" },
+            },
+          },
+          {
+            type: "Monophasic",
+            repeat: { color: "hsla(253, 99%, 58%, 1)", number_of_repeats: 10 },
+            pulse_settings: {
+              phase_one_duration: 10,
+              phase_one_charge: 100,
+              interphase_interval: 0,
+              phase_two_duration: 0,
+              phase_two_charge: 0,
+            },
+            stim_settings: {
+              repeat_delay_interval: 90,
+              total_active_duration: { duration: 1000, unit: "milliseconds" },
+            },
+          },
+          {
+            type: "Biphasic",
+            repeat: { color: "hsla(11, 99%, 55%, 1)", number_of_repeats: 1 },
+            pulse_settings: {
+              phase_one_duration: 10,
+              phase_one_charge: 100,
+              interphase_interval: 0,
+              phase_two_duration: 10,
+              phase_two_charge: -100,
+            },
+            stim_settings: {
+              repeat_delay_interval: 980,
+              total_active_duration: { duration: 2000, unit: "milliseconds" },
+            },
+          },
+        ],
+      },
+    },
+  ],
+  protocol_assignments: {
+    A1: null,
+    B1: null,
+    C1: null,
+    D1: null,
+    A2: null,
+    B2: null,
+    C2: null,
+    D2: null,
+    A3: null,
+    B3: null,
+    C3: null,
+    D3: null,
+    A4: null,
+    B4: null,
+    C4: null,
+    D4: null,
+    A5: null,
+    B5: null,
+    C5: null,
+    D5: null,
+    A6: null,
+    B6: null,
+    C6: null,
+    D6: null,
+  },
+};

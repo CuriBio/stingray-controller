@@ -10,6 +10,7 @@ Added:
 - Protocol validation checks on import in Stimulation Studio
 - Disabled sidebar controls before connection to instrument is made
 - Ability to loop subprotocols in stimulation studio
+- Backwards stimulation protocol compatibility
 
 Fixed:
 ^^^^^^
