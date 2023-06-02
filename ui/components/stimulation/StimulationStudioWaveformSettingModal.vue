@@ -311,6 +311,7 @@ import {
   checkActiveDurationValidity,
   checkPulseFrequencyValidity,
   getMaxPulseDurationForFreq,
+  calculateNumCycles,
 } from "@/js-utils/ProtocolValidation";
 import { TIME_CONVERSION_TO_MILLIS } from "@/store/modules/stimulation/enums";
 import Vue from "vue";
@@ -541,11 +542,11 @@ export default {
         updatedVal = this.calculatedNumCycles = defaultValue;
       } else {
         const selectedUnit = this.timeUnits[this.activeDurationIdx];
-        const durationInSecs =
-          this.pulseSettings.totalActiveDuration.duration * (TIME_CONVERSION_TO_MILLIS[selectedUnit] / 1000);
-
-        const numCycles = durationInSecs * this.inputPulseFrequency;
-        updatedVal = isFinite(numCycles) ? numCycles : defaultValue;
+        updatedVal = calculateNumCycles(
+          selectedUnit,
+          this.pulseSettings.totalActiveDuration,
+          this.inputPulseFrequency
+        );
       }
 
       this.calculatedNumCycles = updatedVal;

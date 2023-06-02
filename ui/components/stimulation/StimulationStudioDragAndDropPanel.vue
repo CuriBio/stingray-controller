@@ -129,6 +129,7 @@ import StimulationStudioWaveformSettingModal from "@/components/stimulation/Stim
 import StimulationStudioInputModal from "@/components/stimulation/StimulationStudioInputModal.vue";
 import SmallDropDown from "@/components/basic-widgets/SmallDropDown.vue";
 import { generateRandomColor } from "@/js-utils/WaveformDataFormatter";
+import { DEFAULT_SUBPROTOCOL_TEMPLATES } from "@/js-utils/ProtocolValidation";
 
 import draggable from "vuedraggable";
 import { mapState, mapActions, mapMutations } from "vuex";
@@ -454,36 +455,12 @@ export default {
           : generateRandomColor(true);
 
       this.selectedColor = randomColor;
-
-      let typeSpecificSettings =
-        type === "Delay"
-          ? { duration: "", unit: "milliseconds" }
-          : // for both monophasic and biphasic
-            {
-              frequency: "",
-              totalActiveDuration: {
-                duration: "",
-                unit: "milliseconds",
-              },
-              numCycles: 0,
-              postphaseInterval: "",
-              phaseOneDuration: "",
-              phaseOneCharge: "",
-            };
-
-      if (type === "Biphasic")
-        typeSpecificSettings = {
-          ...typeSpecificSettings,
-          interphaseInterval: "",
-          phaseTwoCharge: "",
-          phaseTwoDuration: "",
-        };
+      // have to make a deep copy to prevent changing original template state
+      const templateCopy = JSON.parse(JSON.stringify(DEFAULT_SUBPROTOCOL_TEMPLATES[type.toUpperCase()]));
 
       return {
-        type,
+        ...templateCopy,
         color: randomColor,
-        pulseSettings: typeSpecificSettings,
-        subprotocols: [],
       };
     },
     openRepeatModalForEdit(number, idx) {
@@ -547,7 +524,6 @@ export default {
   display: flex;
   align-items: center;
   padding-left: 1px;
-  overflow: hidden;
 }
 
 .span__repeat-label {
@@ -573,7 +549,7 @@ export default {
 }
 
 img {
-  height: 93px;
+  height: 92px;
   width: 92px;
   cursor: pointer;
 }

@@ -4,6 +4,7 @@ import { STIM_STATUS, TIME_CONVERSION_TO_MILLIS } from "./enums";
 import {
   areValidPulses,
   convertProtocolCasing,
+  checkPulseCompatibility,
   _convertObjToCamelCase,
   _convertObjToSnakeCase,
 } from "@/js-utils/ProtocolValidation";
@@ -241,20 +242,26 @@ export default {
     downloadLink.remove();
   },
 
-  async addImportedProtocol({ commit, getters }, { protocols }) {
+  async addImportedProtocol({ commit, getters }, response) {
     const invalidImportedProtocols = [];
-    for (const [idx, { protocol }] of Object.entries(protocols)) {
+    // first interation only exported single protocols, not array of multiple
+    const protocolsToUse = response.protocols || [{ protocol: response }];
+    // reset stim studio
+    await commit("resetProtocolEditor");
+
+    for (const [idx, { protocol }] of Object.entries(protocolsToUse)) {
       // if protocol is unnamed, assign generic name with place in list, +1 to index
       protocol.name = protocol.name.length > 0 ? protocol.name : `protocol_${idx + 1}`;
       // (22/04/2023) For now with mantarray, all protocols will be exported in snake_case, including from stingray
       const convertedProtocol = convertProtocolCasing(protocol, _convertObjToCamelCase);
-      const invalidPulses = areValidPulses(convertedProtocol.subprotocols);
+      const compatibleProtocol = checkPulseCompatibility(convertedProtocol);
+      const invalidPulses = areValidPulses(compatibleProtocol.subprotocols);
 
-      if (invalidPulses) {
+      if (!invalidPulses) {
         await commit("setEditModeOff");
         // needs to be set to off every iteration because an action elsewhere triggers it on
         const { color, letter } = await getters["getNextProtocol"];
-        const importedProtocol = { color, letter, label: protocol.name, protocol: convertedProtocol };
+        const importedProtocol = { color, letter, label: protocol.name, protocol: compatibleProtocol };
         await commit("setNewProtocol", importedProtocol);
       } else {
         invalidImportedProtocols.push(protocol.name);

@@ -170,13 +170,13 @@ describe("StimulationStudioProtocolViewer.vue", () => {
       const dPoints = await convertXYArraysToD3Array(xAxisValues, yAxisValues);
       await wrapper.setProps({ dataPoints: dPoints });
 
-      await store.dispatch("stimulation/onPulseMouseenter", 1);
+      await store.dispatch("stimulation/onPulseMouseenter", { idx: 1 });
 
       const highlightLineNode = wrapper.find("#highlightLineNode");
       const highlightLinePath = highlightLineNode.findAll("path");
 
       expect(highlightLinePath).toHaveLength(1);
-      expect(highlightLinePath.at(0).attributes().opacity).toBe(".15");
+      expect(highlightLinePath.at(0).attributes().opacity).toBe(".25");
       expect(highlightLinePath.at(0).attributes().fill).toBe("#ffff2");
     });
 
