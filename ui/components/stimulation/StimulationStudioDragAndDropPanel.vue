@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div :class="modalType !== null || openDelayModal || openRepeatModal ? 'div__modal-overlay' : null">
+    <div :class="isModalOpen ? 'div__modal-overlay' : null">
       <div>
         <div class="div__drag-and-drop-panel">
           <span class="span__stimulationstudio-drag-drop-header-label">Drag/Drop Waveforms</span>
@@ -74,7 +74,7 @@
                 :ghost-class="'ghost'"
                 :emptyInsertThreshold="40"
                 :disabled="isNestingDisabled"
-                @change="handleProtocolLoop($event, idx)"
+                @change="handleProtocolLoop($event)"
                 @start="isDragging = true"
                 @end="isDragging = false"
               >
@@ -162,10 +162,10 @@ export default {
     draggable,
     StimulationStudioWaveformSettingModal,
     StimulationStudioInputModal,
-    SmallDropDown
+    SmallDropDown,
   },
   props: {
-    disableEdits: { type: Boolean, default: false }
+    disableEdits: { type: Boolean, default: false },
   },
   data() {
     return {
@@ -187,16 +187,16 @@ export default {
       isDragging: false,
       selectedColor: null,
       openRepeatModal: false,
-      dblClickPulseNestedIdx: null
+      dblClickPulseNestedIdx: null,
     };
   },
   computed: {
     ...mapState("stimulation", {
-      timeUnit: state => state.protocolEditor.timeUnit,
-      runUntilStopped: state => state.protocolEditor.runUntilStopped,
-      detailedSubprotocols: state => state.protocolEditor.detailedSubprotocols
+      timeUnit: (state) => state.protocolEditor.timeUnit,
+      runUntilStopped: (state) => state.protocolEditor.runUntilStopped,
+      detailedSubprotocols: (state) => state.protocolEditor.detailedSubprotocols,
     }),
-    isNestingDisabled: function() {
+    isNestingDisabled: function () {
       // disable nesting if the dragged pulse is a nested loop already to prevent deep nesting
       // OR a new pulse is being placed
       const selectedPulse = this.protocolOrder[this.isDragging];
@@ -205,38 +205,41 @@ export default {
         (Number.isInteger(this.isDragging) && selectedPulse && selectedPulse.type === "loop") || this.cloned
       );
     },
-    idxOfNewLoop: function() {
+    idxOfNewLoop: function () {
       // dynamically find the correct index to replace with a loop on modal closure
       return this.protocolOrder.findIndex(
-        protocol => protocol.subprotocols.length > 0 && protocol.type !== "loop"
+        (protocol) => protocol.subprotocols.length > 0 && protocol.type !== "loop"
       );
-    }
+    },
+    isModalOpen: function () {
+      return this.modalType !== null || this.openDelayModal || this.openRepeatModal;
+    },
   },
   watch: {
-    isDragging: function() {
+    isDragging: function () {
       // reset so old position/idx isn't highlighted once moved
       this.onPulseMouseleave();
     },
-    detailedSubprotocols: function() {
+    detailedSubprotocols: function () {
       this.protocolOrder = JSON.parse(
         JSON.stringify(
-          this.detailedSubprotocols.map(protocol =>
+          this.detailedSubprotocols.map((protocol) =>
             protocol.type !== "loop"
               ? {
                   ...protocol,
-                  subprotocols: []
+                  subprotocols: [],
                 }
               : protocol
           )
         )
       );
     },
-    timeUnit: function() {
+    timeUnit: function () {
       this.timeUnitsIdx = this.timeUnitsArray.indexOf(this.timeUnit);
     },
-    runUntilStopped: function() {
+    runUntilStopped: function () {
       this.disableDropdown = !this.runUntilStopped;
-    }
+    },
   },
   methods: {
     ...mapActions("stimulation", ["handleProtocolOrder", "onPulseMouseenter"]),
@@ -383,7 +386,7 @@ export default {
       const loopPulse = {
         type: "loop",
         numIterations: value,
-        subprotocols: [this.protocolOrder[this.dblClickPulseIdx], this.selectedPulseSettings]
+        subprotocols: [this.protocolOrder[this.dblClickPulseIdx], this.selectedPulseSettings],
       };
 
       switch (button) {
@@ -432,7 +435,8 @@ export default {
     onPulseEnter(idx, nestedIdx) {
       // if tile is being dragged, the pulse underneath the dragged tile will highlight even though the user is dragging a different tile
       // 0 index is considered falsy
-      if (!this.isDragging && this.isDragging !== 0) this.onPulseMouseenter({ idx, nestedIdx });
+      if (!this.isDragging && this.isDragging !== 0 && !this.isModalOpen)
+        this.onPulseMouseenter({ idx, nestedIdx });
     },
     onPulseLeave() {
       this.onPulseMouseleave();
@@ -476,7 +480,7 @@ export default {
 
       return {
         ...templateCopy,
-        color: randomColor
+        color: randomColor,
       };
     },
     openRepeatModalForEdit(number, idx) {
@@ -485,7 +489,7 @@ export default {
       this.modalOpenForEdit = true;
       this.openRepeatModal = true;
     },
-    handleProtocolLoop(e, idx) {
+    handleProtocolLoop(e) {
       if (e.added) {
         if (this.idxOfNewLoop !== -1 && this.protocolOrder[this.idxOfNewLoop].type !== "loop") {
           this.dblClickPulseIdx = this.idxOfNewLoop;
@@ -499,14 +503,14 @@ export default {
       } else if (e.removed) {
         // if last nested subprotocol is removed from loop so there is only one left,
         // then replace loop object with last subprotocol object
-        this.protocolOrder = this.protocolOrder.map(protocol =>
+        this.protocolOrder = this.protocolOrder.map((protocol) =>
           protocol.type === "loop" && protocol.subprotocols.length === 1 ? protocol.subprotocols[0] : protocol
         );
 
         this.handleProtocolOrder(this.protocolOrder);
       }
-    }
-  }
+    },
+  },
 };
 </script>
 <style scoped>
