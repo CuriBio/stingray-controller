@@ -7,6 +7,11 @@ Changelog for Stingray Controller
 Added:
 ^^^^^^
 - Ability to loop subprotocols in stimulation studio
+- Backwards stimulation protocol compatibility
+
+Changed:
+^^^^^^^^
+- Minimum phase duration is now 25μs instead of 20μs
 
 
 0.2.0 (2023-06-05)
@@ -17,7 +22,6 @@ Added:
 - Offline FW updating
 - Protocol validation checks on import in Stimulation Studio
 - Disabled sidebar controls before connection to instrument is made
-- Backwards stimulation protocol compatibility
 
 Fixed:
 ^^^^^^
@@ -29,8 +33,6 @@ Changed:
 ^^^^^^^^
 - Error codes
 - New login flow
-- Minimum phase duration is now 25μs instead of 20μs
-
 
 
 0.1.0 (2023-04-13)
