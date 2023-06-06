@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div :class="modalType !== null || openDelayModal || openRepeatModal ? 'div__modal-overlay' : null">
+    <div :class="isModalOpen ? 'div__modal-overlay' : null">
       <div>
         <div class="div__drag-and-drop-panel">
           <span class="span__stimulationstudio-drag-drop-header-label">Drag/Drop Waveforms</span>
@@ -74,7 +74,7 @@
                 :ghost-class="'ghost'"
                 :emptyInsertThreshold="40"
                 :disabled="isNestingDisabled"
-                @change="handleProtocolLoop($event, idx)"
+                @change="handleProtocolLoop($event)"
                 @start="isDragging = true"
                 @end="isDragging = false"
               >
@@ -205,6 +205,15 @@ export default {
         (Number.isInteger(this.isDragging) && selectedPulse && selectedPulse.type === "loop") || this.cloned
       );
     },
+    idxOfNewLoop: function () {
+      // dynamically find the correct index to replace with a loop on modal closure
+      return this.protocolOrder.findIndex(
+        (protocol) => protocol.subprotocols.length > 0 && protocol.type !== "loop"
+      );
+    },
+    isModalOpen: function () {
+      return this.modalType !== null || this.openDelayModal || this.openRepeatModal;
+    },
   },
   watch: {
     isDragging: function () {
@@ -245,7 +254,13 @@ export default {
         if (["Monophasic", "Biphasic"].includes(element.type)) this.modalType = element.type;
         else if (element.type === "Delay") this.openDelayModal = true;
       } else if (e.removed) {
-        this.selectedPulseSettings = e.removed.element;
+        // if a tile on the left side of another is dragged and dropped into the right subprotocol loop, for some reason the change only gets caught here
+        // need to basically mimic the handle_protocol_loop({e: {added: {}}}) event
+        if (!this.dblClickPulseIdx && this.idxOfNewLoop !== -1) {
+          this.dblClickPulseIdx = this.idxOfNewLoop;
+          this.selectedPulseSettings = e.removed.element;
+          this.openRepeatModal = true;
+        }
       }
 
       if ((e.added && !this.cloned) || e.moved || e.removed) {
@@ -347,7 +362,11 @@ export default {
 
         case "Delete":
           if (numSubprotocols - 1 === 1) {
-            this.protocolOrder.splice(this.dblClickPulseIdx, 1, subprotocols[0]);
+            this.protocolOrder.splice(
+              this.dblClickPulseIdx,
+              1,
+              subprotocols[this.dblClickPulseNestedIdx === 0 ? 1 : 0]
+            );
           } else {
             editedPulse.subprotocols.splice(this.dblClickPulseNestedIdx, 1);
           }
@@ -416,7 +435,8 @@ export default {
     onPulseEnter(idx, nestedIdx) {
       // if tile is being dragged, the pulse underneath the dragged tile will highlight even though the user is dragging a different tile
       // 0 index is considered falsy
-      if (!this.isDragging && this.isDragging !== 0) this.onPulseMouseenter({ idx, nestedIdx });
+      if (!this.isDragging && this.isDragging !== 0 && !this.isModalOpen)
+        this.onPulseMouseenter({ idx, nestedIdx });
     },
     onPulseLeave() {
       this.onPulseMouseleave();
@@ -469,10 +489,11 @@ export default {
       this.modalOpenForEdit = true;
       this.openRepeatModal = true;
     },
-    handleProtocolLoop(e, idx) {
+    handleProtocolLoop(e) {
       if (e.added) {
-        if (this.protocolOrder[idx].type !== "loop") {
-          this.dblClickPulseIdx = idx;
+        if (this.idxOfNewLoop !== -1 && this.protocolOrder[this.idxOfNewLoop].type !== "loop") {
+          this.dblClickPulseIdx = this.idxOfNewLoop;
+          this.selectedPulseSettings = e.added.element;
           this.openRepeatModal = true;
         } else {
           this.handleProtocolOrder(this.protocolOrder);
@@ -480,14 +501,11 @@ export default {
       } else if (e.moved) {
         this.handleProtocolOrder(this.protocolOrder);
       } else if (e.removed) {
-        const { subprotocols } = this.protocolOrder[idx];
-        const subprotocolsLeft = subprotocols.length;
-
         // if last nested subprotocol is removed from loop so there is only one left,
         // then replace loop object with last subprotocol object
-        if (subprotocolsLeft === 1) {
-          this.protocolOrder.splice(idx, 1, subprotocols[0]);
-        }
+        this.protocolOrder = this.protocolOrder.map((protocol) =>
+          protocol.type === "loop" && protocol.subprotocols.length === 1 ? protocol.subprotocols[0] : protocol
+        );
 
         this.handleProtocolOrder(this.protocolOrder);
       }
