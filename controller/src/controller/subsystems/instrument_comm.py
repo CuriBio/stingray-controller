@@ -21,6 +21,7 @@ from ..constants import SERIAL_COMM_MAX_PAYLOAD_LENGTH_BYTES
 from ..constants import SERIAL_COMM_PACKET_METADATA_LENGTH_BYTES
 from ..constants import SERIAL_COMM_READ_TIMEOUT
 from ..constants import SERIAL_COMM_REGISTRATION_TIMEOUT_SECONDS
+from ..constants import SERIAL_COMM_STATUS_BEACON_PERIOD_SECONDS
 from ..constants import SERIAL_COMM_STATUS_BEACON_TIMEOUT_SECONDS
 from ..constants import SERIAL_COMM_STATUS_CODE_LENGTH_BYTES
 from ..constants import SerialCommPacketTypes
@@ -330,20 +331,29 @@ class InstrumentComm:
             await asyncio.sleep(SERIAL_COMM_HANDSHAKE_PERIOD_SECONDS)
 
     async def _handle_beacon_tracking(self) -> None:
+        handshake_sent_after_miss = False
+
         while True:
             try:
                 await asyncio.wait_for(
-                    self._status_beacon_received_event.wait(), SERIAL_COMM_STATUS_BEACON_TIMEOUT_SECONDS
+                    self._status_beacon_received_event.wait(), SERIAL_COMM_STATUS_BEACON_PERIOD_SECONDS + 1
                 )
             except asyncio.TimeoutError as e:
-                if not self._instrument_in_sensitive_state:
+                if self._instrument_in_sensitive_state:
+                    # firmware updating / rebooting is complete when a beacon is received,
+                    # so just wait indefinitely for the next one
+                    await self._status_beacon_received_event.wait()
+                    self._status_beacon_received_event.clear()
+                    handshake_sent_after_miss = False
+                elif handshake_sent_after_miss:
                     raise SerialCommStatusBeaconTimeoutError() from e
-
-                # firmware updating / rebooting is complete when a beacon is received,
-                # so just wait indefinitely for the next one
-                await self._status_beacon_received_event.wait()
-
-            self._status_beacon_received_event.clear()
+                else:
+                    logger.info("Status Beacon overdue. Sending handshake now to prompt a response")
+                    await self._send_data_packet(SerialCommPacketTypes.HANDSHAKE)
+                    handshake_sent_after_miss = True
+            else:
+                self._status_beacon_received_event.clear()
+                handshake_sent_after_miss = False
 
     async def _handle_data_stream(self) -> None:
         if not self._instrument:
