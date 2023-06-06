@@ -1,7 +1,15 @@
 Changelog for Stingray Controller
 =================================
 
-0.2.0 (unreleased)
+0.3.0 (2023-06-06)
+------------------
+
+Added:
+^^^^^^
+- Ability to loop subprotocols in stimulation studio
+
+
+0.2.0 (2023-06-05)
 ------------------
 
 Added:
@@ -9,7 +17,6 @@ Added:
 - Offline FW updating
 - Protocol validation checks on import in Stimulation Studio
 - Disabled sidebar controls before connection to instrument is made
-- Ability to loop subprotocols in stimulation studio
 - Backwards stimulation protocol compatibility
 
 Fixed:

@@ -162,10 +162,10 @@ export default {
     draggable,
     StimulationStudioWaveformSettingModal,
     StimulationStudioInputModal,
-    SmallDropDown,
+    SmallDropDown
   },
   props: {
-    disableEdits: { type: Boolean, default: false },
+    disableEdits: { type: Boolean, default: false }
   },
   data() {
     return {
@@ -187,16 +187,16 @@ export default {
       isDragging: false,
       selectedColor: null,
       openRepeatModal: false,
-      dblClickPulseNestedIdx: null,
+      dblClickPulseNestedIdx: null
     };
   },
   computed: {
     ...mapState("stimulation", {
-      timeUnit: (state) => state.protocolEditor.timeUnit,
-      runUntilStopped: (state) => state.protocolEditor.runUntilStopped,
-      detailedSubprotocols: (state) => state.protocolEditor.detailedSubprotocols,
+      timeUnit: state => state.protocolEditor.timeUnit,
+      runUntilStopped: state => state.protocolEditor.runUntilStopped,
+      detailedSubprotocols: state => state.protocolEditor.detailedSubprotocols
     }),
-    isNestingDisabled: function () {
+    isNestingDisabled: function() {
       // disable nesting if the dragged pulse is a nested loop already to prevent deep nesting
       // OR a new pulse is being placed
       const selectedPulse = this.protocolOrder[this.isDragging];
@@ -205,32 +205,38 @@ export default {
         (Number.isInteger(this.isDragging) && selectedPulse && selectedPulse.type === "loop") || this.cloned
       );
     },
+    idxOfNewLoop: function() {
+      // dynamically find the correct index to replace with a loop on modal closure
+      return this.protocolOrder.findIndex(
+        protocol => protocol.subprotocols.length > 0 && protocol.type !== "loop"
+      );
+    }
   },
   watch: {
-    isDragging: function () {
+    isDragging: function() {
       // reset so old position/idx isn't highlighted once moved
       this.onPulseMouseleave();
     },
-    detailedSubprotocols: function () {
+    detailedSubprotocols: function() {
       this.protocolOrder = JSON.parse(
         JSON.stringify(
-          this.detailedSubprotocols.map((protocol) =>
+          this.detailedSubprotocols.map(protocol =>
             protocol.type !== "loop"
               ? {
                   ...protocol,
-                  subprotocols: [],
+                  subprotocols: []
                 }
               : protocol
           )
         )
       );
     },
-    timeUnit: function () {
+    timeUnit: function() {
       this.timeUnitsIdx = this.timeUnitsArray.indexOf(this.timeUnit);
     },
-    runUntilStopped: function () {
+    runUntilStopped: function() {
       this.disableDropdown = !this.runUntilStopped;
-    },
+    }
   },
   methods: {
     ...mapActions("stimulation", ["handleProtocolOrder", "onPulseMouseenter"]),
@@ -245,7 +251,13 @@ export default {
         if (["Monophasic", "Biphasic"].includes(element.type)) this.modalType = element.type;
         else if (element.type === "Delay") this.openDelayModal = true;
       } else if (e.removed) {
-        this.selectedPulseSettings = e.removed.element;
+        // if a tile on the left side of another is dragged and dropped into the right subprotocol loop, for some reason the change only gets caught here
+        // need to basically mimic the handle_protocol_loop({e: {added: {}}}) event
+        if (!this.dblClickPulseIdx && this.idxOfNewLoop !== -1) {
+          this.dblClickPulseIdx = this.idxOfNewLoop;
+          this.selectedPulseSettings = e.removed.element;
+          this.openRepeatModal = true;
+        }
       }
 
       if ((e.added && !this.cloned) || e.moved || e.removed) {
@@ -371,7 +383,7 @@ export default {
       const loopPulse = {
         type: "loop",
         numIterations: value,
-        subprotocols: [this.protocolOrder[this.dblClickPulseIdx], this.selectedPulseSettings],
+        subprotocols: [this.protocolOrder[this.dblClickPulseIdx], this.selectedPulseSettings]
       };
 
       switch (button) {
@@ -464,7 +476,7 @@ export default {
 
       return {
         ...templateCopy,
-        color: randomColor,
+        color: randomColor
       };
     },
     openRepeatModalForEdit(number, idx) {
@@ -475,8 +487,9 @@ export default {
     },
     handleProtocolLoop(e, idx) {
       if (e.added) {
-        if (this.protocolOrder[idx].type !== "loop") {
-          this.dblClickPulseIdx = idx;
+        if (this.idxOfNewLoop !== -1 && this.protocolOrder[this.idxOfNewLoop].type !== "loop") {
+          this.dblClickPulseIdx = this.idxOfNewLoop;
+          this.selectedPulseSettings = e.added.element;
           this.openRepeatModal = true;
         } else {
           this.handleProtocolOrder(this.protocolOrder);
@@ -486,14 +499,14 @@ export default {
       } else if (e.removed) {
         // if last nested subprotocol is removed from loop so there is only one left,
         // then replace loop object with last subprotocol object
-        this.protocolOrder = this.protocolOrder.map((protocol) =>
+        this.protocolOrder = this.protocolOrder.map(protocol =>
           protocol.type === "loop" && protocol.subprotocols.length === 1 ? protocol.subprotocols[0] : protocol
         );
 
         this.handleProtocolOrder(this.protocolOrder);
       }
-    },
-  },
+    }
+  }
 };
 </script>
 <style scoped>
