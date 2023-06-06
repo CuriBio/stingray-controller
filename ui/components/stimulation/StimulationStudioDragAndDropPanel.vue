@@ -347,7 +347,11 @@ export default {
 
         case "Delete":
           if (numSubprotocols - 1 === 1) {
-            this.protocolOrder.splice(this.dblClickPulseIdx, 1, subprotocols[0]);
+            this.protocolOrder.splice(
+              this.dblClickPulseIdx,
+              1,
+              subprotocols[this.dblClickPulseNestedIdx === 0 ? 1 : 0]
+            );
           } else {
             editedPulse.subprotocols.splice(this.dblClickPulseNestedIdx, 1);
           }
@@ -480,14 +484,11 @@ export default {
       } else if (e.moved) {
         this.handleProtocolOrder(this.protocolOrder);
       } else if (e.removed) {
-        const { subprotocols } = this.protocolOrder[idx];
-        const subprotocolsLeft = subprotocols.length;
-
         // if last nested subprotocol is removed from loop so there is only one left,
         // then replace loop object with last subprotocol object
-        if (subprotocolsLeft === 1) {
-          this.protocolOrder.splice(idx, 1, subprotocols[0]);
-        }
+        this.protocolOrder = this.protocolOrder.map((protocol) =>
+          protocol.type === "loop" && protocol.subprotocols.length === 1 ? protocol.subprotocols[0] : protocol
+        );
 
         this.handleProtocolOrder(this.protocolOrder);
       }
