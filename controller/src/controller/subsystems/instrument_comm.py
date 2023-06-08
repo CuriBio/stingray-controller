@@ -433,6 +433,12 @@ class InstrumentComm:
         if not self._instrument:
             raise NotImplementedError("_instrument should never be None here")
 
+        # update trackers if necessary
+        if packet_type == SerialCommPacketTypes.HANDSHAKE:
+            pass  # TODO
+        elif packet_type in (1, "TODO"):
+            pass  # TODO
+
         data_packet = create_data_packet(get_serial_comm_timestamp(), packet_type, data_to_send)
         await self._instrument.write_async(data_packet)
 
@@ -528,12 +534,17 @@ class InstrumentComm:
                     raise NotImplementedError("_firmware_update_manager should never be None here")
                 await self._firmware_update_manager.update(command, response_data)
 
+        if prev_command_info["command"] in "TODO":
+            pass  # TODO update command response tracker
+
         if prev_command_info["command"] not in INTERMEDIATE_FIRMWARE_UPDATE_COMMANDS:
             await self._to_monitor_queue.put(prev_command_info)
 
     async def _process_stim_packets(self, stim_stream_info: dict[str, bytes | int]) -> None:
         if not stim_stream_info["num_packets"]:
             return
+
+        # TODO update stim data tracker
 
         # Tanner (2/28/23): there is currently no data stream, so only need to check for protocols that have completed
 
@@ -561,6 +572,8 @@ class InstrumentComm:
     async def _process_status_codes(self, status_codes_dict: dict[str, int], comm_type: str) -> None:
         # placing this here so that handshake responses also set the event
         self._status_beacon_received_event.set()
+
+        # TODO update beacon tracker
 
         status_codes_msg = f"{comm_type} received from instrument. Status Codes: {status_codes_dict}"
         if any(status_codes_dict.values()):
