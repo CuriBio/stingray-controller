@@ -458,7 +458,10 @@ class InstrumentComm:
             self._update_timepoints_of_events("command_sent")
 
         data_packet = create_data_packet(get_serial_comm_timestamp(), packet_type, data_to_send)
-        await self._instrument.write_async(data_packet)
+
+        write_len = await self._instrument.write_async(data_packet)
+        if write_len == 0:
+            logger.error("Serial data write reporting no bytes written")
 
     async def _process_comm_from_instrument(self, packet_type: int, packet_payload: bytes) -> None:
         match packet_type:
@@ -721,13 +724,14 @@ class VirtualInstrumentConnection:
         logger.debug("RECV: %s", list(data))
         return data
 
-    async def write_async(self, data: bytearray | bytes | memoryview) -> None:
+    async def write_async(self, data: bytearray | bytes | memoryview) -> int:
         try:
             self.writer.write(data)
             await self.writer.drain()
         except Exception:  # nosec B110
             # TODO make sure to add a unit test confirming this can be cancelled correctly
             # TODO raise a different error here?
-            pass
+            return 0
         else:
             logger.debug("SEND: %s", list(data))
+            return len(data)
