@@ -379,7 +379,11 @@ class InstrumentComm:
 
         while True:
             # read all available bytes from serial buffer
-            data_read_bytes = await self._instrument.read_async(self._instrument.in_waiting)
+            try:
+                data_read_bytes = await self._instrument.read_async(self._instrument.in_waiting)
+            except serial.SerialException as e:
+                logger.error(f"Serial data read failed: {repr(e)}. Trying one more time")
+                data_read_bytes = await self._instrument.read_async(self._instrument.in_waiting)
 
             # append all bytes to cache
             self._serial_packet_cache += data_read_bytes
