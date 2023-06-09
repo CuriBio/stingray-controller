@@ -1,13 +1,12 @@
 export default {
-  async sendLoginCommand() {
-    const { activeUserIndex, userAccounts } = this.state.settings;
-    const { customerId, userPassword, username } = userAccounts[activeUserIndex];
+  async sendLoginCommand(_, userDetails) {
+    const { customerId, password, username } = userDetails;
 
     const params = {
       command: "login",
       customer_id: customerId,
-      username: username,
-      password: userPassword,
+      username,
+      password,
     };
 
     this.state.system.socket.send(JSON.stringify(params));

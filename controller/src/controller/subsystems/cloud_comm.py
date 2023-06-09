@@ -254,8 +254,7 @@ class CloudComm:
                     error_message=f"Error during download of {fw_type} firmware",
                 )
                 subtask_res[f"{fw_type}_firmware_contents"] = download_response.content
-        except BaseException as e:
-            # TODO see if asyncio.CancelledError needs to be handled differently?
+        except Exception as e:
             raise FirmwareDownloadError() from e
 
         return subtask_res
@@ -329,10 +328,13 @@ class CloudComm:
         if res.status_code == 401:
             # TODO check service worker to see how refresh mutex is handled
 
-            # get new tokens and try request once more
-            # TODO try logging in again if this also fails
-            self.tokens = self._refresh_cloud_api_tokens()
+            # get new tokens
+            try:
+                self.tokens = self._refresh_cloud_api_tokens()
+            except RefreshFailedError:
+                raise  # TODO try logging in again if this also fails
 
+            # try request once more
             res = await self._client.request(method, url, **request_kwargs)
 
         return res

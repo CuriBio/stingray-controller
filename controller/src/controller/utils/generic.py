@@ -9,11 +9,16 @@ from semver import VersionInfo
 
 from ..constants import ErrorCodes
 from ..exceptions import FirmwareAndSoftwareNotCompatibleError
+from ..exceptions import FirmwareDownloadError
+from ..exceptions import FirmwareGoingDormantError
 from ..exceptions import IncorrectInstrumentConnectedError
 from ..exceptions import InstrumentBadDataError
+from ..exceptions import InstrumentCommandAttemptError
+from ..exceptions import InstrumentCommandResponseError
 from ..exceptions import InstrumentConnectionCreationError
 from ..exceptions import InstrumentConnectionLostError
 from ..exceptions import InstrumentFirmwareError
+from ..exceptions import InstrumentInvalidMetadataError
 from ..exceptions import NoInstrumentDetectedError
 from ..exceptions import WebsocketCommandError
 
@@ -38,17 +43,27 @@ def handle_system_error(exc: BaseException, system_error_future: asyncio.Future[
             error_code = ErrorCodes.INSTRUMENT_CONNECTION_CREATION
         case InstrumentConnectionLostError():
             error_code = ErrorCodes.INSTRUMENT_CONNECTION_LOST
-        case InstrumentBadDataError():
-            error_code = ErrorCodes.INSTRUMENT_SENT_BAD_DATA
         case InstrumentFirmwareError():
             error_code = ErrorCodes.INSTRUMENT_STATUS_CODE
         case FirmwareAndSoftwareNotCompatibleError():
             error_code = ErrorCodes.INSTRUMENT_FW_INCOMPATIBLE_WITH_SW
-        case WebsocketCommandError():
-            error_code = ErrorCodes.UI_SENT_BAD_DATA
         case IncorrectInstrumentConnectedError():
             error_code = ErrorCodes.INCORRECT_INSTRUMENT_TYPE
+        case InstrumentInvalidMetadataError():
+            error_code = ErrorCodes.INVALID_INSTRUMENT_METADATA
+        case FirmwareDownloadError():
+            error_code = ErrorCodes.FIRMWARE_DOWNLOAD_ERROR
+        case InstrumentBadDataError():
+            error_code = ErrorCodes.INSTRUMENT_SENT_BAD_DATA
+        case FirmwareGoingDormantError():
+            error_code = ErrorCodes.INSTRUMENT_INITIATED_DISCONNECTION
+        case InstrumentCommandResponseError():
+            error_code = ErrorCodes.INSTRUMENT_COMMAND_FAILED
+        case InstrumentCommandAttemptError():
+            error_code = ErrorCodes.INSTRUMENT_COMMAND_ATTEMPT
+        case WebsocketCommandError():
+            error_code = ErrorCodes.UI_SENT_BAD_DATA
         case _:
-            error_code = ErrorCodes.UNSPECIFIED
+            error_code = ErrorCodes.UNSPECIFIED_CONTROLLER_ERROR
 
     system_error_future.set_result(error_code)

@@ -12,7 +12,7 @@
     <div
       class="div__input-dropdown-controls-content-widget"
       :class="[
-        messageIfInvalid
+        inputIsInvalid
           ? 'div__input-dropdown-controls-content-widget--invalid'
           : 'div__input-dropdown-controls-content-widget--valid',
       ]"
@@ -39,7 +39,7 @@
       </span>
     </div>
     <div
-      v-show="messageIfInvalid"
+      v-show="inputIsInvalid"
       :id="'input-dropdown-widget-feedback-' + optionsId"
       class="div__input-dropdown-controls-content-feedback"
       :style="'width: ' + inputWidth + 'px;' + 'top:' + inputFeedbackTop + 'px;'"
@@ -52,9 +52,10 @@
 import Vue from "vue";
 import BootstrapVue from "bootstrap-vue";
 import { BFormInput } from "bootstrap-vue";
+
 Vue.use(BootstrapVue);
 Vue.component("BFormInput", BFormInput);
-import "bootstrap/dist/css/bootstrap.min.css";
+
 export default {
   name: "InputDropDown",
   props: {
@@ -66,7 +67,6 @@ export default {
     disabled: { type: Boolean, default: false }, // disabled (optional bool=False) (not able to type into input)
     optionsText: { type: Array, required: true },
     optionsId: { type: String, default: "" }, // This prop is utilized by the parent component
-    messageIfInvalid: { type: Boolean, default: false }, // when set to true, will display a simple feedback
     inputBackgroundColor: { type: String, default: "#1c1c1c" },
     containerBackgroundColor: { type: String, default: "rgb(0, 0, 0)" },
   },
@@ -86,6 +86,9 @@ export default {
           name: option,
         };
       });
+    },
+    inputIsInvalid: function () {
+      return this.invalidText !== "";
     },
     inputHeightBackground: function () {
       return this.titleLabel !== "" ? 100 : 60;
@@ -119,7 +122,6 @@ export default {
       this.inputDropdownValueKey = this.value;
     },
   },
-  methods: {},
 };
 </script>
 <style scoped>
@@ -139,6 +141,7 @@ body {
   box-shadow: none;
   z-index: 3;
   pointer-events: all;
+  display: flex;
 }
 
 .span__input-dropdown-content-label {
@@ -146,10 +149,8 @@ body {
   line-height: 100%;
   transform: rotate(0deg);
   overflow: hidden;
-  position: absolute;
   height: 30px;
   top: 0px;
-  left: -15px;
   padding: 5px;
   visibility: visible;
   user-select: none;
@@ -157,9 +158,10 @@ body {
   font-weight: normal;
   font-style: normal;
   text-decoration: none;
-  font-size: 19px;
-  color: rgb(255, 255, 255);
+  font-size: 17px;
+  color: #b7b7b7;
   z-index: 25;
+  text-align: center;
 }
 
 .span__input-controls-content-input-txt-widget {

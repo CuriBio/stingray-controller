@@ -158,7 +158,9 @@ describe("InputWidget.vue", () => {
       localVue,
     });
     const background = wrapper.find(".div__input-background");
-    expect(background.attributes("style")).toStrictEqual("width: 394px; height: 100px;");
+    expect(background.attributes("style")).toStrictEqual(
+      "width: 394px; height: 100px; background: rgb(17, 17, 17); border: 2px solid rgb(17, 17, 17);"
+    );
     const inputTitleLabel = wrapper.find(".span__input-content-label");
     expect(inputTitleLabel.attributes("style")).toStrictEqual("width: 390px;");
     const inputBoundedDiv = wrapper.find(".div__input-controls-content-widget");
@@ -186,7 +188,9 @@ describe("InputWidget.vue", () => {
       localVue,
     });
     const background = wrapper.find(".div__input-background");
-    expect(background.attributes("style")).toStrictEqual("width: 394px; height: 55px;");
+    expect(background.attributes("style")).toStrictEqual(
+      "width: 394px; height: 55px; background: rgb(17, 17, 17); border: 2px solid rgb(17, 17, 17);"
+    );
     const inputTitleLabel = wrapper.find(".span__input-content-label");
     expect(inputTitleLabel.exists()).toBe(false);
 

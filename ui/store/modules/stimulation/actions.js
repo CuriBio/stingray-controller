@@ -2,9 +2,9 @@ import { WellTitle as LabwareDefinition } from "@/js-utils/LabwareCalculations.j
 const twentyFourWellPlateDefinition = new LabwareDefinition(4, 6);
 import { STIM_STATUS, TIME_CONVERSION_TO_MILLIS } from "./enums";
 import {
-  isValidDelayPulse,
-  isValidSinglePulse,
+  areValidPulses,
   convertProtocolCasing,
+  checkPulseCompatibility,
   _convertObjToCamelCase,
   _convertObjToSnakeCase,
 } from "@/js-utils/ProtocolValidation";
@@ -66,28 +66,65 @@ export default {
     };
 
     await newSubprotocolOrder.map(async (pulse) => {
-      const { color } = pulse;
-      let settings = pulse.pulseSettings;
+      if (pulse.type !== "loop") {
+        const { color } = pulse;
+        let settings = pulse.pulseSettings;
+        const startingRepeatIdx = xValues.length - 1;
 
-      const startingRepeatIdx = xValues.length - 1;
+        settings = {
+          type: pulse.type,
+          ...settings,
+        };
 
-      settings = {
-        type: pulse.type,
-        ...settings,
-      };
+        subprotocols.push(settings);
 
-      subprotocols.push(settings);
+        // numCycles defaults to 0 and delay will never update unless run through once
+        let remainingPulseCycles = pulse.type === "Delay" ? 1 : settings.numCycles;
 
-      // numCycles defaults to 0 and delay will never update unless run through once
-      let remainingPulseCycles = pulse.type === "Delay" ? 1 : settings.numCycles;
+        while (remainingPulseCycles > 0) {
+          helper(settings, pulse.type);
+          remainingPulseCycles--;
+        }
 
-      while (remainingPulseCycles > 0) {
-        helper(settings, pulse.type);
-        remainingPulseCycles--;
+        const endingRepeatIdx = xValues.length;
+        colorAssignments.push([color, [startingRepeatIdx, endingRepeatIdx]]);
+      } else {
+        const pulseCopy = JSON.parse(JSON.stringify(pulse));
+
+        // eslint-disable-next-line  no-unused-vars
+        for (const _ of Array(pulse.numIterations).fill()) {
+          pulseCopy.subprotocols.map((innerPulse) => {
+            const { color } = innerPulse;
+            let settings = innerPulse.pulseSettings;
+            const startingRepeatIdx = xValues.length - 1;
+
+            settings = {
+              type: innerPulse.type,
+              ...settings,
+            };
+
+            let remainingPulseCycles = innerPulse.type === "Delay" ? 1 : settings.numCycles;
+
+            while (remainingPulseCycles > 0) {
+              helper(settings, innerPulse.type);
+              remainingPulseCycles--;
+            }
+
+            const endingRepeatIdx = xValues.length;
+            colorAssignments.push([color, [startingRepeatIdx, endingRepeatIdx]]);
+          });
+        }
+
+        pulseCopy.subprotocols = pulseCopy.subprotocols.map((loopedPulse) => {
+          const settings = loopedPulse.pulseSettings;
+          return {
+            type: loopedPulse.type,
+            ...settings,
+          };
+        });
+
+        subprotocols.push(pulseCopy);
       }
-
-      const endingRepeatIdx = xValues.length;
-      colorAssignments.push([color, [startingRepeatIdx, endingRepeatIdx]]);
     });
 
     // convert xValues to correct unit
@@ -157,9 +194,11 @@ export default {
   async handleExportProtocol({ state }) {
     const { protocolAssignments, protocolList } = state;
     // convert to snakecase to be interchangable with MA controller
-    const protocolCopy = [...protocolList].map((protocol) =>
-      convertProtocolCasing(protocol, _convertObjToSnakeCase)
-    );
+    const protocolCopy = [];
+    for (const protocol of [...protocolList]) {
+      const convertedProtocol = convertProtocolCasing(protocol.protocol, _convertObjToSnakeCase);
+      protocolCopy.push({ ...protocol, protocol: convertedProtocol });
+    }
 
     const message = { protocols: protocolCopy.slice(1), protocolAssignments: {} };
 
@@ -203,23 +242,26 @@ export default {
     downloadLink.remove();
   },
 
-  async addImportedProtocol({ commit, getters }, { protocols }) {
+  async addImportedProtocol({ commit, getters }, response) {
     const invalidImportedProtocols = [];
-    for (const [idx, { protocol }] of Object.entries(protocols)) {
+    // first interation only exported single protocols, not array of multiple
+    const protocolsToUse = response.protocols || [{ protocol: response }];
+    // reset stim studio
+    await commit("resetProtocolEditor");
+
+    for (const [idx, { protocol }] of Object.entries(protocolsToUse)) {
       // if protocol is unnamed, assign generic name with place in list, +1 to index
       protocol.name = protocol.name.length > 0 ? protocol.name : `protocol_${idx + 1}`;
       // (22/04/2023) For now with mantarray, all protocols will be exported in snake_case, including from stingray
       const convertedProtocol = convertProtocolCasing(protocol, _convertObjToCamelCase);
-      const invalidPulses = convertedProtocol.subprotocols.filter((pulse) => {
-        // first check if imported protocols are from stingray or mantarray
-        return !(pulse.type === "Delay" ? isValidDelayPulse(pulse) : isValidSinglePulse(pulse));
-      });
+      const compatibleProtocol = checkPulseCompatibility(convertedProtocol);
+      const invalidPulses = areValidPulses(compatibleProtocol.subprotocols);
 
-      if (invalidPulses.length === 0) {
+      if (!invalidPulses) {
         await commit("setEditModeOff");
         // needs to be set to off every iteration because an action elsewhere triggers it on
         const { color, letter } = await getters["getNextProtocol"];
-        const importedProtocol = { color, letter, label: protocol.name, protocol: convertedProtocol };
+        const importedProtocol = { color, letter, label: protocol.name, protocol: compatibleProtocol };
         await commit("setNewProtocol", importedProtocol);
       } else {
         invalidImportedProtocols.push(protocol.name);
@@ -247,6 +289,7 @@ export default {
             protocol: protocolEditor,
           };
       });
+
       await commit("setProtocolList", protocolListCopy);
       await commit("setEditModeOff");
       await dispatch("updateProtocolAssignments", updatedProtocol);
@@ -275,18 +318,19 @@ export default {
     }
 
     const uniqueProtocolIds = new Set();
+
     for (const well in protocolAssignments) {
       // remove open circuit wells
       if (!stimulatorCircuitStatuses.includes(Number(well))) {
         const { stimulationType, subprotocols, runUntilStopped } = protocolAssignments[well].protocol;
-
         const { letter } = protocolAssignments[well];
 
         // add protocol to list of unique protocols if it has not been entered yet
         if (!uniqueProtocolIds.has(letter)) {
           uniqueProtocolIds.add(letter);
           // this needs to be converted before sent because stim type changes independently of pulse settings
-          const convertedSubprotocols = await _getConvertedSettings(subprotocols);
+          const convertedSubprotocols = _getConvertedSettings(subprotocols);
+
           const protocolModel = {
             protocol_id: letter,
             stimulation_type: stimulationType,
@@ -301,7 +345,6 @@ export default {
         message.protocol_assignments[wellNumber] = letter;
       }
     }
-
     const wsProtocolMessage = JSON.stringify({ command: "set_stim_protocols", stim_info: message });
     this.state.system.socket.send(wsProtocolMessage);
 
@@ -375,14 +418,47 @@ export default {
     this.state.system.socket.send(wsMessage);
     commit("setStimStatus", STIM_STATUS.CONFIG_CHECK_IN_PROGRESS);
   },
-  async onPulseMouseenter({ state }, idx) {
-    const hoveredPulse = state.repeatColors[idx];
+  async onPulseMouseenter({ state }, { idx, nestedIdx }) {
+    const originalPulse = state.protocolEditor.detailedSubprotocols[idx];
 
-    state.hoveredPulse = {
-      idx,
-      indices: hoveredPulse[1],
-      color: hoveredPulse[0],
-    };
+    if (nestedIdx >= 0) {
+      // find the starting index by expanding any loops to find corresponding index in repeatColors
+      const startingIdx = state.protocolEditor.detailedSubprotocols
+        // filter any unnecessary indices after hovered over index
+        .filter((_, i) => i < idx)
+        // reduce to get index
+        .reduce((acc, pulse) => {
+          const val = pulse.type === "loop" ? pulse.subprotocols.length * pulse.numIterations : 1;
+          return acc + val;
+        }, 0);
+
+      // loop through subprotocols x amount of times to highlight every instance in a loop
+      const indicesToUse = [...Array(originalPulse.numIterations).keys()].map((i) => {
+        const numSubprotocols = originalPulse.subprotocols.length;
+        const idxToUse = startingIdx + nestedIdx + i * numSubprotocols;
+        return state.repeatColors[idxToUse][1];
+      });
+      state.hoveredPulse = {
+        idx,
+        color: state.repeatColors[startingIdx + nestedIdx][0],
+        indices: indicesToUse,
+      };
+    } else {
+      //  find the index by expanding any loops to find corresponding index in repeatColors
+      const idxToUse = state.protocolEditor.detailedSubprotocols
+        .filter((_, i) => i <= idx)
+        .reduce((acc, pulse, i) => {
+          let val = pulse.type === "loop" ? pulse.subprotocols.length * pulse.numIterations : 1;
+          if (i === 0) val = val-- < 0 ? 0 : val--;
+          return acc + val;
+        }, 0);
+
+      state.hoveredPulse = {
+        idx,
+        indices: [state.repeatColors[idxToUse][1]],
+        color: state.repeatColors[idxToUse][0],
+      };
+    }
   },
 
   checkStimulatorCircuitStatuses({ commit }, stimulatorStatusesObj) {
@@ -407,13 +483,18 @@ export default {
   },
 };
 
-const _getConvertedSettings = async (subprotocols) => {
+const _getConvertedSettings = (subprotocols) => {
   const milliToMicro = 1e3;
   const chargeConversion = milliToMicro;
 
   return subprotocols.map((pulse) => {
     let typeSpecificSettings = {};
-    if (pulse.type === "Delay")
+    if (pulse.type === "loop") {
+      typeSpecificSettings = {
+        num_iterations: pulse.numIterations,
+        subprotocols: _getConvertedSettings(pulse.subprotocols),
+      };
+    } else if (pulse.type === "Delay")
       typeSpecificSettings.duration = pulse.duration * TIME_CONVERSION_TO_MILLIS[pulse.unit] * milliToMicro;
     else
       typeSpecificSettings = {

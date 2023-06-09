@@ -6,6 +6,7 @@ import {
   INVALID_STIM_JSON,
   TEST_PROTOCOL_LIST,
   TEST_PROTOCOL_ORDER,
+  INCOMPATIBLE_PROTOCOL_EXPORT_MULTI,
 } from "@/tests/sample-stim-protocols/stim-protocols";
 
 describe("store/stimulation", () => {
@@ -384,5 +385,61 @@ describe("store/stimulation", () => {
       const { delayBlocks } = store.state.stimulation;
       expect(delayBlocks).toStrictEqual(expectedBlock);
     });
+
+    test.each([INCOMPATIBLE_PROTOCOL_EXPORT_MULTI, INCOMPATIBLE_PROTOCOL_EXPORT_MULTI.protocols[0].protocol])(
+      "When a protocol file is imported, Then the protocol will be converted to latest protocol format if old format is found",
+      async (protocols) => {
+        await store.dispatch("stimulation/addImportedProtocol", protocols);
+        const expectedDetailedPulses = [
+          {
+            type: "Delay",
+            color: "hsla(281, 91%, 41%, 1)",
+            pulseSettings: {
+              duration: 1000,
+              unit: "milliseconds",
+            },
+            subprotocols: [],
+          },
+          {
+            type: "Monophasic",
+            color: "hsla(253, 99%, 58%, 1)",
+            pulseSettings: {
+              frequency: 10,
+              numCycles: 10,
+              phaseOneCharge: 100,
+              phaseOneDuration: 10,
+              postphaseInterval: 90,
+              totalActiveDuration: {
+                duration: 1000,
+                unit: "milliseconds",
+              },
+            },
+            subprotocols: [],
+          },
+          {
+            type: "Biphasic",
+            color: "hsla(11, 99%, 55%, 1)",
+            pulseSettings: {
+              frequency: 1,
+              interphaseInterval: 0,
+              numCycles: 2,
+              phaseOneCharge: 100,
+              phaseOneDuration: 10,
+              phaseTwoCharge: -100,
+              phaseTwoDuration: 10,
+              postphaseInterval: 980,
+              totalActiveDuration: {
+                duration: 2000,
+                unit: "milliseconds",
+              },
+            },
+            subprotocols: [],
+          },
+        ];
+        expect(store.state.stimulation.protocolList[2].protocol.detailedSubprotocols).toStrictEqual(
+          expectedDetailedPulses
+        );
+      }
+    );
   });
 });

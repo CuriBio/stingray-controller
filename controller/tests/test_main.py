@@ -200,7 +200,7 @@ async def test_main__initializes_system_state_correctly(
     # mock to avoid looking for non-existent dir
     mocker.patch.object(main, "configure_logging", autospec=True)
 
-    spied_init_state = mocker.spy(main, "_initialize_system_state")
+    spied_init_state = mocker.spy(main, "initialize_system_state")
 
     cmd_line_args = []
     if base_directory:
@@ -217,7 +217,7 @@ async def test_main__initializes_system_state_correctly(
     expected_system_state = {
         "system_status": SystemStatuses.SERVER_INITIALIZING_STATE,
         "in_simulation_mode": False,
-        "stimulation_protocols_running": [],
+        "stimulation_protocol_statuses": [],
         "main_firmware_update": None,
         "channel_firmware_update": None,
         "latest_software_version": None,

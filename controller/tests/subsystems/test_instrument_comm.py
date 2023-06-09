@@ -10,16 +10,14 @@ from controller.constants import STM_VID
 from controller.exceptions import NoInstrumentDetectedError
 from controller.subsystems import instrument_comm
 from controller.subsystems.instrument_comm import InstrumentComm
-from controller.utils import aio
 import pytest
 import serial
 from serial.tools.list_ports_common import ListPortInfo
 
+from ..fixtures import fixture__wait_tasks_clean
 
-# TODO move this to a general fixture file
-@pytest.fixture(scope="function", name="patch_wait_tasks_clean")
-def fixture__wait_tasks_clean(mocker):
-    yield mocker.patch.object(aio, "wait_tasks_clean", autospec=True, return_value=None)
+
+__fixtures__ = [fixture__wait_tasks_clean]
 
 
 @pytest.fixture(scope="function", name="test_instrument_comm_obj")

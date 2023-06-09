@@ -1,169 +1,172 @@
 <template>
-  <div class="div__stimulation-controls-container">
-    <!-- Tanner (2/1/22): Only need controls block until SVGs are made of all the buttons in this widget and they can be shaded manually when inactive-->
+  <div v-b-popover.hover.bottom="disabledToolTip" :style="isDisabledStyles">
+    <div :style="div__preventInteraction">
+      <div class="div__stimulation-controls-container">
+        <!-- Tanner (2/1/22): Only need controls block until SVGs are made of all the buttons in this widget and they can be shaded manually when inactive-->
 
-    <span class="span__additional-controls-header">Stimulation Controls</span>
-    <div class="div__border-container">
-      <svg class="svg__stimulation-active-button" height="20" width="20">
-        <defs>
-          <radialGradient id="greenGradient">
-            <stop offset="10%" :stop-color="currentGradient[0]" />
-            <stop offset="95%" :stop-color="currentGradient[1]" />
-          </radialGradient>
-        </defs>
-        <circle cx="10" cy="10" r="10" fill="url('#greenGradient')" />
-      </svg>
-      <svg class="svg__stimulation-controls-loop-button" viewBox="0 0 72 72">
-        <path
-          d="M63.1,42,40,52.9a1.5,1.5,0,0,0-.2,2.5l4.1,2.8A23.7,23.7,0,0,1,12.4,37.1,1.4,1.4,0,0,0,11,35.7H1.6A1.4,1.4,0,0,0,.2,37.1a27.9,27.9,0,0,0,.7,5.8.4.4,0,0,0,0,.5,35.4,35.4,0,0,0,9.7,18A36.2,36.2,0,0,0,36,71.9a35.7,35.7,0,0,0,19.4-5.7L60.8,70A1.4,1.4,0,0,0,63,68.9l2.1-25.5A1.4,1.4,0,0,0,63.1,42Z"
-        />
-        <path
-          d="M71.2,29.2a.5.5,0,0,0,0-.5A35.8,35.8,0,0,0,36.1.2,35.7,35.7,0,0,0,16.7,5.9L11.3,2.1A1.4,1.4,0,0,0,9.1,3.2L7,28.6A1.4,1.4,0,0,0,9,30L32.1,19.2a1.5,1.5,0,0,0,.2-2.5l-4.1-2.9a23.9,23.9,0,0,1,27.2,8.7A23.5,23.5,0,0,1,59.7,35a1.3,1.3,0,0,0,1.4,1.3h9.4a1.5,1.5,0,0,0,1.4-1.5A27.8,27.8,0,0,0,71.2,29.2Z"
-        />
-      </svg>
-
-      <span :class="svg__StimulationStudioControlsPlayStopButton__dynamicClass" @click="handlePlayStop">
+        <span class="span__additional-controls-header">Stimulation Controls</span>
+        <div class="div__border-container">
+          <svg class="svg__stimulation-active-button" height="20" width="20">
+            <defs>
+              <radialGradient id="greenGradient">
+                <stop offset="10%" :stop-color="currentGradient[0]" />
+                <stop offset="95%" :stop-color="currentGradient[1]" />
+              </radialGradient>
+            </defs>
+            <circle cx="10" cy="10" r="10" fill="url('#greenGradient')" />
+          </svg>
+          <svg class="svg__stimulation-controls-loop-button" viewBox="0 0 72 72">
+            <path
+              d="M63.1,42,40,52.9a1.5,1.5,0,0,0-.2,2.5l4.1,2.8A23.7,23.7,0,0,1,12.4,37.1,1.4,1.4,0,0,0,11,35.7H1.6A1.4,1.4,0,0,0,.2,37.1a27.9,27.9,0,0,0,.7,5.8.4.4,0,0,0,0,.5,35.4,35.4,0,0,0,9.7,18A36.2,36.2,0,0,0,36,71.9a35.7,35.7,0,0,0,19.4-5.7L60.8,70A1.4,1.4,0,0,0,63,68.9l2.1-25.5A1.4,1.4,0,0,0,63.1,42Z"
+            />
+            <path
+              d="M71.2,29.2a.5.5,0,0,0,0-.5A35.8,35.8,0,0,0,36.1.2,35.7,35.7,0,0,0,16.7,5.9L11.3,2.1A1.4,1.4,0,0,0,9.1,3.2L7,28.6A1.4,1.4,0,0,0,9,30L32.1,19.2a1.5,1.5,0,0,0,.2-2.5l-4.1-2.9a23.9,23.9,0,0,1,27.2,8.7A23.5,23.5,0,0,1,59.7,35a1.3,1.3,0,0,0,1.4,1.3h9.4a1.5,1.5,0,0,0,1.4-1.5A27.8,27.8,0,0,0,71.2,29.2Z"
+            />
+          </svg>
+          <span :class="svg__StimulationStudioControlsPlayStopButton__dynamicClass" @click="handlePlayStop">
+            <div
+              v-if="!playState"
+              id="start-stim-button"
+              v-b-popover.hover.top="startStimLabel"
+              title="Start Stimulation"
+            >
+              <!-- this is here for testing the popover message -->
+              <span id="start-popover-msg" style="display: none">{{ startStimLabel }}</span>
+              <FontAwesomeIcon class="fontawesome-icon-class" :icon="['fa', 'play-circle']" />
+            </div>
+            <div v-if="playState" v-b-popover.hover.bottom="stopStimLabel" title="Stop Stimulation">
+              <!-- this is here for testing the popover message -->
+              <span id="stop-popover-msg" style="display: none">{{ stopStimLabel }}</span>
+              <FontAwesomeIcon class="fontawesome-icon-class" :icon="['fa', 'stop-circle']" />
+            </div>
+          </span>
+        </div>
         <div
-          v-if="!playState"
-          id="start-stim-button"
-          v-b-popover.hover.top="startStimLabel"
-          title="Start Stimulation"
+          v-b-popover.hover.bottomright="'Edit account settings'"
+          :title="'Settings'"
+          class="div__settings-button-container"
+          @click="$bvModal.show('settings-form')"
         >
-          <!-- this is here for testing the popover message -->
-          <span id="start-popover-msg" style="display: none">{{ startStimLabel }}</span>
-          <FontAwesomeIcon class="fontawesome-icon-class" :icon="['fa', 'play-circle']" />
+          <SettingsButton />
         </div>
-        <div v-if="playState" v-b-popover.hover.bottom="stopStimLabel" title="Stop Stimulation">
-          <!-- this is here for testing the popover message -->
-          <span id="stop-popover-msg" style="display: none">{{ stopStimLabel }}</span>
-          <FontAwesomeIcon class="fontawesome-icon-class" :icon="['fa', 'stop-circle']" />
-        </div>
-      </span>
-    </div>
-    <div
-      v-b-popover.hover.bottomright="'Edit account settings'"
-      :title="'Settings'"
-      class="div__settings-button-container"
-      @click="$bvModal.show('settings-form')"
-    >
-      <SettingsButton />
-    </div>
-    <div
-      v-b-popover.hover.bottom="configurationMessage"
-      title="Configuration Check"
-      class="div__config-check-container"
-    >
-      <svg
-        class="svg__config-check-container"
-        x="0px"
-        y="0px"
-        viewBox="-10 -10 100 100"
-        @click="startStimConfiguration"
-      >
-        <path
-          :class="svg__StimulationStudioControlsConfigCheckButton__dynamicClass"
-          d="M30.9,2.4c15.71,0,28.5,12.79,28.5,28.5c0,15.71-12.79,28.5-28.5,28.5S2.4,46.61,2.4,30.9
+        <div
+          v-b-popover.hover.bottom="configurationMessage"
+          title="Configuration Check"
+          class="div__config-check-container"
+        >
+          <svg
+            class="svg__config-check-container"
+            x="0px"
+            y="0px"
+            viewBox="-10 -10 100 100"
+            @click="startStimConfiguration"
+          >
+            <path
+              :class="svg__StimulationStudioControlsConfigCheckButton__dynamicClass"
+              d="M30.9,2.4c15.71,0,28.5,12.79,28.5,28.5c0,15.71-12.79,28.5-28.5,28.5S2.4,46.61,2.4,30.9
 	C2.4,15.18,15.18,2.4,30.9,2.4"
-        />
-        <g>
-          <g>
+            />
             <g>
               <g>
-                <path
-                  class="svg__inner-circle"
-                  d="M17.26,28.81c1.14,0,2.07,0.93,2.07,2.07c0,1.14-0.93,2.07-2.07,2.07s-2.07-0.93-2.07-2.07
+                <g>
+                  <g>
+                    <path
+                      class="svg__inner-circle"
+                      d="M17.26,28.81c1.14,0,2.07,0.93,2.07,2.07c0,1.14-0.93,2.07-2.07,2.07s-2.07-0.93-2.07-2.07
 					C15.2,29.73,16.12,28.81,17.26,28.81 M17.26,24.81c-3.35,0-6.07,2.72-6.07,6.07c0,3.35,2.72,6.07,6.07,6.07
 					c3.35,0,6.07-2.72,6.07-6.07C23.33,27.52,20.61,24.81,17.26,24.81L17.26,24.81z"
-                />
+                    />
+                  </g>
+                </g>
               </g>
-            </g>
-          </g>
-          <g>
-            <g>
               <g>
-                <path
-                  class="svg__inner-circle"
-                  d="M45.26,28.81c1.14,0,2.07,0.93,2.07,2.07c0,1.14-0.93,2.07-2.07,2.07s-2.07-0.93-2.07-2.07
+                <g>
+                  <g>
+                    <path
+                      class="svg__inner-circle"
+                      d="M45.26,28.81c1.14,0,2.07,0.93,2.07,2.07c0,1.14-0.93,2.07-2.07,2.07s-2.07-0.93-2.07-2.07
 					C43.2,29.73,44.12,28.81,45.26,28.81 M45.26,24.81c-3.35,0-6.07,2.72-6.07,6.07c0,3.35,2.72,6.07,6.07,6.07
 					c3.35,0,6.07-2.72,6.07-6.07C51.33,27.52,48.61,24.81,45.26,24.81L45.26,24.81z"
-                />
+                    />
+                  </g>
+                </g>
               </g>
             </g>
-          </g>
-        </g>
-        <line class="svg__inner-line" x1="11.73" y1="30.87" x2="3.48" y2="30.87" />
-        <line class="svg__inner-line" x1="34.8" y1="17.28" x2="21.16" y2="30.91" />
-        <line class="svg__inner-line" x1="58.73" y1="30.87" x2="50.48" y2="30.87" />
-      </svg>
-      <span v-show="configCheckInProgress" class="span__spinner">
-        <FontAwesomeIcon :style="'fill: #ececed;'" :icon="['fa', 'spinner']" pulse />
-      </span>
+            <line class="svg__inner-line" x1="11.73" y1="30.87" x2="3.48" y2="30.87" />
+            <line class="svg__inner-line" x1="34.8" y1="17.28" x2="21.16" y2="30.91" />
+            <line class="svg__inner-line" x1="58.73" y1="30.87" x2="50.48" y2="30.87" />
+          </svg>
+          <span v-show="configCheckInProgress" class="span__spinner">
+            <FontAwesomeIcon :style="'fill: #ececed;'" :icon="['fa', 'spinner']" pulse />
+          </span>
+        </div>
+        <b-modal
+          id="open-circuit-warning"
+          size="sm"
+          hide-footer
+          hide-header
+          hide-header-close
+          :static="true"
+          :no-close-on-backdrop="true"
+        >
+          <StatusWarningWidget
+            :modalLabels="openCircuitLabels"
+            @handle-confirmation="$bvModal.hide('open-circuit-warning')"
+          />
+        </b-modal>
+        <b-modal
+          id="stim-24hr-warning"
+          size="sm"
+          hide-footer
+          hide-header
+          hide-header-close
+          :static="true"
+          :no-close-on-backdrop="true"
+        >
+          <StatusWarningWidget :modalLabels="timerWarningLabels" @handle-confirmation="closeTimerModal" />
+        </b-modal>
+        <b-modal
+          id="settings-form"
+          hide-footer
+          hide-header
+          hide-header-close
+          :no-close-on-backdrop="true"
+          :static="true"
+        >
+          <SettingsForm @close-modal="closeSettingsModal" />
+        </b-modal>
+        <b-modal
+          id="user-input-prompt-message"
+          size="sm"
+          hide-footer
+          hide-header
+          hide-header-close
+          :static="true"
+          :no-close-on-backdrop="true"
+        >
+          <!-- Tanner (4/6/23): This modal lives in this compenent since the settings modal is always opened after it's closed. It's possible to refactor and move this to StatusBar however, but for keeping here right now for simplicity -->
+          <StatusWarningWidget
+            id="user-input-prompt"
+            :modalLabels="userInputPromptLabels"
+            @handle-confirmation="closeUserInputPromptModal"
+          />
+        </b-modal>
+        <b-modal
+          id="invalid-imported-protocols"
+          size="sm"
+          hide-footer
+          hide-header
+          hide-header-close
+          :static="true"
+          :no-close-on-backdrop="true"
+        >
+          <StatusWarningWidget
+            :modalLabels="invalidImportedProtocolsLabels"
+            @handle-confirmation="closeInvalidProtocolModal"
+          />
+        </b-modal>
+      </div>
     </div>
-    <b-modal
-      id="open-circuit-warning"
-      size="sm"
-      hide-footer
-      hide-header
-      hide-header-close
-      :static="true"
-      :no-close-on-backdrop="true"
-    >
-      <StatusWarningWidget
-        :modalLabels="openCircuitLabels"
-        @handle-confirmation="$bvModal.hide('open-circuit-warning')"
-      />
-    </b-modal>
-    <b-modal
-      id="stim-24hr-warning"
-      size="sm"
-      hide-footer
-      hide-header
-      hide-header-close
-      :static="true"
-      :no-close-on-backdrop="true"
-    >
-      <StatusWarningWidget :modalLabels="timerWarningLabels" @handle-confirmation="closeTimerModal" />
-    </b-modal>
-    <b-modal
-      id="settings-form"
-      hide-footer
-      hide-header
-      hide-header-close
-      :no-close-on-backdrop="true"
-      :static="true"
-    >
-      <SettingsForm @close-modal="closeSettingsModal" />
-    </b-modal>
-    <b-modal
-      id="user-input-prompt-message"
-      size="sm"
-      hide-footer
-      hide-header
-      hide-header-close
-      :static="true"
-      :no-close-on-backdrop="true"
-    >
-      <!-- Tanner (4/6/23): This modal lives in this compenent since the settings modal is always opened after it's closed. It's possible to refactor and move this to StatusBar however, but for keeping here right now for simplicity -->
-      <StatusWarningWidget
-        id="user-input-prompt"
-        :modalLabels="userInputPromptLabels"
-        @handle-confirmation="closeUserInputPromptModal"
-      />
-    </b-modal>
-    <b-modal
-      id="invalid-imported-protocols"
-      size="sm"
-      hide-footer
-      hide-header
-      hide-header-close
-      :static="true"
-      :no-close-on-backdrop="true"
-    >
-      <StatusWarningWidget
-        :modalLabels="invalidImportedProtocolsLabels"
-        @handle-confirmation="closeInvalidProtocolModal"
-      />
-    </b-modal>
   </div>
 </template>
 <script>
@@ -177,8 +180,9 @@ import Vue from "vue";
 import BootstrapVue from "bootstrap-vue";
 import { library } from "@fortawesome/fontawesome-svg-core";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
-import { mapState } from "vuex";
+import { mapState, mapGetters } from "vuex";
 import { VBPopover, BDropdown, BDropdownItemButton } from "bootstrap-vue";
+import { SYSTEM_STATUS } from "@/store/modules/system/enums";
 
 Vue.directive("b-popover", VBPopover);
 Vue.directive("b-dropdown", BDropdown);
@@ -243,6 +247,8 @@ export default {
         buttonNames: ["Okay"],
       },
       stim24hrTimer: null,
+      disabledToolTip: "Controls disabled until connected to instrument.",
+      disabled: true,
     };
   },
   computed: {
@@ -255,6 +261,19 @@ export default {
     ...mapState("system", ["barcodes"]),
     ...mapState("settings", ["userCredInputNeeded"]),
     ...mapState("stimulation", ["invalidImportedProtocols"]),
+    ...mapGetters({
+      statusUuid: "system/statusId",
+    }),
+    div__preventInteraction: function () {
+      return {
+        pointerEvents: this.disabled ? "none" : "auto",
+      };
+    },
+    isDisabledStyles: function () {
+      return {
+        opacity: this.disabled ? 0.5 : 1,
+      };
+    },
     isStartStopButtonEnabled: function () {
       if (!this.playState) {
         // if starting stim make sure initial magnetometer calibration has been completed and
@@ -365,6 +384,12 @@ export default {
     },
     invalidImportedProtocols: function () {
       if (this.invalidImportedProtocols.length > 0) this.$bvModal.show("invalid-imported-protocols");
+    },
+    statusUuid: function (new_status) {
+      if (new_status == SYSTEM_STATUS.IDLE_READY_STATE) {
+        this.disabled = false;
+        this.disabledToolTip = "";
+      }
     },
   },
   methods: {
@@ -567,6 +592,9 @@ body {
   top: 26px;
   left: 60px;
   position: absolute;
+  overflow: hidden;
+  height: 50px;
+  width: 50px;
 }
 
 .svg__waveform-icon {

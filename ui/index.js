@@ -37,8 +37,6 @@ export { default as CheckBoxWidget } from "./components/basic-widgets/CheckBoxWi
 export { default as StimulationStudioPlateWell } from "./components/stimulation/StimulationStudioPlateWell.vue";
 
 // Settings related
-export { default as AddUser } from "./components/settings/AddUser.vue";
-export { default as EditUser } from "./components/settings/EditUser.vue";
 export { default as SettingsButton } from "./components/settings/SettingsButton.vue";
 export { default as SettingsForm } from "./components/settings/SettingsForm.vue";
 
@@ -56,7 +54,7 @@ export { default as StimulationStudioCreateAndEdit } from "./components/stimulat
 export { default as StimulationStudioDragAndDropPanel } from "./components/stimulation/StimulationStudioDragAndDropPanel.vue";
 export { default as StimulationStudioBlockViewEditor } from "./components/stimulation/StimulationStudioBlockViewEditor.vue";
 export { default as StimulationStudioWaveformSettingModal } from "./components/stimulation/StimulationStudioWaveformSettingModal.vue";
-export { default as StimulationStudioDelayModal } from "./components/stimulation/StimulationStudioDelayModal.vue";
+export { default as StimulationStudioInputModal } from "./components/stimulation/StimulationStudioInputModal.vue";
 export { default as StimulationStudioProtocolViewer } from "./components/stimulation/StimulationStudioProtocolViewer.vue";
 export { default as StimulationStudioWaveform } from "./components/stimulation/StimulationStudioWaveform.vue";
 export { default as StimulationStudioZoomControls } from "./components/stimulation/StimulationStudioZoomControls.vue";

@@ -70,7 +70,7 @@ async def main(command_line_args: list[str]) -> None:
         # TODO wrap all this in a function?
 
         system_state_manager = SystemStateManager()
-        await system_state_manager.update(_initialize_system_state(parsed_args, log_file_id))
+        await system_state_manager.update(initialize_system_state(parsed_args, log_file_id))
 
         comm_queues = create_system_comm_queues()
         data_queues = create_system_data_queues()
@@ -185,8 +185,7 @@ def _log_cmd_line_args(parsed_args: dict[str, Any]) -> None:
     logger.info(f"Command Line Args: {parsed_args_copy}".replace(r"\\", "\\"))
 
 
-# TODO make this function reusable in tests
-def _initialize_system_state(parsed_args: dict[str, Any], log_file_id: uuid.UUID) -> dict[str, Any]:
+def initialize_system_state(parsed_args: dict[str, Any], log_file_id: uuid.UUID) -> dict[str, Any]:
     base_directory = (
         parsed_args["base_directory"] if parsed_args["base_directory"] is not None else os.getcwd()
     )
@@ -195,7 +194,7 @@ def _initialize_system_state(parsed_args: dict[str, Any], log_file_id: uuid.UUID
         # main
         "system_status": SystemStatuses.SERVER_INITIALIZING_STATE,
         "in_simulation_mode": False,
-        "stimulation_protocols_running": [],
+        "stimulation_protocol_statuses": [],
         # updating
         "main_firmware_update": None,
         "channel_firmware_update": None,

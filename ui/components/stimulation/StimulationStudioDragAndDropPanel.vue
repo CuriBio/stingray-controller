@@ -1,18 +1,20 @@
 <template>
   <div>
-    <div :class="modalType !== null || openDelayModal ? 'modal_overlay' : null">
+    <div :class="isModalOpen ? 'div__modal-overlay' : null">
       <div>
-        <div class="div__DragAndDdrop-panel">
+        <div class="div__drag-and-drop-panel">
           <span class="span__stimulationstudio-drag-drop-header-label">Drag/Drop Waveforms</span>
           <canvas class="canvas__stimulationstudio-header-separator" />
           <div v-if="disableEdits" v-b-popover.hover.bottom="sidebarBlockLabel" class="div__sidebar-block" />
           <draggable
             v-model="iconTypes"
             tag="div"
-            class="draggable_tile_container"
+            class="draggable__tile-container"
             :disabled="disableEdits"
             :group="{ name: 'order', pull: 'clone', put: false }"
             :clone="clone"
+            @start="isDragging = true"
+            @end="isDragging = false"
           >
             <div v-for="(type, idx) in iconTypes" :id="type" :key="idx">
               <img :src="require(`@/assets/img/${type}.png`)" />
@@ -30,7 +32,6 @@
           :style="disableDropdown ? 'cursor: unset;' : null"
           @selection-changed="handleTimeUnit"
         />
-
         <div class="div__scroll-container">
           <draggable
             v-model="protocolOrder"
@@ -39,23 +40,61 @@
             :group="{ name: 'order' }"
             :ghost-class="'ghost'"
             @change="checkType($event)"
-            @start="isDragging = true"
+            @start="startDragging"
             @end="isDragging = false"
           >
-            <div v-for="(types, idx) in protocolOrder" :key="idx" class="div__tile-container">
+            <div
+              v-for="(pulse, idx) in protocolOrder"
+              :key="idx"
+              :class="'div__repeat-container'"
+              :style="getBorderStyle(pulse)"
+            >
+              <!-- Only display circular icon when nested loop, icon displays number of loops -->
+              <div v-if="pulse.numIterations" :class="'div__repeat-label-container'">
+                <div class="div__circle" @dblclick="openRepeatModalForEdit(pulse.numIterations, idx)">
+                  <span :class="'span__repeat-label'">
+                    {{ pulse.numIterations }}
+                  </span>
+                </div>
+              </div>
               <img
+                v-if="pulse.type !== 'loop'"
                 id="img__waveform-tile"
-                :src="require(`@/assets/img/${types.type}.png`)"
-                @dblclick="openModalForEdit(types.type, idx)"
+                :src="require(`@/assets/img/${pulse.type}.png`)"
+                @dblclick="openModalForEdit(pulse.type, idx)"
                 @mouseenter="onPulseEnter(idx)"
                 @mouseleave="onPulseLeave"
               />
+              <!-- Below is nested dropzone, can be disabled if needed -->
+              <draggable
+                v-model="pulse.subprotocols"
+                class="dropzone"
+                :style="pulse.type === 'loop' && 'margin-right: -31px'"
+                :group="{ name: 'order' }"
+                :ghost-class="'ghost'"
+                :emptyInsertThreshold="40"
+                :disabled="isNestingDisabled"
+                @change="handleProtocolLoop($event)"
+                @start="isDragging = true"
+                @end="isDragging = false"
+              >
+                <div
+                  v-for="(nestedPulse, nestedIdx) in pulse.subprotocols"
+                  :key="nestedIdx"
+                  :style="'position: relative;'"
+                  @dblclick="openModalForEdit(nestedPulse.type, idx, nestedIdx)"
+                  @mouseenter="onPulseEnter(idx, nestedIdx)"
+                  @mouseleave="onPulseLeave"
+                >
+                  <img :src="require(`@/assets/img/${nestedPulse.type}.png`)" :style="'margin-top: 4px;'" />
+                </div>
+              </draggable>
             </div>
           </draggable>
         </div>
       </div>
     </div>
-    <div v-if="modalType !== null" class="modal-container">
+    <div v-if="modalType !== null" class="div__modal-container">
       <StimulationStudioWaveformSettingModal
         :pulseType="modalType"
         :modalOpenForEdit="modalOpenForEdit"
@@ -64,22 +103,33 @@
         @close="onModalClose"
       />
     </div>
-    <div v-if="openDelayModal" class="modal-container delay-container">
-      <StimulationStudioDelayModal
+    <div v-if="openDelayModal" class="div__modal-container delay-container">
+      <StimulationStudioInputModal
         :modalOpenForEdit="modalOpenForEdit"
-        :currentDelayUnit="currentDelayUnit"
-        :currentDelayInput="currentDelayInput"
+        :currentUnit="currentDelayUnit"
+        :currentInput="currentInput"
         :currentColor="selectedColor"
-        @delayClose="onModalClose"
+        @input-close="onModalClose"
+      />
+    </div>
+    <div v-if="openRepeatModal" class="div__modal-container repeat-container">
+      <StimulationStudioInputModal
+        :modalOpenForEdit="modalOpenForEdit"
+        :currentInput="currentInput"
+        :inputLabel="'Number of Iterations:'"
+        :includeUnits="false"
+        :modalTitle="'Setup Subprotocol Loop'"
+        @input-close="closeRepeatModal"
       />
     </div>
   </div>
 </template>
 <script>
 import StimulationStudioWaveformSettingModal from "@/components/stimulation/StimulationStudioWaveformSettingModal.vue";
-import StimulationStudioDelayModal from "@/components/stimulation/StimulationStudioDelayModal.vue";
+import StimulationStudioInputModal from "@/components/stimulation/StimulationStudioInputModal.vue";
 import SmallDropDown from "@/components/basic-widgets/SmallDropDown.vue";
 import { generateRandomColor } from "@/js-utils/WaveformDataFormatter";
+import { DEFAULT_SUBPROTOCOL_TEMPLATES } from "@/js-utils/ProtocolValidation";
 
 import draggable from "vuedraggable";
 import { mapState, mapActions, mapMutations } from "vuex";
@@ -91,9 +141,9 @@ import { mapState, mapActions, mapMutations } from "vuex";
  * @vue-data {Array} protocolOrder -  This is the complete order of pulses/delays/repeats in the entire new protocol
  * @vue-data {String} modalType - Tracks which modal should open based on pulse type
  * @vue-data {String} settingType - This is the stimulation type that user selects from drop down in settings panel
- * @vue-data {Int} shiftClickImgIdx - Index of selected pulse to edit in order to save new settings to correct pulse
+ * @vue-data {Int} dblClickPulseIdx - Index of selected pulse to edit in order to save new settings to correct pulse
  * @vue-data {String} openDelayModal - Tracks which modal should open based on if it is a repeat or delay
- * @vue-data {String} currentDelayInput - Saved input for a delay block that changes depending on which delay block is opened for edit
+ * @vue-data {String} currentInput - Saved input for a delay block that changes depending on which delay block is opened for edit
  * @vue-data {Boolean} cloned - Determines if a placed tile in protocol order is new and needs a modal to open appear to set settings or just an order rearrangement of existing tiles
  * @vue-data {Int} newClonedIdx - If tile placed in protocol order is new, this index allows settings to be saved to correct index in order
  * @vue-data {Boolean} modalOpenForEdit - Determines if existing modal inputs should appear in modal for a reedit or if it's a new delay block with blank settings
@@ -111,7 +161,7 @@ export default {
   components: {
     draggable,
     StimulationStudioWaveformSettingModal,
-    StimulationStudioDelayModal,
+    StimulationStudioInputModal,
     SmallDropDown,
   },
   props: {
@@ -125,17 +175,19 @@ export default {
       protocolOrder: [],
       modalType: null,
       settingType: "Current",
-      shiftClickImgIdx: null,
+      dblClickPulseIdx: null,
       openDelayModal: false,
-      currentDelayInput: null,
+      currentInput: null,
       currentDelayUnit: "milliseconds",
       cloned: false,
       newClonedIdx: null,
-      modalOpenForEdit: false, // TODO Luci, clean up state management and constant names
+      modalOpenForEdit: false,
       timeUnitsIdx: 0,
       disableDropdown: false,
       isDragging: false,
       selectedColor: null,
+      openRepeatModal: false,
+      dblClickPulseNestedIdx: null,
     };
   },
   computed: {
@@ -144,6 +196,24 @@ export default {
       runUntilStopped: (state) => state.protocolEditor.runUntilStopped,
       detailedSubprotocols: (state) => state.protocolEditor.detailedSubprotocols,
     }),
+    isNestingDisabled: function () {
+      // disable nesting if the dragged pulse is a nested loop already to prevent deep nesting
+      // OR a new pulse is being placed
+      const selectedPulse = this.protocolOrder[this.isDragging];
+
+      return (
+        (Number.isInteger(this.isDragging) && selectedPulse && selectedPulse.type === "loop") || this.cloned
+      );
+    },
+    idxOfNewLoop: function () {
+      // dynamically find the correct index to replace with a loop on modal closure
+      return this.protocolOrder.findIndex(
+        (protocol) => protocol.subprotocols.length > 0 && protocol.type !== "loop"
+      );
+    },
+    isModalOpen: function () {
+      return this.modalType !== null || this.openDelayModal || this.openRepeatModal;
+    },
   },
   watch: {
     isDragging: function () {
@@ -151,7 +221,18 @@ export default {
       this.onPulseMouseleave();
     },
     detailedSubprotocols: function () {
-      this.protocolOrder = JSON.parse(JSON.stringify(this.detailedSubprotocols));
+      this.protocolOrder = JSON.parse(
+        JSON.stringify(
+          this.detailedSubprotocols.map((protocol) =>
+            protocol.type !== "loop"
+              ? {
+                  ...protocol,
+                  subprotocols: [],
+                }
+              : protocol
+          )
+        )
+      );
     },
     timeUnit: function () {
       this.timeUnitsIdx = this.timeUnitsArray.indexOf(this.timeUnit);
@@ -169,92 +250,193 @@ export default {
         const { element, newIndex } = e.added;
         this.newClonedIdx = newIndex;
         this.selectedPulseSettings = element.pulseSettings;
-
-        if (element.type === "Monophasic") this.modalType = "Monophasic";
-        else if (element.type === "Biphasic") this.modalType = "Biphasic";
+        this.selectedColor = element.color;
+        if (["Monophasic", "Biphasic"].includes(element.type)) this.modalType = element.type;
         else if (element.type === "Delay") this.openDelayModal = true;
+      } else if (e.removed) {
+        // if a tile on the left side of another is dragged and dropped into the right subprotocol loop, for some reason the change only gets caught here
+        // need to basically mimic the handle_protocol_loop({e: {added: {}}}) event
+        if (!this.dblClickPulseIdx && this.idxOfNewLoop !== -1) {
+          this.dblClickPulseIdx = this.idxOfNewLoop;
+          this.selectedPulseSettings = e.removed.element;
+          this.openRepeatModal = true;
+        }
       }
 
-      if ((e.added && !this.cloned) || e.moved || e.removed) this.handleProtocolOrder(this.protocolOrder);
+      if ((e.added && !this.cloned) || e.moved || e.removed) {
+        this.handleProtocolOrder(this.protocolOrder);
+      }
       // reset
       this.cloned = false;
     },
     onModalClose(button, pulseSettings, selectedColor) {
       this.modalType = null;
-      this.openDelayModal = false;
-      this.modalOpenForEdit = false;
-      this.currentDelayInput = null;
+      this.currentInput = null;
       this.currentDelayUnit = "milliseconds";
       this.selectedColor = null;
 
+      if (this.newClonedIdx !== null) {
+        this.handleNewSettings(button, pulseSettings, selectedColor);
+      } else if (isNaN(this.dblClickPulseNestedIdx)) {
+        this.handleEditedSettings(button, pulseSettings, selectedColor);
+      } else {
+        this.handleNestedSettings(button, pulseSettings, selectedColor);
+      }
+    },
+    startDragging({ oldIndex }) {
+      this.isDragging = oldIndex;
+    },
+    handleNewSettings(button, pulseSettings, selectedColor) {
+      const newPulse = this.protocolOrder[this.newClonedIdx];
+
       switch (button) {
         case "Save":
-          if (this.newClonedIdx !== null) {
-            const newPulse = this.protocolOrder[this.newClonedIdx];
-            newPulse.pulseSettings = pulseSettings;
-            newPulse.color = selectedColor;
-            Object.assign(this.protocolOrder[this.newClonedIdx], newPulse);
-          }
-          if (this.shiftClickImgIdx !== null) {
-            const editedPulse = this.protocolOrder[this.shiftClickImgIdx];
+          newPulse.color = selectedColor;
+          Object.assign(newPulse.pulseSettings, pulseSettings);
+          break;
+        case "Cancel":
+          this.protocolOrder.splice(this.newClonedIdx, 1);
+      }
 
-            Object.assign(editedPulse.pulseSettings, pulseSettings);
-            Object.assign(this.protocolOrder[this.shiftClickImgIdx], editedPulse);
-            editedPulse.color = selectedColor;
+      this.newClonedIdx = null;
+      this.openDelayModal = false;
+      // dispatch vuex state changes
+      this.handleProtocolOrder(this.protocolOrder);
+    },
+    handleEditedSettings(button, pulseSettings, selectedColor) {
+      const editedPulse = this.protocolOrder[this.dblClickPulseIdx];
+      const duplicatePulse = JSON.parse(JSON.stringify(editedPulse));
+
+      // change color and insert after original pulse
+      const previousHue = this.getPulseHue(this.dblClickPulseIdx);
+      const nextHue =
+        this.dblClickPulseIdx < this.protocolOrder.length - 1
+          ? this.getPulseHue(this.dblClickPulseIdx + 1)
+          : undefined;
+
+      switch (button) {
+        case "Save":
+          Object.assign(editedPulse.pulseSettings, pulseSettings);
+          editedPulse.color = selectedColor;
+          break;
+        case "Duplicate":
+          duplicatePulse.color = generateRandomColor(true, previousHue, nextHue);
+          this.protocolOrder.splice(this.dblClickPulseIdx + 1, 0, duplicatePulse);
+          break;
+        case "Delete":
+          this.protocolOrder.splice(this.dblClickPulseIdx, 1);
+          break;
+      }
+
+      this.dblClickPulseIdx = null;
+      this.openDelayModal = false;
+      this.modalOpenForEdit = false;
+      // dispatch vuex state changes
+      this.handleProtocolOrder(this.protocolOrder);
+    },
+    handleNestedSettings(button, pulseSettings, selectedColor) {
+      const editedPulse = this.protocolOrder[this.dblClickPulseIdx];
+      const { subprotocols } = editedPulse;
+      // needs to not edit original pulse, editedPulse does
+      const editedNestedPulse = subprotocols[this.dblClickPulseNestedIdx];
+      const editedNestedPulseCopy = JSON.parse(JSON.stringify(editedNestedPulse));
+      const numSubprotocols = subprotocols.length;
+
+      switch (button) {
+        case "Save":
+          Object.assign(editedNestedPulse.pulseSettings, pulseSettings);
+          editedNestedPulse.color = selectedColor;
+          break;
+        case "Duplicate":
+          // generate color considering previous and next pulses colors
+          editedNestedPulseCopy.color = generateRandomColor(
+            true,
+            this.getPulseHue(this.dblClickPulseIdx, this.dblClickPulseNestedIdx),
+            this.dblClickPulseNestedIdx + 1 < numSubprotocols - 1
+              ? this.getPulseHue(this.dblClickPulseIdx, this.dblClickPulseNestedIdx + 1)
+              : undefined
+          );
+
+          editedPulse.subprotocols.splice(this.dblClickPulseNestedIdx + 1, 0, editedNestedPulseCopy);
+          break;
+
+        case "Delete":
+          if (numSubprotocols - 1 === 1) {
+            this.protocolOrder.splice(
+              this.dblClickPulseIdx,
+              1,
+              subprotocols[this.dblClickPulseNestedIdx === 0 ? 1 : 0]
+            );
+          } else {
+            editedPulse.subprotocols.splice(this.dblClickPulseNestedIdx, 1);
+          }
+          break;
+      }
+
+      this.dblClickPulseNestedIdx = null;
+      this.openDelayModal = false;
+      this.modalOpenForEdit = false;
+      // dispatch vuex state changes
+      this.handleProtocolOrder(this.protocolOrder);
+    },
+    closeRepeatModal(button, value) {
+      this.openRepeatModal = false;
+      this.currentInput = null;
+      // create loop object to replace at index in protocol order
+      const loopPulse = {
+        type: "loop",
+        numIterations: value,
+        subprotocols: [this.protocolOrder[this.dblClickPulseIdx], this.selectedPulseSettings],
+      };
+
+      switch (button) {
+        case "Save":
+          if (this.modalOpenForEdit) {
+            this.protocolOrder[this.dblClickPulseIdx].numIterations = value;
+          } else {
+            this.protocolOrder.splice(this.dblClickPulseIdx, 1, loopPulse);
           }
           break;
         case "Duplicate":
-          // eslint-disable-next-line no-case-declarations
-          const duplicatePulse = // needs to not edit original pulse, editedPulse does
-            this.shiftClickImgIdx !== null
-              ? JSON.parse(JSON.stringify(this.protocolOrder[this.shiftClickImgIdx]))
-              : null;
-
-          // change color and insert after original pulse
-          // eslint-disable-next-line no-case-declarations
-          const previousHue = this.getPulseHue(this.shiftClickImgIdx);
-          // eslint-disable-next-line no-case-declarations
-          const nextHue =
-            this.shiftClickImgIdx < this.protocolOrder.length - 1
-              ? this.getPulseHue(this.shiftClickImgIdx + 1)
-              : undefined;
-
-          duplicatePulse.color = generateRandomColor(true, previousHue, nextHue);
-          this.protocolOrder.splice(this.shiftClickImgIdx + 1, 0, duplicatePulse);
+          this.protocolOrder.splice(this.dblClickPulseIdx, 0, this.protocolOrder[this.dblClickPulseIdx]);
           break;
         case "Delete":
-          this.protocolOrder.splice(this.shiftClickImgIdx, 1);
+          this.protocolOrder.splice(this.dblClickPulseIdx, 1);
           break;
         case "Cancel":
-          if (this.newClonedIdx !== null) {
-            this.protocolOrder.splice(this.newClonedIdx, 1);
+          if (!this.modalOpenForEdit) {
+            this.protocolOrder.splice(this.dblClickPulseIdx + 1, 0, this.selectedPulseSettings);
           }
       }
-      this.newClonedIdx = null;
-      this.shiftClickImgIdx = null;
+
       this.handleProtocolOrder(this.protocolOrder);
+      this.modalOpenForEdit = false;
+      this.dblClickPulseIdx = null;
     },
-    openModalForEdit(type, idx) {
-      const pulse = this.protocolOrder[idx];
-      this.shiftClickImgIdx = idx;
+    openModalForEdit(type, idx, nestedIdx) {
+      const pulse =
+        nestedIdx >= 0 ? this.protocolOrder[idx].subprotocols[nestedIdx] : this.protocolOrder[idx];
+
+      this.dblClickPulseIdx = idx;
+      this.dblClickPulseNestedIdx = nestedIdx;
       this.modalOpenForEdit = true;
       this.selectedPulseSettings = pulse.pulseSettings;
       this.selectedColor = pulse.color;
 
-      if (type === "Monophasic") {
-        this.modalType = "Monophasic";
-      } else if (type === "Biphasic") {
-        this.modalType = "Biphasic";
+      if (["Monophasic", "Biphasic"].includes(type)) {
+        this.modalType = type;
       } else if (type === "Delay") {
         const { duration, unit } = this.selectedPulseSettings;
-        this.currentDelayInput = duration.toString();
+        this.currentInput = duration.toString();
         this.currentDelayUnit = unit.toString();
         this.openDelayModal = true;
       }
     },
-    onPulseEnter(idx) {
+    onPulseEnter(idx, nestedIdx) {
       // if tile is being dragged, the pulse underneath the dragged tile will highlight even though the user is dragging a different tile
-      if (!this.isDragging) this.onPulseMouseenter(idx);
+      // 0 index is considered falsy
+      if (!this.isDragging && this.isDragging !== 0 && !this.isModalOpen)
+        this.onPulseMouseenter({ idx, nestedIdx });
     },
     onPulseLeave() {
       this.onPulseMouseleave();
@@ -265,12 +447,24 @@ export default {
       this.setTimeUnit(unit);
       this.handleProtocolOrder(this.protocolOrder);
     },
-    getPulseHue(idx) {
+    getPulseHue(idx, nestedIdx) {
       // duplicated pulses are not always in last index
       const pulseIdx = idx ? idx : this.protocolOrder.length - 1;
+      const selectedPulse = this.protocolOrder[pulseIdx];
+      const { subprotocols } = selectedPulse;
 
-      const lastPulseHsla = this.protocolOrder[pulseIdx].color;
+      const lastPulseHsla =
+        selectedPulse.type !== "loop"
+          ? selectedPulse.color
+          : subprotocols[nestedIdx >= 0 ? nestedIdx : subprotocols.length - 1].color;
+
       return lastPulseHsla.split("(")[1].split(",")[0];
+    },
+    getBorderStyle(type) {
+      if (type.type === "loop") {
+        const consistentColorToUse = type.subprotocols[0].color;
+        return "border: 2px solid " + consistentColorToUse;
+      }
     },
     clone(type) {
       this.cloned = true;
@@ -281,36 +475,40 @@ export default {
           : generateRandomColor(true);
 
       this.selectedColor = randomColor;
-
-      let typeSpecificSettings = {};
-      if (type === "Delay") typeSpecificSettings = { duration: "", unit: "milliseconds" };
-      // for both monophasic and biphasic
-      else
-        typeSpecificSettings = {
-          frequency: "",
-          totalActiveDuration: {
-            duration: "",
-            unit: "milliseconds",
-          },
-          numCycles: 0,
-          postphaseInterval: "",
-          phaseOneDuration: "",
-          phaseOneCharge: "",
-        };
-
-      if (type === "Biphasic")
-        typeSpecificSettings = {
-          ...typeSpecificSettings,
-          interphaseInterval: "",
-          phaseTwoCharge: "",
-          phaseTwoDuration: "",
-        };
+      // have to make a deep copy to prevent changing original template state
+      const templateCopy = JSON.parse(JSON.stringify(DEFAULT_SUBPROTOCOL_TEMPLATES[type.toUpperCase()]));
 
       return {
-        type,
-        color: `${randomColor}`,
-        pulseSettings: typeSpecificSettings,
+        ...templateCopy,
+        color: randomColor,
       };
+    },
+    openRepeatModalForEdit(number, idx) {
+      this.dblClickPulseIdx = idx;
+      this.currentInput = number.toString();
+      this.modalOpenForEdit = true;
+      this.openRepeatModal = true;
+    },
+    handleProtocolLoop(e) {
+      if (e.added) {
+        if (this.idxOfNewLoop !== -1 && this.protocolOrder[this.idxOfNewLoop].type !== "loop") {
+          this.dblClickPulseIdx = this.idxOfNewLoop;
+          this.selectedPulseSettings = e.added.element;
+          this.openRepeatModal = true;
+        } else {
+          this.handleProtocolOrder(this.protocolOrder);
+        }
+      } else if (e.moved) {
+        this.handleProtocolOrder(this.protocolOrder);
+      } else if (e.removed) {
+        // if last nested subprotocol is removed from loop so there is only one left,
+        // then replace loop object with last subprotocol object
+        this.protocolOrder = this.protocolOrder.map((protocol) =>
+          protocol.type === "loop" && protocol.subprotocols.length === 1 ? protocol.subprotocols[0] : protocol
+        );
+
+        this.handleProtocolOrder(this.protocolOrder);
+      }
     },
   },
 };
@@ -328,7 +526,7 @@ export default {
   left: 0px;
 }
 
-.div__DragAndDdrop-panel {
+.div__drag-and-drop-panel {
   background: rgb(17, 17, 17);
   position: absolute;
   width: 300px;
@@ -340,9 +538,26 @@ export default {
   justify-self: flex-end;
 }
 
-.div__tile-container {
+.div__repeat-container {
   display: flex;
   align-items: center;
+  padding-left: 1px;
+}
+
+.span__repeat-label {
+  font-size: 12px;
+  font-weight: bold;
+  position: relative;
+  font-family: Muli;
+  color: rgb(17, 17, 17);
+}
+
+.div__repeat-label-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 50px;
+  margin-right: 31px;
 }
 
 .img__icon-container {
@@ -352,16 +567,16 @@ export default {
 }
 
 img {
-  height: 93px;
+  height: 92px;
   width: 92px;
   cursor: pointer;
 }
 
 .ghost {
-  padding: 0 7px 7px 7px;
+  padding: 0 7px;
 }
 
-.modal-container {
+.div__modal-container {
   left: 22%;
   position: absolute;
 }
@@ -374,12 +589,12 @@ img {
 }
 
 .dragArea {
-  height: 100px;
+  height: 98px;
   display: flex;
   padding-top: 4px;
 }
 
-.circle {
+.div__circle {
   width: 30px;
   height: 30px;
   border: 1px solid #222;
@@ -391,7 +606,7 @@ img {
   cursor: pointer;
 }
 
-.draggable_tile_container {
+.draggable__tile-container {
   display: grid;
   width: 80%;
   grid-template-columns: 50% 50%;
@@ -401,7 +616,7 @@ img {
   margin-top: 80px;
 }
 
-.modal_overlay {
+.div__modal-overlay {
   width: 1629px;
   height: 885px;
   position: absolute;
@@ -468,9 +683,14 @@ img {
 
 .dropzone {
   visibility: visible;
+  height: 102px;
+  display: flex;
+  right: 31px;
+  position: relative;
 }
 
-.delay-container {
+.delay-container,
+.repeat-container {
   top: 15%;
 }
 </style>
