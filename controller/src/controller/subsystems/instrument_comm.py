@@ -17,6 +17,7 @@ import serial.tools.list_ports as list_ports
 
 from ..constants import CURI_VID
 from ..constants import DEFAULT_MAG_SAMPLING_PERIOD
+from ..constants import MAX_MC_REBOOT_DURATION_SECONDS
 from ..constants import MICRO_TO_BASE_CONVERSION
 from ..constants import NUM_INITIAL_MAG_PACKETS_TO_DROP
 from ..constants import NUM_WELLS
@@ -42,6 +43,7 @@ from ..exceptions import InstrumentCommandAttemptError
 from ..exceptions import InstrumentCommandResponseError
 from ..exceptions import InstrumentError
 from ..exceptions import InstrumentFirmwareError
+from ..exceptions import InstrumentRebootTimeoutError
 from ..exceptions import NoInstrumentDetectedError
 from ..exceptions import SerialCommCommandProcessingError
 from ..exceptions import SerialCommCommandResponseTimeoutError
@@ -416,9 +418,11 @@ class InstrumentComm:
 
         self._is_waiting_for_reboot = True
 
-        # TODO raise InstrumentRebootTimeoutError() if this times out
+        try:
+            await asyncio.wait_for(self._status_beacon_received_event.wait(), MAX_MC_REBOOT_DURATION_SECONDS)
+        except asyncio.TimeoutError as e:
+            raise InstrumentRebootTimeoutError() from e
 
-        await self._status_beacon_received_event.wait()
         logger.info("Instrument completed reboot")
 
         self._is_waiting_for_reboot = False
