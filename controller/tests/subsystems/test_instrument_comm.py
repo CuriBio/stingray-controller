@@ -22,7 +22,7 @@ __fixtures__ = [fixture__wait_tasks_clean]
 
 @pytest.fixture(scope="function", name="test_instrument_comm_obj")
 def fixture__test_instrument_comm_obj(mocker):
-    ic = InstrumentComm(asyncio.Queue(), asyncio.Queue())
+    ic = InstrumentComm(*[asyncio.Queue() for _ in range(4)])
     yield ic
     # TODO any teardown needed here?
 
@@ -69,7 +69,7 @@ async def test_InstrumentComm__creates_connection_to_real_instrument_correctly(
 
     assert test_instrument_comm_obj._instrument is mocked_aioserial.return_value
 
-    assert test_instrument_comm_obj._to_monitor_queue.get_nowait() == {
+    assert test_instrument_comm_obj._comm_to_monitor_queue.get_nowait() == {
         "command": "get_board_connection_status",
         "in_simulation_mode": False,
     }
@@ -100,7 +100,7 @@ async def test_InstrumentComm__creates_connection_to_virtual_instrument_correctl
     mocked_vic_init.assert_called_once_with(test_instrument_comm_obj._instrument)
     mocked_vic_connect.assert_awaited_once_with(test_instrument_comm_obj._instrument)
 
-    assert test_instrument_comm_obj._to_monitor_queue.get_nowait() == {
+    assert test_instrument_comm_obj._comm_to_monitor_queue.get_nowait() == {
         "command": "get_board_connection_status",
         "in_simulation_mode": True,
     }

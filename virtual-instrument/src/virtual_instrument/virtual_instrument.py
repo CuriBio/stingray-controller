@@ -15,10 +15,13 @@ from typing import Any
 from uuid import UUID
 from zlib import crc32
 
+from controller.constants import DEFAULT_MAG_SAMPLING_PERIOD
 from controller.constants import GOING_DORMANT_HANDSHAKE_TIMEOUT_CODE
 from controller.constants import MAX_MC_REBOOT_DURATION_SECONDS
 from controller.constants import MICRO_TO_BASE_CONVERSION
 from controller.constants import MICROS_PER_MILLIS
+from controller.constants import NUM_CHANNELS_PER_MAG_SENSOR
+from controller.constants import NUM_MAG_SENSORS_PER_WELL
 from controller.constants import SERIAL_COMM_CHECKSUM_LENGTH_BYTES
 from controller.constants import SERIAL_COMM_HANDSHAKE_PERIOD_SECONDS
 from controller.constants import SERIAL_COMM_HANDSHAKE_TIMEOUT_SECONDS
@@ -57,10 +60,7 @@ from stdlib_utils import get_current_file_abs_directory
 from stdlib_utils import InfiniteProcess
 from stdlib_utils import resource_path
 
-from .constants import DEFAULT_SAMPLING_PERIOD
 from .constants import MICROSECONDS_PER_CENTIMILLISECOND
-from .constants import SERIAL_COMM_NUM_CHANNELS_PER_SENSOR
-from .constants import SERIAL_COMM_NUM_SENSORS_PER_WELL
 from .exceptions import SerialCommInvalidSamplingPeriodError
 from .exceptions import SerialCommTooManyMissedHandshakesError
 from .exceptions import UnrecognizedSerialCommPacketTypeError
@@ -253,7 +253,7 @@ class MantarrayMcSimulator(InfiniteProcess):
         self._reset_start_time()
         self._reboot_time_secs = None
         self._status_codes = [SERIAL_COMM_OKAY_CODE] * (self._num_wells + 2)
-        self._sampling_period_us = DEFAULT_SAMPLING_PERIOD
+        self._sampling_period_us = DEFAULT_MAG_SAMPLING_PERIOD
         self._adc_readings = [(self.default_adc_reading, self.default_adc_reading)] * self._num_wells
         self._stim_info = {}
         self._is_stimulating = False
@@ -620,8 +620,8 @@ class MantarrayMcSimulator(InfiniteProcess):
                 SERIAL_COMM_MODULE_ID_TO_WELL_IDX[module_id] + 1
             )
             # add data points
-            well_sensor_data = time_offset + (data_value.tobytes() * SERIAL_COMM_NUM_CHANNELS_PER_SENSOR)
-            well_data = well_sensor_data * SERIAL_COMM_NUM_SENSORS_PER_WELL
+            well_sensor_data = time_offset + (data_value.tobytes() * NUM_CHANNELS_PER_MAG_SENSOR)
+            well_data = well_sensor_data * NUM_MAG_SENSORS_PER_WELL
             magnetometer_data_payload += well_data
         return magnetometer_data_payload
 

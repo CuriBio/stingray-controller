@@ -8,6 +8,7 @@ from ..constants import SERIAL_COMM_PAYLOAD_INDEX
 from ..constants import SERIAL_COMM_CHECKSUM_LENGTH_BYTES
 from ..constants import SERIAL_COMM_DATA_SAMPLE_LENGTH_BYTES
 from ..constants import SERIAL_COMM_MAGIC_WORD_BYTES
+from ..constants import NUM_MAG_SENSORS_PER_WELL
 from ..constants import SERIAL_COMM_PACKET_METADATA_LENGTH_BYTES
 from ..constants import SERIAL_COMM_PACKET_REMAINDER_SIZE_LENGTH_BYTES
 from ..constants import SERIAL_COMM_TIME_OFFSET_LENGTH_BYTES
@@ -42,7 +43,7 @@ DEF NUM_CHANNELS_PER_SENSOR = 3
 
 # these values exist only for importing the constants defined above into the python test suite
 SERIAL_COMM_MAGIC_WORD_LENGTH_BYTES_CY = MAGIC_WORD_LEN
-SERIAL_COMM_NUM_CHANNELS_PER_SENSOR_CY = NUM_CHANNELS_PER_SENSOR
+NUM_CHANNELS_PER_MAG_SENSOR_CY = NUM_CHANNELS_PER_SENSOR
 
 # convert python constants to C types
 cdef char[MAGIC_WORD_LEN + 1] MAGIC_WORD = SERIAL_COMM_MAGIC_WORD_BYTES + bytes(1)
@@ -54,13 +55,15 @@ cdef int MIN_PACKET_SIZE = SERIAL_COMM_PACKET_METADATA_LENGTH_BYTES
 
 cdef int SERIAL_COMM_TIME_OFFSET_LENGTH_BYTES_C_INT = SERIAL_COMM_TIME_OFFSET_LENGTH_BYTES
 cdef int SERIAL_COMM_DATA_SAMPLE_LENGTH_BYTES_C_INT = SERIAL_COMM_DATA_SAMPLE_LENGTH_BYTES
-cdef int SERIAL_COMM_NUM_CHANNELS_PER_SENSOR_C_INT = NUM_CHANNELS_PER_SENSOR
+cdef int NUM_CHANNELS_PER_MAG_SENSOR_C_INT = NUM_CHANNELS_PER_SENSOR
+cdef int NUM_MAG_SENSORS_PER_WELL_C_INT = NUM_MAG_SENSORS_PER_WELL
 
 cdef int SERIAL_COMM_PAYLOAD_INDEX_C_INT = SERIAL_COMM_PAYLOAD_INDEX
 cdef int SERIAL_COMM_STIM_STATUS_PACKET_TYPE_C_INT = SerialCommPacketTypes.STIM_STATUS
 
 
 cdef int TOTAL_NUM_WELLS_C_INT = NUM_WELLS
+cdef int TOTAL_NUM_SENSORS_C_INT = TOTAL_NUM_WELLS_C_INT * NUM_MAG_SENSORS_PER_WELL_C_INT
 
 
 cdef packed struct Packet:
@@ -203,7 +206,7 @@ cpdef dict parse_magnetometer_data(
     cdef int magnetometer_data_packet_len = len(mag_data_packet_bytes) // num_mag_data_packets
 
     cdef int num_time_offsets = TOTAL_NUM_SENSORS_C_INT
-    cdef int num_data_channels = TOTAL_NUM_SENSORS_C_INT * SERIAL_COMM_NUM_CHANNELS_PER_SENSOR_C_INT
+    cdef int num_data_channels = TOTAL_NUM_SENSORS_C_INT * NUM_CHANNELS_PER_MAG_SENSOR_C_INT
 
     # arrays for storing parsed data
     time_indices = np.empty(num_mag_data_packets, dtype=np.uint64, order="C")
@@ -233,14 +236,14 @@ cpdef dict parse_magnetometer_data(
         for sensor in range(TOTAL_NUM_SENSORS_C_INT):
             time_offsets_view[time_offset_arr_idx, data_packet_idx] = sensor_data_ptr.time_offset
             time_offset_arr_idx += 1
-            for channel in range(SERIAL_COMM_NUM_CHANNELS_PER_SENSOR_C_INT):
+            for channel in range(NUM_CHANNELS_PER_MAG_SENSOR_C_INT):
                 data_view[channel_arr_idx, data_packet_idx] = sensor_data_ptr.data_points[channel]
                 channel_arr_idx += 1
             # shift SensorData ptr by appropriate amount
             sensor_data_ptr = <SensorData *> (
                 (<uint8_t *> sensor_data_ptr)
                 + SERIAL_COMM_TIME_OFFSET_LENGTH_BYTES_C_INT
-                + (SERIAL_COMM_NUM_CHANNELS_PER_SENSOR_C_INT * SERIAL_COMM_DATA_SAMPLE_LENGTH_BYTES_C_INT)
+                + (NUM_CHANNELS_PER_MAG_SENSOR_C_INT * SERIAL_COMM_DATA_SAMPLE_LENGTH_BYTES_C_INT)
             )
         # increment idxs
         bytes_idx += magnetometer_data_packet_len

@@ -633,8 +633,8 @@ FirstPacketTracker = namedtuple("FirstPacketTracker", ["magnetometer", "stimulat
 
 @dataclass
 class StimDataBuffers:
-    raw: dict[int, NDArray[(2, Any), int]] = {}
-    reduced: dict[int, NDArray[(2, Any), int]] = {}
+    raw: dict[int, NDArray[(2, Any), int]] = dataclasses.field(default_factory=dict)
+    reduced: dict[int, NDArray[(2, Any), int]] = dataclasses.field(default_factory=dict)
 
 
 class DataStreamManager:

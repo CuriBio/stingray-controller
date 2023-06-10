@@ -276,14 +276,20 @@ async def test_main__creates_Server_and_runs_correctly(patch_run_tasks, patch_su
 async def test_main__creates_InstrumentComm_and_runs_correctly(
     patch_run_tasks, patch_subsystem_inits, mocker
 ):
-    spied_create_queues = mocker.spy(main, "create_system_comm_queues")
+    spied_create_comm_queues = mocker.spy(main, "create_system_comm_queues")
+    spied_create_data_queues = mocker.spy(main, "create_system_data_queues")
 
     await main.main([])
 
-    expected_queues = spied_create_queues.spy_return
+    expected_comm_queues = spied_create_comm_queues.spy_return
+    expected_data_queues = spied_create_data_queues.spy_return
 
     patch_subsystem_inits["instrument_comm"].assert_called_once_with(
-        mocker.ANY, expected_queues["to"]["instrument_comm"], expected_queues["from"]["instrument_comm"]
+        mocker.ANY,
+        expected_comm_queues["to"]["instrument_comm"],
+        expected_comm_queues["from"]["instrument_comm"],
+        expected_data_queues["main"],
+        expected_data_queues["file_writer"],
     )
 
 
