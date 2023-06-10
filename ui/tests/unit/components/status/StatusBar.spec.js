@@ -40,14 +40,14 @@ describe("StatusWidget.vue", () => {
   describe("systemStatus", () => {
     // add test to check that false = not visible
     test.each([
-      ["SERVER_INITIALIZING_STATE", "Status: Booting Up..."],
-      ["SERVER_READY_STATE", "Status: Connecting..."],
-      ["INSTRUMENT_INITIALIZING_STATE", "Status: Initializing..."],
-      ["CHECKING_FOR_UPDATES_STATE", "Status: Checking for Firmware Updates..."],
-      ["UPDATES_NEEDED_STATE", "Status: Firmware Updates Required"],
-      ["DOWNLOADING_UPDATES_STATE", "Status: Downloading Firmware Updates..."],
-      ["INSTALLING_UPDATES_STATE", "Status: Installing Firmware Updates..."],
-      ["UPDATES_COMPLETE_STATE", "Status: Firmware Updates Complete"],
+      ["SERVER_INITIALIZING", "Status: Booting Up..."],
+      ["SERVER_READY", "Status: Connecting..."],
+      ["INSTRUMENT_INITIALIZING", "Status: Initializing..."],
+      ["CHECKING_FOR_UPDATES", "Status: Checking for Firmware Updates..."],
+      ["UPDATES_NEEDED", "Status: Firmware Updates Required"],
+      ["DOWNLOADING_UPDATES", "Status: Downloading Firmware Updates..."],
+      ["INSTALLING_UPDATES", "Status: Installing Firmware Updates..."],
+      ["UPDATES_COMPLETE", "Status: Firmware Updates Complete"],
     ])(
       "Given that /shutdown is mocked to return status 200, When Vuex is mutated to the state %s, Then the status text should update to be: %s",
       async (vuexState, expectedText) => {
@@ -67,7 +67,7 @@ describe("StatusWidget.vue", () => {
     );
     test("When initially mounted, Then the status text matches the Vuex state", async () => {
       const propsData = {};
-      store.commit("system/setStatusUuid", SYSTEM_STATUS.SERVER_READY_STATE);
+      store.commit("system/setStatusUuid", SYSTEM_STATUS.SERVER_READY);
       wrapper = mount(StatusWidget, {
         propsData,
         store,
@@ -122,12 +122,12 @@ describe("StatusWidget.vue", () => {
     });
 
     test.each([
-      "SERVER_INITIALIZING_STATE",
-      "SERVER_READY_STATE",
-      "INITIALIZING_INSTRUMENT_STATE",
-      "UPDATES_NEEDED_STATE",
-      "UPDATES_COMPLETE_STATE",
-      "ERROR_STATE",
+      "SERVER_INITIALIZING",
+      "SERVER_READY",
+      "INITIALIZING_INSTRUMENT",
+      "UPDATES_NEEDED",
+      "UPDATES_COMPLETE",
+      "ERROR",
     ])(
       "When a user wants to exit the desktop app, Then the closure warning modals should not appear if there are no active processes or fw update",
       async (vuexState) => {
@@ -210,28 +210,23 @@ describe("StatusWidget.vue", () => {
   });
   describe("stimStatus", () => {
     test.each([
-      ["IDLE_READY_STATE", "NO_PROTOCOLS_ASSIGNED", "Status: No protocols have been assigned", {}],
-      ["IDLE_READY_STATE", "CONFIG_CHECK_NEEDED", "Status: Configuration Check Needed", { 1: {} }],
-      [
-        "IDLE_READY_STATE",
-        "CONFIG_CHECK_IN_PROGRESS",
-        "Status: Configuration Check in Progress...",
-        { 1: {} },
-      ],
-      ["IDLE_READY_STATE", "CONFIG_CHECK_COMPLETE", "Status: Configuration Check Complete", { 1: {} }],
-      ["IDLE_READY_STATE", "READY", "Status: Ready", { 1: {} }],
-      ["IDLE_READY_STATE", "STIM_ACTIVE", "Status: Stimulating...", { 1: {} }],
-      ["IDLE_READY_STATE", "SHORT_CIRCUIT_ERROR", "Status: Short Circuit Error", {}],
-      ["IDLE_READY_STATE", "ERROR", "Status: Error Occurred", {}],
-      ["SERVER_INITIALIZING_STATE", "CONFIG_CHECK_NEEDED", "Status: Booting Up...", { 1: {} }],
-      ["INSTRUMENT_INITIALIZING_STATE", "CONFIG_CHECK_IN_PROGRESS", "Status: Initializing...", { 1: {} }],
-      ["SERVER_READY_STATE", "CONFIG_CHECK_COMPLETE", "Status: Connecting...", { 1: {} }],
-      ["UPDATES_NEEDED_STATE", "READY", "Status: Firmware Updates Required", { 1: {} }],
-      ["INSTALLING_UPDATES_STATE", "STIM_ACTIVE", "Status: Installing Firmware Updates...", { 1: {} }],
-      ["UPDATES_COMPLETE_STATE", "SHORT_CIRCUIT_ERROR", "Status: Firmware Updates Complete", {}],
-      ["CHECKING_FOR_UPDATES_STATE", "STIM_ACTIVE", "Status: Checking for Firmware Updates...", {}],
+      ["IDLE_READY", "NO_PROTOCOLS_ASSIGNED", "Status: No protocols have been assigned", {}],
+      ["IDLE_READY", "CONFIG_CHECK_NEEDED", "Status: Configuration Check Needed", { 1: {} }],
+      ["IDLE_READY", "CONFIG_CHECK_IN_PROGRESS", "Status: Configuration Check in Progress...", { 1: {} }],
+      ["IDLE_READY", "CONFIG_CHECK_COMPLETE", "Status: Configuration Check Complete", { 1: {} }],
+      ["IDLE_READY", "READY", "Status: Ready", { 1: {} }],
+      ["IDLE_READY", "STIM_ACTIVE", "Status: Stimulating...", { 1: {} }],
+      ["IDLE_READY", "SHORT_CIRCUIT_ERROR", "Status: Short Circuit Error", {}],
+      ["IDLE_READY", "ERROR", "Status: Error Occurred", {}],
+      ["SERVER_INITIALIZING", "CONFIG_CHECK_NEEDED", "Status: Booting Up...", { 1: {} }],
+      ["INSTRUMENT_INITIALIZING", "CONFIG_CHECK_IN_PROGRESS", "Status: Initializing...", { 1: {} }],
+      ["SERVER_READY", "CONFIG_CHECK_COMPLETE", "Status: Connecting...", { 1: {} }],
+      ["UPDATES_NEEDED", "READY", "Status: Firmware Updates Required", { 1: {} }],
+      ["INSTALLING_UPDATES", "STIM_ACTIVE", "Status: Installing Firmware Updates...", { 1: {} }],
+      ["UPDATES_COMPLETE", "SHORT_CIRCUIT_ERROR", "Status: Firmware Updates Complete", {}],
+      ["CHECKING_FOR_UPDATES", "STIM_ACTIVE", "Status: Checking for Firmware Updates...", {}],
     ])(
-      "When system status is %s and stim's stimStatus gets mutated to %s, Then the status text should update to be %s if system Uuid is IDLE_READY_STATE",
+      "When system status is %s and stim's stimStatus gets mutated to %s, Then the status text should update to be %s if system Uuid is IDLE_READY",
       async (systemVuexState, vuexState, expectedText, assignments) => {
         const propsData = {};
         wrapper = mount(StatusWidget, {

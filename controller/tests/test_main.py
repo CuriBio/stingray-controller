@@ -215,7 +215,7 @@ async def test_main__initializes_system_state_correctly(
     await main.main(cmd_line_args)
 
     expected_system_state = {
-        "system_status": SystemStatuses.SERVER_INITIALIZING_STATE,
+        "system_status": SystemStatuses.SERVER_INITIALIZING,
         "in_simulation_mode": False,
         "stimulation_protocol_statuses": [],
         "main_firmware_update": None,

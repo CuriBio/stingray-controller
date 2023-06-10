@@ -386,7 +386,7 @@ export default {
       if (this.invalidImportedProtocols.length > 0) this.$bvModal.show("invalid-imported-protocols");
     },
     statusUuid: function (new_status) {
-      if (new_status == SYSTEM_STATUS.IDLE_READY_STATE) {
+      if (new_status == SYSTEM_STATUS.IDLE_READY) {
         this.disabled = false;
         this.disabledToolTip = "";
       }

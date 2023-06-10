@@ -25,6 +25,7 @@ CURRENT_RECORDING_FILE_VERSION = "2.0.0"
 NUM_WELLS = 24
 GENERIC_24_WELL_DEFINITION = LabwareDefinition(row_count=4, column_count=6)
 
+RECORDINGS_SUBDIR = "recordings"
 FW_UPDATE_SUBDIR = "firmware_updates"
 
 AuthTokens = namedtuple("AuthTokens", ["access", "refresh"])
@@ -58,23 +59,23 @@ SERVER_BOOT_UP_TIMEOUT_SECONDS = 5
 
 class SystemStatuses(Enum):
     # boot up states
-    SERVER_INITIALIZING_STATE = uuid.UUID("04471bcf-1a00-4a0d-83c8-4160622f9a25")
-    SERVER_READY_STATE = uuid.UUID("8e24ef4d-2353-4e9d-aa32-4346126e73e3")
-    SYSTEM_INITIALIZING_STATE = uuid.UUID("d2e3d386-b760-4c9a-8b2d-410362ff11c4")
-    CHECKING_FOR_UPDATES_STATE = uuid.UUID("04fd6f6b-ee9e-4656-aae4-0b9584791f36")
+    SERVER_INITIALIZING = uuid.UUID("04471bcf-1a00-4a0d-83c8-4160622f9a25")
+    SERVER_READY = uuid.UUID("8e24ef4d-2353-4e9d-aa32-4346126e73e3")
+    SYSTEM_INITIALIZING = uuid.UUID("d2e3d386-b760-4c9a-8b2d-410362ff11c4")
+    CHECKING_FOR_UPDATES = uuid.UUID("04fd6f6b-ee9e-4656-aae4-0b9584791f36")
     # initial set up states
-    CALIBRATION_NEEDED_STATE = uuid.UUID("009301eb-625c-4dc4-9e92-1a4d0762465f")
-    CALIBRATING_STATE = uuid.UUID("43c08fc5-ca2f-4dcd-9dff-5e9324cb5dbf")
+    CALIBRATION_NEEDED = uuid.UUID("009301eb-625c-4dc4-9e92-1a4d0762465f")
+    CALIBRATING = uuid.UUID("43c08fc5-ca2f-4dcd-9dff-5e9324cb5dbf")
     # normal operation states
-    IDLE_READY_STATE = uuid.UUID("009301eb-625c-4dc4-9e92-1a4d0762465f")
-    BUFFERING_STATE = uuid.UUID("dc774d4b-6bd1-4717-b36e-6df6f1ef6cf4")
-    LIVE_VIEW_ACTIVE_STATE = uuid.UUID("9fbee58e-c6af-49a5-b2e2-5b085eead2ea")
-    RECORDING_STATE = uuid.UUID("1e3d76a2-508d-4c99-8bf5-60dac5cc51fe")
+    IDLE_READY = uuid.UUID("009301eb-625c-4dc4-9e92-1a4d0762465f")
+    BUFFERING = uuid.UUID("dc774d4b-6bd1-4717-b36e-6df6f1ef6cf4")
+    LIVE_VIEW_ACTIVE = uuid.UUID("9fbee58e-c6af-49a5-b2e2-5b085eead2ea")
+    RECORDING = uuid.UUID("1e3d76a2-508d-4c99-8bf5-60dac5cc51fe")
     # updating states
-    UPDATES_NEEDED_STATE = uuid.UUID("d6dcf2a9-b6ea-4d4e-9423-500f91a82a2f")
-    DOWNLOADING_UPDATES_STATE = uuid.UUID("b623c5fa-af01-46d3-9282-748e19fe374c")
-    INSTALLING_UPDATES_STATE = uuid.UUID("19c9c2d6-0de4-4334-8cb3-a4c7ab0eab00")
-    UPDATES_COMPLETE_STATE = uuid.UUID("31f8fbc9-9b41-4191-8598-6462b7490789")
+    UPDATES_NEEDED = uuid.UUID("d6dcf2a9-b6ea-4d4e-9423-500f91a82a2f")
+    DOWNLOADING_UPDATES = uuid.UUID("b623c5fa-af01-46d3-9282-748e19fe374c")
+    INSTALLING_UPDATES = uuid.UUID("19c9c2d6-0de4-4334-8cb3-a4c7ab0eab00")
+    UPDATES_COMPLETE = uuid.UUID("31f8fbc9-9b41-4191-8598-6462b7490789")
 
 
 class StimulationStates(Enum):

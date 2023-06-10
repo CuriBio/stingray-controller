@@ -193,7 +193,7 @@ def initialize_system_state(parsed_args: dict[str, Any], log_file_id: uuid.UUID)
 
     system_state = {
         # main
-        "system_status": SystemStatuses.SERVER_INITIALIZING_STATE,
+        "system_status": SystemStatuses.SERVER_INITIALIZING,
         "in_simulation_mode": False,
         "stimulation_protocol_statuses": [],
         # updating

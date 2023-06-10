@@ -83,20 +83,20 @@ class SystemMonitor:
         new_system_status: SystemStatuses | None = None
 
         match system_state["system_status"]:
-            case SystemStatuses.SERVER_INITIALIZING_STATE:
+            case SystemStatuses.SERVER_INITIALIZING:
                 # TODO Tanner (3/15/23): this state just instantly transitions right now, probably not needed anymore
-                new_system_status = SystemStatuses.SERVER_READY_STATE
-            case SystemStatuses.SERVER_READY_STATE:
+                new_system_status = SystemStatuses.SERVER_READY
+            case SystemStatuses.SERVER_READY:
                 # TODO Tanner (3/15/23): this state just instantly transitions right now, probably not needed anymore
-                new_system_status = SystemStatuses.SYSTEM_INITIALIZING_STATE
-            case SystemStatuses.SYSTEM_INITIALIZING_STATE if (
-                # need to wait in SYSTEM_INITIALIZING_STATE until UI connects (indicated by
+                new_system_status = SystemStatuses.SYSTEM_INITIALIZING
+            case SystemStatuses.SYSTEM_INITIALIZING if (
+                # need to wait in SYSTEM_INITIALIZING until UI connects (indicated by
                 # latest_software_version being set) and instrument completes booting up (indicated by
                 # instrument_metadata being set)
                 system_state["instrument_metadata"]
                 and system_state["latest_software_version"]
             ):
-                new_system_status = SystemStatuses.CHECKING_FOR_UPDATES_STATE
+                new_system_status = SystemStatuses.CHECKING_FOR_UPDATES
                 instrument_metadata = system_state["instrument_metadata"]
                 # send command to cloud comm process to check for latest firmware versions
                 await self._queues["to"]["cloud_comm"].put(
@@ -107,9 +107,9 @@ class SystemMonitor:
                         "main_fw_version": instrument_metadata[MAIN_FIRMWARE_VERSION_UUID],
                     }
                 )
-            case SystemStatuses.UPDATES_NEEDED_STATE if system_state["firmware_updates_accepted"]:
+            case SystemStatuses.UPDATES_NEEDED if system_state["firmware_updates_accepted"]:
                 if not system_state["firmware_updates_require_download"] or system_state["is_user_logged_in"]:
-                    new_system_status = SystemStatuses.DOWNLOADING_UPDATES_STATE
+                    new_system_status = SystemStatuses.DOWNLOADING_UPDATES
 
                     fw_update_dir_path = (
                         None
@@ -131,15 +131,15 @@ class SystemMonitor:
                         {"communication_type": "user_input_needed", "input_type": "user_creds"}
                     )
             # firmware_updates_accepted value will be None before a user has made a decision, so need to explicitly check that it is False
-            case SystemStatuses.UPDATES_NEEDED_STATE if system_state["firmware_updates_accepted"] is False:
-                new_system_status = SystemStatuses.IDLE_READY_STATE
-            case SystemStatuses.INSTALLING_UPDATES_STATE:
+            case SystemStatuses.UPDATES_NEEDED if system_state["firmware_updates_accepted"] is False:
+                new_system_status = SystemStatuses.IDLE_READY
+            case SystemStatuses.INSTALLING_UPDATES:
                 # these two values get reset to None after their respective installs complete
                 if (
                     system_state["main_firmware_update"] is None
                     and system_state["channel_firmware_update"] is None
                 ):
-                    new_system_status = SystemStatuses.UPDATES_COMPLETE_STATE
+                    new_system_status = SystemStatuses.UPDATES_COMPLETE
                     await self._send_enable_sw_auto_install_message()
 
         if new_system_status:
@@ -216,7 +216,7 @@ class SystemMonitor:
                     logger.info(f"User {action} firmware update(s)")
                     system_state_updates["firmware_updates_accepted"] = update_accepted
                 case {"command": "start_calibration"}:
-                    system_state_updates["system_status"] = SystemStatuses.CALIBRATING_STATE
+                    system_state_updates["system_status"] = SystemStatuses.CALIBRATING
                     await self._queues["to"]["file_writer"].put(
                         create_start_recording_command(
                             system_state, start_recording_time_index=0, is_calibration_recording=True
@@ -234,7 +234,7 @@ class SystemMonitor:
                     )
                 case {"command": "start_data_stream"}:
                     # it's fine to switch the status here since buffering isn't a status directly related to the instrument
-                    system_state_updates["system_status"] = SystemStatuses.BUFFERING_STATE
+                    system_state_updates["system_status"] = SystemStatuses.BUFFERING
                     await self._queues["to"]["file_writer"].put(communication)
                     await self._queues["to"]["instrument_comm"].put(communication)
                 case {"command": "stop_data_stream"}:
@@ -242,7 +242,7 @@ class SystemMonitor:
                     await self._queues["to"]["file_writer"].put(communication)
                     await self._queues["to"]["instrument_comm"].put(communication)
                 case {"command": "start_recording"}:
-                    system_state_updates["system_status"] = SystemStatuses.RECORDING_STATE
+                    system_state_updates["system_status"] = SystemStatuses.RECORDING
                     await self._queues["to"]["file_writer"].put(
                         create_start_recording_command(
                             system_state,
@@ -251,10 +251,9 @@ class SystemMonitor:
                             is_calibration_recording=False,
                         )
                     )
-                case {"command": "stop_recording"}:
-                    await self._queues["to"]["file_writer"].put(
-                        {"command": "stop_recording", "stop_timepoint": communication["stop_timepoint"]}
-                    )
+                case {"command": "stop_recording" | "update_recording_name"}:
+                    # neither of these command require additional processing here
+                    await self._queues["to"]["file_writer"].put(communication)
                 case {"command": "set_stim_status", "running": status}:
                     num_protocols = len(system_state["stim_info"]["protocols"])
                     if status:
@@ -305,7 +304,7 @@ class SystemMonitor:
                 case {"command": "start_data_stream"}:
                     pass  # system will switch into live view active state once enough data packets have been sent to the UI
                 case {"command": "stop_data_stream"}:
-                    system_state_updates["system_status"] = SystemStatuses.IDLE_READY_STATE
+                    system_state_updates["system_status"] = SystemStatuses.IDLE_READY
                 case {"command": "set_stim_protocols"}:
                     pass  # nothing to do here
                 case {"command": "start_stimulation"}:
@@ -377,7 +376,11 @@ class SystemMonitor:
                     if communication.get("is_calibration_recording"):
                         await self._queues["to"]["instrument_comm"].put({"command": "stop_data_stream"})
                     else:
-                        system_state_updates["system_status"] = SystemStatuses.LIVE_VIEW_ACTIVE_STATE
+                        system_state_updates["system_status"] = SystemStatuses.LIVE_VIEW_ACTIVE
+                case {"command": "update_recording_name"}:
+                    await self._queues["to"]["server"].put(
+                        {"communication_type": "update_recording_name", "name_updated": True}
+                    )
                 case invalid_comm:
                     raise NotImplementedError(f"Invalid communication from FileWriter: {invalid_comm}")
 
@@ -399,7 +402,7 @@ class SystemMonitor:
                     )
                 case {"command": "check_versions", "error": _}:
                     # error will be logged by cloud comm
-                    system_state_updates["system_status"] = SystemStatuses.IDLE_READY_STATE
+                    system_state_updates["system_status"] = SystemStatuses.IDLE_READY
                 case {"command": "check_versions"}:
                     system_state_updates["firmware_updates_require_download"] = communication["download"]
 
@@ -423,7 +426,7 @@ class SystemMonitor:
                     if (main_fw_update_needed or channel_fw_update_needed) and min_sw_version_available:
                         logger.info("Firmware update(s) found")
 
-                        system_state_updates["system_status"] = SystemStatuses.UPDATES_NEEDED_STATE
+                        system_state_updates["system_status"] = SystemStatuses.UPDATES_NEEDED
                         system_state_updates["main_firmware_update"] = (
                             latest_main_fw if main_fw_update_needed else None
                         )
@@ -439,11 +442,11 @@ class SystemMonitor:
                         )
                     else:
                         logger.info("No firmware updates found")
-                        system_state_updates["system_status"] = SystemStatuses.IDLE_READY_STATE
+                        system_state_updates["system_status"] = SystemStatuses.IDLE_READY
                         # since no updates available, also enable auto install of SW update
                         await self._send_enable_sw_auto_install_message()
                 case {"command": "download_firmware_updates"}:
-                    system_state_updates["system_status"] = SystemStatuses.INSTALLING_UPDATES_STATE
+                    system_state_updates["system_status"] = SystemStatuses.INSTALLING_UPDATES
                     # Tanner (1/13/22): send both firmware update commands at once, and make sure channel is sent first.
                     # If both are sent, the second will be ignored by instrument comm until the first install completes
                     for firmware_type in ("channel", "main"):

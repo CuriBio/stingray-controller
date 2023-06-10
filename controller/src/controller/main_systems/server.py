@@ -4,10 +4,13 @@ import copy
 import functools
 import json
 import logging
+import os
 from typing import Any
 from typing import Awaitable
 from typing import Callable
+import urllib.parse
 
+from pulse3D.constants import NOT_APPLICABLE_H5_METADATA
 from semver import VersionInfo
 import websockets
 from websockets import serve
@@ -16,12 +19,14 @@ from websockets.server import WebSocketServerProtocol
 from ..constants import DEFAULT_SERVER_PORT_NUMBER
 from ..constants import GENERIC_24_WELL_DEFINITION
 from ..constants import NUM_WELLS
+from ..constants import RECORDINGS_SUBDIR
 from ..constants import StimulationStates
 from ..constants import StimulatorCircuitStatuses
 from ..constants import SystemStatuses
 from ..constants import VALID_CREDENTIAL_TYPES
 from ..constants import VALID_STIMULATION_TYPES
 from ..exceptions import WebsocketCommandError
+from ..exceptions import WebsocketCommandNoOpException
 from ..utils.aio import clean_up_tasks
 from ..utils.aio import wait_tasks_clean
 from ..utils.generic import handle_system_error
@@ -191,9 +196,11 @@ class Server:
             except KeyError as e:
                 raise WebsocketCommandError(f"Unrecognized command from UI: {command}") from e
 
-            # TODO make sure the error handling works here
+            # TODO make sure the error handling works here. Probably don't need to include the error in the log msg below
             try:
                 await handler(self, msg)
+            except WebsocketCommandNoOpException:
+                logger.error(f"Command {command} resulted in a no-op")
             except WebsocketCommandError as e:
                 logger.error(f"Command {command} failed with error: {e.args[0]}")
                 raise
@@ -251,10 +258,10 @@ class Server:
         """Begin magnetometer calibration recording."""
         system_state = self._get_system_state_ro()
 
-        valid_states = (SystemStatuses.CALIBRATION_NEEDED_STATE, SystemStatuses.IDLE_READY_STATE)
+        valid_states = (SystemStatuses.CALIBRATION_NEEDED, SystemStatuses.IDLE_READY)
 
         if system_state["system_status"] not in valid_states:
-            raise WebsocketCommandError(f"Command cannot be sent unless in {valid_states}")
+            raise WebsocketCommandError(f"Cannot calibrate  unless in {valid_states}")
         if _are_stimulator_checks_running(system_state):
             raise WebsocketCommandError("Cannot calibrate while stimulator checks are running")
         if _are_any_stim_protocols_running(system_state):
@@ -268,7 +275,7 @@ class Server:
         system_state = self._get_system_state_ro()
         system_status = system_state["system_status"]
 
-        if system_status != SystemStatuses.IDLE_READY_STATE:
+        if system_status != SystemStatuses.IDLE_READY:
             raise WebsocketCommandError(f"Cannot start data stream while in {system_status.name}")
 
         try:
@@ -283,7 +290,7 @@ class Server:
 
         # TODO import MANTARRAY_SERIAL_NUMBER_UUID as INSTRUMENT_SERIAL_NUMBER_UUID in all files. Same for nickname constant
         if not all(system_state["instrument_metadata"].values()):  # TODO test this
-            # TODO make a custom error code for this
+            # TODO make a custom error + code for this and move this handling to instrument_comm so it's handled right after getting metadata
             raise WebsocketCommandError("Instrument metadata is incomplete")
         if _are_stimulator_checks_running(system_state):
             raise WebsocketCommandError("Cannot start data stream while stimulator checks are running")
@@ -296,22 +303,75 @@ class Server:
         system_state = self._get_system_state_ro()
         system_status = system_state["system_status"]
 
-        if system_status not in (SystemStatuses.BUFFERING_STATE, SystemStatuses.LIVE_VIEW_ACTIVE_STATE):
+        if system_status not in (SystemStatuses.BUFFERING, SystemStatuses.LIVE_VIEW_ACTIVE):
             raise WebsocketCommandError(f"Cannot stop data stream while in {system_status.name}")
 
         await self._to_monitor_queue.put(comm)
 
     @mark_handler
     async def _start_recording(self, comm: dict[str, Any]) -> None:
-        """TODO"""
+        """Start writing data stream to file."""
+        # TODO make sure all required params are always sent from UI
+        system_state = self._get_system_state_ro()
+
+        if _is_recording(system_state):
+            raise WebsocketCommandNoOpException()
+
+        if not isinstance((start_timepoint := comm.get("start_timepoint")), int):
+            raise WebsocketCommandError(f"Invalid value for 'start_timepoint': {start_timepoint}")
+
+        barcodes_to_validate = ["plate_barcode"]
+        if _are_any_stim_protocols_running(system_state):
+            barcodes_to_validate.append("stim_barcode")
+        # check that all required params are given before validating
+        for barcode_type in barcodes_to_validate:
+            try:
+                barcode = comm[barcode_type]
+            except KeyError:
+                raise WebsocketCommandError(f"Command missing '{barcode_type}' value")
+            else:
+                if error_message := check_barcode_for_errors(barcode, barcode_type):
+                    barcode_label = barcode_type.split("_")[0].title()
+                    raise WebsocketCommandError(f"{barcode_label} {error_message}")
+
+        if comm["stim_barcode"] is None:
+            comm["stim_barcode"] = NOT_APPLICABLE_H5_METADATA
+
+        if comm["platemap"] is not None:
+            comm["platemap"] = json.loads(urllib.parse.unquote_plus(comm["platemap"]))
+
+        await self._to_monitor_queue.put(comm)
 
     @mark_handler
     async def _stop_recording(self, comm: dict[str, Any]) -> None:
-        """TODO"""
+        """Stop writing data stream to file and close the file."""
+        system_state = self._get_system_state_ro()
+
+        if not _is_recording(system_state):
+            raise WebsocketCommandNoOpException()
+
+        if not isinstance((stop_timepoint := comm.get("stop_timepoint")), int):
+            raise WebsocketCommandError(f"Invalid value for 'stop_timepoint': {stop_timepoint}")
+
+        await self._to_monitor_queue.put(comm)
 
     @mark_handler
     async def _update_recording_name(self, comm: dict[str, Any]) -> None:
-        """TODO"""
+        """Update the name of the most recent recording."""
+        system_state = self._get_system_state_ro()
+
+        comm["new_name"] = comm["new_name"].strip()
+
+        recording_dir = os.path.join(system_state["base_directory"], RECORDINGS_SUBDIR)
+        if not comm.get("replace_existing") and os.path.exists(os.path.join(recording_dir, comm["new_name"])):
+            # immediately sending message back to UI since there is no reason to have SystemMonitor handle doing this
+            await self._from_monitor_queue.put(
+                {"communication_type": "update_recording_name", "name_updated": False}
+            )
+        else:
+            await self._to_monitor_queue.put(comm)
+
+    # TODO make a new route for handling the recording snapshot?
 
     # TODO consider changing this to "set_stim_info"
     @mark_handler
@@ -329,7 +389,7 @@ class Server:
 
         if _are_any_stim_protocols_running(system_state):
             raise WebsocketCommandError("Cannot set stim protocols while stimulation is running")
-        if system_status != SystemStatuses.IDLE_READY_STATE:
+        if system_status != SystemStatuses.IDLE_READY:
             raise WebsocketCommandError(f"Cannot set stim protocols while in {system_status.name}")
 
         stim_info = comm["stim_info"]
@@ -392,12 +452,10 @@ class Server:
         system_state = self._get_system_state_ro()
 
         if _are_stimulator_checks_running(system_state):
-            return  # nothing to do here
+            raise WebsocketCommandNoOpException()
 
-        if system_state["system_status"] != SystemStatuses.IDLE_READY_STATE:
-            raise WebsocketCommandError(
-                f"Cannot start stim check unless in {SystemStatuses.IDLE_READY_STATE.name}"
-            )
+        if system_state["system_status"] != SystemStatuses.IDLE_READY:
+            raise WebsocketCommandError(f"Cannot start stim check unless in {SystemStatuses.IDLE_READY.name}")
         if _are_any_stim_protocols_running(system_state):
             raise WebsocketCommandError("Cannot perform stimulator checks while stimulation is running")
 
@@ -437,13 +495,13 @@ class Server:
         system_state = self._get_system_state_ro()
 
         if stim_status is _are_any_stim_protocols_running(system_state):
-            return  # nothing to do here
+            raise WebsocketCommandNoOpException()
 
         if not system_state["stim_info"]:
             raise WebsocketCommandError("Protocols have not been set")
 
         if stim_status:
-            if (system_status := system_state["system_status"]) != SystemStatuses.IDLE_READY_STATE:
+            if (system_status := system_state["system_status"]) != SystemStatuses.IDLE_READY:
                 raise WebsocketCommandError(f"Cannot start stimulation while in {system_status.name}")
             if not _are_initial_stimulator_checks_complete(system_state):
                 raise WebsocketCommandError(
@@ -460,6 +518,10 @@ class Server:
 
 
 # HELPERS
+
+
+def _is_recording(system_state: ReadOnlyDict) -> bool:
+    return system_state["system_status"] == SystemStatuses.RECORDING  # type: ignore  # mypy doesn't understand that this is a bool
 
 
 def _are_any_stim_protocols_running(system_state: ReadOnlyDict) -> bool:

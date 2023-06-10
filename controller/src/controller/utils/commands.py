@@ -39,21 +39,24 @@ def create_start_recording_command(
     system_state: ReadOnlyDict,
     *,
     start_recording_time_index: int,
+    barcodes: dict[str, str] | None = None,
     platemap_info: dict[str, Any] | None = None,
     is_calibration_recording: bool = False,
 ) -> dict[str, Any]:
     start_recording_timestamp_utc = datetime.datetime.utcnow()
 
     # barcodes
+    if not barcodes:
+        barcodes = {"plate_barcode": NOT_APPLICABLE_H5_METADATA, "stim_barcode": NOT_APPLICABLE_H5_METADATA}
+
     barcode_metadata = {}
     for barcode_type, barcode_uuid, barcode_match_uuid in (
         ("plate_barcode", PLATE_BARCODE_UUID, PLATE_BARCODE_IS_FROM_SCANNER_UUID),
         ("stim_barcode", STIM_BARCODE_UUID, STIM_BARCODE_IS_FROM_SCANNER_UUID),
     ):
-        barcode_metadata[barcode_uuid] = (
-            barcode if (barcode := system_state[barcode_type]) is not None else NOT_APPLICABLE_H5_METADATA
-        )
-        barcode_metadata[barcode_match_uuid] = barcode_metadata[barcode_uuid] == system_state[barcode_type]
+        barcode = barcodes[barcode_type]
+        barcode_metadata[barcode_uuid] = barcode
+        barcode_metadata[barcode_match_uuid] = barcode == system_state[barcode_type]
 
     # platemap
     formatted_platemap_info = {
@@ -80,36 +83,34 @@ def create_start_recording_command(
     }
 
     if not is_calibration_recording:
-        command["metadata"].update(
-            {
-                # machine
-                COMPUTER_NAME_HASH_UUID: get_hash_of_computer_name(),
-                # software
-                SOFTWARE_BUILD_NUMBER_UUID: COMPILED_EXE_BUILD_TIMESTAMP,
-                SOFTWARE_RELEASE_VERSION_UUID: CURRENT_SOFTWARE_VERSION,
-                # user
-                CUSTOMER_ACCOUNT_ID_UUID: config_settings.get("customer_id", NOT_APPLICABLE_H5_METADATA),
-                USER_ACCOUNT_ID_UUID: config_settings.get("username", NOT_APPLICABLE_H5_METADATA),
-                # session
-                BACKEND_LOG_UUID: system_state["log_file_id"],
-                # recording
-                START_RECORDING_TIME_INDEX_UUID: start_recording_time_index,
-                # barcodes
-                **barcode_metadata,
-                # experiment/analysis
-                PLATEMAP_NAME_UUID: formatted_platemap_info["name"],
-                PLATEMAP_LABEL_UUID: formatted_platemap_info["labels"],
-                TOTAL_WELL_COUNT_UUID: NUM_WELLS,
-                # instrument
-                MANTARRAY_SERIAL_NUMBER_UUID: instrument_metadata[MANTARRAY_SERIAL_NUMBER_UUID],
-                MAIN_FIRMWARE_VERSION_UUID: instrument_metadata[MAIN_FIRMWARE_VERSION_UUID],
-                CHANNEL_FIRMWARE_VERSION_UUID: instrument_metadata[CHANNEL_FIRMWARE_VERSION_UUID],
-                TISSUE_SAMPLING_PERIOD_UUID: DEFAULT_MAG_SAMPLING_PERIOD,
-                INITIAL_MAGNET_FINDING_PARAMS_UUID: json.dumps(
-                    dict(instrument_metadata[INITIAL_MAGNET_FINDING_PARAMS_UUID])
-                ),
-                BOOT_FLAGS_UUID: instrument_metadata[BOOT_FLAGS_UUID],
-            }
-        )
+        command["metadata"] |= {
+            # machine
+            COMPUTER_NAME_HASH_UUID: get_hash_of_computer_name(),
+            # software
+            SOFTWARE_BUILD_NUMBER_UUID: COMPILED_EXE_BUILD_TIMESTAMP,
+            SOFTWARE_RELEASE_VERSION_UUID: CURRENT_SOFTWARE_VERSION,
+            # user
+            CUSTOMER_ACCOUNT_ID_UUID: config_settings.get("customer_id", NOT_APPLICABLE_H5_METADATA),
+            USER_ACCOUNT_ID_UUID: config_settings.get("username", NOT_APPLICABLE_H5_METADATA),
+            # session
+            BACKEND_LOG_UUID: system_state["log_file_id"],
+            # recording
+            START_RECORDING_TIME_INDEX_UUID: start_recording_time_index,
+            # barcodes
+            **barcode_metadata,
+            # experiment/analysis
+            PLATEMAP_NAME_UUID: formatted_platemap_info["name"],
+            PLATEMAP_LABEL_UUID: formatted_platemap_info["labels"],
+            TOTAL_WELL_COUNT_UUID: NUM_WELLS,
+            # instrument
+            MANTARRAY_SERIAL_NUMBER_UUID: instrument_metadata[MANTARRAY_SERIAL_NUMBER_UUID],
+            MAIN_FIRMWARE_VERSION_UUID: instrument_metadata[MAIN_FIRMWARE_VERSION_UUID],
+            CHANNEL_FIRMWARE_VERSION_UUID: instrument_metadata[CHANNEL_FIRMWARE_VERSION_UUID],
+            TISSUE_SAMPLING_PERIOD_UUID: DEFAULT_MAG_SAMPLING_PERIOD,
+            INITIAL_MAGNET_FINDING_PARAMS_UUID: json.dumps(
+                dict(instrument_metadata[INITIAL_MAGNET_FINDING_PARAMS_UUID])
+            ),
+            BOOT_FLAGS_UUID: instrument_metadata[BOOT_FLAGS_UUID],
+        }
 
     return command

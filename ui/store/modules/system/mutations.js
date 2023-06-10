@@ -3,7 +3,7 @@ import { SYSTEM_STATUS, ERROR_MESSAGES } from "./enums";
 
 export default {
   setStatusUuid(state, newId) {
-    if (state.statusUuid !== SYSTEM_STATUS.ERROR_STATE) {
+    if (state.statusUuid !== SYSTEM_STATUS.ERROR) {
       state.statusUuid = newId;
     }
   },
