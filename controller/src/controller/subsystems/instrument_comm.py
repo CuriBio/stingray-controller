@@ -5,6 +5,7 @@ import dataclasses
 from dataclasses import dataclass
 import logging
 import struct
+from time import perf_counter
 from typing import Any
 from zlib import crc32
 
@@ -31,6 +32,7 @@ from ..constants import SERIAL_COMM_MAX_PAYLOAD_LENGTH_BYTES
 from ..constants import SERIAL_COMM_PACKET_METADATA_LENGTH_BYTES
 from ..constants import SERIAL_COMM_READ_TIMEOUT
 from ..constants import SERIAL_COMM_REGISTRATION_TIMEOUT_SECONDS
+from ..constants import SERIAL_COMM_STATUS_BEACON_PERIOD_SECONDS
 from ..constants import SERIAL_COMM_STATUS_BEACON_TIMEOUT_SECONDS
 from ..constants import SERIAL_COMM_STATUS_CODE_LENGTH_BYTES
 from ..constants import SerialCommPacketTypes
@@ -73,6 +75,21 @@ from ..utils.serial_comm import validate_instrument_metadata
 logger = logging.getLogger(__name__)
 
 ERROR_MSG = "IN INSTRUMENT COMM"
+
+
+TRACKED_EVENT_NAMES = (
+    "handshake_sent",
+    "command_sent",
+    "command_response_received",
+    "status_beacon_received",
+    "magnetometer_data_received",
+    "stimulation_data_received",
+)
+
+# TODO replace all nametuples with dataclasses
+TimepointsOfEvents = namedtuple(  # type: ignore
+    "TimepointsOfEvents", TRACKED_EVENT_NAMES, defaults=[None] * len(TRACKED_EVENT_NAMES)  # type: ignore
+)
 
 
 COMMAND_PACKET_TYPES = frozenset(
@@ -130,6 +147,8 @@ class InstrumentComm:
         self._status_beacon_received_event = asyncio.Event()
         # firmware updating
         self._firmware_update_manager: FirmwareUpdateManager | None = None
+        # comm tracking
+        self._timepoints_of_events = TimepointsOfEvents()
 
     # PROPERTIES
 
@@ -164,6 +183,7 @@ class InstrumentComm:
             logger.exception(ERROR_MSG)
             handle_system_error(e, system_error_future)
         finally:
+            self._log_dur_since_events()
             logger.info("InstrumentComm shut down")
 
     async def _setup(self) -> None:
@@ -337,20 +357,29 @@ class InstrumentComm:
             await asyncio.sleep(SERIAL_COMM_HANDSHAKE_PERIOD_SECONDS)
 
     async def _handle_beacon_tracking(self) -> None:
+        handshake_sent_after_miss = False
+
         while True:
             try:
                 await asyncio.wait_for(
-                    self._status_beacon_received_event.wait(), SERIAL_COMM_STATUS_BEACON_TIMEOUT_SECONDS
+                    self._status_beacon_received_event.wait(), SERIAL_COMM_STATUS_BEACON_PERIOD_SECONDS + 1
                 )
             except asyncio.TimeoutError as e:
-                if not self._instrument_in_sensitive_state:
+                if self._instrument_in_sensitive_state:
+                    # firmware updating / rebooting is complete when a beacon is received,
+                    # so just wait indefinitely for the next one
+                    await self._status_beacon_received_event.wait()
+                    self._status_beacon_received_event.clear()
+                    handshake_sent_after_miss = False
+                elif handshake_sent_after_miss:
                     raise SerialCommStatusBeaconTimeoutError() from e
-
-                # firmware updating / rebooting is complete when a beacon is received,
-                # so just wait indefinitely for the next one
-                await self._status_beacon_received_event.wait()
-
-            self._status_beacon_received_event.clear()
+                else:
+                    logger.info("Status Beacon overdue. Sending handshake now to prompt a response")
+                    await self._send_data_packet(SerialCommPacketTypes.HANDSHAKE)
+                    handshake_sent_after_miss = True
+            else:
+                self._status_beacon_received_event.clear()
+                handshake_sent_after_miss = False
 
     async def _handle_data_stream(self) -> None:
         if not self._instrument:
@@ -358,7 +387,11 @@ class InstrumentComm:
 
         while True:
             # read all available bytes from serial buffer
-            data_read_bytes = await self._instrument.read_async(self._instrument.in_waiting)
+            try:
+                data_read_bytes = await self._instrument.read_async(self._instrument.in_waiting)
+            except serial.SerialException as e:
+                logger.error(f"Serial data read failed: {e}. Trying one more time")
+                data_read_bytes = await self._instrument.read_async(self._instrument.in_waiting)
 
             # append all bytes to cache
             self._serial_packet_cache += data_read_bytes
@@ -384,6 +417,10 @@ class InstrumentComm:
                     raise SerialCommCommandProcessingError(
                         f"Timestamp: {timestamp}, Packet Type: {packet_type}, Payload: {packet_payload}"
                     ) from e
+
+            for data_type in ("magnetometer", "stimulation"):
+                if sorted_packet_dict[f"{data_type}_stream_info"]["num_packets"] > 0:
+                    self._update_timepoints_of_events(f"{data_type}_data_received")
 
             await self._data_stream_manager.push(sorted_packet_dict)
 
@@ -430,8 +467,17 @@ class InstrumentComm:
         if not self._instrument:
             raise NotImplementedError("_instrument should never be None here")
 
+        # update trackers if necessary
+        if packet_type == SerialCommPacketTypes.HANDSHAKE:
+            self._update_timepoints_of_events("handshake_sent")
+        elif packet_type in COMMAND_PACKET_TYPES:
+            self._update_timepoints_of_events("command_sent")
+
         data_packet = create_data_packet(get_serial_comm_timestamp(), packet_type, data_to_send)
-        await self._instrument.write_async(data_packet)
+
+        write_len = await self._instrument.write_async(data_packet)
+        if write_len == 0:
+            logger.error("Serial data write reporting no bytes written")
 
     async def _process_comm_from_instrument(self, packet_type: int, packet_payload: bytes) -> None:
         match packet_type:
@@ -461,6 +507,14 @@ class InstrumentComm:
                 await self._comm_to_monitor_queue.put(barcode_comm)
             case _:
                 raise NotImplementedError(f"Packet Type: {packet_type} is not defined")
+
+        if packet_type in (
+            *COMMAND_PACKET_TYPES,
+            SerialCommPacketTypes.CF_UPDATE_COMPLETE,
+            SerialCommPacketTypes.MF_UPDATE_COMPLETE,
+            SerialCommPacketTypes.BARCODE_FOUND,
+        ):
+            self._update_timepoints_of_events("command_response_received")
 
     async def _process_command_response(self, packet_type: int, response_data: bytes) -> None:
         try:
@@ -552,14 +606,28 @@ class InstrumentComm:
         # placing this here so that handshake responses also set the event
         self._status_beacon_received_event.set()
 
+        self._update_timepoints_of_events("status_beacon_received")
+
         status_codes_msg = f"{comm_type} received from instrument. Status Codes: {status_codes_dict}"
         if any(status_codes_dict.values()):
             await self._send_data_packet(SerialCommPacketTypes.ERROR_ACK)
             raise InstrumentFirmwareError(status_codes_msg)
         logger.debug(status_codes_msg)
 
+    def _update_timepoints_of_events(self, *event_names: str) -> None:
+        self._timepoints_of_events = self._timepoints_of_events._replace(
+            **{event: perf_counter() for event in event_names}
+        )
 
-# TODO replace all nametuples with dataclasses
+    def _log_dur_since_events(self) -> None:
+        current_timepoint = perf_counter()
+        durs = {
+            event_name: ("No occurrence" if event_timepoint is None else current_timepoint - event_timepoint)
+            for event_name, event_timepoint in self._timepoints_of_events._asdict().items()
+        }
+        logger.info(f"Duration (seconds) since events: {durs}")
+
+
 FirstPacketTracker = namedtuple("FirstPacketTracker", ["magnetometer", "stimulation"])
 
 
@@ -690,10 +758,9 @@ class DataStreamManager:
         self._reset_mag_data_buffers()
 
     async def _push_stimulation(self, stream_info: dict[str, Any]) -> None:
-        if not stream_info["num_packets"]:
-            return
-
         protocol_statuses: dict[int, Any] = parse_stim_data(*stream_info.values())
+
+        logger.debug("Stim statuses received: %s", protocol_statuses)
 
         # update buffers and dump packets if neccesary
         reduced_protocol_statuses: dict[int, Any] = {}
@@ -883,13 +950,14 @@ class VirtualInstrumentConnection:
         logger.debug("RECV: %s", list(data))
         return data
 
-    async def write_async(self, data: bytearray | bytes | memoryview) -> None:
+    async def write_async(self, data: bytearray | bytes | memoryview) -> int:
         try:
             self.writer.write(data)
             await self.writer.drain()
         except Exception:  # nosec B110
             # TODO make sure to add a unit test confirming this can be cancelled correctly
             # TODO raise a different error here?
-            pass
+            return 0
         else:
             logger.debug("SEND: %s", list(data))
+            return len(data)
