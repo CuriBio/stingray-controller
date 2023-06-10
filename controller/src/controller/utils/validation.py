@@ -1,4 +1,7 @@
-from controller.constants import ALL_VALID_BARCODE_HEADERS, BARCODE_HEADERS, BARCODE_LEN
+# -*- coding: utf-8 -*-
+from controller.constants import ALL_VALID_BARCODE_HEADERS
+from controller.constants import BARCODE_HEADERS
+from controller.constants import BARCODE_LEN
 
 
 def check_barcode_for_errors(barcode: str, barcode_type: str | None = None) -> str:

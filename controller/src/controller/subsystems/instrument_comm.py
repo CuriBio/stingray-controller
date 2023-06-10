@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 import asyncio
 from collections import namedtuple
+import dataclasses
+from dataclasses import dataclass
 import logging
 import struct
 from typing import Any
@@ -16,10 +18,9 @@ import serial
 import serial.tools.list_ports as list_ports
 
 from ..constants import CURI_VID
-from ..constants import DEFAULT_MAG_SAMPLING_PERIOD
 from ..constants import MAX_MC_REBOOT_DURATION_SECONDS
-from ..constants import MICRO_TO_BASE_CONVERSION
 from ..constants import NUM_INITIAL_MAG_PACKETS_TO_DROP
+from ..constants import NUM_MAG_DATA_PACKETS_PER_SECOND
 from ..constants import NUM_WELLS
 from ..constants import SERIAL_COMM_BAUD_RATE
 from ..constants import SERIAL_COMM_BYTESIZE
@@ -73,12 +74,6 @@ logger = logging.getLogger(__name__)
 
 ERROR_MSG = "IN INSTRUMENT COMM"
 
-# TODO try to handle stim chunking entirely in InstrumentComm. If successful, remove the rest of the commented out code in this method
-# self._reset_stim_idx_counters()
-# output_queue = self._board_queues[board_idx][1]
-# if reduced_well_statuses := self._reduce_subprotocol_chunks(stim_packet["well_statuses"]):
-#     output_queue.put_nowait({**stim_packet, "well_statuses": reduced_well_statuses})
-
 
 COMMAND_PACKET_TYPES = frozenset(
     [
@@ -111,15 +106,15 @@ class InstrumentComm:
     def __init__(
         self,
         from_monitor_queue: asyncio.Queue[dict[str, Any]],
-        to_monitor_queue: asyncio.Queue[dict[str, Any]],
-        to_file_writer_queue: asyncio.Queue[dict[str, Any]],
+        comm_to_monitor_queue: asyncio.Queue[dict[str, Any]],
+        data_to_monitor_queue: asyncio.Queue[dict[str, Any]],
+        data_to_file_writer_queue: asyncio.Queue[dict[str, Any]],
         hardware_test_mode: bool = False,
     ) -> None:
         # comm queues
         self._from_monitor_queue = from_monitor_queue
-        self._to_monitor_queue = to_monitor_queue
+        self._comm_to_monitor_queue = comm_to_monitor_queue
 
-        # TODO try making some kind of container for all this data?
         # instrument
         self._instrument: AioSerial | VirtualInstrumentConnection | None = None
         self._hardware_test_mode = hardware_test_mode
@@ -127,7 +122,9 @@ class InstrumentComm:
         self._serial_packet_cache = bytes(0)
         self._command_tracker = CommandTracker()
         # data stream
-        self._data_stream_manager = DataStreamManager(to_monitor_queue, to_file_writer_queue)
+        self._data_stream_manager = DataStreamManager(
+            comm_to_monitor_queue, data_to_monitor_queue, data_to_file_writer_queue
+        )
         # instrument status
         self._is_waiting_for_reboot = False
         self._status_beacon_received_event = asyncio.Event()
@@ -210,7 +207,7 @@ class InstrumentComm:
             else:
                 self._instrument = virtual_instrument
 
-        await self._to_monitor_queue.put(
+        await self._comm_to_monitor_queue.put(
             {
                 "command": "get_board_connection_status",
                 "in_simulation_mode": isinstance(self._instrument, VirtualInstrumentConnection),
@@ -310,7 +307,7 @@ class InstrumentComm:
                         raise InstrumentCommandAttemptError(
                             "Cannot update stimulation protocols while stimulating"
                         )
-                    self._data_stream_manager.num_stim_protocols = len(stim_info["protocols"])
+                    self._data_stream_manager.set_stim_info(comm_from_monitor)
                 case {"command": "start_stimulation"}:
                     packet_type = SerialCommPacketTypes.START_STIM
                 case {"command": "stop_stimulation"}:
@@ -406,7 +403,7 @@ class InstrumentComm:
 
         await self._wait_for_reboot()
 
-        await self._to_monitor_queue.put(
+        await self._comm_to_monitor_queue.put(
             {
                 "command": "firmware_update_complete",
                 "firmware_type": comm_from_monitor["firmware_type"],
@@ -461,7 +458,7 @@ class InstrumentComm:
                 barcode = packet_payload.decode("ascii")
                 logger.info(f"Barcode scanned by instrument: {barcode}")
                 barcode_comm = {"command": "get_barcode", "barcode": barcode}
-                await self._to_monitor_queue.put(barcode_comm)
+                await self._comm_to_monitor_queue.put(barcode_comm)
             case _:
                 raise NotImplementedError(f"Packet Type: {packet_type} is not defined")
 
@@ -494,7 +491,6 @@ class InstrumentComm:
                 else:
                     base_global_time_of_data_stream = int.from_bytes(response_data[1:9], byteorder="little")
                     await self._data_stream_manager.activate(base_global_time_of_data_stream)
-                    # TODO if _is_data_streaming is needed, make it a property tied to something in self._data_stream_manager
             case "stop_data_stream":
                 if response_data[0]:
                     if not self._hardware_test_mode:
@@ -544,7 +540,7 @@ class InstrumentComm:
                 await self._firmware_update_manager.update(command, response_data)
 
         if prev_command_info["command"] not in INTERMEDIATE_FIRMWARE_UPDATE_COMMANDS:
-            await self._to_monitor_queue.put(prev_command_info)
+            await self._comm_to_monitor_queue.put(prev_command_info)
 
     async def _process_status_beacon(self, packet_payload: bytes) -> None:
         status_codes_dict = convert_status_code_bytes_to_dict(
@@ -563,34 +559,50 @@ class InstrumentComm:
         logger.debug(status_codes_msg)
 
 
-def _create_stim_data_packet(protocol_statuses: NDArray[(2, Any), int]) -> dict[str, Any]:
-    return {"data_type": "stimulation", "protocol_statuses": protocol_statuses}
-
-
+# TODO replace all nametuples with dataclasses
 FirstPacketTracker = namedtuple("FirstPacketTracker", ["magnetometer", "stimulation"])
+
+
+@dataclass
+class StimDataBuffers:
+    raw: dict[int, NDArray[(2, Any), int]] = {}
+    reduced: dict[int, NDArray[(2, Any), int]] = {}
 
 
 class DataStreamManager:
     def __init__(
         self,
-        to_monitor_queue: asyncio.Queue[dict[str, Any]],
-        to_file_writer_queue: asyncio.Queue[dict[str, Any]],
+        comm_to_monitor_queue: asyncio.Queue[dict[str, Any]],
+        data_to_monitor_queue: asyncio.Queue[dict[str, Any]],
+        data_to_file_writer_queue: asyncio.Queue[dict[str, Any]],
     ) -> None:
-        self._to_file_writer_queue = to_file_writer_queue
-        self._to_monitor_queue = to_monitor_queue
+        self._comm_to_monitor_queue = comm_to_monitor_queue
+        self._data_to_monitor_queue = data_to_monitor_queue
+        self._data_to_file_writer_queue = data_to_file_writer_queue
 
         self._base_global_time_of_data_stream: int | None = None
         self._has_packet_been_sent = FirstPacketTracker(magnetometer=False, stimulation=False)
 
-        # TODO combine these two into a dict or namedtuple containing "stimulation" and "magnetometer" as top level keys
         self._mag_data_buffers: dict[str, Any] = {}
-        self._stim_status_buffers: dict[int, NDArray[(2, Any), int]] = {}
+        self._stim_status_buffers = StimDataBuffers()
         self.protocols_running: set[int] = set()
+
+        # TODO store this data more cleanly
+        self._subprotocol_idx_mappings: dict[int, dict[int, int]] = {}
+        self._max_original_subprotocol_idx_counts: dict[int, tuple[int, ...]] = {}
+        self._curr_original_subprotocol_idxs: list[int | None]
+        self._curr_original_subprotocol_counts: list[int | None]
+        self._reset_stim_idx_counters()
 
         self._reset_mag_data_buffers()
 
     def _reset_mag_data_buffers(self) -> None:
+        # TODO make this a dataclass
         self._mag_data_buffers = {"raw_bytes": bytearray(0), "num_packets": 0}
+
+    def _reset_stim_idx_counters(self) -> None:
+        self._curr_original_subprotocol_idxs = [None] * NUM_WELLS
+        self._curr_original_subprotocol_counts = [None] * NUM_WELLS
 
     @property
     def is_streaming(self) -> bool:
@@ -603,37 +615,50 @@ class DataStreamManager:
     @is_stimulating.setter
     def is_stimulating(self, value: bool) -> None:
         if value:
+            self._reset_stim_idx_counters()
             self.protocols_running = set(range(self.num_stim_protocols))
         else:
             self.protocols_running = set()
 
     @property
     def num_stim_protocols(self) -> int:
-        return len(self._stim_status_buffers)
+        return len(self._stim_status_buffers.raw)
 
     @num_stim_protocols.setter
     def num_stim_protocols(self, num: int) -> None:
-        self._stim_status_buffers = {protocol_idx: np.empty((2, 0)) for protocol_idx in range(num)}
+        self._stim_status_buffers = StimDataBuffers(
+            *[
+                {protocol_idx: np.empty((2, 0)) for protocol_idx in range(num)}
+                for _ in range(len(dataclasses.fields(StimDataBuffers)))
+            ]
+        )
+
+    def set_stim_info(self, comm_from_monitor: dict[str, dict[Any, Any]]) -> None:
+        self.num_stim_protocols = len(comm_from_monitor["stim_info"]["protocols"])
+        self._subprotocol_idx_mappings = comm_from_monitor["subprotocol_idx_mappings"]
+        self._max_original_subprotocol_idx_counts = comm_from_monitor["max_subprotocol_idx_counts"]
 
     async def activate(self, base_global_time_of_data_stream: int) -> None:
         self._base_global_time_of_data_stream = base_global_time_of_data_stream
         self._has_packet_been_sent = FirstPacketTracker(magnetometer=False, stimulation=False)
 
         # send any buffered stim statuses
-        protocol_statuses: dict[int, Any] = {}
-        for protocol_idx, stim_statuses in self._stim_status_buffers.items():
-            if stim_statuses.shape[1] > 0 and stim_statuses[1][-1] != STIM_COMPLETE_SUBPROTOCOL_IDX:
-                protocol_statuses[protocol_idx] = stim_statuses
+        for status_type, buffered_protocol_statuses in dataclasses.asdict(self._stim_status_buffers).items():
+            protocol_statuses: dict[int, Any] = {}
+            for protocol_idx, stim_statuses in buffered_protocol_statuses.items():
+                if stim_statuses.shape[1] > 0 and stim_statuses[1][-1] != STIM_COMPLETE_SUBPROTOCOL_IDX:
+                    protocol_statuses[protocol_idx] = stim_statuses
 
-        if protocol_statuses:
-            await self._dump_packet(_create_stim_data_packet(protocol_statuses))
+            if protocol_statuses:
+                await self._dump_packet(
+                    {"data_type": f"{status_type}_stimulation", "protocol_statuses": protocol_statuses}
+                )
 
     async def deactivate(self) -> None:
         self._base_global_time_of_data_stream = None
         # TODO anything else?
 
     async def push(self, sorted_packets: dict[str, Any]) -> None:
-        # TODO make a constant or enum for these?
         for data_type in ("magnetometer", "stimulation"):
             handler_fn = getattr(self, f"_push_{data_type}")
             await handler_fn(sorted_packets[f"{data_type}_stream_info"])
@@ -645,13 +670,12 @@ class DataStreamManager:
 
         # update cache values
         for key, value in stream_info.items():
-            self._mag_data_cache_dict[key] += value  # type: ignore
+            self._mag_data_buffers[key] += value
 
         current_num_packets = self._mag_data_buffers["num_packets"]
 
         # don't parse and send to file writer unless there is at least 1 second worth of data
-        # TODO make this a constant so it's not recalculated each time
-        if current_num_packets < (MICRO_TO_BASE_CONVERSION // DEFAULT_MAG_SAMPLING_PERIOD):
+        if current_num_packets < NUM_MAG_DATA_PACKETS_PER_SECOND:
             return
 
         # parse magnetometer data
@@ -671,8 +695,26 @@ class DataStreamManager:
 
         protocol_statuses: dict[int, Any] = parse_stim_data(*stream_info.values())
 
-        # TODO handle buffering and dumping this
-        _create_stim_data_packet(protocol_statuses)
+        # update buffers and dump packets if neccesary
+        reduced_protocol_statuses: dict[int, Any] = {}
+        for protocol_idx, status_updates_arr in protocol_statuses.items():
+            self._stim_status_buffers.raw[protocol_idx] = np.hstack(
+                [self._stim_status_buffers.raw[protocol_idx][:, -1], status_updates_arr]
+            )
+            if (
+                reduced_well_status_arr := self._reduce_subprotocol_chunks(protocol_idx, status_updates_arr)
+            ).shape[1] > 0:
+                self._stim_status_buffers.reduced[protocol_idx] = np.hstack(
+                    [self._stim_status_buffers.reduced[protocol_idx][:, -1], reduced_well_status_arr]
+                )
+                reduced_protocol_statuses[protocol_idx] = reduced_protocol_statuses
+
+        if self.is_streaming:
+            await self._dump_packet({"data_type": "raw_stimulation", "protocol_statuses": protocol_statuses})
+            if reduced_protocol_statuses:
+                await self._dump_packet(
+                    {"data_type": "reduced_stimulation", "protocol_statuses": reduced_protocol_statuses}
+                )
 
         protocols_completed = [
             protocol_idx
@@ -681,7 +723,7 @@ class DataStreamManager:
         ]
         if protocols_completed:
             self.protocols_running -= set(protocols_completed)
-            await self._to_monitor_queue.put(
+            await self._comm_to_monitor_queue.put(
                 {"command": "stim_status_update", "protocols_completed": protocols_completed}
             )
 
@@ -689,17 +731,53 @@ class DataStreamManager:
         data_type = data_packet["data_type"]
         data_packet["is_first_packet_of_stream"] = not self._has_packet_been_sent._asdict()[data_type]
 
-        match data_type:
-            case "magnetometer":
-                if data_packet["is_first_packet_of_stream"]:
-                    for data_type in (TIME_INDICES, TIME_OFFSETS, TISSUE_SENSOR_READINGS):
-                        data_packet = data_packet[data_type][..., NUM_INITIAL_MAG_PACKETS_TO_DROP:]
-            case "stimulation":
-                for protocol_statuses in data_packet["protocol_statuses"].values():
-                    protocol_statuses[0] -= self._base_global_time_of_data_stream
+        if data_type == "magnetometer":
+            if data_packet["is_first_packet_of_stream"]:
+                for data_type in (TIME_INDICES, TIME_OFFSETS, TISSUE_SENSOR_READINGS):
+                    data_packet = data_packet[data_type][..., NUM_INITIAL_MAG_PACKETS_TO_DROP:]
+            await self._data_to_file_writer_queue.put(data_packet)
+        else:  # stim data
+            for protocol_statuses in data_packet["protocol_statuses"].values():
+                protocol_statuses[0] -= self._base_global_time_of_data_stream
+            queue = self._data_to_file_writer_queue if "raw" in data_type else self._data_to_monitor_queue
+            await queue.put({**data_packet, "data_type": "stimulation"})
 
-        await self._to_file_writer_queue.put(data_packet)
         self._has_packet_been_sent._replace(**{data_type: True})
+
+    def _reduce_subprotocol_chunks(
+        self, protocol_idx: int, protocol_statuses: NDArray[(2, Any), int]
+    ) -> NDArray[(2, Any), int]:
+        timepoint_well_status_pairs = []
+        for timepoint, chunked_subprotocol_idx in protocol_statuses.T:
+            original_subprotocol_idx = (
+                chunked_subprotocol_idx
+                if chunked_subprotocol_idx == STIM_COMPLETE_SUBPROTOCOL_IDX
+                else self._subprotocol_idx_mappings[protocol_idx][chunked_subprotocol_idx]
+            )
+
+            if original_subprotocol_idx == STIM_COMPLETE_SUBPROTOCOL_IDX:
+                timepoint_well_status_pairs.append((timepoint, original_subprotocol_idx))
+                continue
+
+            # update idx and reset count if subprotocol idx changed
+            if original_subprotocol_idx != self._curr_original_subprotocol_idxs[protocol_idx]:
+                self._curr_original_subprotocol_idxs[protocol_idx] = original_subprotocol_idx
+                self._curr_original_subprotocol_counts[protocol_idx] = -1
+
+            curr_count = self._curr_original_subprotocol_counts[protocol_idx]
+            max_count = self._max_original_subprotocol_idx_counts[protocol_idx][original_subprotocol_idx]
+            self._curr_original_subprotocol_counts[protocol_idx] = (curr_count + 1) % max_count  # type: ignore
+
+            # filter out intermediate idxs
+            if self._curr_original_subprotocol_counts[protocol_idx] == 0:
+                timepoint_well_status_pairs.append((timepoint, original_subprotocol_idx))
+
+        reduced_protocol_statuses = (
+            np.array(timepoint_well_status_pairs, dtype=np.int64).T
+            if timepoint_well_status_pairs
+            else np.empty((2, 0))  # still need the array to be the correct shape
+        )
+        return reduced_protocol_statuses
 
 
 FirmwareUpdateItems = tuple[int, bytes, dict[str, Any]]

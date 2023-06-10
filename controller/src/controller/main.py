@@ -85,6 +85,7 @@ async def main(command_line_args: list[str]) -> None:
         instrument_comm_subsystem = InstrumentComm(
             comm_queues["to"]["instrument_comm"],
             comm_queues["from"]["instrument_comm"],
+            data_queues["main"],
             data_queues["file_writer"],
         )
         cloud_comm_subsystem = CloudComm(
