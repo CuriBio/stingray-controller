@@ -1,18 +1,24 @@
 # -*- coding: utf-8 -*-
 import asyncio
 import json
+from random import choice
 import uuid
 
 from controller.constants import ErrorCodes
+from controller.constants import VALID_CREDENTIAL_TYPES
+from controller.exceptions import WebsocketCommandError
 from controller.main import initialize_system_state
+from controller.main_systems import server
 from controller.main_systems.server import Server
-from controller.utils.aio import clean_up_tasks
 from controller.utils.aio import wait_tasks_clean
 from controller.utils.state_management import SystemStateManager
 import pytest
 import pytest_asyncio
 from websockets import connect
 from websockets.server import WebSocketServerProtocol
+
+from ..helpers import random_bool
+from ..helpers import random_semver
 
 WS_URI = "ws://localhost:4565"
 
@@ -29,7 +35,7 @@ class ServerTestRunner:
 
     async def clean_up(self):
         if self._run_task:
-            await clean_up_tasks({self._run_task})
+            await wait_tasks_clean({self._run_task})
 
 
 @pytest_asyncio.fixture(scope="function", name="test_server_items")
@@ -85,11 +91,8 @@ async def test_Server__handles_disconnect(test_server_items, mocker):
 
     system_error_future = asyncio.Future()
     run_task = await test_server_items["run"](system_error_future, asyncio.Event())
-
-    # TODO make a function for this if this pattern becomes common
     async with connect(WS_URI):
         pass
-    # await this so the next assertion isn't made too early
     await wait_tasks_clean({run_task})
 
     spied_report.assert_not_called()
@@ -105,15 +108,38 @@ async def test_Server__handles_cancellation(test_server_items, mocker):
 
     system_error_future = asyncio.Future()
     run_task = await test_server_items["run"](system_error_future, asyncio.Event())
-
     async with connect(WS_URI):
         run_task.cancel()
-    # await this so the next assertion isn't made too early
     await wait_tasks_clean({run_task})
 
     spied_report.assert_called_once_with(system_error_future)
     # this will not be done since there was no error
     assert not system_error_future.done()
+
+
+@pytest.mark.asyncio
+async def test_Server__passes_msg_from_incoming_queue_to_websocket_client(test_server_items):
+    test_from_monitor_queue = test_server_items["from_monitor_queue"]
+
+    test_msg = {"communication_type": "test"}
+
+    await test_server_items["run"](asyncio.Future(), asyncio.Event())
+    async with connect(WS_URI) as client:
+        await test_from_monitor_queue.put(test_msg)
+        assert json.loads(await client.recv()) == test_msg
+
+
+@pytest.mark.asyncio
+async def test_Server__logs_incoming_command(test_server_items, mocker):
+    spied_log_info = mocker.spy(server.logger, "info")
+
+    test_comm = {"command": "test"}
+
+    await test_server_items["run"](asyncio.Future(), asyncio.Event())
+    async with connect(WS_URI) as client:
+        await client.send(json.dumps(test_comm))
+
+    spied_log_info.assert_any_call(f"Comm from UI: {test_comm}")
 
 
 @pytest.mark.asyncio
@@ -123,12 +149,205 @@ async def test_Server__handles_uncrecognized_command(test_server_items, mocker):
     spied_report = mocker.spy(test_server, "_report_system_error")
 
     system_error_future = asyncio.Future()
-    run_task = await test_server_items["run"](system_error_future, asyncio.Event())
-
+    await test_server_items["run"](system_error_future, asyncio.Event())
     async with connect(WS_URI) as client:
         await client.send(json.dumps({"command": "fake"}))
-    # await this so the next assertion isn't made too early
+
+    spied_report.assert_called_once_with(system_error_future)
+    assert system_error_future.result() == ErrorCodes.UI_SENT_BAD_DATA
+
+
+@pytest.mark.asyncio
+async def test_Server__handles_command_that_results_in_no_op(test_server_items, mocker):
+    test_server = test_server_items["server"]
+
+    spied_report = mocker.spy(test_server, "_report_system_error")
+    spied_log_error = mocker.spy(server.logger, "error")
+
+    test_command = "stop_recording"
+
+    system_error_future = asyncio.Future()
+    await test_server_items["run"](system_error_future, asyncio.Event())
+    async with connect(WS_URI) as client:
+        await client.send(json.dumps({"command": test_command}))
+
+    spied_log_error.assert_any_call(f"Command {test_command} resulted in a no-op")
+    spied_report.assert_not_called()
+    assert not system_error_future.done()
+
+
+@pytest.mark.asyncio
+async def test_Server__handles_failed_command(test_server_items, mocker):
+    test_server = test_server_items["server"]
+
+    spied_report = mocker.spy(test_server, "_report_system_error")
+    spied_handle_error = mocker.spy(server, "handle_system_error")
+
+    # arbitrarily choosing this command
+    test_command = "test_cmd"
+    test_error = WebsocketCommandError("test msg")
+    test_server._handlers[test_command] = mocker.MagicMock(autospec=True, side_effect=test_error)
+
+    system_error_future = asyncio.Future()
+    run_task = await test_server_items["run"](system_error_future, asyncio.Event())
+    async with connect(WS_URI) as client:
+        await client.send(json.dumps({"command": test_command}))
     await wait_tasks_clean({run_task})
 
     spied_report.assert_called_once_with(system_error_future)
     assert system_error_future.result() == ErrorCodes.UI_SENT_BAD_DATA
+
+    spied_handle_error.assert_called_once_with(test_error, system_error_future)
+    assert f"Command {test_command} failed" in test_error.__notes__
+
+
+@pytest.mark.asyncio
+async def test_Server__handles_shutdown_command(test_server_items, mocker):
+    test_server = test_server_items["server"]
+
+    spied_report = mocker.spy(test_server, "_report_system_error")
+
+    system_error_future = asyncio.Future()
+    run_task = await test_server_items["run"](system_error_future, asyncio.Event())
+
+    async with connect(WS_URI) as client:
+        await client.send(json.dumps({"command": "shutdown"}))
+    await wait_tasks_clean({run_task})
+
+    assert test_server.user_initiated_shutdown is True
+
+    spied_report.assert_not_called()
+    assert not system_error_future.done()
+
+
+@pytest.mark.asyncio
+async def test_Server__handles_login_command__success(test_server_items):
+    test_to_monitor_queue = test_server_items["to_monitor_queue"]
+
+    test_command = {"command": "login"} | {cred: "val" for cred in VALID_CREDENTIAL_TYPES}
+
+    run_task = await test_server_items["run"](asyncio.Future(), asyncio.Event())
+    async with connect(WS_URI) as client:
+        await client.send(json.dumps(test_command))
+    await wait_tasks_clean({run_task})
+
+    assert test_to_monitor_queue.qsize() == 1
+    assert await test_to_monitor_queue.get() == test_command
+
+
+@pytest.mark.asyncio
+async def test_Server__handles_login_command__missing_cred(test_server_items, mocker):
+    spied_handle_error = mocker.spy(server, "handle_system_error")
+
+    test_command = {"command": "login"} | {cred: "val" for cred in VALID_CREDENTIAL_TYPES}
+    test_missing_cred = choice(list(VALID_CREDENTIAL_TYPES))
+    test_command.pop(test_missing_cred)
+
+    run_task = await test_server_items["run"](asyncio.Future(), asyncio.Event())
+    async with connect(WS_URI) as client:
+        await client.send(json.dumps(test_command))
+    await wait_tasks_clean({run_task})
+
+    actual_error = spied_handle_error.call_args[0][0]
+    assert str(actual_error) == f"Missing cred type(s): {set([test_missing_cred])}"
+
+
+@pytest.mark.asyncio
+async def test_Server__handles_login_command__invalid_cred(test_server_items, mocker):
+    spied_handle_error = mocker.spy(server, "handle_system_error")
+
+    test_invalid_cred = "bad_cred"
+    test_command = {"command": "login", test_invalid_cred: "val"} | {
+        cred: "val" for cred in VALID_CREDENTIAL_TYPES
+    }
+
+    run_task = await test_server_items["run"](asyncio.Future(), asyncio.Event())
+    async with connect(WS_URI) as client:
+        await client.send(json.dumps(test_command))
+    await wait_tasks_clean({run_task})
+
+    actual_error = spied_handle_error.call_args[0][0]
+    assert str(actual_error) == f"Invalid cred type(s) given: {set([test_invalid_cred])}"
+
+
+@pytest.mark.asyncio
+async def test_Server__handles_set_latest_software_version_command__success(test_server_items, mocker):
+    test_to_monitor_queue = test_server_items["to_monitor_queue"]
+
+    test_command = {"command": "set_latest_software_version", "version": random_semver()}
+
+    run_task = await test_server_items["run"](asyncio.Future(), asyncio.Event())
+    async with connect(WS_URI) as client:
+        await client.send(json.dumps(test_command))
+    await wait_tasks_clean({run_task})
+
+    assert test_to_monitor_queue.qsize() == 1
+    assert await test_to_monitor_queue.get() == test_command
+
+
+@pytest.mark.asyncio
+async def test_Server__handles_set_latest_software_version_command__version_missing(
+    test_server_items, mocker
+):
+    spied_handle_error = mocker.spy(server, "handle_system_error")
+
+    test_command = {"command": "set_latest_software_version"}
+
+    run_task = await test_server_items["run"](asyncio.Future(), asyncio.Event())
+    async with connect(WS_URI) as client:
+        await client.send(json.dumps(test_command))
+    await wait_tasks_clean({run_task})
+
+    actual_error = spied_handle_error.call_args[0][0]
+    assert str(actual_error) == "Command missing 'version' value"
+
+
+@pytest.mark.asyncio
+async def test_Server__handles_set_latest_software_version_command__invalid_version(
+    test_server_items, mocker
+):
+    spied_handle_error = mocker.spy(server, "handle_system_error")
+
+    test_bad_version = "bad"
+    test_command = {"command": "set_latest_software_version", "version": test_bad_version}
+
+    run_task = await test_server_items["run"](asyncio.Future(), asyncio.Event())
+    async with connect(WS_URI) as client:
+        await client.send(json.dumps(test_command))
+    await wait_tasks_clean({run_task})
+
+    actual_error = spied_handle_error.call_args[0][0]
+    assert str(actual_error) == f"Invalid semver: {test_bad_version}"
+
+
+@pytest.mark.asyncio
+async def test_Server__handles_set_firmware_update_confirmation_command__success(test_server_items, mocker):
+    test_to_monitor_queue = test_server_items["to_monitor_queue"]
+
+    test_command = {"command": "set_firmware_update_confirmation", "update_accepted": random_bool()}
+
+    run_task = await test_server_items["run"](asyncio.Future(), asyncio.Event())
+    async with connect(WS_URI) as client:
+        await client.send(json.dumps(test_command))
+    await wait_tasks_clean({run_task})
+
+    assert test_to_monitor_queue.qsize() == 1
+    assert await test_to_monitor_queue.get() == test_command
+
+
+@pytest.mark.asyncio
+async def test_Server__handles_set_firmware_update_confirmation_command__invalid_update_accepted_value(
+    test_server_items, mocker
+):
+    spied_handle_error = mocker.spy(server, "handle_system_error")
+
+    test_bad_val = "bad"
+    test_command = {"command": "set_firmware_update_confirmation", "update_accepted": test_bad_val}
+
+    run_task = await test_server_items["run"](asyncio.Future(), asyncio.Event())
+    async with connect(WS_URI) as client:
+        await client.send(json.dumps(test_command))
+    await wait_tasks_clean({run_task})
+
+    actual_error = spied_handle_error.call_args[0][0]
+    assert str(actual_error) == f"Invalid value for update_accepted: {test_bad_val}"

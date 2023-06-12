@@ -196,13 +196,12 @@ class Server:
             except KeyError as e:
                 raise WebsocketCommandError(f"Unrecognized command from UI: {command}") from e
 
-            # TODO make sure the error handling works here. Probably don't need to include the error in the log msg below
             try:
                 await handler(self, msg)
             except WebsocketCommandNoOpException:
                 logger.error(f"Command {command} resulted in a no-op")
             except WebsocketCommandError as e:
-                logger.error(f"Command {command} failed with error: {e.args[0]}")
+                e.add_note(f"Command {command} failed")
                 raise
 
     def _log_incoming_message(self, msg: dict[str, Any]) -> None:
@@ -225,23 +224,27 @@ class Server:
     @mark_handler
     async def _login(self, comm: dict[str, str]) -> None:
         """Update the customer/user settings."""
-        for cred_type in comm:
-            if cred_type not in VALID_CREDENTIAL_TYPES | {"command"}:
-                raise WebsocketCommandError(f"Invalid cred type given: {cred_type}")
+        required_keys = set(VALID_CREDENTIAL_TYPES) | {"command"}
+        provided_keys = set(comm)
+        if missing_keys := required_keys - provided_keys:
+            raise WebsocketCommandError(f"Missing cred type(s): {missing_keys}")
+        if invalid_keys := provided_keys - required_keys:
+            raise WebsocketCommandError(f"Invalid cred type(s) given: {invalid_keys}")
 
         await self._to_monitor_queue.put(comm)
 
     @mark_handler
     async def _set_latest_software_version(self, comm: dict[str, str]) -> None:
         """Set the latest available software version."""
+
         try:
             version = comm["version"]
             # check if version is a valid semantic version string. ValueError will be raised if not
             VersionInfo.parse(version)
         except KeyError:
-            raise WebsocketCommandError("Version not specified")
+            raise WebsocketCommandError("Command missing 'version' value")
         except ValueError:
-            raise WebsocketCommandError(f"Invalid version string: {version}")
+            raise WebsocketCommandError(f"Invalid semver: {version}")
 
         await self._to_monitor_queue.put(comm)
 
@@ -313,6 +316,8 @@ class Server:
         """Start writing data stream to file."""
         # TODO make sure all required params are always sent from UI
         system_state = self._get_system_state_ro()
+
+        # TODO make sure this route can only be called in the correct state
 
         if _is_recording(system_state):
             raise WebsocketCommandNoOpException()
