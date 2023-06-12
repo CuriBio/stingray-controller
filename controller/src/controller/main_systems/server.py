@@ -184,12 +184,12 @@ class Server:
             try:
                 msg = json.loads(await websocket.recv())
             except websockets.ConnectionClosed:
+                logger.error("Failed to read message from UI")
                 return
 
             self._log_incoming_message(msg)
 
             command = msg["command"]
-
             try:
                 # TODO try using pydantic to define message schema + some other message schema generator (nano message, ask Jason)
                 handler = self._handlers[command]
