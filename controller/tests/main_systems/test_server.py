@@ -5,6 +5,9 @@ from random import choice
 import uuid
 
 from controller.constants import ErrorCodes
+from controller.constants import StimulationStates
+from controller.constants import StimulatorCircuitStatuses
+from controller.constants import SystemStatuses
 from controller.constants import VALID_CREDENTIAL_TYPES
 from controller.exceptions import WebsocketCommandError
 from controller.main import initialize_system_state
@@ -19,8 +22,13 @@ from websockets.server import WebSocketServerProtocol
 
 from ..helpers import random_bool
 from ..helpers import random_semver
+from ..helpers import random_well_idx
+from ..helpers import TEST_PLATE_BARCODE
 
 WS_URI = "ws://localhost:4565"
+
+
+ALL_SYSTEM_STATUSES = frozenset(SystemStatuses.__members__.values())
 
 
 class ServerTestRunner:
@@ -351,3 +359,274 @@ async def test_Server__handles_set_firmware_update_confirmation_command__invalid
 
     actual_error = spied_handle_error.call_args[0][0]
     assert str(actual_error) == f"Invalid value for update_accepted: {test_bad_val}"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("test_system_status", [SystemStatuses.CALIBRATION_NEEDED, SystemStatuses.IDLE_READY])
+async def test_Server__handles_start_calibration_command__success(test_system_status, test_server_items):
+    test_to_monitor_queue = test_server_items["to_monitor_queue"]
+    ssm = test_server_items["system_state_manager"]
+    await ssm.update({"system_status": test_system_status})
+
+    test_command = {"command": "start_calibration"}
+
+    run_task = await test_server_items["run"](asyncio.Future(), asyncio.Event())
+    async with connect(WS_URI) as client:
+        await client.send(json.dumps(test_command))
+    await wait_tasks_clean({run_task})
+
+    assert test_to_monitor_queue.qsize() == 1
+    assert await test_to_monitor_queue.get() == test_command
+
+
+@pytest.mark.asyncio
+async def test_Server__handles_start_calibration_command__no_op(test_server_items, mocker):
+    test_to_monitor_queue = test_server_items["to_monitor_queue"]
+    ssm = test_server_items["system_state_manager"]
+    await ssm.update({"system_status": SystemStatuses.CALIBRATING})
+
+    spied_handle_error = mocker.spy(server, "handle_system_error")
+
+    test_command = {"command": "start_calibration"}
+
+    run_task = await test_server_items["run"](asyncio.Future(), asyncio.Event())
+    async with connect(WS_URI) as client:
+        await client.send(json.dumps(test_command))
+    await wait_tasks_clean({run_task})
+
+    assert test_to_monitor_queue.qsize() == 0
+    spied_handle_error.assert_not_called()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "test_system_status",
+    ALL_SYSTEM_STATUSES
+    - {SystemStatuses.CALIBRATION_NEEDED, SystemStatuses.CALIBRATING, SystemStatuses.IDLE_READY},
+)
+async def test_Server__handles_start_calibration_command__invalid_system_status(
+    test_system_status, test_server_items, mocker
+):
+    ssm = test_server_items["system_state_manager"]
+    await ssm.update({"system_status": test_system_status})
+
+    spied_handle_error = mocker.spy(server, "handle_system_error")
+
+    test_command = {"command": "start_calibration"}
+
+    run_task = await test_server_items["run"](asyncio.Future(), asyncio.Event())
+    async with connect(WS_URI) as client:
+        await client.send(json.dumps(test_command))
+    await wait_tasks_clean({run_task})
+
+    actual_error = spied_handle_error.call_args[0][0]
+    assert (
+        str(actual_error)
+        == f"Cannot calibrate unless in {(SystemStatuses.CALIBRATION_NEEDED, SystemStatuses.IDLE_READY)}"
+    )
+
+
+@pytest.mark.asyncio
+async def test_Server__handles_start_calibration_command__stim_checks_running(test_server_items, mocker):
+    ssm = test_server_items["system_state_manager"]
+
+    await ssm.update(
+        {
+            "system_status": choice([SystemStatuses.CALIBRATION_NEEDED, SystemStatuses.IDLE_READY]),
+            "stimulator_circuit_statuses": {
+                random_well_idx(): StimulatorCircuitStatuses.CALCULATING.name.lower()
+            },
+        }
+    )
+
+    spied_handle_error = mocker.spy(server, "handle_system_error")
+
+    test_command = {"command": "start_calibration"}
+
+    run_task = await test_server_items["run"](asyncio.Future(), asyncio.Event())
+    async with connect(WS_URI) as client:
+        await client.send(json.dumps(test_command))
+    await wait_tasks_clean({run_task})
+
+    actual_error = spied_handle_error.call_args[0][0]
+    assert str(actual_error) == "Cannot calibrate while stimulator checks are running"
+
+
+@pytest.mark.asyncio
+async def test_Server__handles_start_calibration_command__stim_running(test_server_items, mocker):
+    ssm = test_server_items["system_state_manager"]
+
+    await ssm.update(
+        {
+            "system_status": choice([SystemStatuses.CALIBRATION_NEEDED, SystemStatuses.IDLE_READY]),
+            "stimulation_protocol_statuses": [
+                choice([StimulationStates.STARTING, StimulationStates.RUNNING])
+            ],
+        }
+    )
+
+    spied_handle_error = mocker.spy(server, "handle_system_error")
+
+    test_command = {"command": "start_calibration"}
+
+    run_task = await test_server_items["run"](asyncio.Future(), asyncio.Event())
+    async with connect(WS_URI) as client:
+        await client.send(json.dumps(test_command))
+    await wait_tasks_clean({run_task})
+
+    actual_error = spied_handle_error.call_args[0][0]
+    assert str(actual_error) == "Cannot calibrate while stimulation is running"
+
+
+@pytest.mark.asyncio
+async def test_Server__handles_start_data_stream_command__success(test_server_items):
+    test_to_monitor_queue = test_server_items["to_monitor_queue"]
+    ssm = test_server_items["system_state_manager"]
+    await ssm.update({"system_status": SystemStatuses.IDLE_READY})
+
+    test_command = {"command": "start_data_stream", "plate_barcode": TEST_PLATE_BARCODE}
+
+    run_task = await test_server_items["run"](asyncio.Future(), asyncio.Event())
+    async with connect(WS_URI) as client:
+        await client.send(json.dumps(test_command))
+    await wait_tasks_clean({run_task})
+
+    assert test_to_monitor_queue.qsize() == 1
+    assert await test_to_monitor_queue.get() == test_command
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "test_system_status",
+    [SystemStatuses.BUFFERING, SystemStatuses.LIVE_VIEW_ACTIVE, SystemStatuses.RECORDING],
+)
+async def test_Server__handles_start_data_stream_command__no_op(
+    test_system_status, test_server_items, mocker
+):
+    test_to_monitor_queue = test_server_items["to_monitor_queue"]
+    ssm = test_server_items["system_state_manager"]
+    await ssm.update({"system_status": test_system_status})
+
+    spied_handle_error = mocker.spy(server, "handle_system_error")
+
+    test_command = {"command": "start_data_stream", "plate_barcode": TEST_PLATE_BARCODE}
+
+    run_task = await test_server_items["run"](asyncio.Future(), asyncio.Event())
+    async with connect(WS_URI) as client:
+        await client.send(json.dumps(test_command))
+    await wait_tasks_clean({run_task})
+
+    assert test_to_monitor_queue.qsize() == 0
+    spied_handle_error.assert_not_called()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "test_system_status",
+    ALL_SYSTEM_STATUSES
+    - {
+        SystemStatuses.IDLE_READY,
+        SystemStatuses.BUFFERING,
+        SystemStatuses.LIVE_VIEW_ACTIVE,
+        SystemStatuses.RECORDING,
+    },
+)
+async def test_Server__handles_start_data_stream_command__invalid_system_status(
+    test_system_status, test_server_items, mocker
+):
+    ssm = test_server_items["system_state_manager"]
+    await ssm.update({"system_status": test_system_status})
+
+    spied_handle_error = mocker.spy(server, "handle_system_error")
+
+    test_command = {"command": "start_data_stream", "plate_barcode": TEST_PLATE_BARCODE}
+
+    run_task = await test_server_items["run"](asyncio.Future(), asyncio.Event())
+    async with connect(WS_URI) as client:
+        await client.send(json.dumps(test_command))
+    await wait_tasks_clean({run_task})
+
+    actual_error = spied_handle_error.call_args[0][0]
+    assert str(actual_error) == f"Cannot start data stream unless in in {SystemStatuses.IDLE_READY.name}"
+
+
+@pytest.mark.asyncio
+async def test_Server__handles_start_data_stream_command__stim_checks_running(test_server_items, mocker):
+    ssm = test_server_items["system_state_manager"]
+    await ssm.update(
+        {
+            "system_status": SystemStatuses.IDLE_READY,
+            "stimulator_circuit_statuses": {
+                random_well_idx(): StimulatorCircuitStatuses.CALCULATING.name.lower()
+            },
+        }
+    )
+
+    spied_handle_error = mocker.spy(server, "handle_system_error")
+
+    test_command = {"command": "start_data_stream", "plate_barcode": TEST_PLATE_BARCODE}
+
+    run_task = await test_server_items["run"](asyncio.Future(), asyncio.Event())
+    async with connect(WS_URI) as client:
+        await client.send(json.dumps(test_command))
+    await wait_tasks_clean({run_task})
+
+    actual_error = spied_handle_error.call_args[0][0]
+    assert str(actual_error) == "Cannot start data stream while stimulator checks are running"
+
+
+@pytest.mark.asyncio
+async def test_Server__handles_start_data_stream_command__missing_plate_barcode(test_server_items, mocker):
+    ssm = test_server_items["system_state_manager"]
+    await ssm.update({"system_status": SystemStatuses.IDLE_READY})
+
+    spied_handle_error = mocker.spy(server, "handle_system_error")
+
+    test_command = {"command": "start_data_stream"}
+
+    run_task = await test_server_items["run"](asyncio.Future(), asyncio.Event())
+    async with connect(WS_URI) as client:
+        await client.send(json.dumps(test_command))
+    await wait_tasks_clean({run_task})
+
+    actual_error = spied_handle_error.call_args[0][0]
+    assert str(actual_error) == "Command missing 'plate_barcode' value"
+
+
+@pytest.mark.asyncio
+async def test_Server__handles_start_data_stream_command__empty_plate_barcode(test_server_items, mocker):
+    ssm = test_server_items["system_state_manager"]
+    await ssm.update({"system_status": SystemStatuses.IDLE_READY})
+
+    spied_handle_error = mocker.spy(server, "handle_system_error")
+
+    test_command = {"command": "start_data_stream", "plate_barcode": ""}
+
+    run_task = await test_server_items["run"](asyncio.Future(), asyncio.Event())
+    async with connect(WS_URI) as client:
+        await client.send(json.dumps(test_command))
+    await wait_tasks_clean({run_task})
+
+    actual_error = spied_handle_error.call_args[0][0]
+    assert str(actual_error) == "Cannot start data stream without a plate barcode present"
+
+
+@pytest.mark.asyncio
+async def test_Server__handles_start_data_stream_command__invalid_plate_barcode(test_server_items, mocker):
+    ssm = test_server_items["system_state_manager"]
+    await ssm.update({"system_status": SystemStatuses.IDLE_READY})
+
+    spied_handle_error = mocker.spy(server, "handle_system_error")
+    spied_check_error = mocker.spy(server, "check_barcode_for_errors")
+
+    test_plate_barcode = "bad"
+    test_command = {"command": "start_data_stream", "plate_barcode": test_plate_barcode}
+
+    run_task = await test_server_items["run"](asyncio.Future(), asyncio.Event())
+    async with connect(WS_URI) as client:
+        await client.send(json.dumps(test_command))
+    await wait_tasks_clean({run_task})
+
+    spied_check_error.assert_called_once_with(test_plate_barcode, "plate_barcode")
+    actual_error = spied_handle_error.call_args[0][0]
+    assert str(actual_error) == f"Plate {spied_check_error.spy_return}"

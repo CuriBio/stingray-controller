@@ -261,10 +261,13 @@ class Server:
         """Begin magnetometer calibration recording."""
         system_state = self._get_system_state_ro()
 
-        valid_states = (SystemStatuses.CALIBRATION_NEEDED, SystemStatuses.IDLE_READY)
+        if system_state["system_status"] == SystemStatuses.CALIBRATING:
+            raise WebsocketCommandNoOpException()
 
-        if system_state["system_status"] not in valid_states:
-            raise WebsocketCommandError(f"Cannot calibrate  unless in {valid_states}")
+        if system_state["system_status"] not in (
+            valid_states := (SystemStatuses.CALIBRATION_NEEDED, SystemStatuses.IDLE_READY)
+        ):
+            raise WebsocketCommandError(f"Cannot calibrate unless in {valid_states}")
         if _are_stimulator_checks_running(system_state):
             raise WebsocketCommandError("Cannot calibrate while stimulator checks are running")
         if _are_any_stim_protocols_running(system_state):
@@ -278,8 +281,14 @@ class Server:
         system_state = self._get_system_state_ro()
         system_status = system_state["system_status"]
 
+        if _is_data_streaming(system_state):
+            raise WebsocketCommandNoOpException()
         if system_status != SystemStatuses.IDLE_READY:
-            raise WebsocketCommandError(f"Cannot start data stream while in {system_status.name}")
+            raise WebsocketCommandError(
+                f"Cannot start data stream unless in in {SystemStatuses.IDLE_READY.name}"
+            )
+        if _are_stimulator_checks_running(system_state):
+            raise WebsocketCommandError("Cannot start data stream while stimulator checks are running")
 
         try:
             plate_barcode = comm["plate_barcode"]
@@ -287,7 +296,6 @@ class Server:
             raise WebsocketCommandError("Command missing 'plate_barcode' value")
         if not plate_barcode:
             raise WebsocketCommandError("Cannot start data stream without a plate barcode present")
-
         if error_message := check_barcode_for_errors(plate_barcode, "plate_barcode"):
             raise WebsocketCommandError(f"Plate {error_message}")
 
@@ -295,8 +303,6 @@ class Server:
         if not all(system_state["instrument_metadata"].values()):  # TODO test this
             # TODO make a custom error + code for this and move this handling to instrument_comm so it's handled right after getting metadata
             raise WebsocketCommandError("Instrument metadata is incomplete")
-        if _are_stimulator_checks_running(system_state):
-            raise WebsocketCommandError("Cannot start data stream while stimulator checks are running")
 
         await self._to_monitor_queue.put(comm)
 
@@ -523,6 +529,14 @@ class Server:
 
 
 # HELPERS
+
+
+def _is_data_streaming(system_state: ReadOnlyDict) -> bool:
+    return system_state["system_status"] in (
+        SystemStatuses.BUFFERING,
+        SystemStatuses.LIVE_VIEW_ACTIVE,
+        SystemStatuses.RECORDING,
+    )
 
 
 def _is_recording(system_state: ReadOnlyDict) -> bool:
