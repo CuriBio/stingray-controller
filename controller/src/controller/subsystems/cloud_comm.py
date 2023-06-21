@@ -79,7 +79,7 @@ class CloudComm:
 
     # ONE-SHOT TASKS
 
-    async def run(self, system_error_future: asyncio.Future[int]) -> None:
+    async def run(self, system_error_future: asyncio.Future[tuple[int, dict[str, str]]]) -> None:
         # TODO ADD MORE LOGGING
         logger.info("Starting CloudComm")
 
