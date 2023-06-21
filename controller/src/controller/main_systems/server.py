@@ -312,6 +312,8 @@ class Server:
         system_state = self._get_system_state_ro()
         system_status = system_state["system_status"]
 
+        # TODO add no-op handling
+
         if system_status not in (SystemStatuses.BUFFERING, SystemStatuses.LIVE_VIEW_ACTIVE):
             raise WebsocketCommandError(f"Cannot stop data stream while in {system_status.name}")
 
@@ -334,6 +336,8 @@ class Server:
         barcodes_to_validate = ["plate_barcode"]
         if _are_any_stim_protocols_running(system_state):
             barcodes_to_validate.append("stim_barcode")
+        else:
+            comm["stim_barcode"] = NOT_APPLICABLE_H5_METADATA
         # check that all required params are given before validating
         for barcode_type in barcodes_to_validate:
             try:
@@ -344,9 +348,6 @@ class Server:
                 if error_message := check_barcode_for_errors(barcode, barcode_type):
                     barcode_label = barcode_type.split("_")[0].title()
                     raise WebsocketCommandError(f"{barcode_label} {error_message}")
-
-        if comm["stim_barcode"] is None:
-            comm["stim_barcode"] = NOT_APPLICABLE_H5_METADATA
 
         if comm["platemap"] is not None:
             comm["platemap"] = json.loads(urllib.parse.unquote_plus(comm["platemap"]))
@@ -373,8 +374,7 @@ class Server:
 
         comm["new_name"] = comm["new_name"].strip()
 
-        recording_dir = os.path.join(system_state["base_directory"], RECORDINGS_SUBDIR)
-        if not comm.get("replace_existing") and os.path.exists(os.path.join(recording_dir, comm["new_name"])):
+        if _recording_exists(system_state, comm["new_name"]) and not comm["replace_existing"]:
             # immediately sending message back to UI since there is no reason to have SystemMonitor handle doing this
             await self._from_monitor_queue.put(
                 {"communication_type": "update_recording_name", "name_updated": False}
@@ -541,6 +541,11 @@ def _is_data_streaming(system_state: ReadOnlyDict) -> bool:
 
 def _is_recording(system_state: ReadOnlyDict) -> bool:
     return system_state["system_status"] == SystemStatuses.RECORDING  # type: ignore  # mypy doesn't understand that this is a bool
+
+
+def _recording_exists(system_state, recording_name):
+    recording_dir = os.path.join(system_state["base_directory"], RECORDINGS_SUBDIR)
+    os.path.exists(os.path.join(recording_dir, recording_name))
 
 
 def _are_any_stim_protocols_running(system_state: ReadOnlyDict) -> bool:

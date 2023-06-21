@@ -2,6 +2,8 @@
 import asyncio
 import json
 from random import choice
+from random import randint
+import urllib
 import uuid
 
 from controller.constants import ErrorCodes
@@ -15,6 +17,7 @@ from controller.main_systems import server
 from controller.main_systems.server import Server
 from controller.utils.aio import wait_tasks_clean
 from controller.utils.state_management import SystemStateManager
+from pulse3D.constants import NOT_APPLICABLE_H5_METADATA
 import pytest
 import pytest_asyncio
 from websockets import connect
@@ -24,6 +27,7 @@ from ..helpers import random_bool
 from ..helpers import random_semver
 from ..helpers import random_well_idx
 from ..helpers import TEST_PLATE_BARCODE
+from ..helpers import TEST_STIM_BARCODE
 
 WS_URI = "ws://localhost:4565"
 
@@ -630,3 +634,196 @@ async def test_Server__handles_start_data_stream_command__invalid_plate_barcode(
     spied_check_error.assert_called_once_with(test_plate_barcode, "plate_barcode")
     actual_error = spied_handle_error.call_args[0][0]
     assert str(actual_error) == f"Plate {spied_check_error.spy_return}"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("test_system_status", [SystemStatuses.BUFFERING, SystemStatuses.LIVE_VIEW_ACTIVE])
+async def test_Server__handles_stop_data_stream_command__success(test_system_status, test_server_items):
+    test_to_monitor_queue = test_server_items["to_monitor_queue"]
+    ssm = test_server_items["system_state_manager"]
+    await ssm.update({"system_status": test_system_status})
+
+    test_command = {"command": "stop_data_stream"}
+
+    run_task = await test_server_items["run"](asyncio.Future(), asyncio.Event())
+    async with connect(WS_URI) as client:
+        await client.send(json.dumps(test_command))
+    await wait_tasks_clean({run_task})
+
+    assert test_to_monitor_queue.qsize() == 1
+    assert await test_to_monitor_queue.get() == test_command
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("test_stim_running_status", [True, False])
+@pytest.mark.parametrize(
+    "test_platemap",
+    [
+        None,
+        {},
+        {
+            "map_name": "test platemap name",
+            "labels": [{"name": "test-label-1", "wells": [0]}, {"name": "test_label_2", "wells": [1]}],
+        },
+    ],
+)
+async def test_Server__handles_start_recording_command__success(
+    test_stim_running_status, test_platemap, test_server_items
+):
+    test_to_monitor_queue = test_server_items["to_monitor_queue"]
+    ssm = test_server_items["system_state_manager"]
+
+    await ssm.update({"system_status": SystemStatuses.LIVE_VIEW_ACTIVE})
+    test_command = {
+        "command": "start_recording",
+        "start_timepoint": randint(0, 100000),  # arbitrary bounds
+        "plate_barcode": TEST_PLATE_BARCODE,
+        "stim_barcode": None,
+        "platemap": urllib.parse.quote_plus(json.dumps(test_platemap)),
+    }
+    if test_stim_running_status:
+        test_command["stim_barcode"] = TEST_STIM_BARCODE
+        await ssm.update(
+            {
+                "stimulation_protocol_statuses": [
+                    choice([StimulationStates.STARTING, StimulationStates.RUNNING])
+                ]
+            }
+        )
+
+    run_task = await test_server_items["run"](asyncio.Future(), asyncio.Event())
+    async with connect(WS_URI) as client:
+        await client.send(json.dumps(test_command))
+    await wait_tasks_clean({run_task})
+
+    expected_command = {**test_command, "platemap": test_platemap}
+    if not test_stim_running_status:
+        expected_command["stim_barcode"] = NOT_APPLICABLE_H5_METADATA
+
+    assert test_to_monitor_queue.qsize() == 1
+    assert await test_to_monitor_queue.get() == expected_command
+
+
+@pytest.mark.asyncio
+async def test_Server__handles_stop_recording_command__success(test_server_items):
+    test_to_monitor_queue = test_server_items["to_monitor_queue"]
+    ssm = test_server_items["system_state_manager"]
+
+    await ssm.update({"system_status": SystemStatuses.RECORDING})
+    test_command = {
+        "command": "stop_recording",
+        "stop_timepoint": randint(0, 100000),  # arbitrary bounds
+    }
+
+    run_task = await test_server_items["run"](asyncio.Future(), asyncio.Event())
+    async with connect(WS_URI) as client:
+        await client.send(json.dumps(test_command))
+    await wait_tasks_clean({run_task})
+
+    assert test_to_monitor_queue.qsize() == 1
+    assert await test_to_monitor_queue.get() == test_command
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "test_recording_exists,test_replace_existing", [(False, False), (False, True), (True, True)]
+)
+async def test_Server__handles_update_recording_name_command__success(
+    test_recording_exists, test_replace_existing, test_server_items, mocker
+):
+    test_to_monitor_queue = test_server_items["to_monitor_queue"]
+
+    mocker.patch.object(server, "_recording_exists", autospec=True, return_value=test_recording_exists)
+
+    test_command = {
+        "command": "update_recording_name",
+        "new_name": " NewRecording ",
+        "replace_existing": test_replace_existing,
+    }
+
+    run_task = await test_server_items["run"](asyncio.Future(), asyncio.Event())
+    async with connect(WS_URI) as client:
+        await client.send(json.dumps(test_command))
+    await wait_tasks_clean({run_task})
+
+    assert test_to_monitor_queue.qsize() == 1
+    assert await test_to_monitor_queue.get() == {**test_command, "new_name": test_command["new_name"].strip()}
+
+
+@pytest.mark.asyncio
+async def test_Server__handles_update_recording_name_command__recording_exists_and_not_replacing(
+    test_server_items, mocker
+):
+    test_to_monitor_queue = test_server_items["to_monitor_queue"]
+
+    mocker.patch.object(server, "_recording_exists", autospec=True, return_value=True)
+
+    test_command = {
+        "command": "update_recording_name",
+        "new_name": " NewRecording ",
+        "replace_existing": False,
+    }
+
+    run_task = await test_server_items["run"](asyncio.Future(), asyncio.Event())
+    async with connect(WS_URI) as client:
+        await client.send(json.dumps(test_command))
+        await client.recv() == {"communication_type": "update_recording_name", "name_updated": False}
+    await wait_tasks_clean({run_task})
+
+    assert test_to_monitor_queue.qsize() == 0
+
+
+@pytest.mark.asyncio
+async def test_Server__handles_set_stim_protocols_command__success(test_server_items, mocker):
+    test_to_monitor_queue = test_server_items["to_monitor_queue"]
+    ssm = test_server_items["system_state_manager"]
+
+    test_protocol = get_random_protocol()
+    test_protocol_assignments = get_random_protocol_assignments([test_protocol["protocol_id"]])
+
+    await ssm.update({"system_status": SystemStatuses.RECORDING})
+    test_command = {
+        "command": "set_stim_protocols",
+        "stim_barcode": TEST_STIM_BARCODE,
+        "stim_info": {"protocols": [test_protocol], "protocol_assignments": test_protocol_assignments},
+    }
+
+    run_task = await test_server_items["run"](asyncio.Future(), asyncio.Event())
+    async with connect(WS_URI) as client:
+        await client.send(json.dumps(test_command))
+        actual = await asyncio.wait_for(test_to_monitor_queue.get(), timeout=1)
+        # set event since the command handler will not exit until this is done
+        cpe = actual.pop("command_processed_event")
+        assert isinstance(cpe, asyncio.Event)
+        cpe.set()
+
+    await wait_tasks_clean({run_task})
+
+    assert actual == test_command
+
+
+@pytest.mark.asyncio
+async def test_Server__handles_start_stim_checks_command__success(test_server_items, mocker):
+    test_to_monitor_queue = test_server_items["to_monitor_queue"]
+    ssm = test_server_items["system_state_manager"]
+
+    await ssm.update({"system_status": SystemStatuses.RECORDING})
+    test_command = {
+        "command": "start_stim_checks",
+        "well_indices": get_random_well_idxs(),
+        "plate_barcode": TEST_PLATE_BARCODE,
+        "stim_barcode": TEST_STIM_BARCODE,
+    }
+
+    run_task = await test_server_items["run"](asyncio.Future(), asyncio.Event())
+    async with connect(WS_URI) as client:
+        await client.send(json.dumps(test_command))
+    await wait_tasks_clean({run_task})
+
+    assert test_to_monitor_queue.qsize() == 1
+    assert await test_to_monitor_queue.get() == test_command
+
+
+@pytest.mark.asyncio
+async def test_Server__handles_set_stim_status_command__success(test_server_items, mocker):
+    assert not "TODO"
