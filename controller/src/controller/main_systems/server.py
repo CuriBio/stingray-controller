@@ -73,7 +73,9 @@ class Server:
         self.user_initiated_shutdown = False
 
     async def run(
-        self, system_error_future: asyncio.Future[int], server_running_event: asyncio.Event
+        self,
+        system_error_future: asyncio.Future[tuple[int, dict[str, str]]],
+        server_running_event: asyncio.Event,
     ) -> None:
         logger.info("Starting Server")
 
@@ -105,7 +107,9 @@ class Server:
             logger.info("Server shut down")
 
     async def _run(
-        self, websocket: WebSocketServerProtocol, system_error_future: asyncio.Future[int]
+        self,
+        websocket: WebSocketServerProtocol,
+        system_error_future: asyncio.Future[tuple[int, dict[str, str]]],
     ) -> None:
         if not self._serve_task:
             raise NotImplementedError("_serve_task must be not be None here")
@@ -130,12 +134,15 @@ class Server:
 
         self._serve_task.cancel()
 
-    async def _report_system_error(self, system_error_future: asyncio.Future[int]) -> None:
+    async def _report_system_error(
+        self, system_error_future: asyncio.Future[tuple[int, dict[str, str]]]
+    ) -> None:
         if not system_error_future.done():
             logger.info("No errors to report to UI")
             return
 
-        error_code = system_error_future.result()
+        # TODO use a dataclass for this instead of a tuple
+        error_code, extra_info = system_error_future.result()
 
         logger.info(f"Attempting to report system error code {error_code} to UI")
 
@@ -151,7 +158,7 @@ class Server:
 
         if self._websocket:
             logger.info(f"Sending system error code {error_code} to UI")
-            msg = {"communication_type": "error", "error_code": error_code}
+            msg = {"communication_type": "error", "error_code": error_code, **extra_info}
             try:
                 await self._websocket.send(json.dumps(msg))
             except BaseException:

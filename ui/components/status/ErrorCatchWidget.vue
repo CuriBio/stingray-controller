@@ -1,13 +1,13 @@
 <template>
   <div class="div__status-error-catch-background">
     <div class="div__status-error-catch-title-label">An&nbsp;<wbr />error&nbsp;<wbr />occurred.</div>
-    <p class="p__status-error-catch-alert-txt">{{ systemErrorMessage }}</p>
     <p class="p__status-error-catch-alert-txt">{{ `Error Code: ${systemErrorCode}` }}</p>
+    <p class="p__status-error-catch-alert-txt">{{ systemErrorMessage }}</p>
     <textarea
       v-if="installerLink"
       class="textarea__installer_filepath"
       name="installerLink"
-      rows="2"
+      rows="3"
       cols="75"
       spellcheck="false"
       :value.prop="installerLink"

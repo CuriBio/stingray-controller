@@ -13,6 +13,10 @@ class WebsocketCommandError(Exception):
     pass
 
 
+class ElectronControllerVersionMismatchError(Exception):
+    pass
+
+
 # Instrument related errors
 
 

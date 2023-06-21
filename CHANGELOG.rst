@@ -1,7 +1,7 @@
 Changelog for Stingray Controller
 =================================
 
-0.3.0 (2023-06-07)
+0.3.0 (unreleased)
 ------------------
 
 Added:
@@ -13,6 +13,13 @@ Changed:
 ^^^^^^^^
 - Minimum phase duration is now 25μs instead of 20μs
 
+Fixed:
+^^^^^^
+- Error message for when:
+
+    - The instrument's firmware is incompatible with the software
+    - An error occurs during software install
+
 
 0.2.0 (2023-06-05)
 ------------------
@@ -23,16 +30,16 @@ Added:
 - Protocol validation checks on import in Stimulation Studio
 - Disabled sidebar controls before connection to instrument is made
 
+Changed:
+^^^^^^^^
+- Error codes
+- New login flow
+
 Fixed:
 ^^^^^^
 - SW auto-updating
 - Issue with firmware versions always reported as being incompatible
 - Prevent connection to Mantarray instruments
-
-Changed:
-^^^^^^^^
-- Error codes
-- New login flow
 
 
 0.1.0 (2023-04-13)

@@ -158,7 +158,7 @@ class InstrumentComm:
 
     # ONE-SHOT TASKS
 
-    async def run(self, system_error_future: asyncio.Future[int]) -> None:
+    async def run(self, system_error_future: asyncio.Future[tuple[int, dict[str, str]]]) -> None:
         logger.info("Starting InstrumentComm")
 
         try:

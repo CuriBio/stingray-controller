@@ -88,7 +88,7 @@ async def main(command_line_args: list[str]) -> None:
         )
 
         # future for subsystems to set if they experience an error. The server will report the error in the future to the UI
-        system_error_future: asyncio.Future[int] = asyncio.Future()
+        system_error_future: asyncio.Future[tuple[int, dict[str, str]]] = asyncio.Future()
 
         # make sure that WS server boots up before starting other subsystems. This ensures that errors can be reported to the UI
         logger.info("Booting up server before other subsystems")
@@ -105,6 +105,7 @@ async def main(command_line_args: list[str]) -> None:
         else:
             logger.info("Creating remaining subsystems")
             tasks |= {
+                # TODO might be cleaner to pass in a call back to handle errors instead of the future itself
                 asyncio.create_task(system_monitor.run(system_error_future)),
                 asyncio.create_task(instrument_comm_subsystem.run(system_error_future)),
                 asyncio.create_task(cloud_comm_subsystem.run(system_error_future)),
@@ -200,7 +201,6 @@ def initialize_system_state(parsed_args: dict[str, Any], log_file_id: uuid.UUID)
     if (expected_software_version := parsed_args["expected_software_version"]) and not parsed_args[
         "skip_software_version_verification"
     ]:
-        # TODO check this in system monitor start up
         system_state["expected_software_version"] = expected_software_version
 
     return system_state
