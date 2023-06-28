@@ -101,11 +101,9 @@ async def test_main__logs_command_line_args(log_directory, mocker):
 
     spied_info = mocker.spy(main.logger, "info")
 
-    rand_arg = choice(
-        ["--log-level-debug", "--skip-software-version-verification", "--expected-software-version=1.2.3"]
-    )
+    rand_arg = choice(["--log-level-debug", "--expected-software-version=1.2.3"])
 
-    cmd_line_args = [rand_arg]
+    cmd_line_args = [rand_arg, f"--base-directory={os.path.join('Users', 'some-user', 'some-other-dir')}"]
     if log_directory:
         cmd_line_args.append(f"--log-directory={log_directory}")
 
@@ -115,7 +113,7 @@ async def test_main__logs_command_line_args(log_directory, mocker):
     for arg in sorted(cmd_line_args):
         arg_name, *arg_values = arg.split("=")
         arg_name = arg_name[2:].replace("-", "_")
-        if arg_name == "log_directory":
+        if "directory" in arg_name:
             arg_value = redact_sensitive_info_from_path(arg_values[0])
         else:
             arg_value = arg_values[0] if arg_values else True

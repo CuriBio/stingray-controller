@@ -50,11 +50,12 @@ const PY_EXE = "instrument-controller"; // the name of the main module
 // When booting up (3/27/20), __dirname is equal to: win-unpacked\resources\app\dist\main
 const pathToPyDistFolder = path.join(__dirname, "..", "..", "..", "..", PY_DIST_FOLDER);
 const isRunningInBundle = () => {
-  console.log("Current dirname: " + mainUtils.redactUsernameFromLogs(__dirname)); // allow-log
+  console.log(`Current dirname: ${mainUtils.redactUsernameFromLogs(__dirname)}`); // allow-log
   console.log(
     // allow-log
-    "To determine if running in bundle, checking the path " +
-      mainUtils.redactUsernameFromLogs(pathToPyDistFolder)
+    `To determine if running in bundle, checking the path: ${mainUtils.redactUsernameFromLogs(
+      pathToPyDistFolder
+    )}`
   );
   return fs.existsSync(pathToPyDistFolder);
 };
@@ -97,7 +98,7 @@ const startPythonSubprocess = () => {
     launchMsg = "Launching Controller through Python shell";
   }
 
-  const redactedArgs = pythonCmdLineArgs.map((a, i) => (i == 0 ? mainUtils.redactUsernameFromLogs(a) : a));
+  const redactedArgs = pythonCmdLineArgs.map((arg) => mainUtils.redactUsernameFromLogs(arg));
   launchMsg += ` using args: ${redactedArgs}`;
   console.log(launchMsg);
 
