@@ -80,7 +80,6 @@ const generateFlaskCommandLineArgs = function (electronStore) {
   const args = [];
   args.push("--base-directory=" + path.dirname(electronStore.path));
   args.push("--log-directory=" + flaskLogsFullPath);
-  args.push("--expected-software-version=" + exportFunctions.getCurrentAppVersion());
 
   return args;
 };

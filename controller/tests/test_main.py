@@ -187,12 +187,10 @@ async def test_main__handles_errors_correctly(mocker):
 @pytest.mark.parametrize("base_directory", [None, os.path.join("Users", "Username", "AppData")])
 @pytest.mark.parametrize("log_directory", [None, "logs_in_here"])
 @pytest.mark.parametrize("expected_software_version", [None, "1.2.3"])
-@pytest.mark.parametrize("skip_software_version_verification", [True, False])
 async def test_main__initializes_system_state_correctly(
     base_directory,
     log_directory,
     expected_software_version,
-    skip_software_version_verification,
     mocker,
 ):
     spied_uuid4 = mocker.spy(main.uuid, "uuid4")
@@ -209,8 +207,6 @@ async def test_main__initializes_system_state_correctly(
         cmd_line_args.append(f"--log-directory={log_directory}")
     if expected_software_version:
         cmd_line_args.append(f"--expected-software-version={expected_software_version}")
-    if skip_software_version_verification:
-        cmd_line_args.append("--skip-software-version-verification")
 
     await main.main(cmd_line_args)
 
@@ -233,7 +229,7 @@ async def test_main__initializes_system_state_correctly(
         "log_file_id": spied_uuid4.spy_return,
     }
 
-    if expected_software_version and not skip_software_version_verification:
+    if expected_software_version:
         expected_system_state["expected_software_version"] = expected_software_version
 
     assert spied_init_state.spy_return == expected_system_state

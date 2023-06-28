@@ -198,9 +198,7 @@ def initialize_system_state(parsed_args: dict[str, Any], log_file_id: uuid.UUID)
         "log_file_id": log_file_id,
     }
 
-    if (expected_software_version := parsed_args["expected_software_version"]) and not parsed_args[
-        "skip_software_version_verification"
-    ]:
+    if expected_software_version := parsed_args["expected_software_version"]:
         system_state["expected_software_version"] = expected_software_version
 
     return system_state
