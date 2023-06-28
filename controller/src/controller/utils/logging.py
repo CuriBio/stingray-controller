@@ -2,7 +2,6 @@
 import datetime
 import logging
 import os
-import re
 import sys
 import time
 from typing import Any
@@ -53,13 +52,13 @@ def redact_sensitive_info_from_path(file_path: str | None) -> str | None:
     # TODO is None really ever passed into this function?
     if file_path is None:
         return None
-    split_path = re.split(r"(Users\\)(.*)(\\AppData)", file_path)
-    if len(split_path) != 5:
-        return get_redacted_string(4)
-    scrubbed_path = split_path[0] + split_path[1]
-    scrubbed_path += get_redacted_string(len(split_path[2]))
-    scrubbed_path += split_path[3] + split_path[4]
-    return scrubbed_path
+    dirs = file_path.split(os.path.sep)
+    try:
+        users_idx = dirs.index("Users")
+    except ValueError:
+        return file_path
+    dirs[users_idx + 1] = get_redacted_string(4)
+    return os.path.join(*dirs)
 
 
 def get_redacted_string(length: int) -> str:

@@ -54,7 +54,12 @@ const createStore = function ({ filePath = undefined, fileName = "stingray_contr
 };
 
 const redactUsernameFromLogs = (dirPath) => {
-  const username = dirPath.includes("\\") ? dirPath.split("\\")[2] : dirPath.split("/")[2];
+  const dirs = dirPath.split(process.platform === "win32" ? "\\" : "/");
+  const usersIdx = dirs.indexOf("Users");
+  if (usersIdx === -1) {
+    return dirPath;
+  }
+  const username = dirs[usersIdx + 1];
   return dirPath.replace(username, "****");
 };
 
@@ -75,12 +80,11 @@ const getLogDir = (electronStore) => {
  */
 const generateFlaskCommandLineArgs = function (electronStore) {
   console.log("node env: " + process.env.NODE_ENV); // allow-log
-  const flaskLogsFullPath = getLogDir(electronStore);
+  const flaskLogsFullPath = getLogSubdir();
 
   const args = [];
   args.push("--base-directory=" + path.dirname(electronStore.path));
   args.push("--log-directory=" + flaskLogsFullPath);
-  args.push("--expected-software-version=" + exportFunctions.getCurrentAppVersion());
 
   return args;
 };

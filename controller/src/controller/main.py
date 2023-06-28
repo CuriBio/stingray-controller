@@ -164,8 +164,9 @@ def _log_cmd_line_args(parsed_args: dict[str, Any]) -> None:
         arg_name: arg_value for arg_name, arg_value in sorted(parsed_args.items()) if arg_value
     }
 
-    if log_directory := parsed_args_copy.get("log_directory"):
-        parsed_args_copy["log_directory"] = redact_sensitive_info_from_path(log_directory)
+    for arg_name in ("base_directory", "log_directory"):
+        if arg_val := parsed_args_copy.get(arg_name):
+            parsed_args_copy[arg_name] = redact_sensitive_info_from_path(arg_val)
     # Tanner (1/14/21): Unsure why the back slashes are duplicated when converting the dict to string. Using replace here to remove the duplication, not sure if there is a better way to solve or avoid this problem
     logger.info(f"Command Line Args: {parsed_args_copy}".replace(r"\\", "\\"))
 
@@ -198,9 +199,7 @@ def initialize_system_state(parsed_args: dict[str, Any], log_file_id: uuid.UUID)
         "log_file_id": log_file_id,
     }
 
-    if (expected_software_version := parsed_args["expected_software_version"]) and not parsed_args[
-        "skip_software_version_verification"
-    ]:
+    if expected_software_version := parsed_args["expected_software_version"]:
         system_state["expected_software_version"] = expected_software_version
 
     return system_state
