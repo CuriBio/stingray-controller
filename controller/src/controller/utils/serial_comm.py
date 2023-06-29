@@ -25,7 +25,7 @@ from pulse3D.constants import TAMPER_FLAG_UUID
 from pulse3D.constants import TOTAL_WORKING_HOURS_UUID
 
 from ..constants import GENERIC_24_WELL_DEFINITION
-from ..constants import MICROS_PER_MILLIS
+from ..constants import MICROS_PER_MILLI
 from ..constants import NUM_WELLS
 from ..constants import SERIAL_COMM_CHECKSUM_LENGTH_BYTES
 from ..constants import SERIAL_COMM_MAGIC_WORD_BYTES
@@ -290,7 +290,7 @@ def convert_subprotocol_pulse_dict_to_bytes(
     if is_null:
         num_unused_bytes = 24
         subprotocol_bytes = bytes(num_unused_bytes) + (
-            subprotocol_components["duration"] // MICROS_PER_MILLIS
+            subprotocol_components["duration"] // MICROS_PER_MILLI
         ).to_bytes(4, byteorder="little")
     else:
         subprotocol_bytes = subprotocol_components["phase_one_duration"].to_bytes(4, byteorder="little") + (
@@ -327,7 +327,7 @@ def convert_subprotocol_pulse_bytes_to_dict(
 
     # the final byte is a flag indicating whether or not this subprotocol is a delay
     if subprotocol_bytes[-1]:
-        duration_us = num_cycles_or_duration_ms * MICROS_PER_MILLIS
+        duration_us = num_cycles_or_duration_ms * MICROS_PER_MILLI
         return {"type": "delay", "duration": duration_us}
 
     conversion_factor = 1 if is_voltage else 10

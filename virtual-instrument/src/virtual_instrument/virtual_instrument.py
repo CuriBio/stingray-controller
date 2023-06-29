@@ -18,7 +18,7 @@ from zlib import crc32
 from controller.constants import GOING_DORMANT_HANDSHAKE_TIMEOUT_CODE
 from controller.constants import MAX_MC_REBOOT_DURATION_SECONDS
 from controller.constants import MICRO_TO_BASE_CONVERSION
-from controller.constants import MICROS_PER_MILLIS
+from controller.constants import MICROS_PER_MILLI
 from controller.constants import SERIAL_COMM_CHECKSUM_LENGTH_BYTES
 from controller.constants import SERIAL_COMM_HANDSHAKE_PERIOD_SECONDS
 from controller.constants import SERIAL_COMM_HANDSHAKE_TIMEOUT_SECONDS
@@ -540,7 +540,7 @@ class MantarrayMcSimulator(InfiniteProcess):
             comm_from_controller[SERIAL_COMM_PAYLOAD_INDEX : SERIAL_COMM_PAYLOAD_INDEX + 2],
             byteorder="little",
         )
-        if sampling_period % MICROS_PER_MILLIS != 0:
+        if sampling_period % MICROS_PER_MILLI != 0:
             raise SerialCommInvalidSamplingPeriodError(sampling_period)
         self._sampling_period_us = sampling_period
         return update_status_byte
