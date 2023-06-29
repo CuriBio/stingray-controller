@@ -121,16 +121,45 @@ def validate_checksum(comm_from_pc: bytes) -> bool:
     return actual_checksum == expected_checksum
 
 
-def parse_metadata_bytes(metadata_bytes: bytes) -> dict[UUID | str, Any]:
+def parse_instrument_event_info(event_info: bytes) -> dict[str, Any]:
+    return {
+        "prev_main_status_update_timestamp": int.from_bytes(event_info[:8], byteorder="little"),
+        "prev_channel_status_update_timestamp": int.from_bytes(event_info[8:16], byteorder="little"),
+        "start_of_prev_mag_data_stream_timestamp": int.from_bytes(event_info[16:24], byteorder="little"),
+        "start_of_prev_stim_timestamp": int.from_bytes(event_info[24:32], byteorder="little"),
+        "prev_handshake_received_timestamp": int.from_bytes(event_info[32:40], byteorder="little"),
+        "prev_system_going_dormant_timestamp": int.from_bytes(event_info[40:48], byteorder="little"),
+        "mag_data_stream_active": bool(event_info[48]),
+        "stim_active": bool(event_info[49]),
+        "pc_connection_status": event_info[50],
+        "prev_barcode_scanned": event_info[51:63].decode("ascii"),
+    }
+
+
+def convert_instrument_event_info_to_bytes(event_info: dict[str, Any]) -> bytes:
+    return (  # type: ignore
+        event_info["prev_main_status_update_timestamp"].to_bytes(8, byteorder="little")
+        + event_info["prev_channel_status_update_timestamp"].to_bytes(8, byteorder="little")
+        + event_info["start_of_prev_mag_data_stream_timestamp"].to_bytes(8, byteorder="little")
+        + event_info["start_of_prev_stim_timestamp"].to_bytes(8, byteorder="little")
+        + event_info["prev_handshake_received_timestamp"].to_bytes(8, byteorder="little")
+        + event_info["prev_system_going_dormant_timestamp"].to_bytes(8, byteorder="little")
+        + bytes(
+            [event_info[key] for key in ("mag_data_stream_active", "stim_active", "pc_connection_status")]
+        )
+        + bytes(event_info["prev_barcode_scanned"], encoding="ascii")
+    )
+
+
+def parse_metadata_bytes(metadata_bytes: bytes) -> dict[Any, Any]:
     """Parse bytes containing metadata and return as Dict."""
     return {
         BOOT_FLAGS_UUID: metadata_bytes[0],
         MANTARRAY_NICKNAME_UUID: metadata_bytes[1:14].decode("utf-8"),
         MANTARRAY_SERIAL_NUMBER_UUID: metadata_bytes[14:26].decode("ascii"),
         MAIN_FIRMWARE_VERSION_UUID: convert_semver_bytes_to_str(metadata_bytes[26:29]),
-        CHANNEL_FIRMWARE_VERSION_UUID: convert_semver_bytes_to_str(metadata_bytes[26:29]),
-        # this key is only necessary for logging at the moment
-        "Status codes prior to reboot": convert_status_code_bytes_to_dict(metadata_bytes[32:58]),
+        CHANNEL_FIRMWARE_VERSION_UUID: convert_semver_bytes_to_str(metadata_bytes[29:32]),
+        "status_codes_prior_to_reboot": convert_status_code_bytes_to_dict(metadata_bytes[32:58]),
         INITIAL_MAGNET_FINDING_PARAMS_UUID: {
             "X": int.from_bytes(metadata_bytes[58:59], byteorder="little", signed=True),
             "Y": int.from_bytes(metadata_bytes[59:60], byteorder="little", signed=True),
@@ -138,6 +167,7 @@ def parse_metadata_bytes(metadata_bytes: bytes) -> dict[UUID | str, Any]:
             "REMN": int.from_bytes(metadata_bytes[61:63], byteorder="little", signed=True),
         },
         "is_stingray": bool(metadata_bytes[63]),
+        **parse_instrument_event_info(metadata_bytes[64:]),
     }
 
 
@@ -157,6 +187,7 @@ def convert_metadata_to_bytes(metadata_dict: dict[UUID | str, Any]) -> bytes:
             2, byteorder="little", signed=True
         )
         + bytes([metadata_dict["is_stingray"]])
+        + convert_instrument_event_info_to_bytes(metadata_dict)  # type: ignore
     )
     # append empty bytes so the result length is always a multiple of 32
     metadata_bytes += bytes(math.ceil(len(metadata_bytes) / 32) * 32 - len(metadata_bytes))

@@ -37,6 +37,7 @@ from controller.constants import SerialCommPacketTypes
 from controller.constants import STIM_COMPLETE_SUBPROTOCOL_IDX
 from controller.constants import StimProtocolStatuses
 from controller.utils.serial_comm import convert_adc_readings_to_circuit_status
+from controller.utils.serial_comm import convert_instrument_event_info_to_bytes
 from controller.utils.serial_comm import convert_metadata_to_bytes
 from controller.utils.serial_comm import convert_stim_bytes_to_dict
 from controller.utils.serial_comm import create_data_packet
@@ -123,6 +124,20 @@ class MantarrayMcSimulator(InfiniteProcess):
     default_channel_firmware_version = "0.0.1"
     default_plate_barcode = "ML22001000-2"
     default_stim_barcode = "MS22001000-2"
+    default_event_info = immutabledict(
+        {
+            "prev_main_status_update_timestamp": 1,
+            "prev_channel_status_update_timestamp": 2,
+            "start_of_prev_mag_data_stream_timestamp": 3,
+            "start_of_prev_stim_timestamp": 4,
+            "prev_handshake_received_timestamp": 5,
+            "prev_system_going_dormant_timestamp": 6,
+            "mag_data_stream_active": False,
+            "stim_active": False,
+            "pc_connection_status": 1,
+            "prev_barcode_scanned": default_plate_barcode,
+        }
+    )
     default_metadata_values: immutabledict[UUID, Any] = immutabledict(
         {
             BOOT_FLAGS_UUID: 0b00000000,
@@ -132,6 +147,7 @@ class MantarrayMcSimulator(InfiniteProcess):
             CHANNEL_FIRMWARE_VERSION_UUID: default_channel_firmware_version,
             INITIAL_MAGNET_FINDING_PARAMS_UUID: initial_magnet_finding_params,
             "is_stingray": True,
+            **default_event_info,
         }
     )
     default_adc_reading = 0xFF00
@@ -157,7 +173,7 @@ class MantarrayMcSimulator(InfiniteProcess):
         self._is_first_data_stream = True
         self._simulated_data_index = 0
         self._simulated_data: NDArray[np.uint16] = np.array([], dtype=np.uint16)
-        self._metadata_dict: dict[UUID, Any] = dict()
+        self._metadata_dict: dict[UUID | str, Any] = dict()
         self._reset_metadata_dict()
         # self._setup_data_interpolator()
         # simulator values (set in _handle_boot_up_config)
@@ -503,6 +519,8 @@ class MantarrayMcSimulator(InfiniteProcess):
             if not checksum_failure:
                 self._reboot_time_secs = perf_counter()
                 self._reboot_again = True
+        elif packet_type == SerialCommPacketTypes.GET_ERROR_DETAILS:  # pragma: no cover
+            response_body += convert_instrument_event_info_to_bytes(self.default_event_info)
         elif packet_type == SerialCommPacketTypes.ERROR_ACK:  # pragma: no cover
             # Tanner (3/24/22): As of right now, simulator does not need to handle this message at all, so it is the responsibility of tests to prompt simulator to go through the rest of the error handling procedure
             pass

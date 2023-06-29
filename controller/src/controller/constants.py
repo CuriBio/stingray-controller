@@ -195,6 +195,7 @@ class SerialCommPacketTypes(IntEnum):
     # Misc?
     TRIGGER_ERROR = 103
     # Errors
+    GET_ERROR_DETAILS = 253
     ERROR_ACK = 254
     CHECKSUM_FAILURE = 255
 
