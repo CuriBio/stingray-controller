@@ -1,6 +1,15 @@
 Changelog for Stingray Controller
 =================================
 
+
+0.3.1 (unreleased)
+------------------
+
+Added:
+^^^^^^
+- Handling for new firmware error reporting
+
+
 0.3.0 (unreleased)
 ------------------
 
