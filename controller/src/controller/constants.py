@@ -34,7 +34,7 @@ VALID_CONFIG_SETTINGS = frozenset(ConfigSettings._fields)
 BARCODE_HEADERS: immutabledict[str, str] = immutabledict({"plate_barcode": "ML", "stim_barcode": "MS"})
 ALL_VALID_BARCODE_HEADERS = frozenset(BARCODE_HEADERS.values())
 
-MICROS_PER_MILLIS = int(1e3)
+MICROS_PER_MILLI = int(1e3)
 MICRO_TO_BASE_CONVERSION = int(1e6)
 
 # Cloud APIs
@@ -195,6 +195,7 @@ class SerialCommPacketTypes(IntEnum):
     # Misc?
     TRIGGER_ERROR = 103
     # Errors
+    GET_ERROR_DETAILS = 253
     ERROR_ACK = 254
     CHECKSUM_FAILURE = 255
 
