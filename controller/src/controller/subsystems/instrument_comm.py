@@ -68,6 +68,7 @@ from ..utils.serial_comm import convert_stimulator_check_bytes_to_dict
 from ..utils.serial_comm import create_data_packet
 from ..utils.serial_comm import get_serial_comm_timestamp
 from ..utils.serial_comm import METADATA_TAGS_FOR_LOGGING
+from ..utils.serial_comm import parse_instrument_event_info
 from ..utils.serial_comm import parse_metadata_bytes
 from ..utils.serial_comm import validate_instrument_metadata
 
@@ -162,7 +163,7 @@ class InstrumentComm:
 
     # ONE-SHOT TASKS
 
-    async def run(self, system_error_future: asyncio.Future[int]) -> None:
+    async def run(self, system_error_future: asyncio.Future[tuple[int, dict[str, str]]]) -> None:
         logger.info("Starting InstrumentComm")
 
         try:
@@ -485,7 +486,11 @@ class InstrumentComm:
                 returned_packet = SERIAL_COMM_MAGIC_WORD_BYTES + packet_payload
                 raise SerialCommIncorrectChecksumFromPCError(returned_packet)
             case SerialCommPacketTypes.STATUS_BEACON:
-                await self._process_status_beacon(packet_payload)
+                status_codes_dict = convert_status_code_bytes_to_dict(
+                    # TODO see if removing this slice works
+                    packet_payload[:SERIAL_COMM_STATUS_CODE_LENGTH_BYTES]
+                )
+                await self._process_status_codes(status_codes_dict, "Status Beacon")
             case SerialCommPacketTypes.HANDSHAKE:
                 status_codes_dict = convert_status_code_bytes_to_dict(packet_payload)
                 await self._process_status_codes(status_codes_dict, "Handshake Response")
@@ -505,6 +510,10 @@ class InstrumentComm:
                 logger.info(f"Barcode scanned by instrument: {barcode}")
                 barcode_comm = {"command": "get_barcode", "barcode": barcode}
                 await self._comm_to_monitor_queue.put(barcode_comm)
+            case SerialCommPacketTypes.GET_ERROR_DETAILS:
+                error_details = parse_instrument_event_info(packet_payload)
+                await self._send_data_packet(SerialCommPacketTypes.ERROR_ACK)
+                raise InstrumentFirmwareError(f"Error Details: {error_details}")
             case _:
                 raise NotImplementedError(f"Packet Type: {packet_type} is not defined")
 
@@ -536,7 +545,7 @@ class InstrumentComm:
                 validate_instrument_metadata(metadata_dict)
                 if not metadata_dict.pop("is_stingray"):
                     raise IncorrectInstrumentConnectedError()
-                prev_command_info.update(metadata_dict)  # type: ignore [arg-type]  # mypy doesn't like that the keys are UUIDs here
+                prev_command_info.update(metadata_dict)
             case "start_data_stream":
                 if response_data[0]:
                     if not self._hardware_test_mode:
@@ -596,12 +605,6 @@ class InstrumentComm:
         if prev_command_info["command"] not in INTERMEDIATE_FIRMWARE_UPDATE_COMMANDS:
             await self._comm_to_monitor_queue.put(prev_command_info)
 
-    async def _process_status_beacon(self, packet_payload: bytes) -> None:
-        status_codes_dict = convert_status_code_bytes_to_dict(
-            packet_payload[:SERIAL_COMM_STATUS_CODE_LENGTH_BYTES]
-        )
-        await self._process_status_codes(status_codes_dict, "Status Beacon")
-
     async def _process_status_codes(self, status_codes_dict: dict[str, int], comm_type: str) -> None:
         # placing this here so that handshake responses also set the event
         self._status_beacon_received_event.set()
@@ -610,9 +613,14 @@ class InstrumentComm:
 
         status_codes_msg = f"{comm_type} received from instrument. Status Codes: {status_codes_dict}"
         if any(status_codes_dict.values()):
-            await self._send_data_packet(SerialCommPacketTypes.ERROR_ACK)
-            raise InstrumentFirmwareError(status_codes_msg)
-        logger.debug(status_codes_msg)
+            logger.error(status_codes_msg)
+            logger.error("Retrieving error details from instrument")
+            await self._send_data_packet(SerialCommPacketTypes.GET_ERROR_DETAILS)
+            await self._command_tracker.add(
+                SerialCommPacketTypes.GET_ERROR_DETAILS, {"command": "get_error_details"}
+            )
+        else:
+            logger.debug(status_codes_msg)
 
     def _update_timepoints_of_events(self, *event_names: str) -> None:
         self._timepoints_of_events = self._timepoints_of_events._replace(

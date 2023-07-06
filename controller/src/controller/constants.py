@@ -40,7 +40,7 @@ BARCODE_LEN = 12
 BARCODE_HEADERS: immutabledict[str, str] = immutabledict({"plate_barcode": "ML", "stim_barcode": "MS"})
 ALL_VALID_BARCODE_HEADERS = frozenset(BARCODE_HEADERS.values())
 
-MICROS_PER_MILLIS = int(1e3)
+MICROS_PER_MILLI = int(1e3)
 MICRO_TO_BASE_CONVERSION = int(1e6)
 
 # Cloud APIs
@@ -99,6 +99,7 @@ class ErrorCodes(IntEnum):
     INSTRUMENT_COMMAND_FAILED = 12
     INSTRUMENT_COMMAND_ATTEMPT = 13
     # 100 - Caught in Controller
+    ELECTRON_CONTROLLER_VERSION_MISMATCH = 105
     UI_SENT_BAD_DATA = 110
     FIRMWARE_DOWNLOAD_ERROR = 180
     UNSPECIFIED_CONTROLLER_ERROR = (
@@ -206,6 +207,7 @@ class SerialCommPacketTypes(IntEnum):
     # Misc?
     TRIGGER_ERROR = 103
     # Errors
+    GET_ERROR_DETAILS = 253
     ERROR_ACK = 254
     CHECKSUM_FAILURE = 255
 

@@ -13,7 +13,6 @@ const log = require("electron-log");
 const path = require("path");
 const features = require("./features.json");
 
-const ci = require("ci-info");
 const fs = require("fs");
 const axios = require("axios");
 
@@ -51,11 +50,12 @@ const PY_EXE = "instrument-controller"; // the name of the main module
 // When booting up (3/27/20), __dirname is equal to: win-unpacked\resources\app\dist\main
 const pathToPyDistFolder = path.join(__dirname, "..", "..", "..", "..", PY_DIST_FOLDER);
 const isRunningInBundle = () => {
-  console.log("Current dirname: " + mainUtils.redactUsernameFromLogs(__dirname)); // allow-log
+  console.log(`Current dirname: ${mainUtils.redactUsernameFromLogs(__dirname)}`); // allow-log
   console.log(
     // allow-log
-    "To determine if running in bundle, checking the path " +
-      mainUtils.redactUsernameFromLogs(pathToPyDistFolder)
+    `To determine if running in bundle, checking the path: ${mainUtils.redactUsernameFromLogs(
+      pathToPyDistFolder
+    )}`
   );
   return fs.existsSync(pathToPyDistFolder);
 };
@@ -65,57 +65,50 @@ let waitForSubprocessToComplete = null;
 const startPythonSubprocess = () => {
   console.log("About to generate command line arguments to use when booting up server"); // allow-log
   const pythonCmdLineArgs = generateFlaskCommandLineArgs(store);
-  if (process.argv.includes("--log-level-debug")) pythonCmdLineArgs.push("--log-level-debug");
-  if (process.platform !== "win32") {
-    // presumably running in a unix dev or CI environment
-    if (!ci.isCI) {
-      // don't do this in CI environment, only locally
-      pythonCmdLineArgs.push("--skip-software-version-verification");
-    }
+  if (process.argv.includes("--log-level-debug")) {
+    pythonCmdLineArgs.push("--log-level-debug");
   }
 
-  const redactedArgs = pythonCmdLineArgs.map((a, i) => (i == 0 ? mainUtils.redactUsernameFromLogs(a) : a));
-
-  console.log("sending command line args: " + redactedArgs); // allow-log
+  let launcher;
+  let launchMsg;
   if (isRunningInBundle()) {
-    const script = path.join(pathToPyDistFolder, PY_EXE);
-    console.log(
-      // allow-log
-      "Launching compiled Python EXE at path: " + mainUtils.redactUsernameFromLogs(script)
-    );
-    const pythonSubprocess = require("child_process").execFile(script, pythonCmdLineArgs);
+    const controllerExe = path.join(pathToPyDistFolder, PY_EXE);
+    pythonCmdLineArgs.push(`--expected-software-version=${getCurrentAppVersion()}`);
 
-    waitForSubprocessToComplete = new Promise((resolve) => {
-      pythonSubprocess.on("close", (code, signal) =>
-        resolve(`Subprocess exit code: ${code}: termination signal ${signal}`)
-      );
-    });
+    launcher = () => {
+      return require("child_process").execFile(controllerExe, pythonCmdLineArgs);
+    };
+    launchMsg = `Launching compiled Controller EXE at path: ${mainUtils.redactUsernameFromLogs(
+      controllerExe
+    )}`;
   } else {
     const PythonShell = require("python-shell").PythonShell; // Eli (4/15/20) experienced odd error where the compiled exe was not able to load package python-shell...but since it's only actually required in development, just moving it to here
 
-    console.log("sending command line args: " + redactedArgs); // allow-log
+    const controllerEntrypoint = "entrypoint.py";
     const options = {
       mode: "text",
       pythonPath: process.platform === "win32" ? "python" : "python3",
-      // pythonOptions: ['-u'], // get print results in real-time
       scriptPath: path.join("..", "controller", "src"),
       args: pythonCmdLineArgs,
     };
-    const pyFileName = "entrypoint.py";
-    const redactedOptions = { ...options, args: redactedArgs };
-    console.log(
-      // allow-log
-      "Launching Python interpreter to run script '" +
-        pyFileName +
-        "' with options: " +
-        JSON.stringify(redactedOptions)
-    );
-    const pythonShell = new PythonShell(pyFileName, options);
 
-    waitForSubprocessToComplete = new Promise((resolve) => {
-      pythonShell.on("close", () => resolve("Python shell closed"));
-    });
+    launcher = () => {
+      return new PythonShell(controllerEntrypoint, options);
+    };
+    launchMsg = "Launching Controller through Python shell";
   }
+
+  const redactedArgs = pythonCmdLineArgs.map((arg) => mainUtils.redactUsernameFromLogs(arg));
+  launchMsg += ` using args: ${redactedArgs}`;
+  console.log(launchMsg);
+
+  const controllerSubprocess = launcher();
+
+  waitForSubprocessToComplete = new Promise((resolve) => {
+    controllerSubprocess.on("close", (code, signal) =>
+      resolve(`Subprocess exit code: ${code}: termination signal ${signal}`)
+    );
+  });
 };
 
 const bootUpFlask = function () {

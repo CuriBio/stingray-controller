@@ -101,11 +101,9 @@ async def test_main__logs_command_line_args(log_directory, mocker):
 
     spied_info = mocker.spy(main.logger, "info")
 
-    rand_arg = choice(
-        ["--log-level-debug", "--skip-software-version-verification", "--expected-software-version=1.2.3"]
-    )
+    rand_arg = choice(["--log-level-debug", "--expected-software-version=1.2.3"])
 
-    cmd_line_args = [rand_arg]
+    cmd_line_args = [rand_arg, f"--base-directory={os.path.join('Users', 'some-user', 'some-other-dir')}"]
     if log_directory:
         cmd_line_args.append(f"--log-directory={log_directory}")
 
@@ -115,7 +113,7 @@ async def test_main__logs_command_line_args(log_directory, mocker):
     for arg in sorted(cmd_line_args):
         arg_name, *arg_values = arg.split("=")
         arg_name = arg_name[2:].replace("-", "_")
-        if arg_name == "log_directory":
+        if "directory" in arg_name:
             arg_value = redact_sensitive_info_from_path(arg_values[0])
         else:
             arg_value = arg_values[0] if arg_values else True
@@ -187,12 +185,10 @@ async def test_main__handles_errors_correctly(mocker):
 @pytest.mark.parametrize("base_directory", [None, os.path.join("Users", "Username", "AppData")])
 @pytest.mark.parametrize("log_directory", [None, "logs_in_here"])
 @pytest.mark.parametrize("expected_software_version", [None, "1.2.3"])
-@pytest.mark.parametrize("skip_software_version_verification", [True, False])
 async def test_main__initializes_system_state_correctly(
     base_directory,
     log_directory,
     expected_software_version,
-    skip_software_version_verification,
     mocker,
 ):
     spied_uuid4 = mocker.spy(main.uuid, "uuid4")
@@ -209,8 +205,6 @@ async def test_main__initializes_system_state_correctly(
         cmd_line_args.append(f"--log-directory={log_directory}")
     if expected_software_version:
         cmd_line_args.append(f"--expected-software-version={expected_software_version}")
-    if skip_software_version_verification:
-        cmd_line_args.append("--skip-software-version-verification")
 
     await main.main(cmd_line_args)
 
@@ -233,7 +227,7 @@ async def test_main__initializes_system_state_correctly(
         "log_file_id": spied_uuid4.spy_return,
     }
 
-    if expected_software_version and not skip_software_version_verification:
+    if expected_software_version:
         expected_system_state["expected_software_version"] = expected_software_version
 
     assert spied_init_state.spy_return == expected_system_state

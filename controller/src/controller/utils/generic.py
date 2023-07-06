@@ -8,6 +8,7 @@ import socket
 from semver import VersionInfo
 
 from ..constants import ErrorCodes
+from ..exceptions import ElectronControllerVersionMismatchError
 from ..exceptions import FirmwareAndSoftwareNotCompatibleError
 from ..exceptions import FirmwareDownloadError
 from ..exceptions import FirmwareGoingDormantError
@@ -32,9 +33,13 @@ def semver_gt(version_a: str, version_b: str) -> bool:
     return VersionInfo.parse(version_a) > VersionInfo.parse(version_b)  # type: ignore
 
 
-def handle_system_error(exc: BaseException, system_error_future: asyncio.Future[int]) -> None:
+def handle_system_error(
+    exc: BaseException, system_error_future: asyncio.Future[tuple[int, dict[str, str]]]
+) -> None:
     if system_error_future.done():
         return
+
+    extra_info = {}
 
     match exc:
         case NoInstrumentDetectedError():
@@ -47,6 +52,7 @@ def handle_system_error(exc: BaseException, system_error_future: asyncio.Future[
             error_code = ErrorCodes.INSTRUMENT_STATUS_CODE
         case FirmwareAndSoftwareNotCompatibleError():
             error_code = ErrorCodes.INSTRUMENT_FW_INCOMPATIBLE_WITH_SW
+            extra_info["latest_compatible_sw_version"] = exc.args[0]
         case IncorrectInstrumentConnectedError():
             error_code = ErrorCodes.INCORRECT_INSTRUMENT_TYPE
         case InstrumentInvalidMetadataError():
@@ -61,9 +67,12 @@ def handle_system_error(exc: BaseException, system_error_future: asyncio.Future[
             error_code = ErrorCodes.INSTRUMENT_COMMAND_FAILED
         case InstrumentCommandAttemptError():
             error_code = ErrorCodes.INSTRUMENT_COMMAND_ATTEMPT
+        case ElectronControllerVersionMismatchError():
+            error_code = ErrorCodes.ELECTRON_CONTROLLER_VERSION_MISMATCH
+            extra_info["expected_software_version"] = exc.args[0]
         case WebsocketCommandError():
             error_code = ErrorCodes.UI_SENT_BAD_DATA
         case _:
             error_code = ErrorCodes.UNSPECIFIED_CONTROLLER_ERROR
 
-    system_error_future.set_result(error_code)
+    system_error_future.set_result((error_code, extra_info))

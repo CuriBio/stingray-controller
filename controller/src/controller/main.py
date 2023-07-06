@@ -95,7 +95,7 @@ async def main(command_line_args: list[str]) -> None:
         )
 
         # future for subsystems to set if they experience an error. The server will report the error in the future to the UI
-        system_error_future: asyncio.Future[int] = asyncio.Future()
+        system_error_future: asyncio.Future[tuple[int, dict[str, str]]] = asyncio.Future()
 
         # make sure that WS server boots up before starting other subsystems. This ensures that errors can be reported to the UI
         logger.info("Booting up server before other subsystems")
@@ -112,6 +112,7 @@ async def main(command_line_args: list[str]) -> None:
         else:
             logger.info("Creating remaining subsystems")
             tasks |= {
+                # TODO might be cleaner to pass in a call back to handle errors instead of the future itself
                 asyncio.create_task(system_monitor.run(system_error_future)),
                 asyncio.create_task(instrument_comm_subsystem.run(system_error_future)),
                 asyncio.create_task(cloud_comm_subsystem.run(system_error_future)),
@@ -180,8 +181,9 @@ def _log_cmd_line_args(parsed_args: dict[str, Any]) -> None:
         arg_name: arg_value for arg_name, arg_value in sorted(parsed_args.items()) if arg_value
     }
 
-    if log_directory := parsed_args_copy.get("log_directory"):
-        parsed_args_copy["log_directory"] = redact_sensitive_info_from_path(log_directory)
+    for arg_name in ("base_directory", "log_directory"):
+        if arg_val := parsed_args_copy.get(arg_name):
+            parsed_args_copy[arg_name] = redact_sensitive_info_from_path(arg_val)
     # Tanner (1/14/21): Unsure why the back slashes are duplicated when converting the dict to string. Using replace here to remove the duplication, not sure if there is a better way to solve or avoid this problem
     logger.info(f"Command Line Args: {parsed_args_copy}".replace(r"\\", "\\"))
 
@@ -214,10 +216,7 @@ def initialize_system_state(parsed_args: dict[str, Any], log_file_id: uuid.UUID)
         "log_file_id": log_file_id,
     }
 
-    if (expected_software_version := parsed_args["expected_software_version"]) and not parsed_args[
-        "skip_software_version_verification"
-    ]:
-        # TODO check this in system monitor start up
+    if expected_software_version := parsed_args["expected_software_version"]:
         system_state["expected_software_version"] = expected_software_version
 
     return system_state

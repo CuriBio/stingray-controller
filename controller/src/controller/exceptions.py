@@ -17,6 +17,10 @@ class WebsocketCommandNoOpException(Exception):
     pass
 
 
+class ElectronControllerVersionMismatchError(Exception):
+    pass
+
+
 # Instrument related errors
 
 

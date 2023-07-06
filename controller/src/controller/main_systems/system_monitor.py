@@ -18,6 +18,7 @@ from ..constants import MICRO_TO_BASE_CONVERSION
 from ..constants import StimulationStates
 from ..constants import StimulatorCircuitStatuses
 from ..constants import SystemStatuses
+from ..exceptions import ElectronControllerVersionMismatchError
 from ..utils.aio import wait_tasks_clean
 from ..utils.commands import create_start_recording_command
 from ..utils.generic import handle_system_error
@@ -43,7 +44,7 @@ class SystemMonitor:
         self._system_state_manager = system_state_manager
         self._queues = queues
 
-    async def run(self, system_error_future: asyncio.Future[int]) -> None:
+    async def run(self, system_error_future: asyncio.Future[tuple[int, dict[str, str]]]) -> None:
         logger.info("Starting SystemMonitor")
 
         tasks = {
@@ -87,7 +88,11 @@ class SystemMonitor:
                 # TODO Tanner (3/15/23): this state just instantly transitions right now, probably not needed anymore
                 new_system_status = SystemStatuses.SERVER_READY
             case SystemStatuses.SERVER_READY:
-                # TODO Tanner (3/15/23): this state just instantly transitions right now, probably not needed anymore
+                # make sure the electron process is running the same version
+                if (
+                    expected_software_version := system_state.get("expected_software_version")
+                ) and expected_software_version != CURRENT_SOFTWARE_VERSION:
+                    raise ElectronControllerVersionMismatchError(expected_software_version)
                 new_system_status = SystemStatuses.SYSTEM_INITIALIZING
             case SystemStatuses.SYSTEM_INITIALIZING if (
                 # need to wait in SYSTEM_INITIALIZING until UI connects (indicated by

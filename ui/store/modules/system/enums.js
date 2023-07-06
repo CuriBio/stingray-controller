@@ -40,8 +40,6 @@ export const ERROR_MESSAGES = {
   [ERROR_CODES.INSTRUMENT_CONNECTION_CREATION]: "Unable to establish a connection to the instrument",
   [ERROR_CODES.INSTRUMENT_CONNECTION_LOST]: "The instrument failed to respond to one or more commands",
   [ERROR_CODES.INSTRUMENT_STATUS_CODE]: "An error occurred on the instrument",
-  [ERROR_CODES.INSTRUMENT_FW_INCOMPATIBLE_WITH_SW]:
-    "The instrument's firmware is not compatible with this version of the Stingray Controller",
   [ERROR_CODES.INSTRUMENT_SENT_BAD_DATA]: "Malformed data received from the instrument",
   [ERROR_CODES.INCORRECT_INSTRUMENT_TYPE]:
     "Mantarray instrument detected. Please connect to a Stingray and restart the software",
