@@ -67,7 +67,7 @@ class SystemStatuses(Enum):
     CALIBRATION_NEEDED = uuid.UUID("009301eb-625c-4dc4-9e92-1a4d0762465f")
     CALIBRATING = uuid.UUID("43c08fc5-ca2f-4dcd-9dff-5e9324cb5dbf")
     # normal operation states
-    IDLE_READY = uuid.UUID("009301eb-625c-4dc4-9e92-1a4d0762465f")
+    IDLE_READY = uuid.UUID("b480373b-9466-4fa0-92a6-fa5f8e340d30")
     BUFFERING = uuid.UUID("dc774d4b-6bd1-4717-b36e-6df6f1ef6cf4")
     LIVE_VIEW_ACTIVE = uuid.UUID("9fbee58e-c6af-49a5-b2e2-5b085eead2ea")
     RECORDING = uuid.UUID("1e3d76a2-508d-4c99-8bf5-60dac5cc51fe")

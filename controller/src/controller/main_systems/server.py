@@ -106,7 +106,7 @@ class Server:
 
             raise
         except BaseException:
-            # Tanner (4/10/23): don't expected this to be reached, but logging just in case
+            # Tanner (4/10/23): don't expect this to be reached, but logging just in case
             logger.exception(ERROR_MSG)
         finally:
             await clean_up_tasks({self._serve_task}, ERROR_MSG)
@@ -292,7 +292,7 @@ class Server:
             raise WebsocketCommandNoOpException()
         if system_status != SystemStatuses.IDLE_READY:
             raise WebsocketCommandError(
-                f"Cannot start data stream unless in in {SystemStatuses.IDLE_READY.name}"
+                f"Cannot start data stream unless in {SystemStatuses.IDLE_READY.name}"
             )
         if _are_stimulator_checks_running(system_state):
             raise WebsocketCommandError("Cannot start data stream while stimulator checks are running")
@@ -319,8 +319,8 @@ class Server:
         system_state = self._get_system_state_ro()
         system_status = system_state["system_status"]
 
-        # TODO add no-op handling
-
+        if system_status == SystemStatuses.IDLE_READY:
+            raise WebsocketCommandNoOpException()
         if system_status not in (SystemStatuses.BUFFERING, SystemStatuses.LIVE_VIEW_ACTIVE):
             raise WebsocketCommandError(f"Cannot stop data stream while in {system_status.name}")
 

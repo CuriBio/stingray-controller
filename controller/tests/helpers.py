@@ -254,7 +254,7 @@ def get_random_stim_loop():
     raise NotImplementedError("TODO")
 
 
-def create_random_stim_info():
+def get_random_stim_info():
     protocol_ids = (None, "A", "B", "C", "D")
     stim_info = {
         "protocols": [

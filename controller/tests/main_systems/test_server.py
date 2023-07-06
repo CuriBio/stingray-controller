@@ -23,6 +23,7 @@ import pytest_asyncio
 from websockets import connect
 from websockets.server import WebSocketServerProtocol
 
+from ..helpers import get_random_stim_info
 from ..helpers import random_bool
 from ..helpers import random_semver
 from ..helpers import random_well_idx
@@ -166,7 +167,7 @@ async def test_Server__handles_uncrecognized_command(test_server_items, mocker):
         await client.send(json.dumps({"command": "fake"}))
 
     spied_report.assert_called_once_with(system_error_future)
-    assert system_error_future.result() == ErrorCodes.UI_SENT_BAD_DATA
+    assert system_error_future.result() == (ErrorCodes.UI_SENT_BAD_DATA, {})
 
 
 @pytest.mark.asyncio
@@ -207,7 +208,7 @@ async def test_Server__handles_failed_command(test_server_items, mocker):
     await wait_tasks_clean({run_task})
 
     spied_report.assert_called_once_with(system_error_future)
-    assert system_error_future.result() == ErrorCodes.UI_SENT_BAD_DATA
+    assert system_error_future.result() == (ErrorCodes.UI_SENT_BAD_DATA, {})
 
     spied_handle_error.assert_called_once_with(test_error, system_error_future)
     assert f"Command {test_command} failed" in test_error.__notes__
@@ -551,7 +552,7 @@ async def test_Server__handles_start_data_stream_command__invalid_system_status(
     await wait_tasks_clean({run_task})
 
     actual_error = spied_handle_error.call_args[0][0]
-    assert str(actual_error) == f"Cannot start data stream unless in in {SystemStatuses.IDLE_READY.name}"
+    assert str(actual_error) == f"Cannot start data stream unless in {SystemStatuses.IDLE_READY.name}"
 
 
 @pytest.mark.asyncio
@@ -652,6 +653,46 @@ async def test_Server__handles_stop_data_stream_command__success(test_system_sta
 
     assert test_to_monitor_queue.qsize() == 1
     assert await test_to_monitor_queue.get() == test_command
+
+
+@pytest.mark.asyncio
+async def test_Server__handles_stop_data_stream_command__no_op(test_server_items, mocker):
+    test_to_monitor_queue = test_server_items["to_monitor_queue"]
+    ssm = test_server_items["system_state_manager"]
+    await ssm.update({"system_status": SystemStatuses.IDLE_READY})
+
+    spied_handle_error = mocker.spy(server, "handle_system_error")
+
+    test_command = {"command": "stop_data_stream"}
+
+    run_task = await test_server_items["run"](asyncio.Future(), asyncio.Event())
+    async with connect(WS_URI) as client:
+        await client.send(json.dumps(test_command))
+    await wait_tasks_clean({run_task})
+
+    assert test_to_monitor_queue.qsize() == 0
+    spied_handle_error.assert_not_called()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("test_system_status", [SystemStatuses.CALIBRATING, SystemStatuses.RECORDING])
+async def test_Server__handles_stop_data_stream_command__invalid_system_status(
+    test_system_status, test_server_items, mocker
+):
+    ssm = test_server_items["system_state_manager"]
+    await ssm.update({"system_status": test_system_status})
+
+    spied_handle_error = mocker.spy(server, "handle_system_error")
+
+    test_command = {"command": "stop_data_stream"}
+
+    run_task = await test_server_items["run"](asyncio.Future(), asyncio.Event())
+    async with connect(WS_URI) as client:
+        await client.send(json.dumps(test_command))
+    await wait_tasks_clean({run_task})
+
+    actual_error = spied_handle_error.call_args[0][0]
+    assert str(actual_error) == f"Cannot stop data stream while in {test_system_status.name}"
 
 
 @pytest.mark.asyncio
@@ -778,14 +819,11 @@ async def test_Server__handles_set_stim_protocols_command__success(test_server_i
     test_to_monitor_queue = test_server_items["to_monitor_queue"]
     ssm = test_server_items["system_state_manager"]
 
-    test_protocol = get_random_protocol()
-    test_protocol_assignments = get_random_protocol_assignments([test_protocol["protocol_id"]])
-
-    await ssm.update({"system_status": SystemStatuses.RECORDING})
+    await ssm.update({"system_status": SystemStatuses.IDLE_READY})
     test_command = {
         "command": "set_stim_protocols",
         "stim_barcode": TEST_STIM_BARCODE,
-        "stim_info": {"protocols": [test_protocol], "protocol_assignments": test_protocol_assignments},
+        "stim_info": get_random_stim_info(),
     }
 
     run_task = await test_server_items["run"](asyncio.Future(), asyncio.Event())
@@ -807,10 +845,51 @@ async def test_Server__handles_start_stim_checks_command__success(test_server_it
     test_to_monitor_queue = test_server_items["to_monitor_queue"]
     ssm = test_server_items["system_state_manager"]
 
-    await ssm.update({"system_status": SystemStatuses.RECORDING})
+    await ssm.update({"system_status": SystemStatuses.IDLE_READY})
     test_command = {
         "command": "start_stim_checks",
-        "well_indices": get_random_well_idxs(),
+        "well_indices": [random_well_idx()],
+        "plate_barcode": TEST_PLATE_BARCODE,
+        "stim_barcode": TEST_STIM_BARCODE,
+    }
+
+    run_task = await test_server_items["run"](asyncio.Future(), asyncio.Event())
+    async with connect(WS_URI) as client:
+        await client.send(json.dumps(test_command))
+    await wait_tasks_clean({run_task})
+
+    assert test_to_monitor_queue.qsize() == 1
+    assert await test_to_monitor_queue.get() == {
+        "plate_barcode_is_from_scanner": False,
+        "stim_barcode_is_from_scanner": False,
+        **test_command,
+    }
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("test_running_status", [True, False])
+async def test_Server__handles_set_stim_status_command__success(
+    test_running_status, test_server_items, mocker
+):
+    test_running_status
+    test_to_monitor_queue = test_server_items["to_monitor_queue"]
+    ssm = test_server_items["system_state_manager"]
+
+    await ssm.update(
+        {
+            "system_status": SystemStatuses.IDLE_READY,
+            "stim_info": get_random_stim_info(),
+            "stimulator_circuit_statuses": {random_well_idx(): StimulatorCircuitStatuses.MEDIA.name.lower()},
+            "stimulation_protocol_statuses": [
+                choice([StimulationStates.STOPPING, StimulationStates.INACTIVE])
+                if test_running_status
+                else choice([StimulationStates.STARTING, StimulationStates.RUNNING])
+            ],
+        }
+    )
+    test_command = {
+        "command": "set_stim_status",
+        "running": test_running_status,
         "plate_barcode": TEST_PLATE_BARCODE,
         "stim_barcode": TEST_STIM_BARCODE,
     }
@@ -822,8 +901,3 @@ async def test_Server__handles_start_stim_checks_command__success(test_server_it
 
     assert test_to_monitor_queue.qsize() == 1
     assert await test_to_monitor_queue.get() == test_command
-
-
-@pytest.mark.asyncio
-async def test_Server__handles_set_stim_status_command__success(test_server_items, mocker):
-    assert not "TODO"
