@@ -10,6 +10,7 @@ import sys
 from stdlib_utils import configure_logging
 from stdlib_utils import get_current_file_abs_directory
 import scipy
+import jsonschema_specifications
 
 # https://stackoverflow.com/questions/37319911/python-how-to-specify-output-folders-in-pyinstaller-spec-file?rq=1
 
@@ -24,13 +25,20 @@ PATH_OF_CURRENT_FILE = os.path.dirname((inspect.stack()[0][1]))
 
 
 scipy_libs_dir = os.path.join(scipy.__file__, os.pardir, os.pardir, "scipy.libs")
+jsonschema_specifications_schemas_dir = os.path.join(jsonschema_specifications.__file__, os.pardir, "schemas")
 
 
 a = Analysis(  # type: ignore # noqa: F821     the 'Analysis' object is special to how pyinstaller reads the file
     [os.path.join("src", "entrypoint.py")],
     pathex=["dist"],
     binaries=[],
-    datas=[(os.path.join(scipy_libs_dir, "*"), "scipy.libs")],
+    datas=[
+        (os.path.join(scipy_libs_dir, "*"), "scipy.libs"),
+        (
+            os.path.join(jsonschema_specifications_schemas_dir, "*"),
+            os.path.join("jsonschema_specifications", "schemas"),
+        ),
+    ],
     hiddenimports=["scipy.special.cython_special"],
     hookspath=[os.path.join(get_current_file_abs_directory(), "hooks")],
     runtime_hooks=[],
