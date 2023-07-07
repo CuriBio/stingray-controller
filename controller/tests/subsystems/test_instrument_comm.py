@@ -168,6 +168,12 @@ async def test_InstrumentComm__reports_system_error_if_no_real_or_virtual_instru
     assert mocked_handle_error.call_args[0][1] is system_error_future
 
 
+# TODO add tests for each individual step of the setup
+
+
+# TODO in one of the success tests for each of the commands, assert that the correct message was sent to the instrument
+
+
 @pytest.mark.asyncio
 async def test_InstrumentComm__handles_start_data_stream_command__success__no_stim_packets_to_be_sent(
     test_instrument_comm_obj_with_connection,
@@ -235,5 +241,89 @@ async def test_InstrumentComm__handles_start_data_stream_command__fail(
         spied_handle_error.call_args[0][0], InstrumentCommandResponseError(test_command["command"])
     )
     assert spied_handle_error.call_args[0][1] is system_error_future
+
+    await clean_up_tasks({run_task})
+
+
+@pytest.mark.asyncio
+async def test_InstrumentComm__handles_stop_data_stream_command__success(
+    test_instrument_comm_obj_with_connection,
+):
+    test_ic, test_instrument = test_instrument_comm_obj_with_connection
+
+    test_command = {"command": "stop_data_stream"}
+
+    run_task = asyncio.create_task(test_ic.run(asyncio.Future()))
+
+    await test_ic._from_monitor_queue.put(test_command)
+    # set up response
+    test_instrument.send.append(
+        create_data_packet(
+            random_serial_comm_timestamp(), SerialCommPacketTypes.STOP_DATA_STREAMING, bytes([0])
+        )
+    )
+
+    assert await asyncio.wait_for(test_ic._comm_to_monitor_queue.get(), timeout=1) == test_command
+
+    assert test_ic._data_stream_manager._base_global_time_of_data_stream is None
+    assert not test_ic._data_stream_manager.is_streaming
+
+    await clean_up_tasks({run_task})
+
+
+@pytest.mark.asyncio
+async def test_InstrumentComm__handles_stop_data_stream_command__fail(
+    test_instrument_comm_obj_with_connection, mocker
+):
+    test_ic, test_instrument = test_instrument_comm_obj_with_connection
+
+    spied_handle_error = mocker.spy(instrument_comm, "handle_system_error")
+
+    test_command = {"command": "stop_data_stream"}
+
+    system_error_future = asyncio.Future()
+    run_task = asyncio.create_task(test_ic.run(system_error_future))
+
+    await test_ic._from_monitor_queue.put(test_command)
+    # set up response
+    test_instrument.send.append(
+        create_data_packet(
+            random_serial_comm_timestamp(),
+            SerialCommPacketTypes.STOP_DATA_STREAMING,
+            bytes([1]),
+        )
+    )
+
+    await asyncio.wait_for(system_error_future, timeout=1)
+
+    assert compare_exceptions(
+        spied_handle_error.call_args[0][0], InstrumentCommandResponseError(test_command["command"])
+    )
+    assert spied_handle_error.call_args[0][1] is system_error_future
+
+    await clean_up_tasks({run_task})
+
+
+@pytest.mark.asyncio
+async def test_InstrumentComm__handles_start_stim_checks_command__success(
+    test_instrument_comm_obj_with_connection,
+):
+    test_ic, test_instrument = test_instrument_comm_obj_with_connection
+
+    test_command = {"command": "start_stim_checks"}
+
+    run_task = asyncio.create_task(test_ic.run(asyncio.Future()))
+
+    await test_ic._from_monitor_queue.put(test_command)
+    # set up response
+    test_instrument.send.append(
+        create_data_packet(
+            random_serial_comm_timestamp(), SerialCommPacketTypes.STIM_IMPEDANCE_CHECK, bytes([0])
+        )
+    )
+
+    assert await asyncio.wait_for(test_ic._comm_to_monitor_queue.get(), timeout=1) == test_command
+
+    # TODO assert something else here?
 
     await clean_up_tasks({run_task})

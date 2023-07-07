@@ -291,12 +291,10 @@ def get_random_stim_info():
         },
     }
 
-    if all(protocol_id is None for protocol_id in stim_info["protocol_assignments"].values()):
-        # make sure at least one well has a protocol assigned
-        stim_info["protocol_assignments"]["A1"] = "A"
-    elif all(protocol_id is not None for protocol_id in stim_info["protocol_assignments"].values()):
-        # make sure at least one well does not have a protocol assigned
-        stim_info["protocol_assignments"]["A1"] = None
+    # make sure all protocols are actually assigned and at least one well does not have a protocol
+    for well_idx, protocol_id in enumerate(protocol_ids):
+        well_name = GENERIC_24_WELL_DEFINITION.get_well_name_from_well_index(well_idx)
+        stim_info["protocol_assignments"][well_name] = protocol_id
 
     return stim_info
 
