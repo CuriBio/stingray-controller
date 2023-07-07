@@ -18,7 +18,7 @@ immutabledict = "2.2.3"
 labware-domain-models = "0.3.1"
 numpy = "1.23.5"  # pinned for pulse3d
 # psutil = "5.9.4"
-pulse3d = "0.33.5"
+pulse3d = "0.33.10"
 pyserial = "3.5"
 semver = "2.13.0"
 stdlib-utils = "0.5.2"
@@ -42,7 +42,6 @@ pytest-profiling = "1.7.0"
 pytest-randomly = "3.12.0"
 pytest-timeout = "2.1.0"
 # pywin32-ctypes = "0.2.0" # Tanner (2/24/23): this must be explicitly specified so that it will be included in a Windows build environment
-requests = "2.28.2"
 
 [build-system]
 requires = ["poetry-core", "setuptools", "Cython", "numpy"]
