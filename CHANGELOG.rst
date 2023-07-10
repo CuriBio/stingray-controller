@@ -8,6 +8,7 @@ Changelog for Stingray Controller
 Added:
 ^^^^^^
 - Handling for new firmware error reporting
+- Stim waiting state to add spinner to stim start/stop button
 
 
 0.3.0 (unreleased)

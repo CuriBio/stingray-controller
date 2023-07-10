@@ -80,9 +80,12 @@ export default {
     };
   },
   computed: {
-    ...mapState("stimulation", ["protocolList", "editMode"]),
+    ...mapState("stimulation", ["protocolList", "editMode", "selectedWells"]),
     editModeStatus: function () {
       return this.editMode.status;
+    },
+    noWellsSelected: function () {
+      return this.selectedWells.length === 0;
     },
   },
   watch: {
@@ -113,7 +116,11 @@ export default {
       this.$emit("handle-selection-change", selectedProtocol);
     },
     disableSelectionBtn(idx) {
-      return this.disableEdits || (this.selectedProtocolIdx === 0 && idx === 0);
+      return (
+        this.disableEdits ||
+        (this.selectedProtocolIdx === 0 && idx === 0) ||
+        (this.noWellsSelected && idx === 0)
+      );
     },
     handleClick(idx) {
       if (this.disableSelectionBtn(idx)) {
