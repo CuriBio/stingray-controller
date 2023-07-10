@@ -1,5 +1,5 @@
 <template>
-  <div v-b-popover.hover.bottom="false" :style="isDisabledStyles">
+  <div v-b-popover.hover.bottom="disabledToolTip" :style="isDisabledStyles">
     <div :style="div__preventInteraction">
       <div class="div__stimulation-controls-container">
         <!-- Tanner (2/1/22): Only need controls block until SVGs are made of all the buttons in this widget and they can be shaded manually when inactive-->
@@ -218,7 +218,7 @@ export default {
     FontAwesomeIcon,
     StatusWarningWidget,
     SettingsButton,
-    SettingsForm,
+    SettingsForm
   },
   data() {
     return {
@@ -231,24 +231,24 @@ export default {
         msgOne:
           "You are attempting to assign a protocol to a well that an open circuit was previously found in during the configuration check.",
         msgTwo: "Please unassign all wells labeled with an open circuit.",
-        buttonNames: ["Okay"],
+        buttonNames: ["Okay"]
       },
       timerWarningLabels: {
         header: "Warning!",
         msgOne: "You have been running a stimulation for 24 hours.",
         msgTwo:
           "We strongly recommend stopping the stimulation and running another configuration check to ensure the integrity of the stimulation.",
-        buttonNames: ["Continue Anyway", "Stop Stimulation"],
+        buttonNames: ["Continue Anyway", "Stop Stimulation"]
       },
       userInputPromptLabels: {
         header: "Important!",
         msgOne: "Downloading the firmware update requires your user credentials.",
         msgTwo: "Please input them to begin the download",
-        buttonNames: ["Okay"],
+        buttonNames: ["Okay"]
       },
       stim24hrTimer: null,
       disabledToolTip: "Controls disabled until connected to instrument.",
-      disabled: true,
+      disabled: true
     };
   },
   computed: {
@@ -256,28 +256,28 @@ export default {
       "protocolAssignments",
       "stimPlayState",
       "stimStatus",
-      "stimulatorCircuitStatuses",
+      "stimulatorCircuitStatuses"
     ]),
     ...mapState("system", ["barcodes"]),
     ...mapState("settings", ["userCredInputNeeded"]),
     ...mapState("stimulation", ["invalidImportedProtocols"]),
     ...mapGetters({
-      statusUuid: "system/statusId",
+      statusUuid: "system/statusId"
     }),
-    div__preventInteraction: function () {
+    div__preventInteraction: function() {
       return {
-        pointerEvents: this.disabled ? "none" : "auto",
+        pointerEvents: this.disabled ? "none" : "auto"
       };
     },
-    isDisabledStyles: function () {
+    isDisabledStyles: function() {
       return {
-        opacity: this.disabled ? 0.5 : 1,
+        opacity: this.disabled ? 0.5 : 1
       };
     },
-    isStimInWaiting: function () {
+    isStimInWaiting: function() {
       return this.stimStatus === STIM_STATUS.WAITING;
     },
-    isStartStopButtonEnabled: function () {
+    isStartStopButtonEnabled: function() {
       if (this.isStimInWaiting) return false;
 
       if (!this.playState) {
@@ -292,20 +292,20 @@ export default {
             STIM_STATUS.CONFIG_CHECK_NEEDED,
             STIM_STATUS.CONFIG_CHECK_IN_PROGRESS,
             STIM_STATUS.SHORT_CIRCUIT_ERROR,
-            STIM_STATUS.CALIBRATION_NEEDED,
+            STIM_STATUS.CALIBRATION_NEEDED
           ].includes(this.stimStatus)
         );
       }
       // currently, stop button should always be enabled
       return true;
     },
-    assignedOpenCircuits: function () {
+    assignedOpenCircuits: function() {
       // filter for matching indices
-      return this.stimulatorCircuitStatuses.filter((well) =>
+      return this.stimulatorCircuitStatuses.filter(well =>
         Object.keys(this.protocolAssignments).includes(well.toString())
       );
     },
-    startStimLabel: function () {
+    startStimLabel: function() {
       if (this.stimStatus === STIM_STATUS.ERROR || this.stimStatus === STIM_STATUS.SHORT_CIRCUIT_ERROR) {
         return "Cannot start a stimulation with error";
       } else if (
@@ -322,11 +322,11 @@ export default {
         return "Start Stimulation";
       }
     },
-    stopStimLabel: function () {
+    stopStimLabel: function() {
       // Tanner (7/27/22): there used to be multiple values, so leaving this as a function in case more values get added in future
       return "Stop Stimulation";
     },
-    svg__StimulationStudioControlsPlayStopButton__dynamicClass: function () {
+    svg__StimulationStudioControlsPlayStopButton__dynamicClass: function() {
       // Tanner (2/1/22): This is only necessary so that the this button is shaded the same as the rest of
       // the stim controls buttons when the controls block is displayed. The button is
       // not actually active here. If the controls block is removed, this branch can likely be removed too.
@@ -334,18 +334,18 @@ export default {
         ? "span__stimulation-controls-play-stop-button--enabled"
         : "span__stimulation-controls-play-stop-button--disabled";
     },
-    isConfigCheckButtonEnabled: function () {
+    isConfigCheckButtonEnabled: function() {
       return (
         [STIM_STATUS.CONFIG_CHECK_NEEDED, STIM_STATUS.READY].includes(this.stimStatus) &&
         this.barcodes.stimBarcode.valid
       );
     },
-    svg__StimulationStudioControlsConfigCheckButton__dynamicClass: function () {
+    svg__StimulationStudioControlsConfigCheckButton__dynamicClass: function() {
       return this.isConfigCheckButtonEnabled
         ? "svg__stimulation-controls-config-check-button--enabled"
         : "svg__stimulation-controls-config-check-button--disabled";
     },
-    configurationMessage: function () {
+    configurationMessage: function() {
       if (!this.barcodes.stimBarcode.valid) {
         return "Must have a valid Stimulation Lid Barcode";
       } else if (this.stimStatus == STIM_STATUS.ERROR || this.stimStatus == STIM_STATUS.SHORT_CIRCUIT_ERROR) {
@@ -362,40 +362,40 @@ export default {
         return "Configuration check complete. Click to rerun.";
       }
     },
-    configCheckInProgress: function () {
+    configCheckInProgress: function() {
       return this.stimStatus === STIM_STATUS.CONFIG_CHECK_IN_PROGRESS;
     },
-    invalidImportedProtocolsLabels: function () {
+    invalidImportedProtocolsLabels: function() {
       return {
         header: "Warning!",
         msgOne:
           "The following protocols were not imported because some values no longer pass current validity checks:",
         msgTwo: this.invalidImportedProtocols.join(", "),
-        buttonNames: ["Close"],
+        buttonNames: ["Close"]
       };
-    },
+    }
   },
   watch: {
-    stimPlayState: function () {
+    stimPlayState: function() {
       this.currentGradient = this.stimPlayState ? this.activeGradient : this.inactiveGradient;
       this.playState = this.stimPlayState;
     },
-    assignedOpenCircuits: function (newVal, oldVal) {
+    assignedOpenCircuits: function(newVal, oldVal) {
       if (this.stimStatus !== STIM_STATUS.CONFIG_CHECK_COMPLETE && newVal.length > oldVal.length)
         this.$bvModal.show("open-circuit-warning");
     },
-    userCredInputNeeded: function () {
+    userCredInputNeeded: function() {
       if (this.userCredInputNeeded) this.$bvModal.show("user-input-prompt-message");
     },
-    invalidImportedProtocols: function () {
+    invalidImportedProtocols: function() {
       if (this.invalidImportedProtocols.length > 0) this.$bvModal.show("invalid-imported-protocols");
     },
-    statusUuid: function (new_status) {
+    statusUuid: function(new_status) {
       if (new_status == SYSTEM_STATUS.IDLE_READY_STATE) {
         this.disabled = false;
         this.disabledToolTip = "";
       }
-    },
+    }
   },
   methods: {
     async handlePlayStop(e) {
@@ -433,7 +433,7 @@ export default {
       this.$bvModal.hide("user-input-prompt-message");
       this.$bvModal.show("settings-form");
     },
-    closeSettingsModal: function (save) {
+    closeSettingsModal: function(save) {
       this.$bvModal.hide("settings-form");
 
       if (save) {
@@ -441,11 +441,11 @@ export default {
         this.$emit("save-account-info");
       }
     },
-    closeInvalidProtocolModal: function () {
+    closeInvalidProtocolModal: function() {
       this.$bvModal.hide("invalid-imported-protocols");
       this.$store.commit("stimulation/setInvalidImportedProtocols", []);
-    },
-  },
+    }
+  }
 };
 </script>
 <style>
