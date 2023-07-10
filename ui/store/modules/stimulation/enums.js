@@ -9,6 +9,8 @@ export const STIM_STATUS = {
   READY: "Ready",
   // stim play states
   STIM_ACTIVE: "Stimulating...",
+  // used to show spinner in stim controls over play/stop button
+  WAITING: "",
 
   // error
   SHORT_CIRCUIT_ERROR: "Short Circuit Error",
