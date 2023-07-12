@@ -8,9 +8,10 @@ Changelog for Stingray Controller
 Added:
 ^^^^^^
 - Handling for new firmware error reporting
+- Stim waiting state to add spinner to stim start/stop button
 
 
-0.3.0 (unreleased)
+0.3.0 (2023-07-11)
 ------------------
 
 Added:
@@ -26,8 +27,8 @@ Fixed:
 ^^^^^^
 - Error message for when:
 
-    - The instrument's firmware is incompatible with the software
-    - An error occurs during software install
+  - The instrument's firmware is incompatible with the software
+  - An error occurs during software install
 
 
 0.2.0 (2023-06-05)

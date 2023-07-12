@@ -25,19 +25,19 @@
           </svg>
           <span :class="svg__StimulationStudioControlsPlayStopButton__dynamicClass" @click="handlePlayStop">
             <div
-              v-if="!playState"
-              id="start-stim-button"
-              v-b-popover.hover.top="startStimLabel"
-              title="Start Stimulation"
+              v-b-popover.hover.bottom="playState ? stopStimLabel : startStimLabel"
+              :title="playState ? 'Stop Stimulation' : 'Start Stimulation'"
             >
-              <!-- this is here for testing the popover message -->
-              <span id="start-popover-msg" style="display: none">{{ startStimLabel }}</span>
-              <FontAwesomeIcon class="fontawesome-icon-class" :icon="['fa', 'play-circle']" />
-            </div>
-            <div v-if="playState" v-b-popover.hover.bottom="stopStimLabel" title="Stop Stimulation">
-              <!-- this is here for testing the popover message -->
-              <span id="stop-popover-msg" style="display: none">{{ stopStimLabel }}</span>
-              <FontAwesomeIcon class="fontawesome-icon-class" :icon="['fa', 'stop-circle']" />
+              <span :id="playState ? 'stop-popover-msg' : 'start-popover-msg'" style="display: none">{{
+                playState ? stopStimLabel : startStimLabel
+              }}</span>
+              <FontAwesomeIcon
+                class="fontawesome-icon-class"
+                :icon="playState ? ['fa', 'stop-circle'] : ['fa', 'play-circle']"
+              />
+              <span v-show="isStimInWaiting" class="span__start-stop-spinner">
+                <FontAwesomeIcon :style="'fill: #ececed;'" :icon="['fa', 'spinner']" pulse />
+              </span>
             </div>
           </span>
         </div>
@@ -96,7 +96,7 @@
             <line class="svg__inner-line" x1="34.8" y1="17.28" x2="21.16" y2="30.91" />
             <line class="svg__inner-line" x1="58.73" y1="30.87" x2="50.48" y2="30.87" />
           </svg>
-          <span v-show="configCheckInProgress" class="span__spinner">
+          <span v-show="configCheckInProgress" class="span__config-check-spinner">
             <FontAwesomeIcon :style="'fill: #ececed;'" :icon="['fa', 'spinner']" pulse />
           </span>
         </div>
@@ -274,7 +274,12 @@ export default {
         opacity: this.disabled ? 0.5 : 1,
       };
     },
+    isStimInWaiting: function () {
+      return this.stimStatus === STIM_STATUS.WAITING;
+    },
     isStartStopButtonEnabled: function () {
+      if (this.isStimInWaiting) return false;
+
       if (!this.playState) {
         // if starting stim make sure initial magnetometer calibration has been completed and
         // no additional calibrations are running, stim checks have completed, there are no short or
@@ -396,6 +401,8 @@ export default {
     async handlePlayStop(e) {
       e.preventDefault();
       if (this.isStartStopButtonEnabled) {
+        this.$store.commit("stimulation/setStimStatus", STIM_STATUS.WAITING);
+
         if (this.playState) {
           this.$store.dispatch(`stimulation/stopStimulation`);
           clearTimeout(this.stim24hrTimer); // clear 24 hour timer for next stimulation
@@ -490,7 +497,7 @@ body {
   grid-template-columns: repeat(25%, 4);
   align-items: center;
   justify-items: center;
-  padding: 5px;
+  padding: 2px;
 }
 
 .span__stimulation-controls-play-stop-button--disabled {
@@ -571,11 +578,11 @@ body {
   width: 20px;
 }
 
-.span__spinner {
+.span__config-check-spinner {
   position: absolute;
   font-size: 34px;
-  right: 17.5px;
-  bottom: 15px;
+  left: 5px;
+  top: 0px;
   width: 45px;
   color: #fff;
   padding-left: 5px;
@@ -638,6 +645,17 @@ body {
   stroke: black;
   stroke-width: 8;
   fill: none;
+}
+
+.span__start-stop-spinner {
+  position: absolute;
+  font-size: 20px;
+  right: 2px;
+  bottom: 3px;
+  color: #fff;
+  padding-left: 5px;
+  background-color: #000;
+  opacity: 0.75;
 }
 
 #user-input-prompt-message,

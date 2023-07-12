@@ -260,7 +260,11 @@ export default {
     },
     stimStatus: function (newStatus) {
       // only let stim messages through if system is in idle ready state
-      if (this.statusUuid === SYSTEM_STATUS.IDLE_READY) this.setStimSpecificStatus(newStatus);
+      if (this.statusUuid === SYSTEM_STATUS.IDLE_READY) {
+        if (newStatus === STIM_STATUS.WAITING) newStatus = this.stimPlayState ? "Stopping..." : "Starting...";
+
+        this.setStimSpecificStatus(newStatus);
+      }
     },
     confirmationRequest: async function () {
       const stimOpsInProgress =
