@@ -8,7 +8,10 @@ Changelog for Stingray Controller
 Added:
 ^^^^^^
 - Handling for new firmware error reporting
-- Stim waiting state to add spinner to stim start/stop button
+
+Fixed:
+^^^^^^
+- Stim start/stop button will turn into a spinner while waiting for stim to start/stop
 
 
 0.3.0 (2023-07-11)

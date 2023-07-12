@@ -173,12 +173,9 @@ jobs:
           poetry run pre-commit run git-dirty -a
 
       - name: Insert the Build Number and Software Version into the code
-        env:
-          build_number: ${{ github.run_number }}
         shell: bash
         run: |
-          echo $build_number
-          sed -i 's/REPLACETHISWITHTIMESTAMPDURINGBUILD/'"$(date +'%y%m%d%H%M%S')"'--$build_number/g' controller/src/controller/constants.py
+          sed -i 's/REPLACETHISWITHTIMESTAMPDURINGBUILD/'"$(date +'%y%m%d%H%M%S')"'--${{github.run_number}}/g' controller/src/controller/constants.py
           sed -i 's/REPLACETHISWITHVERSIONDURINGBUILD/'"${{steps.software-version.outputs.prop}}"'/g' controller/src/controller/constants.py
           sed -i 's/REPLACETHISWITHENDPOINTDURINGBUILD/'"${{github.event.inputs.api_endpoint}}"'/g' controller/src/controller/constants.py
           sed -i 's/REPLACETHISWITHENDPOINTDURINGBUILD/'"${{github.event.inputs.api_endpoint}}"'/g' electron/main/index.js
