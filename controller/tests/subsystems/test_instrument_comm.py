@@ -1,29 +1,76 @@
 # -*- coding: utf-8 -*-
 import asyncio
+from collections import deque
 from random import choice
+from random import randint
+import struct
 
 from controller.constants import CURI_VID
+from controller.constants import NUM_WELLS
 from controller.constants import SERIAL_COMM_BAUD_RATE
 from controller.constants import SERIAL_COMM_BYTESIZE
 from controller.constants import SERIAL_COMM_READ_TIMEOUT
+from controller.constants import SerialCommPacketTypes
+from controller.constants import STIM_WELL_IDX_TO_MODULE_ID
+from controller.constants import StimulatorCircuitStatuses
 from controller.constants import STM_VID
+from controller.exceptions import InstrumentCommandResponseError
 from controller.exceptions import NoInstrumentDetectedError
 from controller.subsystems import instrument_comm
 from controller.subsystems.instrument_comm import InstrumentComm
+from controller.utils.aio import clean_up_tasks
+from controller.utils.serial_comm import convert_adc_readings_to_circuit_status
+from controller.utils.serial_comm import create_data_packet
 import pytest
 import serial
 from serial.tools.list_ports_common import ListPortInfo
 
 from ..fixtures import fixture__wait_tasks_clean
+from ..helpers import compare_exceptions
+from ..helpers import random_bool
+from ..helpers import random_serial_comm_timestamp
 
 
 __fixtures__ = [fixture__wait_tasks_clean]
 
 
+class MockInstrument:
+    def __init__(self):
+        self.recv = deque()
+        self.send = deque()
+
+        self.in_waiting = 123  # arbitrary number
+
+    async def read_async(self, size):
+        try:
+            return self.send.popleft()
+        except IndexError:
+            return bytes()
+
+    async def write_async(self, data):
+        self.recv.append(data)
+
+
+# TODO consider using the simulator in all these tests
+
+
 @pytest.fixture(scope="function", name="test_instrument_comm_obj")
 def fixture__test_instrument_comm_obj(mocker):
-    ic = InstrumentComm(asyncio.Queue(), asyncio.Queue())
+    ic = InstrumentComm(*[asyncio.Queue() for _ in range(4)])
     yield ic
+    # TODO any teardown needed here?
+
+
+@pytest.fixture(scope="function", name="test_instrument_comm_obj_with_connection")
+def fixture__test_instrument_comm_obj_with_connection(test_instrument_comm_obj, mocker):
+    connection = MockInstrument()
+
+    def se():
+        test_instrument_comm_obj._instrument = connection
+
+    mocker.patch.object(test_instrument_comm_obj, "_setup", autospec=True, side_effect=se)
+
+    yield test_instrument_comm_obj, connection
     # TODO any teardown needed here?
 
 
@@ -69,7 +116,7 @@ async def test_InstrumentComm__creates_connection_to_real_instrument_correctly(
 
     assert test_instrument_comm_obj._instrument is mocked_aioserial.return_value
 
-    assert test_instrument_comm_obj._to_monitor_queue.get_nowait() == {
+    assert test_instrument_comm_obj._comm_to_monitor_queue.get_nowait() == {
         "command": "get_board_connection_status",
         "in_simulation_mode": False,
     }
@@ -100,7 +147,7 @@ async def test_InstrumentComm__creates_connection_to_virtual_instrument_correctl
     mocked_vic_init.assert_called_once_with(test_instrument_comm_obj._instrument)
     mocked_vic_connect.assert_awaited_once_with(test_instrument_comm_obj._instrument)
 
-    assert test_instrument_comm_obj._to_monitor_queue.get_nowait() == {
+    assert test_instrument_comm_obj._comm_to_monitor_queue.get_nowait() == {
         "command": "get_board_connection_status",
         "in_simulation_mode": True,
     }
@@ -128,3 +175,196 @@ async def test_InstrumentComm__reports_system_error_if_no_real_or_virtual_instru
     # TODO make a function for this if it becomes common
     assert isinstance(mocked_handle_error.call_args[0][0], NoInstrumentDetectedError)
     assert mocked_handle_error.call_args[0][1] is system_error_future
+
+
+# TODO add tests for each individual step of the setup
+
+
+# TODO in one of the success tests for each of the commands, assert that the correct message was sent to the instrument
+
+
+@pytest.mark.asyncio
+async def test_InstrumentComm__handles_start_data_stream_command__success__no_stim_packets_to_be_sent(
+    test_instrument_comm_obj_with_connection,
+):
+    test_ic, test_instrument = test_instrument_comm_obj_with_connection
+
+    test_global_time_at_stream_start = randint(0, 0xFFFF)  # arbitrary range
+    test_command = {"command": "start_data_stream"}
+
+    run_task = asyncio.create_task(test_ic.run(asyncio.Future()))
+
+    await test_ic._from_monitor_queue.put(test_command)
+    # set up response
+    test_instrument.send.append(
+        create_data_packet(
+            random_serial_comm_timestamp(),
+            SerialCommPacketTypes.START_DATA_STREAMING,
+            bytes([0]) + test_global_time_at_stream_start.to_bytes(8, byteorder="little"),
+        )
+    )
+
+    assert await asyncio.wait_for(test_ic._comm_to_monitor_queue.get(), timeout=1) == test_command
+
+    assert test_ic._data_stream_manager._base_global_time_of_data_stream == test_global_time_at_stream_start
+    assert test_ic._data_stream_manager.is_streaming
+
+    assert test_ic._data_stream_manager._data_to_file_writer_queue.qsize() == 0
+
+    await clean_up_tasks({run_task})
+
+
+# TODO
+# @pytest.mark.asyncio
+# async def test_InstrumentComm__handles_start_data_stream_command__success__stim_packets_buffered(
+#     test_instrument_comm_obj_with_connection,
+# ):
+
+
+@pytest.mark.asyncio
+async def test_InstrumentComm__handles_start_data_stream_command__fail(
+    test_instrument_comm_obj_with_connection, mocker
+):
+    test_ic, test_instrument = test_instrument_comm_obj_with_connection
+
+    spied_handle_error = mocker.spy(instrument_comm, "handle_system_error")
+
+    test_command = {"command": "start_data_stream"}
+
+    system_error_future = asyncio.Future()
+    run_task = asyncio.create_task(test_ic.run(system_error_future))
+
+    await test_ic._from_monitor_queue.put(test_command)
+    # set up response
+    test_instrument.send.append(
+        create_data_packet(
+            random_serial_comm_timestamp(),
+            SerialCommPacketTypes.START_DATA_STREAMING,
+            bytes([1]),
+        )
+    )
+
+    await asyncio.wait_for(system_error_future, timeout=1)
+
+    assert compare_exceptions(
+        spied_handle_error.call_args[0][0], InstrumentCommandResponseError(test_command["command"])
+    )
+    assert spied_handle_error.call_args[0][1] is system_error_future
+
+    await clean_up_tasks({run_task})
+
+
+@pytest.mark.asyncio
+async def test_InstrumentComm__handles_stop_data_stream_command__success(
+    test_instrument_comm_obj_with_connection,
+):
+    test_ic, test_instrument = test_instrument_comm_obj_with_connection
+
+    test_command = {"command": "stop_data_stream"}
+
+    run_task = asyncio.create_task(test_ic.run(asyncio.Future()))
+
+    await test_ic._from_monitor_queue.put(test_command)
+    # set up response
+    test_instrument.send.append(
+        create_data_packet(
+            random_serial_comm_timestamp(), SerialCommPacketTypes.STOP_DATA_STREAMING, bytes([0])
+        )
+    )
+
+    assert await asyncio.wait_for(test_ic._comm_to_monitor_queue.get(), timeout=1) == test_command
+
+    assert test_ic._data_stream_manager._base_global_time_of_data_stream is None
+    assert not test_ic._data_stream_manager.is_streaming
+
+    await clean_up_tasks({run_task})
+
+
+@pytest.mark.asyncio
+async def test_InstrumentComm__handles_stop_data_stream_command__fail(
+    test_instrument_comm_obj_with_connection, mocker
+):
+    test_ic, test_instrument = test_instrument_comm_obj_with_connection
+
+    spied_handle_error = mocker.spy(instrument_comm, "handle_system_error")
+
+    test_command = {"command": "stop_data_stream"}
+
+    system_error_future = asyncio.Future()
+    run_task = asyncio.create_task(test_ic.run(system_error_future))
+
+    await test_ic._from_monitor_queue.put(test_command)
+    # set up response
+    test_instrument.send.append(
+        create_data_packet(
+            random_serial_comm_timestamp(),
+            SerialCommPacketTypes.STOP_DATA_STREAMING,
+            bytes([1]),
+        )
+    )
+
+    await asyncio.wait_for(system_error_future, timeout=1)
+
+    assert compare_exceptions(
+        spied_handle_error.call_args[0][0], InstrumentCommandResponseError(test_command["command"])
+    )
+    assert spied_handle_error.call_args[0][1] is system_error_future
+
+    await clean_up_tasks({run_task})
+
+
+@pytest.mark.asyncio
+async def test_InstrumentComm__handles_start_stim_checks_command__success(
+    test_instrument_comm_obj_with_connection,
+):
+    test_ic, test_instrument = test_instrument_comm_obj_with_connection
+
+    test_well_indices = list(range(4))
+    test_well_indices.extend([i for i in range(4, NUM_WELLS) if random_bool()])
+
+    # set known adc readings in simulator. these first 4 values are hard coded, if this test fails might need to update them
+    adc_readings = [(0, 0), (0, 2039), (0, 2049), (1113, 0)]
+    adc_readings.extend([(i, i + 100) for i in range(NUM_WELLS - len(adc_readings))])
+
+    test_command = {"command": "start_stim_checks", "well_indices": test_well_indices}
+
+    run_task = asyncio.create_task(test_ic.run(asyncio.Future()))
+
+    await test_ic._from_monitor_queue.put(test_command)
+
+    # set up response
+    adc_readings_ordered_by_module_id = [None] * NUM_WELLS
+    for well_idx, readings in enumerate(adc_readings):
+        module_id = STIM_WELL_IDX_TO_MODULE_ID[well_idx]
+        adc_readings_ordered_by_module_id[module_id] = readings
+    response_body = bytes([])
+    for module_readings in adc_readings_ordered_by_module_id:
+        status = convert_adc_readings_to_circuit_status(*module_readings)
+        response_body += struct.pack("<HHB", *module_readings, status)
+    test_instrument.send.append(
+        create_data_packet(
+            random_serial_comm_timestamp(), SerialCommPacketTypes.STIM_IMPEDANCE_CHECK, response_body
+        )
+    )
+
+    msg_to_main = await asyncio.wait_for(test_ic._comm_to_monitor_queue.get(), timeout=1)
+
+    # make sure that the message sent back to main contains the correct values
+    stimulator_circuit_statuses = {}
+    for well_idx in test_well_indices:
+        well_readings = adc_readings[well_idx]
+        status_int = convert_adc_readings_to_circuit_status(*well_readings)
+        status = list(StimulatorCircuitStatuses)[status_int + 1].name.lower()
+        stimulator_circuit_statuses[well_idx] = status
+
+    assert msg_to_main == {
+        **test_command,
+        "stimulator_circuit_statuses": stimulator_circuit_statuses,
+        "adc_readings": {
+            well_idx: readings
+            for well_idx, readings in enumerate(adc_readings)
+            if well_idx in test_well_indices
+        },
+    }
+
+    await clean_up_tasks({run_task})

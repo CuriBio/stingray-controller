@@ -11,6 +11,8 @@ from immutabledict import immutabledict
 from labware_domain_models import LabwareDefinition
 
 
+# TODO organize this file
+
 # General
 CURRENT_SOFTWARE_VERSION = "REPLACETHISWITHVERSIONDURINGBUILD"
 COMPILED_EXE_BUILD_TIMESTAMP = "REPLACETHISWITHTIMESTAMPDURINGBUILD"
@@ -18,9 +20,12 @@ SOFTWARE_RELEASE_CHANNEL = "REPLACETHISWITHRELEASECHANNELDURINGBUILD"
 
 DEFAULT_SERVER_PORT_NUMBER = 4565
 
+CURRENT_RECORDING_FILE_VERSION = "2.0.0"
+
 NUM_WELLS = 24
 GENERIC_24_WELL_DEFINITION = LabwareDefinition(row_count=4, column_count=6)
 
+RECORDINGS_SUBDIR = "recordings"
 FW_UPDATE_SUBDIR = "firmware_updates"
 
 AuthTokens = namedtuple("AuthTokens", ["access", "refresh"])
@@ -30,6 +35,7 @@ ConfigSettings = namedtuple("ConfigSettings", ["auto_upload_on_completion", "log
 VALID_CREDENTIAL_TYPES = frozenset(AuthCreds._fields)
 VALID_CONFIG_SETTINGS = frozenset(ConfigSettings._fields)
 
+BARCODE_LEN = 12
 # TODO try replacing all immutabledicts with enums
 BARCODE_HEADERS: immutabledict[str, str] = immutabledict({"plate_barcode": "ML", "stim_barcode": "MS"})
 ALL_VALID_BARCODE_HEADERS = frozenset(BARCODE_HEADERS.values())
@@ -53,17 +59,23 @@ SERVER_BOOT_UP_TIMEOUT_SECONDS = 5
 
 class SystemStatuses(Enum):
     # boot up states
-    SERVER_INITIALIZING_STATE = uuid.UUID("04471bcf-1a00-4a0d-83c8-4160622f9a25")
-    SERVER_READY_STATE = uuid.UUID("8e24ef4d-2353-4e9d-aa32-4346126e73e3")
-    SYSTEM_INITIALIZING_STATE = uuid.UUID("d2e3d386-b760-4c9a-8b2d-410362ff11c4")
-    CHECKING_FOR_UPDATES_STATE = uuid.UUID("04fd6f6b-ee9e-4656-aae4-0b9584791f36")
+    SERVER_INITIALIZING = uuid.UUID("04471bcf-1a00-4a0d-83c8-4160622f9a25")
+    SERVER_READY = uuid.UUID("8e24ef4d-2353-4e9d-aa32-4346126e73e3")
+    SYSTEM_INITIALIZING = uuid.UUID("d2e3d386-b760-4c9a-8b2d-410362ff11c4")
+    CHECKING_FOR_UPDATES = uuid.UUID("04fd6f6b-ee9e-4656-aae4-0b9584791f36")
+    # initial set up states
+    CALIBRATION_NEEDED = uuid.UUID("009301eb-625c-4dc4-9e92-1a4d0762465f")
+    CALIBRATING = uuid.UUID("43c08fc5-ca2f-4dcd-9dff-5e9324cb5dbf")
     # normal operation states
-    IDLE_READY_STATE = uuid.UUID("009301eb-625c-4dc4-9e92-1a4d0762465f")
+    IDLE_READY = uuid.UUID("b480373b-9466-4fa0-92a6-fa5f8e340d30")
+    BUFFERING = uuid.UUID("dc774d4b-6bd1-4717-b36e-6df6f1ef6cf4")
+    LIVE_VIEW_ACTIVE = uuid.UUID("9fbee58e-c6af-49a5-b2e2-5b085eead2ea")
+    RECORDING = uuid.UUID("1e3d76a2-508d-4c99-8bf5-60dac5cc51fe")
     # updating states
-    UPDATES_NEEDED_STATE = uuid.UUID("d6dcf2a9-b6ea-4d4e-9423-500f91a82a2f")
-    DOWNLOADING_UPDATES_STATE = uuid.UUID("b623c5fa-af01-46d3-9282-748e19fe374c")
-    INSTALLING_UPDATES_STATE = uuid.UUID("19c9c2d6-0de4-4334-8cb3-a4c7ab0eab00")
-    UPDATES_COMPLETE_STATE = uuid.UUID("31f8fbc9-9b41-4191-8598-6462b7490789")
+    UPDATES_NEEDED = uuid.UUID("d6dcf2a9-b6ea-4d4e-9423-500f91a82a2f")
+    DOWNLOADING_UPDATES = uuid.UUID("b623c5fa-af01-46d3-9282-748e19fe374c")
+    INSTALLING_UPDATES = uuid.UUID("19c9c2d6-0de4-4334-8cb3-a4c7ab0eab00")
+    UPDATES_COMPLETE = uuid.UUID("31f8fbc9-9b41-4191-8598-6462b7490789")
 
 
 class StimulationStates(Enum):
@@ -209,6 +221,24 @@ SERIAL_COMM_COMMAND_FAILURE_BYTE = 1
 GOING_DORMANT_HANDSHAKE_TIMEOUT_CODE = 0
 
 
+# Magnetometer configuration
+SERIAL_COMM_SENSOR_AXIS_LOOKUP_TABLE: immutabledict[str, dict[str, int]] = immutabledict(
+    {
+        "A": {"X": 0, "Y": 1, "Z": 2},
+        "B": {"X": 3, "Y": 4, "Z": 5},
+        "C": {"X": 6, "Y": 7, "Z": 8},
+    }
+)
+NUM_CHANNELS_PER_MAG_SENSOR = 3
+NUM_MAG_SENSORS_PER_WELL = 3
+NUM_MAG_DATA_CHANNELS_PER_WELL = NUM_CHANNELS_PER_MAG_SENSOR * NUM_MAG_SENSORS_PER_WELL
+
+DEFAULT_MAG_DATA_CHANNEL = SERIAL_COMM_SENSOR_AXIS_LOOKUP_TABLE["A"]["Z"]
+DEFAULT_MAG_SAMPLING_PERIOD = 10000  # valid as of 4/12/23
+NUM_MAG_DATA_PACKETS_PER_SECOND = MICRO_TO_BASE_CONVERSION // DEFAULT_MAG_SAMPLING_PERIOD
+
+NUM_INITIAL_MAG_PACKETS_TO_DROP = 2
+
 # Stimulation
 STIM_MAX_ABSOLUTE_CURRENT_MICROAMPS = int(100e3)
 STIM_MAX_ABSOLUTE_VOLTAGE_MILLIVOLTS = int(1.2e3)
@@ -307,3 +337,10 @@ STIM_MODULE_ID_TO_WELL_IDX: immutabledict[int, int] = immutabledict(
 STIM_WELL_IDX_TO_MODULE_ID: immutabledict[int, int] = immutabledict(
     {well_idx: module_id for module_id, well_idx in STIM_MODULE_ID_TO_WELL_IDX.items()}
 )
+
+
+# Recording
+CALIBRATION_RECORDING_DUR_SECONDS = 30
+
+FILE_WRITER_BUFFER_SIZE_SECONDS = 30
+FILE_WRITER_BUFFER_SIZE_MILLISECONDS = FILE_WRITER_BUFFER_SIZE_SECONDS * MICRO_TO_BASE_CONVERSION

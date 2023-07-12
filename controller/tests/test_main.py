@@ -209,7 +209,7 @@ async def test_main__initializes_system_state_correctly(
     await main.main(cmd_line_args)
 
     expected_system_state = {
-        "system_status": SystemStatuses.SERVER_INITIALIZING_STATE,
+        "system_status": SystemStatuses.SERVER_INITIALIZING,
         "in_simulation_mode": False,
         "stimulation_protocol_statuses": [],
         "main_firmware_update": None,
@@ -240,7 +240,7 @@ async def test_main__initializes_system_state_correctly(
 @pytest.mark.asyncio
 async def test_main__creates_SystemMonitor_and_runs_correctly(patch_run_tasks, patch_subsystem_inits, mocker):
     spied_ssm = mocker.spy(main, "SystemStateManager")
-    spied_create_queues = mocker.spy(main, "create_system_queues")
+    spied_create_queues = mocker.spy(main, "create_system_comm_queues")
 
     await main.main([])
 
@@ -252,7 +252,7 @@ async def test_main__creates_SystemMonitor_and_runs_correctly(patch_run_tasks, p
 @pytest.mark.asyncio
 async def test_main__creates_Server_and_runs_correctly(patch_run_tasks, patch_subsystem_inits, mocker):
     spied_ssm = mocker.spy(main, "SystemStateManager")
-    spied_create_queues = mocker.spy(main, "create_system_queues")
+    spied_create_queues = mocker.spy(main, "create_system_comm_queues")
 
     await main.main([])
 
@@ -270,20 +270,26 @@ async def test_main__creates_Server_and_runs_correctly(patch_run_tasks, patch_su
 async def test_main__creates_InstrumentComm_and_runs_correctly(
     patch_run_tasks, patch_subsystem_inits, mocker
 ):
-    spied_create_queues = mocker.spy(main, "create_system_queues")
+    spied_create_comm_queues = mocker.spy(main, "create_system_comm_queues")
+    spied_create_data_queues = mocker.spy(main, "create_system_data_queues")
 
     await main.main([])
 
-    expected_queues = spied_create_queues.spy_return
+    expected_comm_queues = spied_create_comm_queues.spy_return
+    expected_data_queues = spied_create_data_queues.spy_return
 
     patch_subsystem_inits["instrument_comm"].assert_called_once_with(
-        mocker.ANY, expected_queues["to"]["instrument_comm"], expected_queues["from"]["instrument_comm"]
+        mocker.ANY,
+        expected_comm_queues["to"]["instrument_comm"],
+        expected_comm_queues["from"]["instrument_comm"],
+        expected_data_queues["main"],
+        expected_data_queues["file_writer"],
     )
 
 
 @pytest.mark.asyncio
 async def test_main__creates_CloudComm_and_runs_correctly(patch_run_tasks, patch_subsystem_inits, mocker):
-    spied_create_queues = mocker.spy(main, "create_system_queues")
+    spied_create_queues = mocker.spy(main, "create_system_comm_queues")
     spied_get_setting = mocker.spy(main, "_get_user_config_settings")
 
     await main.main([])

@@ -7,7 +7,7 @@ import { SYSTEM_STATUS } from "./enums";
 
 const defaultState = {
   port: 4565, // http://localhost:4565/
-  statusUuid: SYSTEM_STATUS.SERVER_INITIALIZING_STATE,
+  statusUuid: SYSTEM_STATUS.SERVER_INITIALIZING,
   simulationMode: false,
   barcodeManualMode: false,
   isConnectedToController: false,

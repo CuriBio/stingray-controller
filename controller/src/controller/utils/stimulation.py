@@ -118,16 +118,14 @@ def chunk_stim_nodes(
     )
 
 
-def chunk_protocols_in_stim_info(
-    stim_info: dict[str, Any]
-) -> tuple[dict[str, Any], dict[str, dict[int, int]], dict[str, tuple[int, ...]]]:
+def chunk_protocols_in_stim_info(stim_info: dict[str, Any]) -> dict[str, dict[Any, Any]]:
     # copying so the original dict passed in does not get modified
     chunked_stim_info = copy.deepcopy(stim_info)
 
     subprotocol_idx_mappings = {}
     max_subprotocol_idx_counts = {}
 
-    for protocol in chunked_stim_info["protocols"]:
+    for protocol_idx, protocol in enumerate(chunked_stim_info["protocols"]):
         new_subprotocols, chunked_idx_to_original_idx, original_idx_counts, *_ = chunk_stim_nodes(
             protocol["subprotocols"]
         )
@@ -135,11 +133,14 @@ def chunk_protocols_in_stim_info(
         # FW requires top level to be a single loop
         protocol["subprotocols"] = [{"type": "loop", "num_iterations": 1, "subprotocols": new_subprotocols}]
 
-        protocol_id = protocol["protocol_id"]
-        subprotocol_idx_mappings[protocol_id] = chunked_idx_to_original_idx
-        max_subprotocol_idx_counts[protocol_id] = tuple(original_idx_counts)
+        subprotocol_idx_mappings[protocol_idx] = chunked_idx_to_original_idx
+        max_subprotocol_idx_counts[protocol_idx] = tuple(original_idx_counts)
 
-    return chunked_stim_info, subprotocol_idx_mappings, max_subprotocol_idx_counts
+    return {
+        "stim_info": chunked_stim_info,
+        "subprotocol_idx_mappings": subprotocol_idx_mappings,
+        "max_subprotocol_idx_counts": max_subprotocol_idx_counts,
+    }
 
 
 def _check_subprotocol_type(subprotocol: dict[str, Any], protocol_id: int, idx: int) -> Any:

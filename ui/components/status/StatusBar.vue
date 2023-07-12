@@ -236,39 +236,43 @@ export default {
     },
     isInitializing: function () {
       return [
-        SYSTEM_STATUS.SERVER_INITIALIZING_STATE,
-        SYSTEM_STATUS.SERVER_READY_STATE,
-        SYSTEM_STATUS.INSTRUMENT_INITIALIZING_STATE,
+        SYSTEM_STATUS.SERVER_INITIALIZING,
+        SYSTEM_STATUS.SERVER_READY,
+        SYSTEM_STATUS.INSTRUMENT_INITIALIZING,
       ].includes(this.statusUuid);
     },
     isUpdating: function () {
       return [
-        SYSTEM_STATUS.CHECKING_FOR_UPDATES_STATE,
-        SYSTEM_STATUS.INSTALLING_UPDATES_STATE,
-        SYSTEM_STATUS.DOWNLOADING_UPDATES_STATE,
+        SYSTEM_STATUS.CHECKING_FOR_UPDATES,
+        SYSTEM_STATUS.INSTALLING_UPDATES,
+        SYSTEM_STATUS.DOWNLOADING_UPDATES,
       ].includes(this.statusUuid);
     },
   },
   watch: {
     statusUuid: function (newStatus) {
       // set message for stimulation status and system status if error occurs
-      if (!this.systemErrorCode && newStatus !== SYSTEM_STATUS.IDLE_READY_STATE) {
+      if (!this.systemErrorCode && newStatus !== SYSTEM_STATUS.IDLE_READY) {
         this.setSystemSpecificStatus(newStatus);
-      } else if (newStatus === SYSTEM_STATUS.IDLE_READY_STATE) {
+      } else if (newStatus === SYSTEM_STATUS.IDLE_READY) {
         this.setStimSpecificStatus();
       }
     },
     stimStatus: function (newStatus) {
       // only let stim messages through if system is in idle ready state
-      if (this.statusUuid === SYSTEM_STATUS.IDLE_READY_STATE) this.setStimSpecificStatus(newStatus);
+      if (this.statusUuid === SYSTEM_STATUS.IDLE_READY) {
+        if (newStatus === STIM_STATUS.WAITING) newStatus = this.stimPlayState ? "Stopping..." : "Starting...";
+
+        this.setStimSpecificStatus(newStatus);
+      }
     },
     confirmationRequest: async function () {
       const stimOpsInProgress =
         this.stimStatus === STIM_STATUS.CONFIG_CHECK_IN_PROGRESS || this.stimPlayState;
 
       const fwUpdateInProgress =
-        this.statusUuid === SYSTEM_STATUS.DOWNLOADING_UPDATES_STATE ||
-        this.statusUuid === SYSTEM_STATUS.INSTALLING_UPDATES_STATE;
+        this.statusUuid === SYSTEM_STATUS.DOWNLOADING_UPDATES ||
+        this.statusUuid === SYSTEM_STATUS.INSTALLING_UPDATES;
 
       if (this.confirmationRequest) {
         if (fwUpdateInProgress) {
@@ -311,29 +315,29 @@ export default {
     },
     setSystemSpecificStatus: function (status) {
       switch (status) {
-        case SYSTEM_STATUS.SERVER_INITIALIZING_STATE:
+        case SYSTEM_STATUS.SERVER_INITIALIZING:
           this.alertTxt = "Booting Up...";
           break;
-        case SYSTEM_STATUS.SERVER_READY_STATE:
+        case SYSTEM_STATUS.SERVER_READY:
           this.alertTxt = "Connecting...";
           break;
-        case SYSTEM_STATUS.INSTRUMENT_INITIALIZING_STATE:
+        case SYSTEM_STATUS.INSTRUMENT_INITIALIZING:
           this.alertTxt = "Initializing...";
           break;
-        case SYSTEM_STATUS.CHECKING_FOR_UPDATES_STATE:
+        case SYSTEM_STATUS.CHECKING_FOR_UPDATES:
           this.alertTxt = "Checking for Firmware Updates...";
           break;
-        case SYSTEM_STATUS.UPDATES_NEEDED_STATE:
+        case SYSTEM_STATUS.UPDATES_NEEDED:
           this.alertTxt = `Firmware Updates Required`;
           break;
-        case SYSTEM_STATUS.DOWNLOADING_UPDATES_STATE:
+        case SYSTEM_STATUS.DOWNLOADING_UPDATES:
           this.alertTxt = `Downloading Firmware Updates...`;
           this.$bvModal.show("fw-updates-in-progress-message");
           break;
-        case SYSTEM_STATUS.INSTALLING_UPDATES_STATE:
+        case SYSTEM_STATUS.INSTALLING_UPDATES:
           this.alertTxt = `Installing Firmware Updates...`;
           break;
-        case SYSTEM_STATUS.UPDATES_COMPLETE_STATE:
+        case SYSTEM_STATUS.UPDATES_COMPLETE:
           this.alertTxt = `Firmware Updates Complete`;
           this.closeModalsById(["fw-updates-in-progress-message", "fw-closure-warning"]);
           this.$bvModal.show("fw-updates-complete-message");

@@ -11,13 +11,16 @@ from pulse3D.constants import CHANNEL_FIRMWARE_VERSION_UUID
 from pulse3D.constants import MAIN_FIRMWARE_VERSION_UUID
 from pulse3D.constants import MANTARRAY_SERIAL_NUMBER_UUID as INSTRUMENT_SERIAL_NUMBER_UUID
 
+from ..constants import CALIBRATION_RECORDING_DUR_SECONDS
 from ..constants import CURRENT_SOFTWARE_VERSION
 from ..constants import FW_UPDATE_SUBDIR
+from ..constants import MICRO_TO_BASE_CONVERSION
 from ..constants import StimulationStates
 from ..constants import StimulatorCircuitStatuses
 from ..constants import SystemStatuses
 from ..exceptions import ElectronControllerVersionMismatchError
 from ..utils.aio import wait_tasks_clean
+from ..utils.commands import create_start_recording_command
 from ..utils.generic import handle_system_error
 from ..utils.generic import semver_gt
 from ..utils.state_management import ReadOnlyDict
@@ -81,24 +84,24 @@ class SystemMonitor:
         new_system_status: SystemStatuses | None = None
 
         match system_state["system_status"]:
-            case SystemStatuses.SERVER_INITIALIZING_STATE:
+            case SystemStatuses.SERVER_INITIALIZING:
                 # TODO Tanner (3/15/23): this state just instantly transitions right now, probably not needed anymore
-                new_system_status = SystemStatuses.SERVER_READY_STATE
-            case SystemStatuses.SERVER_READY_STATE:
+                new_system_status = SystemStatuses.SERVER_READY
+            case SystemStatuses.SERVER_READY:
                 # make sure the electron process is running the same version
                 if (
                     expected_software_version := system_state.get("expected_software_version")
                 ) and expected_software_version != CURRENT_SOFTWARE_VERSION:
                     raise ElectronControllerVersionMismatchError(expected_software_version)
-                new_system_status = SystemStatuses.SYSTEM_INITIALIZING_STATE
-            case SystemStatuses.SYSTEM_INITIALIZING_STATE if (
-                # need to wait in SYSTEM_INITIALIZING_STATE until UI connects (indicated by
+                new_system_status = SystemStatuses.SYSTEM_INITIALIZING
+            case SystemStatuses.SYSTEM_INITIALIZING if (
+                # need to wait in SYSTEM_INITIALIZING until UI connects (indicated by
                 # latest_software_version being set) and instrument completes booting up (indicated by
                 # instrument_metadata being set)
                 system_state["instrument_metadata"]
                 and system_state["latest_software_version"]
             ):
-                new_system_status = SystemStatuses.CHECKING_FOR_UPDATES_STATE
+                new_system_status = SystemStatuses.CHECKING_FOR_UPDATES
                 instrument_metadata = system_state["instrument_metadata"]
                 # send command to cloud comm process to check for latest firmware versions
                 await self._queues["to"]["cloud_comm"].put(
@@ -109,9 +112,9 @@ class SystemMonitor:
                         "main_fw_version": instrument_metadata[MAIN_FIRMWARE_VERSION_UUID],
                     }
                 )
-            case SystemStatuses.UPDATES_NEEDED_STATE if system_state["firmware_updates_accepted"]:
+            case SystemStatuses.UPDATES_NEEDED if system_state["firmware_updates_accepted"]:
                 if not system_state["firmware_updates_require_download"] or system_state["is_user_logged_in"]:
-                    new_system_status = SystemStatuses.DOWNLOADING_UPDATES_STATE
+                    new_system_status = SystemStatuses.DOWNLOADING_UPDATES
 
                     fw_update_dir_path = (
                         None
@@ -132,16 +135,16 @@ class SystemMonitor:
                     await self._queues["to"]["server"].put(
                         {"communication_type": "user_input_needed", "input_type": "user_creds"}
                     )
-            case SystemStatuses.UPDATES_NEEDED_STATE if system_state["firmware_updates_accepted"] is False:
-                # firmware_updates_accepted value will be None before a user has made a decision, so need to explicitly check that it is False
-                new_system_status = SystemStatuses.IDLE_READY_STATE
-            case SystemStatuses.INSTALLING_UPDATES_STATE:
+            # firmware_updates_accepted value will be None before a user has made a decision, so need to explicitly check that it is False
+            case SystemStatuses.UPDATES_NEEDED if system_state["firmware_updates_accepted"] is False:
+                new_system_status = SystemStatuses.IDLE_READY
+            case SystemStatuses.INSTALLING_UPDATES:
                 # these two values get reset to None after their respective installs complete
                 if (
                     system_state["main_firmware_update"] is None
                     and system_state["channel_firmware_update"] is None
                 ):
-                    new_system_status = SystemStatuses.UPDATES_COMPLETE_STATE
+                    new_system_status = SystemStatuses.UPDATES_COMPLETE
                     await self._send_enable_sw_auto_install_message()
 
         if new_system_status:
@@ -217,6 +220,45 @@ class SystemMonitor:
                     action = "accepted" if update_accepted else "declined"
                     logger.info(f"User {action} firmware update(s)")
                     system_state_updates["firmware_updates_accepted"] = update_accepted
+                case {"command": "start_calibration"}:
+                    system_state_updates["system_status"] = SystemStatuses.CALIBRATING
+                    await self._queues["to"]["file_writer"].put(
+                        create_start_recording_command(
+                            system_state, start_recording_time_index=0, is_calibration_recording=True
+                        )
+                    )
+                    await self._queues["to"]["file_writer"].put(
+                        {
+                            "command": "stop_recording",
+                            "stop_timepoint": CALIBRATION_RECORDING_DUR_SECONDS * MICRO_TO_BASE_CONVERSION,
+                        }
+                    )
+
+                    await self._queues["to"]["instrument_comm"].put(
+                        {"command": "start_data_stream", "is_calibration_recording": True}
+                    )
+                case {"command": "start_data_stream"}:
+                    # it's fine to switch the status here since buffering isn't a status directly related to the instrument
+                    system_state_updates["system_status"] = SystemStatuses.BUFFERING
+                    await self._queues["to"]["file_writer"].put(communication)
+                    await self._queues["to"]["instrument_comm"].put(communication)
+                case {"command": "stop_data_stream"}:
+                    # need to wait for the data stream to actually stop before transitiontion back to idle ready, so no status transition here
+                    await self._queues["to"]["file_writer"].put(communication)
+                    await self._queues["to"]["instrument_comm"].put(communication)
+                case {"command": "start_recording"}:
+                    system_state_updates["system_status"] = SystemStatuses.RECORDING
+                    await self._queues["to"]["file_writer"].put(
+                        create_start_recording_command(
+                            system_state,
+                            start_recording_time_index=communication["start_timepoint"],
+                            platemap_info=communication["platemap_info"],
+                            is_calibration_recording=False,
+                        )
+                    )
+                case {"command": "stop_recording" | "update_recording_name"}:
+                    # neither of these command require additional processing here
+                    await self._queues["to"]["file_writer"].put(communication)
                 case {"command": "set_stim_status", "running": status}:
                     num_protocols = len(system_state["stim_info"]["protocols"])
                     if status:
@@ -234,10 +276,9 @@ class SystemMonitor:
                     await self._queues["to"]["instrument_comm"].put({"command": command})
                 case {"command": "set_stim_protocols", "stim_info": stim_info}:
                     system_state_updates["stim_info"] = stim_info
-                    chunked_stim_info, *_ = chunk_protocols_in_stim_info(stim_info)
-                    await self._queues["to"]["instrument_comm"].put(
-                        {**communication, "stim_info": chunked_stim_info}
-                    )
+                    chunked_stim_info = chunk_protocols_in_stim_info(stim_info)
+                    await self._queues["to"]["instrument_comm"].put({**communication, **chunked_stim_info})
+                    # TODO send to file writer ?
                 case {"command": "start_stim_checks", "well_indices": well_indices}:
                     system_state_updates["stimulator_circuit_statuses"] = {
                         well_idx: StimulatorCircuitStatuses.CALCULATING.name.lower()
@@ -258,10 +299,17 @@ class SystemMonitor:
             communication = await self._queues["from"]["instrument_comm"].get()
 
             system_state = self._system_state_manager.data
-
             system_state_updates: dict[str, Any] = {}
 
             match communication:
+                case {"command": "get_board_connection_status", "in_simulation_mode": in_simulation_mode}:
+                    system_state_updates["in_simulation_mode"] = in_simulation_mode
+                case {"command": "get_metadata", **metadata}:
+                    system_state_updates["instrument_metadata"] = metadata
+                case {"command": "start_data_stream"}:
+                    pass  # system will switch into live view active state once enough data packets have been sent to the UI
+                case {"command": "stop_data_stream"}:
+                    system_state_updates["system_status"] = SystemStatuses.IDLE_READY
                 case {"command": "set_stim_protocols"}:
                     pass  # nothing to do here
                 case {"command": "start_stimulation"}:
@@ -287,8 +335,6 @@ class SystemMonitor:
                     await self._queues["to"]["server"].put(
                         {"communication_type": "stimulator_circuit_statuses", **update}
                     )
-                case {"command": "get_board_connection_status", "in_simulation_mode": in_simulation_mode}:
-                    system_state_updates["in_simulation_mode"] = in_simulation_mode
                 case {"command": "get_barcode", "barcode": barcode}:
                     barcode_type = "stim_barcode" if barcode.startswith("MS") else "plate_barcode"
                     # if barcode didn't change, then no need to create an update
@@ -302,8 +348,6 @@ class SystemMonitor:
                                 "new_barcode": barcode,
                             }
                         )
-                case {"command": "get_metadata", **metadata}:
-                    system_state_updates["instrument_metadata"] = metadata
                 case {"command": "firmware_update_complete", "firmware_type": firmware_type}:
                     key = f"{firmware_type}_firmware_update"
                     fw_version = system_state[key]
@@ -322,13 +366,35 @@ class SystemMonitor:
             if system_state_updates:
                 await self._system_state_manager.update(system_state_updates)
 
+    async def _handle_comm_from_file_writer(self) -> None:
+        while True:
+            communication = await self._queues["from"]["file_writer"].get()
+
+            system_state_updates: dict[str, Any] = {}
+
+            match communication:
+                case {"command": "start_data_stream" | "stop_data_stream"}:
+                    pass  # nothing to do here
+                case {"command": "start_recording"}:
+                    pass  # nothing to do here
+                case {"command": "stop_recording"}:
+                    if communication.get("is_calibration_recording"):
+                        await self._queues["to"]["instrument_comm"].put({"command": "stop_data_stream"})
+                    else:
+                        system_state_updates["system_status"] = SystemStatuses.LIVE_VIEW_ACTIVE
+                case {"command": "update_recording_name"}:
+                    await self._queues["to"]["server"].put(
+                        {"communication_type": "update_recording_name", "name_updated": True}
+                    )
+                case invalid_comm:
+                    raise NotImplementedError(f"Invalid communication from FileWriter: {invalid_comm}")
+
     async def _handle_comm_from_cloud_comm(self) -> None:
         # TODO could make try making these first 4 boiler plates lines reusable somehow
         while True:
             communication = await self._queues["from"]["cloud_comm"].get()
 
             system_state = self._system_state_manager.data
-
             system_state_updates: dict[str, Any] = {}
 
             match communication:
@@ -341,7 +407,7 @@ class SystemMonitor:
                     )
                 case {"command": "check_versions", "error": _}:
                     # error will be logged by cloud comm
-                    system_state_updates["system_status"] = SystemStatuses.IDLE_READY_STATE
+                    system_state_updates["system_status"] = SystemStatuses.IDLE_READY
                 case {"command": "check_versions"}:
                     system_state_updates["firmware_updates_require_download"] = communication["download"]
 
@@ -365,7 +431,7 @@ class SystemMonitor:
                     if (main_fw_update_needed or channel_fw_update_needed) and min_sw_version_available:
                         logger.info("Firmware update(s) found")
 
-                        system_state_updates["system_status"] = SystemStatuses.UPDATES_NEEDED_STATE
+                        system_state_updates["system_status"] = SystemStatuses.UPDATES_NEEDED
                         system_state_updates["main_firmware_update"] = (
                             latest_main_fw if main_fw_update_needed else None
                         )
@@ -381,11 +447,11 @@ class SystemMonitor:
                         )
                     else:
                         logger.info("No firmware updates found")
-                        system_state_updates["system_status"] = SystemStatuses.IDLE_READY_STATE
+                        system_state_updates["system_status"] = SystemStatuses.IDLE_READY
                         # since no updates available, also enable auto install of SW update
                         await self._send_enable_sw_auto_install_message()
                 case {"command": "download_firmware_updates"}:
-                    system_state_updates["system_status"] = SystemStatuses.INSTALLING_UPDATES_STATE
+                    system_state_updates["system_status"] = SystemStatuses.INSTALLING_UPDATES
                     # Tanner (1/13/22): send both firmware update commands at once, and make sure channel is sent first.
                     # If both are sent, the second will be ignored by instrument comm until the first install completes
                     for firmware_type in ("channel", "main"):

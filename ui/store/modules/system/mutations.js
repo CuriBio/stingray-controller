@@ -5,7 +5,7 @@ const SW_INSTALLER_URL_PREFIX = "https://downloads.curibio.com/software/stingray
 
 export default {
   setStatusUuid(state, newId) {
-    if (state.statusUuid !== SYSTEM_STATUS.ERROR_STATE) {
+    if (state.statusUuid !== SYSTEM_STATUS.ERROR) {
       state.statusUuid = newId;
     }
   },

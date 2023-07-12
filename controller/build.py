@@ -32,5 +32,7 @@ cmd.run()
 
 for output in cmd.get_outputs():
     relative_extension = os.path.relpath(output, cmd.build_lib)
-    # TODO delete the .so file it if already exists
-    shutil.copyfile(output, os.path.join("src", relative_extension))
+    dest_path = os.path.join("src", relative_extension)
+    if os.path.exists(dest_path):
+        os.remove(dest_path)
+    shutil.copyfile(output, dest_path)

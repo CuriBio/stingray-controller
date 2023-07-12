@@ -7,6 +7,7 @@ from controller.constants import GENERIC_24_WELL_DEFINITION
 from controller.constants import MICRO_TO_BASE_CONVERSION
 from controller.constants import MICROS_PER_MILLI
 from controller.constants import NUM_WELLS
+from controller.constants import SERIAL_COMM_MAX_TIMESTAMP_VALUE
 from controller.constants import STIM_MAX_DUTY_CYCLE_DURATION_MICROSECONDS
 from controller.constants import STIM_MAX_DUTY_CYCLE_PERCENTAGE
 from controller.constants import STIM_MAX_SUBPROTOCOL_DURATION_MICROSECONDS
@@ -56,6 +57,10 @@ def random_bool():
 
 def random_well_idx():
     return randint(0, NUM_WELLS - 1)
+
+
+def random_serial_comm_timestamp():
+    return randint(0, SERIAL_COMM_MAX_TIMESTAMP_VALUE)
 
 
 def random_stim_type():
@@ -254,7 +259,7 @@ def get_random_stim_loop():
     raise NotImplementedError("TODO")
 
 
-def create_random_stim_info():
+def get_random_stim_info():
     protocol_ids = (None, "A", "B", "C", "D")
     stim_info = {
         "protocols": [
@@ -286,12 +291,10 @@ def create_random_stim_info():
         },
     }
 
-    if all(protocol_id is None for protocol_id in stim_info["protocol_assignments"].values()):
-        # make sure at least one well has a protocol assigned
-        stim_info["protocol_assignments"]["A1"] = "A"
-    elif all(protocol_id is not None for protocol_id in stim_info["protocol_assignments"].values()):
-        # make sure at least one well does not have a protocol assigned
-        stim_info["protocol_assignments"]["A1"] = None
+    # make sure all protocols are actually assigned and at least one well does not have a protocol
+    for well_idx, protocol_id in enumerate(protocol_ids):
+        well_name = GENERIC_24_WELL_DEFINITION.get_well_name_from_well_index(well_idx)
+        stim_info["protocol_assignments"][well_name] = protocol_id
 
     return stim_info
 
@@ -340,3 +343,8 @@ def assert_subprotocol_node_bytes_are_expected(actual, expected):
     else:
         assert actual[1] == expected[1], "Invalid subprotocol idx"
         assert_subprotocol_pulse_bytes_are_expected(actual[2:], expected[2:])
+
+
+def compare_exceptions(e1, e2):
+    # from https://stackoverflow.com/questions/15844131/comparing-exception-objects-in-python
+    return type(e1) is type(e2) and e1.args == e2.args

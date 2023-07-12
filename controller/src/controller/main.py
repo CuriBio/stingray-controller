@@ -4,11 +4,9 @@
 
 import argparse
 import asyncio
-import hashlib
 import logging
 import os
 import platform
-import socket
 import sys
 from typing import Any
 import uuid
@@ -28,6 +26,7 @@ from .main_systems.system_monitor import SystemMonitor
 from .subsystems.cloud_comm import CloudComm
 from .subsystems.instrument_comm import InstrumentComm
 from .utils.aio import wait_tasks_clean
+from .utils.generic import get_hash_of_computer_name
 from .utils.logging import configure_logging
 from .utils.logging import redact_sensitive_info_from_path
 from .utils.state_management import SystemStateManager
@@ -73,18 +72,26 @@ async def main(command_line_args: list[str]) -> None:
         system_state_manager = SystemStateManager()
         await system_state_manager.update(initialize_system_state(parsed_args, log_file_id))
 
-        queues = create_system_queues()
+        comm_queues = create_system_comm_queues()
+        data_queues = create_system_data_queues()
 
         # create subsystems
-        system_monitor = SystemMonitor(system_state_manager, queues)
+        system_monitor = SystemMonitor(system_state_manager, comm_queues)
         server = Server(
-            system_state_manager.get_read_only_copy, queues["to"]["server"], queues["from"]["server"]
+            system_state_manager.get_read_only_copy,
+            comm_queues["to"]["server"],
+            comm_queues["from"]["server"],
         )
         instrument_comm_subsystem = InstrumentComm(
-            queues["to"]["instrument_comm"], queues["from"]["instrument_comm"]
+            comm_queues["to"]["instrument_comm"],
+            comm_queues["from"]["instrument_comm"],
+            data_queues["main"],
+            data_queues["file_writer"],
         )
         cloud_comm_subsystem = CloudComm(
-            queues["to"]["cloud_comm"], queues["from"]["cloud_comm"], **_get_user_config_settings(parsed_args)
+            comm_queues["to"]["cloud_comm"],
+            comm_queues["from"]["cloud_comm"],
+            **_get_user_config_settings(parsed_args),
         )
 
         # future for subsystems to set if they experience an error. The server will report the error in the future to the UI
@@ -120,11 +127,21 @@ async def main(command_line_args: list[str]) -> None:
         logger.info("Program exiting")
 
 
-# TODO consider moving this to a different file
-def create_system_queues() -> dict[str, Any]:
+# TODO consider moving these two to a different file
+def create_system_comm_queues() -> dict[str, Any]:
     return {
-        direction: {subsystem: asyncio.Queue() for subsystem in ("server", "instrument_comm", "cloud_comm")}
+        direction: {
+            subsystem: asyncio.Queue()
+            for subsystem in ("server", "instrument_comm", "cloud_comm", "file_writer")
+        }
         for direction in ("to", "from")
+    }
+
+
+def create_system_data_queues() -> dict[str, Any]:
+    return {
+        receiving_subsystem: asyncio.Queue()
+        for receiving_subsystem in ("file_writer", "data_analyzer", "main")
     }
 
 
@@ -178,7 +195,7 @@ def initialize_system_state(parsed_args: dict[str, Any], log_file_id: uuid.UUID)
 
     system_state = {
         # main
-        "system_status": SystemStatuses.SERVER_INITIALIZING_STATE,
+        "system_status": SystemStatuses.SERVER_INITIALIZING,
         "in_simulation_mode": False,
         "stimulation_protocol_statuses": [],
         # updating
@@ -211,8 +228,6 @@ def _log_system_info() -> None:
     uname_release = getattr(uname, "release")
     uname_version = getattr(uname, "version")
 
-    computer_name_hash = hashlib.sha512(socket.gethostname().encode(encoding="UTF-8")).hexdigest()
-
     for msg in (
         f"System: {uname_sys}",
         f"Release: {uname_release}",
@@ -224,7 +239,7 @@ def _log_system_info() -> None:
         f"Architecture: {platform.architecture()}",
         f"Interpreter is 64-bits: {sys.maxsize > 2**32}",
         f"System Alias: {platform.system_alias(uname_sys, uname_release, uname_version)}",
-        f"SHA512 digest of Computer Name {computer_name_hash}",
+        f"SHA512 digest of Computer Name {get_hash_of_computer_name()}",
     ):
         logger.info(msg)
 

@@ -13,6 +13,10 @@ class WebsocketCommandError(Exception):
     pass
 
 
+class WebsocketCommandNoOpException(Exception):
+    pass
+
+
 class ElectronControllerVersionMismatchError(Exception):
     pass
 

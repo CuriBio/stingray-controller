@@ -25,12 +25,10 @@ class _Command:
 
     async def complete(self) -> None:
         self._timer.cancel()
-        await self._timer
-        # TODO see if this helps clean up errors here
-        # try:
-        #     await self._timer
-        # except asyncio.CancelledError:
-        #     pass
+        try:
+            await self._timer
+        except asyncio.CancelledError:
+            pass
 
 
 class CommandTracker:
