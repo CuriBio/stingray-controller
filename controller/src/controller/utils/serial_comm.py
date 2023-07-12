@@ -220,7 +220,7 @@ def convert_status_code_bytes_to_dict(status_code_bytes: bytes) -> dict[str, int
     status_code_labels = (
         "main_status",
         "index_of_thread_with_error",
-        *[f"module_{i}_status" for i in range(24)],
+        *[f"module_{i}_status" for i in range(NUM_WELLS)],
     )
     return {label: status_code_bytes[i] for i, label in enumerate(status_code_labels)}
 
@@ -446,7 +446,8 @@ def convert_stim_bytes_to_dict(stim_bytes: bytes) -> dict[str, Any]:
     stim_info_dict: dict[str, Any] = {
         "protocols": [],
         "protocol_assignments": {
-            GENERIC_24_WELL_DEFINITION.get_well_name_from_well_index(well_idx): None for well_idx in range(24)
+            GENERIC_24_WELL_DEFINITION.get_well_name_from_well_index(well_idx): None
+            for well_idx in range(NUM_WELLS)
         },
     }
 

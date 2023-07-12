@@ -3,18 +3,23 @@ import asyncio
 from collections import deque
 from random import choice
 from random import randint
+import struct
 
 from controller.constants import CURI_VID
+from controller.constants import NUM_WELLS
 from controller.constants import SERIAL_COMM_BAUD_RATE
 from controller.constants import SERIAL_COMM_BYTESIZE
 from controller.constants import SERIAL_COMM_READ_TIMEOUT
 from controller.constants import SerialCommPacketTypes
+from controller.constants import STIM_WELL_IDX_TO_MODULE_ID
+from controller.constants import StimulatorCircuitStatuses
 from controller.constants import STM_VID
 from controller.exceptions import InstrumentCommandResponseError
 from controller.exceptions import NoInstrumentDetectedError
 from controller.subsystems import instrument_comm
 from controller.subsystems.instrument_comm import InstrumentComm
 from controller.utils.aio import clean_up_tasks
+from controller.utils.serial_comm import convert_adc_readings_to_circuit_status
 from controller.utils.serial_comm import create_data_packet
 import pytest
 import serial
@@ -22,6 +27,7 @@ from serial.tools.list_ports_common import ListPortInfo
 
 from ..fixtures import fixture__wait_tasks_clean
 from ..helpers import compare_exceptions
+from ..helpers import random_bool
 from ..helpers import random_serial_comm_timestamp
 
 
@@ -43,6 +49,9 @@ class MockInstrument:
 
     async def write_async(self, data):
         self.recv.append(data)
+
+
+# TODO consider using the simulator in all these tests
 
 
 @pytest.fixture(scope="function", name="test_instrument_comm_obj")
@@ -310,20 +319,52 @@ async def test_InstrumentComm__handles_start_stim_checks_command__success(
 ):
     test_ic, test_instrument = test_instrument_comm_obj_with_connection
 
-    test_command = {"command": "start_stim_checks"}
+    test_well_indices = list(range(4))
+    test_well_indices.extend([i for i in range(4, NUM_WELLS) if random_bool()])
+
+    # set known adc readings in simulator. these first 4 values are hard coded, if this test fails might need to update them
+    adc_readings = [(0, 0), (0, 2039), (0, 2049), (1113, 0)]
+    adc_readings.extend([(i, i + 100) for i in range(NUM_WELLS - len(adc_readings))])
+
+    test_command = {"command": "start_stim_checks", "well_indices": test_well_indices}
 
     run_task = asyncio.create_task(test_ic.run(asyncio.Future()))
 
     await test_ic._from_monitor_queue.put(test_command)
+
     # set up response
+    adc_readings_ordered_by_module_id = [None] * NUM_WELLS
+    for well_idx, readings in enumerate(adc_readings):
+        module_id = STIM_WELL_IDX_TO_MODULE_ID[well_idx]
+        adc_readings_ordered_by_module_id[module_id] = readings
+    response_body = bytes([])
+    for module_readings in adc_readings_ordered_by_module_id:
+        status = convert_adc_readings_to_circuit_status(*module_readings)
+        response_body += struct.pack("<HHB", *module_readings, status)
     test_instrument.send.append(
         create_data_packet(
-            random_serial_comm_timestamp(), SerialCommPacketTypes.STIM_IMPEDANCE_CHECK, bytes([0])
+            random_serial_comm_timestamp(), SerialCommPacketTypes.STIM_IMPEDANCE_CHECK, response_body
         )
     )
 
-    assert await asyncio.wait_for(test_ic._comm_to_monitor_queue.get(), timeout=1) == test_command
+    msg_to_main = await asyncio.wait_for(test_ic._comm_to_monitor_queue.get(), timeout=1)
 
-    # TODO assert something else here?
+    # make sure that the message sent back to main contains the correct values
+    stimulator_circuit_statuses = {}
+    for well_idx in test_well_indices:
+        well_readings = adc_readings[well_idx]
+        status_int = convert_adc_readings_to_circuit_status(*well_readings)
+        status = list(StimulatorCircuitStatuses)[status_int + 1].name.lower()
+        stimulator_circuit_statuses[well_idx] = status
+
+    assert msg_to_main == {
+        **test_command,
+        "stimulator_circuit_statuses": stimulator_circuit_statuses,
+        "adc_readings": {
+            well_idx: readings
+            for well_idx, readings in enumerate(adc_readings)
+            if well_idx in test_well_indices
+        },
+    }
 
     await clean_up_tasks({run_task})
