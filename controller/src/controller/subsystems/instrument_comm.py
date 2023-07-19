@@ -121,6 +121,7 @@ class InstrumentComm:
         # TODO try making some kind of container for all this data?
         # instrument
         self._instrument: AioSerial | VirtualInstrumentConnection | None = None
+        self._instrument_error_detected = False  # Tanner (7/18/23): this flag currently only used to decide which command response to grab the system stats from when reporting a FW error
         self._hardware_test_mode = hardware_test_mode
         # instrument comm
         self._serial_packet_cache = bytes(0)
@@ -468,6 +469,10 @@ class InstrumentComm:
         if write_len == 0:
             logger.error("Serial data write reporting no bytes written")
 
+    async def _report_instrument_fw_error(self, error_details: dict[Any, Any]) -> None:
+        await self._send_data_packet(SerialCommPacketTypes.ERROR_ACK)
+        raise InstrumentFirmwareError(f"Error Details: {error_details}")
+
     async def _process_comm_from_instrument(self, packet_type: int, packet_payload: bytes) -> None:
         match packet_type:
             case SerialCommPacketTypes.CHECKSUM_FAILURE:
@@ -500,8 +505,7 @@ class InstrumentComm:
                 await self._to_monitor_queue.put(barcode_comm)
             case SerialCommPacketTypes.GET_ERROR_DETAILS:
                 error_details = parse_instrument_event_info(packet_payload)
-                await self._send_data_packet(SerialCommPacketTypes.ERROR_ACK)
-                raise InstrumentFirmwareError(f"Error Details: {error_details}")
+                await self._report_instrument_fw_error(error_details)
             case _:
                 raise NotImplementedError(f"Packet Type: {packet_type} is not defined")
 
@@ -528,8 +532,13 @@ class InstrumentComm:
                 metadata_dict_for_logging = {
                     METADATA_TAGS_FOR_LOGGING.get(key, key): val for key, val in metadata_dict.items()
                 }
+                if self._instrument_error_detected:
+                    # Tanner (7/18/23): currently a handshake will always be sent before the metadata retrieval command is sent,
+                    # and if there are error codes in the response to the handshake then this flag will be set and the system
+                    # stats in the metadata should be reported instead of the error retrieval command
+                    await self._report_instrument_fw_error(metadata_dict_for_logging)
                 logger.info(f"Instrument metadata received: {metadata_dict_for_logging}")
-                # validate after logging so that every value still gets loggedin case of a bad value
+                # validate after logging so that every value still gets logged in case of a bad value
                 validate_instrument_metadata(metadata_dict)
                 if not metadata_dict.pop("is_stingray"):
                     raise IncorrectInstrumentConnectedError()
@@ -611,6 +620,8 @@ class InstrumentComm:
         status_codes_msg = f"{comm_type} received from instrument. Status Codes: {status_codes_dict}"
         if any(status_codes_dict.values()):
             logger.error(status_codes_msg)
+            self._instrument_error_detected = True
+
             logger.error("Retrieving error details from instrument")
             await self._send_data_packet(SerialCommPacketTypes.GET_ERROR_DETAILS)
             await self._command_tracker.add(
