@@ -7,6 +7,7 @@ Changelog for Stingray Controller
 
 Added:
 ^^^^^^
+- Support for barcodes of MA Mini Plates
 - Handling for new firmware error reporting
 
 Fixed:
