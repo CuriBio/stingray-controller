@@ -24,6 +24,7 @@ from controller.utils.serial_comm import convert_subprotocol_pulse_dict_to_bytes
 from controller.utils.serial_comm import convert_well_name_to_module_id
 from controller.utils.serial_comm import create_data_packet
 from controller.utils.serial_comm import get_serial_comm_timestamp
+from controller.utils.serial_comm import parse_instrument_event_info
 from controller.utils.serial_comm import parse_metadata_bytes
 from controller.utils.serial_comm import SERIAL_COMM_CHECKSUM_LENGTH_BYTES
 from controller.utils.serial_comm import SERIAL_COMM_MAGIC_WORD_BYTES
@@ -121,6 +122,13 @@ def test_parse_metadata_bytes__returns_expected_value():
         "is_stingray": is_stingray,
         **TEST_EVENT_INFO,
     }
+
+
+def test_parse_instrument_event_info__parses_default_metadata_values_without_error():
+    event_info_len = 64
+    test_bytes = bytes([0xFF] * event_info_len)
+    actual = parse_instrument_event_info(test_bytes)
+    assert actual["prev_barcode_scanned"] == "N/A"
 
 
 @freeze_time("2021-04-07 13:14:07.234987")
