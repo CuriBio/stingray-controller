@@ -175,6 +175,17 @@
         @handle-confirmation="closeInvalidProtocolModal"
       />
     </b-modal>
+    <b-modal
+      id="offline-mode"
+      size="sm"
+      hide-footer
+      hide-header
+      hide-header-close
+      :static="true"
+      :no-close-on-backdrop="true"
+    >
+      <StatusWarningWidget :modalLabels="offlineModeLabels" @handle-confirmation="closeOfflineModeModal" />
+    </b-modal>
   </div>
   <!-- </div>
   </div> -->
@@ -256,6 +267,13 @@ export default {
         msgTwo: "Please input them to begin the download",
         buttonNames: ["Okay"],
       },
+      // TODO change these to better labels
+      offlineModeLabels: {
+        header: "Important!",
+        msgOne: "You are entering offline mode.",
+        msgTwo: "Please confirm to continue.",
+        buttonNames: ["Cancel", "Confirm"],
+      },
       stim24hrTimer: null,
       disabledToolTip: "Controls disabled until connected to instrument.",
       disabled: true,
@@ -286,6 +304,9 @@ export default {
     },
     isStimInWaiting: function () {
       return this.stimStatus === STIM_STATUS.WAITING;
+    },
+    isInOfflineMode: function () {
+      return this.statusUuid === SYSTEM_STATUS.OFFLINE_STATE;
     },
     isStartStopButtonEnabled: function () {
       if (this.isStimInWaiting) return false;
@@ -332,6 +353,7 @@ export default {
         return "Start Stimulation";
       }
     },
+
     stopStimLabel: function () {
       // Tanner (7/27/22): there used to be multiple values, so leaving this as a function in case more values get added in future
       return "Stop Stimulation";
@@ -423,7 +445,23 @@ export default {
       }
     },
     async handleOfflineMode() {
-      this.$store.dispatch(`system/sendInitiateOfflineMode`);
+      // Can only enter or end offline mode if stim is already active
+      if (this.playState) {
+        // if already in offline mode, just turn off
+        if (this.isInOfflineMode) {
+          this.$store.dispatch(`system/sendOfflineState`);
+          // else show confirmation modal to initiate offline mode if not in a transition state
+        } else if (this.statusUuid !== SYSTEM_STATUS.GOING_OFFLINE_STATE) {
+          this.$bvModal.show("offline-mode");
+        }
+      }
+    },
+    closeOfflineModeModal(idx) {
+      this.$bvModal.hide("offline-mode");
+
+      if (idx === 1) {
+        this.$store.dispatch(`system/sendOfflineState`);
+      }
     },
     async startStimConfiguration() {
       if (this.isConfigCheckButtonEnabled && !this.configCheckInProgress)

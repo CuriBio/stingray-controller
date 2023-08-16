@@ -1,4 +1,4 @@
-import { ERROR_CODES } from "@/store/modules/system/enums";
+import { ERROR_CODES, SYSTEM_STATUS } from "@/store/modules/system/enums";
 import { STIM_STATUS } from "@/store/modules/stimulation/enums";
 import { TextValidation } from "@/js-utils/TextValidation.js";
 
@@ -166,10 +166,11 @@ export default {
 
     state.socket.send(wsMessage);
   },
-  async sendInitiateOfflineMode({ commit, state }) {
+  async sendOfflineState({ state }) {
+    // this can only be called if stimulation is already active
     const wsMessage = JSON.stringify({
       command: "set_offline_state",
-      offline_state: true,
+      offline_state: state.statusUuid !== SYSTEM_STATUS.OFFLINE_STATE,
     });
 
     state.socket.send(wsMessage);
