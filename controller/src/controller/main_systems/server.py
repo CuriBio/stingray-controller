@@ -386,6 +386,25 @@ class Server:
 
         await self._to_monitor_queue.put(comm)
 
+    @mark_handler
+    async def _set_offline_state(self, comm: dict[str, Any]) -> None:
+        """Initiate or terminate system offline mode."""
+
+        system_state = self._get_system_state_ro()
+        system_status = system_state["system_status"]
+
+        comms_to_ignore = (
+            system_status == SystemStatuses.OFFLINE_STATE and comm["offline_state"],
+            system_status != SystemStatuses.OFFLINE_STATE and not comm["offline_state"],
+        )
+
+        if True in comms_to_ignore:
+            return  # nothing to do here
+        if not _are_any_stim_protocols_running(system_state):
+            raise WebsocketCommandError("Can only enter offline state if stimulation is active")
+
+        await self._to_monitor_queue.put(comm)
+
 
 # HELPERS
 

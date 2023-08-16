@@ -94,6 +94,8 @@ COMMAND_PACKET_TYPES = frozenset(
         SerialCommPacketTypes.BEGIN_FIRMWARE_UPDATE,
         SerialCommPacketTypes.FIRMWARE_UPDATE,
         SerialCommPacketTypes.END_FIRMWARE_UPDATE,
+        SerialCommPacketTypes.INIT_OFFLINE_MODE,
+        SerialCommPacketTypes.END_OFFLINE_MODE,
     ]
 )
 
@@ -334,6 +336,13 @@ class InstrumentComm:
                 }:  # pragma: no cover
                     packet_type = SerialCommPacketTypes.TRIGGER_ERROR
                     bytes_to_send = bytes(first_two_status_codes)
+                case {"command": "set_offline_state", "offline_state": offline_state}:
+                    logger.info(f"Setting new offline state: {offline_state}")
+                    packet_type = (
+                        SerialCommPacketTypes.INIT_OFFLINE_MODE
+                        if offline_state
+                        else SerialCommPacketTypes.END_OFFLINE_MODE
+                    )
                 case invalid_comm:
                     raise NotImplementedError(
                         f"InstrumentComm received invalid comm from SystemMonitor: {invalid_comm}"
@@ -433,10 +442,7 @@ class InstrumentComm:
         await self._wait_for_reboot()
 
         await self._to_monitor_queue.put(
-            {
-                "command": "firmware_update_complete",
-                "firmware_type": comm_from_monitor["firmware_type"],
-            }
+            {"command": "firmware_update_complete", "firmware_type": comm_from_monitor["firmware_type"]}
         )
 
     async def _wait_for_reboot(self) -> None:
@@ -464,7 +470,6 @@ class InstrumentComm:
             self._update_timepoints_of_events("command_sent")
 
         data_packet = create_data_packet(get_serial_comm_timestamp(), packet_type, data_to_send)
-
         write_len = await self._instrument.write_async(data_packet)
         if write_len == 0:
             logger.error("Serial data write reporting no bytes written")

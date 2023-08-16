@@ -244,6 +244,11 @@ class SystemMonitor:
                         for well_idx in well_indices
                     }
                     await self._queues["to"]["instrument_comm"].put(communication)
+                case {"command": "set_offline_state", "offline_state": offline_state}:
+                    if offline_state:
+                        system_state_updates["system_status"] = SystemStatuses.GOING_OFFLINE_STATE
+
+                    await self._queues["to"]["instrument_comm"].put(communication)
                 case invalid_comm:
                     raise NotImplementedError(f"Invalid communication from Server: {invalid_comm}")
 
@@ -314,8 +319,14 @@ class SystemMonitor:
                             FW_UPDATE_SUBDIR,
                             f"{firmware_type}-{fw_version}.bin",
                         )
+
                         os.remove(fw_file_path)
+
                     system_state_updates[key] = None
+                case {"command": "set_offline_state", "offline_state": offline_state}:
+                    system_state_updates["system_status"] = (
+                        SystemStatuses.OFFLINE_STATE if offline_state else SystemStatuses.IDLE_READY_STATE
+                    )
                 case invalid_comm:
                     raise NotImplementedError(f"Invalid communication from InstrumentComm: {invalid_comm}")
 
@@ -353,12 +364,10 @@ class SystemMonitor:
                         required_sw_for_fw, system_state["latest_software_version"]
                     )
                     main_fw_update_needed = semver_gt(
-                        latest_main_fw,
-                        system_state["instrument_metadata"][MAIN_FIRMWARE_VERSION_UUID],
+                        latest_main_fw, system_state["instrument_metadata"][MAIN_FIRMWARE_VERSION_UUID]
                     )
                     channel_fw_update_needed = semver_gt(
-                        latest_channel_fw,
-                        system_state["instrument_metadata"][CHANNEL_FIRMWARE_VERSION_UUID],
+                        latest_channel_fw, system_state["instrument_metadata"][CHANNEL_FIRMWARE_VERSION_UUID]
                     )
 
                     # FW updates are only available if the required SW can be downloaded

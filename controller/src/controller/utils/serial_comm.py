@@ -93,11 +93,7 @@ def _get_checksum_bytes(packet: bytes) -> bytes:
     return crc32(packet).to_bytes(SERIAL_COMM_CHECKSUM_LENGTH_BYTES, byteorder="little")
 
 
-def create_data_packet(
-    timestamp: int,
-    packet_type: int,
-    packet_payload: bytes = bytes(0),
-) -> bytes:
+def create_data_packet(timestamp: int, packet_type: int, packet_payload: bytes = bytes(0)) -> bytes:
     """Create a data packet to send to the PC."""
     packet_base = convert_to_timestamp_bytes(timestamp) + bytes([packet_type])
     packet_remainder_size = len(packet_base) + len(packet_payload) + SERIAL_COMM_CHECKSUM_LENGTH_BYTES
@@ -109,15 +105,13 @@ def create_data_packet(
     data_packet += packet_base
     data_packet += packet_payload
     data_packet += _get_checksum_bytes(data_packet)
+
     return data_packet
 
 
 def validate_checksum(comm_from_pc: bytes) -> bool:
     expected_checksum = crc32(comm_from_pc[:-SERIAL_COMM_CHECKSUM_LENGTH_BYTES])
-    actual_checksum = int.from_bytes(
-        comm_from_pc[-SERIAL_COMM_CHECKSUM_LENGTH_BYTES:],
-        byteorder="little",
-    )
+    actual_checksum = int.from_bytes(comm_from_pc[-SERIAL_COMM_CHECKSUM_LENGTH_BYTES:], byteorder="little")
     return actual_checksum == expected_checksum
 
 

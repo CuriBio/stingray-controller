@@ -103,7 +103,6 @@ export default {
   },
   setStimPlayState(state, bool) {
     state.stimPlayState = bool;
-
     // this contradictory state occurs when 'Stimulate until complete' was selected for a stimulation.
     // the system status pinging returns a isStimulating key that constantly updates the stimPlayState
     // currently no other way set up for the FE to know on it's own that a stimulation has run to completion

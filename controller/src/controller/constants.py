@@ -64,6 +64,8 @@ class SystemStatuses(Enum):
     DOWNLOADING_UPDATES_STATE = uuid.UUID("b623c5fa-af01-46d3-9282-748e19fe374c")
     INSTALLING_UPDATES_STATE = uuid.UUID("19c9c2d6-0de4-4334-8cb3-a4c7ab0eab00")
     UPDATES_COMPLETE_STATE = uuid.UUID("31f8fbc9-9b41-4191-8598-6462b7490789")
+    OFFLINE_STATE = uuid.UUID("9cf862e0-805e-4aa5-b345-eef298c11317")
+    GOING_OFFLINE_STATE = uuid.UUID("74362035-a23f-4cba-9e82-106872cb2b13")
 
 
 class StimulationStates(Enum):
@@ -177,6 +179,9 @@ class SerialCommPacketTypes(IntEnum):
     STOP_STIM = 22
     STIM_STATUS = 23
     STIM_IMPEDANCE_CHECK = 27
+    # offline mode
+    INIT_OFFLINE_MODE = 40
+    END_OFFLINE_MODE = 41
     # Magnetometer
     SET_SAMPLING_PERIOD = 50
     START_DATA_STREAMING = 52

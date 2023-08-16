@@ -115,7 +115,7 @@ class MantarrayMcSimulator(InfiniteProcess):
 
     # values for V1 instrument as of 6/17/22
     initial_magnet_finding_params: immutabledict[str, int] = immutabledict(
-        {"X": 0, "Y": 2, "Z": -5, "REMN": 1200},
+        {"X": 0, "Y": 2, "Z": -5, "REMN": 1200}
     )
 
     default_mantarray_nickname = "Vrtl Stingray"
@@ -153,12 +153,7 @@ class MantarrayMcSimulator(InfiniteProcess):
     default_adc_reading = 0xFF00
     global_timer_offset_secs = 2.5  # TODO Tanner (11/17/21): figure out if this should be removed
 
-    def __init__(
-        self,
-        conn: socket.socket,
-        logging_level: int = logging.INFO,
-        num_wells: int = 24,
-    ) -> None:
+    def __init__(self, conn: socket.socket, logging_level: int = logging.INFO, num_wells: int = 24) -> None:
         # InfiniteProcess values
         super().__init__(Queue(), logging_level=logging_level)
         # socket connections
@@ -259,8 +254,7 @@ class MantarrayMcSimulator(InfiniteProcess):
             simulated_data_timepoints = next(csv.reader(csvfile, delimiter=","))
             simulated_data_values = next(csv.reader(csvfile, delimiter=","))
         self._interpolator = interpolate.interp1d(
-            np.array(simulated_data_timepoints, dtype=np.uint64),
-            simulated_data_values,
+            np.array(simulated_data_timepoints, dtype=np.uint64), simulated_data_values
         )
 
     def _handle_boot_up_config(self, reboot: bool = False) -> None:
@@ -283,8 +277,7 @@ class MantarrayMcSimulator(InfiniteProcess):
                     else SerialCommPacketTypes.MF_UPDATE_COMPLETE
                 )
                 self._send_data_packet(
-                    packet_type,
-                    bytes([0, 0, 0]),  # TODO make this the new firmware version
+                    packet_type, bytes([0, 0, 0])  # TODO make this the new firmware version
                 )
             elif self._new_nickname is not None:
                 self._send_data_packet(
@@ -322,10 +315,7 @@ class MantarrayMcSimulator(InfiniteProcess):
         return self._get_absolute_timer()
 
     def _send_data_packet(
-        self,
-        packet_type: int,
-        data_to_send: bytes = bytes(0),
-        truncate: bool = False,
+        self, packet_type: int, data_to_send: bytes = bytes(0), truncate: bool = False
     ) -> None:
         timestamp = self._get_timestamp()
         data_packet = create_data_packet(timestamp, packet_type, data_to_send)
@@ -521,7 +511,11 @@ class MantarrayMcSimulator(InfiniteProcess):
                 self._reboot_again = True
         elif packet_type == SerialCommPacketTypes.GET_ERROR_DETAILS:  # pragma: no cover
             response_body += convert_instrument_event_info_to_bytes(self.default_event_info)
-        elif packet_type == SerialCommPacketTypes.ERROR_ACK:  # pragma: no cover
+        elif packet_type in (
+            SerialCommPacketTypes.ERROR_ACK,
+            SerialCommPacketTypes.INIT_OFFLINE_MODE,
+            SerialCommPacketTypes.END_OFFLINE_MODE,
+        ):  # pragma: no cover
             # Tanner (3/24/22): As of right now, simulator does not need to handle this message at all, so it is the responsibility of tests to prompt simulator to go through the rest of the error handling procedure
             pass
         else:

@@ -24,7 +24,9 @@
         </span>
       </div>
     </div>
-    <div class="div__top-header-bar" />
+    <div class="div__top-header-bar">
+      <div v-if="stimPlayState" class="div__offline-status-banner-container">{{ offlineStatusText }}</div>
+    </div>
     <div class="div__nuxt-page">
       <nuxt />
     </div>
@@ -33,7 +35,13 @@
 <script>
 import Vue from "vue";
 
-import { BarcodeViewer, StatusBar, SimulationMode, StimulationStudioControls } from "@curi-bio/ui";
+import {
+  systemStoreModule,
+  BarcodeViewer,
+  StatusBar,
+  SimulationMode,
+  StimulationStudioControls,
+} from "@curi-bio/ui";
 
 import { mapState } from "vuex";
 import { VBPopover, VBToggle } from "bootstrap-vue";
@@ -65,6 +73,11 @@ export default {
     ...mapState("stimulation", ["stimPlayState"]),
     ...mapState("system", ["statusUuid", "allowSwUpdateInstall", "isConnectedToController"]),
     ...mapState("settings", ["userAccount"]),
+    offlineStatusText: function () {
+      return this.statusUuid === systemStoreModule.SYSTEM_STATUS.OFFLINE_STATE
+        ? "Stimulation in Progress - Offline Mode"
+        : "Stimulation in Progress - Online Mode";
+    },
   },
   watch: {
     allowSwUpdateInstall: function () {
@@ -178,6 +191,18 @@ body {
   background-color: #111111;
   height: 45px;
   width: 1629px;
+}
+
+.div__offline-status-banner-container {
+  position: absolute;
+  width: 400px;
+  height: 45px;
+  background: #f44336;
+  color: white;
+  text-align: center;
+  left: 484px;
+  font-size: 12px;
+  line-height: 3.4;
 }
 
 .div__sidebar {

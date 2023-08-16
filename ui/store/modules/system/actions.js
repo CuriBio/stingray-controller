@@ -166,4 +166,12 @@ export default {
 
     state.socket.send(wsMessage);
   },
+  async sendInitiateOfflineMode({ commit, state }) {
+    const wsMessage = JSON.stringify({
+      command: "set_offline_state",
+      offline_state: true,
+    });
+
+    state.socket.send(wsMessage);
+  },
 };
