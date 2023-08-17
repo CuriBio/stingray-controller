@@ -1,9 +1,6 @@
 <template>
-  <!-- <div v-b-popover.hover.bottom="disabledToolTip" :style="isDisabledStyles">
-    <div :style="div__preventInteraction"> -->
   <div class="div__stimulation-controls-container">
     <!-- Tanner (2/1/22): Only need controls block until SVGs are made of all the buttons in this widget and they can be shaded manually when inactive-->
-
     <span class="span__additional-controls-header">Stimulation Controls</span>
     <div class="div__border-container">
       <svg class="svg__stimulation-active-button" height="20" width="20">
@@ -101,10 +98,10 @@
       </span>
     </div>
     <!-- TODO UPDATE WITH ACTUAL SVG FOR OFFLINE MODE --->
-    <div class="svg__stimulation-controls-offline-mode">
+    <div :class="svg__StimulationStudioControlsOfflineMode__dynamicClass" :style="offlineButtonDynamicStyle">
       <div
-        v-b-popover.hover.bottom="playState ? 'Go Offline' : 'Go Online'"
-        :title="playState ? 'Go Offline' : 'Go Online'"
+        v-b-popover.hover.bottom="offlineModeTooltipLabels.message"
+        :title="offlineModeTooltipLabels.title"
         @click="handleOfflineMode"
       >
         <FontAwesomeIcon class="fontawesome-icon-class" :icon="['fa', 'stop-circle']" />
@@ -186,9 +183,12 @@
     >
       <StatusWarningWidget :modalLabels="offlineModeLabels" @handle-confirmation="closeOfflineModeModal" />
     </b-modal>
+    <div
+      v-if="disabled"
+      v-b-popover.hover.bottom="disabledToolTip"
+      class="div__stimulation-controls-overlay"
+    />
   </div>
-  <!-- </div>
-  </div> -->
 </template>
 <script>
 import StatusWarningWidget from "@/components/status/StatusWarningWidget.vue";
@@ -270,9 +270,9 @@ export default {
       // TODO change these to better labels
       offlineModeLabels: {
         header: "Important!",
-        msgOne: "You are entering offline mode.",
-        msgTwo: "Please confirm to continue.",
-        buttonNames: ["Cancel", "Confirm"],
+        msgOne: "You are now entering offline mode.",
+        msgTwo: "Would you like to shutdown the software or leave open until you choose to go back online?",
+        buttonNames: ["Cancel", "Stay Open", "Shutdown"],
       },
       stim24hrTimer: null,
       disabledToolTip: "Controls disabled until connected to instrument.",
@@ -292,21 +292,12 @@ export default {
     ...mapGetters({
       statusUuid: "system/statusId",
     }),
-    div__preventInteraction: function () {
-      return {
-        pointerEvents: this.disabled ? "none" : "auto",
-      };
-    },
-    isDisabledStyles: function () {
-      return {
-        opacity: this.disabled ? 0.5 : 1,
-      };
-    },
     isStimInWaiting: function () {
       return this.stimStatus === STIM_STATUS.WAITING;
     },
     isInOfflineMode: function () {
-      return this.statusUuid === SYSTEM_STATUS.OFFLINE_STATE;
+      // disable for both going offline and in offline, if going offline for some reason fails, the status will be handled elsewhere anyway.
+      return [SYSTEM_STATUS.OFFLINE_STATE, SYSTEM_STATUS.GOING_OFFLINE_STATE].includes(this.statusUuid);
     },
     isStartStopButtonEnabled: function () {
       if (this.isStimInWaiting) return false;
@@ -372,10 +363,30 @@ export default {
         this.barcodes.stimBarcode.valid
       );
     },
+    svg__StimulationStudioControlsOfflineMode__dynamicClass: function () {
+      return `svg__stimulation-controls-offline-mode ${
+        this.isInOfflineMode || this.stimStatus === STIM_STATUS.STIM_ACTIVE
+          ? "svg__stimulation-controls-offline-mode--enabled"
+          : "svg__stimulation-controls-offline-mode--disabled"
+      }`;
+    },
     svg__StimulationStudioControlsConfigCheckButton__dynamicClass: function () {
       return this.isConfigCheckButtonEnabled
         ? "svg__stimulation-controls-config-check-button--enabled"
         : "svg__stimulation-controls-config-check-button--disabled";
+    },
+    offlineModeTooltipLabels: function () {
+      if (!this.stimPlayState) {
+        return {
+          title: "Offline Mode Disabled",
+          message: "Stimulation must be running",
+        };
+      } else {
+        return {
+          title: "",
+          message: this.isInOfflineMode ? "Go back online" : "Go offline",
+        };
+      }
     },
     configurationMessage: function () {
       if (!this.barcodes.stimBarcode.valid) {
@@ -428,6 +439,12 @@ export default {
         this.disabledToolTip = "";
       }
     },
+    isInOfflineMode() {
+      if (this.isInOfflineMode) {
+        this.disabled = true;
+        this.disabledToolTip = "Disabled while offline";
+      }
+    },
   },
   methods: {
     async handlePlayStop(e) {
@@ -461,6 +478,8 @@ export default {
 
       if (idx === 1) {
         this.$store.dispatch(`system/sendOfflineState`);
+      } else if (idx === 2) {
+        // TODO handle shutting down software here
       }
     },
     async startStimConfiguration() {
@@ -597,6 +616,15 @@ body {
   cursor: pointer;
 }
 
+.div__stimulation-controls-overlay {
+  position: relative;
+  height: 100%;
+  width: 100%;
+  z-index: 2;
+  background: black;
+  opacity: 0.4;
+}
+
 .svg__stimulation-controls-loop-button {
   position: relative;
   fill: #b7b7b7;
@@ -681,14 +709,23 @@ body {
   cursor: pointer;
 }
 
+.svg__stimulation-controls-offline-mode--disabled {
+  color: #2f2f2f;
+  z-index: 0;
+}
+
 .svg__stimulation-controls-offline-mode {
   position: absolute;
   height: 29px;
   width: 33px;
   top: 42px;
-  color: green;
   right: 47px;
   font-size: 20px;
+}
+
+.svg__stimulation-controls-offline-mode--enabled {
+  color: #b7b7b7;
+  z-index: 3;
 }
 
 .svg__stimulation-controls-config-check-button--enabled:hover {

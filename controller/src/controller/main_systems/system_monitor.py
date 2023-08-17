@@ -11,6 +11,7 @@ from pulse3D.constants import CHANNEL_FIRMWARE_VERSION_UUID
 from pulse3D.constants import MAIN_FIRMWARE_VERSION_UUID
 from pulse3D.constants import MANTARRAY_SERIAL_NUMBER_UUID as INSTRUMENT_SERIAL_NUMBER_UUID
 
+from ..constants import ConnectionStatuses
 from ..constants import CURRENT_SOFTWARE_VERSION
 from ..constants import FW_UPDATE_SUBDIR
 from ..constants import StimulationStates
@@ -309,6 +310,8 @@ class SystemMonitor:
                         )
                 case {"command": "get_metadata", **metadata}:
                     system_state_updates["instrument_metadata"] = metadata
+                    # immediately check connection status
+                    await self._queues["to"]["instrument_comm"].put({"command": "check_connection_status"})
                 case {"command": "firmware_update_complete", "firmware_type": firmware_type}:
                     key = f"{firmware_type}_firmware_update"
                     fw_version = system_state[key]
@@ -327,6 +330,9 @@ class SystemMonitor:
                     system_state_updates["system_status"] = (
                         SystemStatuses.OFFLINE_STATE if offline_state else SystemStatuses.IDLE_READY_STATE
                     )
+                case {"command": "check_connection_status", "status": status}:
+                    if status == ConnectionStatuses.HEADLESS.value:
+                        system_state_updates["system_status"] = SystemStatuses.OFFLINE_STATE
                 case invalid_comm:
                     raise NotImplementedError(f"Invalid communication from InstrumentComm: {invalid_comm}")
 

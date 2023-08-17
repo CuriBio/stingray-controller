@@ -33,7 +33,7 @@
           :buttonWidgetLeft="0"
           :buttonNames="modalLabels.buttonNames"
           :enabledColor="'#B7B7B7'"
-          :hoverColor="['#bd4932', '#19ac8a']"
+          :hoverColor="['#bd4932', '#19ac8a', '#19ac8a']"
           @btn-click="handleClick"
         />
       </div>

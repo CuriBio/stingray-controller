@@ -170,6 +170,7 @@ class SerialCommPacketTypes(IntEnum):
     STATUS_BEACON = 0
     MAGNETOMETER_DATA = 1
     REBOOT = 2
+    CHECK_CONNECTION_STATUS = 3
     HANDSHAKE = 4
     PLATE_EVENT = 6
     GOING_DORMANT = 10
@@ -312,3 +313,10 @@ STIM_MODULE_ID_TO_WELL_IDX: immutabledict[int, int] = immutabledict(
 STIM_WELL_IDX_TO_MODULE_ID: immutabledict[int, int] = immutabledict(
     {well_idx: module_id for module_id, well_idx in STIM_MODULE_ID_TO_WELL_IDX.items()}
 )
+
+
+class ConnectionStatuses(IntEnum):
+    DISCONNECTED = 0
+    CONNECTED = 1
+    HEADLESS = 2
+    ONE_HS_MISSED = 3

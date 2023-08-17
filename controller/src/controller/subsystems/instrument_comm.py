@@ -96,6 +96,7 @@ COMMAND_PACKET_TYPES = frozenset(
         SerialCommPacketTypes.END_FIRMWARE_UPDATE,
         SerialCommPacketTypes.INIT_OFFLINE_MODE,
         SerialCommPacketTypes.END_OFFLINE_MODE,
+        SerialCommPacketTypes.CHECK_CONNECTION_STATUS,
     ]
 )
 
@@ -337,12 +338,13 @@ class InstrumentComm:
                     packet_type = SerialCommPacketTypes.TRIGGER_ERROR
                     bytes_to_send = bytes(first_two_status_codes)
                 case {"command": "set_offline_state", "offline_state": offline_state}:
-                    logger.info(f"Setting new offline state: {offline_state}")
                     packet_type = (
                         SerialCommPacketTypes.INIT_OFFLINE_MODE
                         if offline_state
                         else SerialCommPacketTypes.END_OFFLINE_MODE
                     )
+                case {"command": "check_connection_status"}:
+                    packet_type = SerialCommPacketTypes.CHECK_CONNECTION_STATUS
                 case invalid_comm:
                     raise NotImplementedError(
                         f"InstrumentComm received invalid comm from SystemMonitor: {invalid_comm}"
@@ -589,6 +591,8 @@ class InstrumentComm:
                 if self._firmware_update_manager is None:
                     raise NotImplementedError("_firmware_update_manager should never be None here")
                 await self._firmware_update_manager.update(command, response_data)
+            case "check_connection_status":
+                prev_command_info["status"] = response_data[0]
 
         if prev_command_info["command"] not in INTERMEDIATE_FIRMWARE_UPDATE_COMMANDS:
             await self._to_monitor_queue.put(prev_command_info)
