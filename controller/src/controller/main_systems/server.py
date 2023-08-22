@@ -71,6 +71,8 @@ class Server:
 
         self._ui_connection_made = asyncio.Event()
         self.user_initiated_shutdown = False
+        # used to tell server to ignore all messages when offline
+        self.system_in_offline_mode = False
 
     async def run(
         self,
@@ -187,22 +189,28 @@ class Server:
             except websockets.ConnectionClosed:
                 return
 
-            self._log_incoming_message(msg)
-
             command = msg["command"]
 
-            try:
-                # TODO try using pydantic to define message schema + some other message schema generator (nano message, ask Jason)
-                handler = self._handlers[command]
-            except KeyError as e:
-                raise WebsocketCommandError(f"Unrecognized command from UI: {command}") from e
+            is_offline_request = command != "set_offline_state"
+            ignore_incoming_comm = is_offline_request and self.system_in_offline_mode
 
-            # TODO make sure the error handling works here
-            try:
-                await handler(self, msg)
-            except WebsocketCommandError as e:
-                logger.error(f"Command {command} failed with error: {e.args[0]}")
-                raise
+            if not ignore_incoming_comm:
+                self._log_incoming_message(msg)
+
+                try:
+                    # TODO try using pydantic to define message schema + some other message schema generator (nano message, ask Jason)
+                    handler = self._handlers[command]
+                except KeyError as e:
+                    raise WebsocketCommandError(f"Unrecognized command from UI: {command}") from e
+
+                # TODO make sure the error handling works here
+                try:
+                    await handler(self, msg)
+                except WebsocketCommandError as e:
+                    logger.error(f"Command {command} failed with error: {e.args[0]}")
+                    raise
+            else:
+                logger.info(f"Ignoring command '{command}' in server while offline")
 
     def _log_incoming_message(self, msg: dict[str, Any]) -> None:
         if msg["command"] == "login":
@@ -403,6 +411,8 @@ class Server:
         if not _are_any_stim_protocols_running(system_state):
             raise WebsocketCommandError("Can only enter offline state if stimulation is active")
 
+        # used to tell server to ignore all messages when offline
+        self.system_in_offline_mode = comm["offline_state"]
         await self._to_monitor_queue.put(comm)
 
 

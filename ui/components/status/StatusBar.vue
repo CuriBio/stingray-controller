@@ -241,9 +241,6 @@ export default {
         SYSTEM_STATUS.INSTRUMENT_INITIALIZING_STATE,
       ].includes(this.statusUuid);
     },
-    isInOfflineMode() {
-      return [SYSTEM_STATUS.OFFLINE_STATE, SYSTEM_STATUS.GOING_OFFLINE_STATE].includes(this.statusUuid);
-    },
     isUpdating: function () {
       return [
         SYSTEM_STATUS.CHECKING_FOR_UPDATES_STATE,
@@ -270,12 +267,8 @@ export default {
       }
     },
     confirmationRequest: async function () {
-      // stim can be active in offline mode
       const stimOpsInProgress =
-        this.stimStatus === STIM_STATUS.CONFIG_CHECK_IN_PROGRESS ||
-        this.stimPlayState ||
-        !this.isInOfflineMode;
-
+        this.stimStatus === STIM_STATUS.CONFIG_CHECK_IN_PROGRESS || this.stimPlayState;
       const fwUpdateInProgress =
         this.statusUuid === SYSTEM_STATUS.DOWNLOADING_UPDATES_STATE ||
         this.statusUuid === SYSTEM_STATUS.INSTALLING_UPDATES_STATE;

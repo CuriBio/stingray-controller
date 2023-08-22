@@ -139,6 +139,8 @@ class InstrumentComm:
         self._firmware_update_manager: FirmwareUpdateManager | None = None
         # comm tracking
         self._timepoints_of_events = TimepointsOfEvents()
+        # used to tell instrument comm to ignore all messages when offline
+        self.system_in_offline_mode = False
 
     # PROPERTIES
 
@@ -307,48 +309,58 @@ class InstrumentComm:
             bytes_to_send = bytes(0)
             packet_type: int | None = None
 
-            match comm_from_monitor:
-                case {"command": "start_stim_checks", "well_indices": well_indices}:
-                    packet_type = SerialCommPacketTypes.STIM_IMPEDANCE_CHECK
-                    bytes_to_send = struct.pack(
-                        f"<{NUM_WELLS}?",
-                        *[
-                            STIM_MODULE_ID_TO_WELL_IDX[module_id] in well_indices
-                            for module_id in range(NUM_WELLS)
-                        ],
-                    )
-                case {"command": "set_stim_protocols", "stim_info": stim_info}:
-                    packet_type = SerialCommPacketTypes.SET_STIM_PROTOCOL
-                    bytes_to_send = convert_stim_dict_to_bytes(stim_info)
-                    if self._is_stimulating and not self._hardware_test_mode:
-                        raise InstrumentCommandAttemptError(
-                            "Cannot update stimulation protocols while stimulating"
+            is_offline_request = comm_from_monitor["command"] != "set_offline_state"
+            ignore_incoming_comm = is_offline_request and self.system_in_offline_mode
+
+            if not ignore_incoming_comm:
+                match comm_from_monitor:
+                    case {"command": "start_stim_checks", "well_indices": well_indices}:
+                        packet_type = SerialCommPacketTypes.STIM_IMPEDANCE_CHECK
+                        bytes_to_send = struct.pack(
+                            f"<{NUM_WELLS}?",
+                            *[
+                                STIM_MODULE_ID_TO_WELL_IDX[module_id] in well_indices
+                                for module_id in range(NUM_WELLS)
+                            ],
                         )
-                    self._num_stim_protocols = len(stim_info["protocols"])
-                case {"command": "start_stimulation"}:
-                    packet_type = SerialCommPacketTypes.START_STIM
-                case {"command": "stop_stimulation"}:
-                    packet_type = SerialCommPacketTypes.STOP_STIM
-                case {"command": "start_firmware_update"}:
-                    await self._handle_firmware_update(comm_from_monitor)
-                case {
-                    "command": "trigger_firmware_error",
-                    "first_two_status_codes": first_two_status_codes,
-                }:  # pragma: no cover
-                    packet_type = SerialCommPacketTypes.TRIGGER_ERROR
-                    bytes_to_send = bytes(first_two_status_codes)
-                case {"command": "set_offline_state", "offline_state": offline_state}:
-                    packet_type = (
-                        SerialCommPacketTypes.INIT_OFFLINE_MODE
-                        if offline_state
-                        else SerialCommPacketTypes.END_OFFLINE_MODE
-                    )
-                case {"command": "check_connection_status"}:
-                    packet_type = SerialCommPacketTypes.CHECK_CONNECTION_STATUS
-                case invalid_comm:
-                    raise NotImplementedError(
-                        f"InstrumentComm received invalid comm from SystemMonitor: {invalid_comm}"
-                    )
+                    case {"command": "set_stim_protocols", "stim_info": stim_info}:
+                        packet_type = SerialCommPacketTypes.SET_STIM_PROTOCOL
+                        bytes_to_send = convert_stim_dict_to_bytes(stim_info)
+                        if self._is_stimulating and not self._hardware_test_mode:
+                            raise InstrumentCommandAttemptError(
+                                "Cannot update stimulation protocols while stimulating"
+                            )
+                        self._num_stim_protocols = len(stim_info["protocols"])
+                    case {"command": "start_stimulation"}:
+                        packet_type = SerialCommPacketTypes.START_STIM
+                    case {"command": "stop_stimulation"}:
+                        packet_type = SerialCommPacketTypes.STOP_STIM
+                    case {"command": "start_firmware_update"}:
+                        await self._handle_firmware_update(comm_from_monitor)
+                    case {
+                        "command": "trigger_firmware_error",
+                        "first_two_status_codes": first_two_status_codes,
+                    }:  # pragma: no cover
+                        packet_type = SerialCommPacketTypes.TRIGGER_ERROR
+                        bytes_to_send = bytes(first_two_status_codes)
+                    case {"command": "set_offline_state", "offline_state": offline_state}:
+                        packet_type = (
+                            SerialCommPacketTypes.INIT_OFFLINE_MODE
+                            if offline_state
+                            else SerialCommPacketTypes.END_OFFLINE_MODE
+                        )
+
+                        self.system_in_offline_mode = offline_state
+                    case {"command": "check_connection_status"}:
+                        packet_type = SerialCommPacketTypes.CHECK_CONNECTION_STATUS
+                    case invalid_comm:
+                        raise NotImplementedError(
+                            f"InstrumentComm received invalid comm from SystemMonitor: {invalid_comm}"
+                        )
+            else:
+                logger.info(
+                    f"Ignoring incoming command '{comm_from_monitor['command']}' in instrument comm while offline"
+                )
 
             if packet_type is not None:
                 await self._send_data_packet(packet_type, bytes_to_send)
@@ -627,6 +639,7 @@ class InstrumentComm:
         self._update_timepoints_of_events("status_beacon_received")
 
         status_codes_msg = f"{comm_type} received from instrument. Status Codes: {status_codes_dict}"
+
         if any(status_codes_dict.values()):
             logger.error(status_codes_msg)
             self._instrument_error_detected = True

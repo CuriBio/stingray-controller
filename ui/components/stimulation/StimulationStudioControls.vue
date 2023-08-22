@@ -98,14 +98,32 @@
       </span>
     </div>
     <!-- TODO UPDATE WITH ACTUAL SVG FOR OFFLINE MODE --->
-    <div :class="svg__StimulationStudioControlsOfflineMode__dynamicClass" :style="offlineButtonDynamicStyle">
-      <div
+    <div class="div__stimulation-controls-offline-mode" :style="offlineButtonDynamicStyle">
+      <svg
         v-b-popover.hover.bottom="offlineModeTooltipLabels.message"
+        :class="svg__computerOutline__dynamicClass"
+        viewBox="0 0 150 150"
         :title="offlineModeTooltipLabels.title"
         @click="handleOfflineMode"
       >
-        <FontAwesomeIcon class="fontawesome-icon-class" :icon="['fa', 'stop-circle']" />
-      </div>
+        <path
+          d="m134.25,33.48c.93,0,1.68.75,1.68,1.68v77.71c0,.93-.75,1.68-1.68,1.68H16.4c-.93,0-1.68-.75-1.68-1.68V35.16c0-.93.75-1.68,1.68-1.68h117.85m0-4.67H16.4c-3.51,0-6.35,2.84-6.35,6.35v77.71c0,3.51,2.84,6.35,6.35,6.35h117.85c3.51,0,6.35-2.84,6.35-6.35V35.16c0-3.51-2.84-6.35-6.35-6.35h0Z"
+        />
+        <path d="m139.24,121.98H11.07c-.51,0-9.45,6.37-9.62,6.53h147.4c-.28-.26-9.28-6.53-9.62-6.53h0Z" />
+        <path
+          d="m1.16,130.74c-.06,0-.04,1.15-.04,2.48s1.07,2.48,2.4,2.48h143.54c1.33,0,2.4-1.11,2.4-2.48s.04-2.39-.04-2.48H1.16s0,0,0,0h0Z"
+        />
+        <path
+          v-if="isInOfflineMode"
+          class="path__red-cross"
+          d="m80.13,74.53l19.53-19.53c1.33-1.33,1.33-3.5,0-4.83-1.33-1.33-3.5-1.33-4.83,0l-19.53,19.53-19.53-19.53c-1.33-1.33-3.5-1.33-4.83,0-1.33,1.33-1.33,3.5,0,4.83l19.53,19.53-19.53,19.53c-1.33,1.33-1.33,3.5,0,4.83.65.64,1.51,1,2.42,1s1.77-.36,2.42-1l19.53-19.53,19.53,19.53c.65.64,1.51,1,2.42,1s1.77-.36,2.42-1c1.33-1.33,1.33-3.5,0-4.83l-19.53-19.53Z"
+        />
+        <path
+          v-if="!isInOfflineMode && stimPlayState"
+          class="path__green-check"
+          d="m72.9,100.52c-.73,0-1.45-.26-2.02-.74l-17.12-14.47c-1.32-1.12-1.49-3.1-.37-4.42,1.12-1.32,3.09-1.49,4.42-.37l14,11.84,19.28-40.79c.74-1.56,2.6-2.23,4.18-1.5,1.56.74,2.23,2.61,1.49,4.17l-21.02,44.48c-.42.88-1.22,1.52-2.17,1.72-.22.05-.44.07-.66.07Z"
+        />
+      </svg>
     </div>
     <b-modal
       id="open-circuit-warning"
@@ -173,7 +191,7 @@
       />
     </b-modal>
     <b-modal
-      id="offline-mode"
+      id="enter-offline-mode"
       size="sm"
       hide-footer
       hide-header
@@ -183,11 +201,25 @@
     >
       <StatusWarningWidget :modalLabels="offlineModeLabels" @handle-confirmation="closeOfflineModeModal" />
     </b-modal>
-    <div
+    <b-modal
+      id="startup-in-offline-mode"
+      size="sm"
+      hide-footer
+      hide-header
+      hide-header-close
+      :static="true"
+      :no-close-on-backdrop="true"
+    >
+      <StatusWarningWidget
+        :modalLabels="startupInOfflineLabels"
+        @handle-confirmation="closeStartupOfflineModal"
+      />
+    </b-modal>
+    <!-- <div
       v-if="disabled"
       v-b-popover.hover.bottom="disabledToolTip"
       class="div__stimulation-controls-overlay"
-    />
+    /> -->
   </div>
 </template>
 <script>
@@ -270,9 +302,15 @@ export default {
       // TODO change these to better labels
       offlineModeLabels: {
         header: "Important!",
-        msgOne: "You are now entering offline mode.",
+        msgOne: "You are entering offline mode.",
         msgTwo: "Would you like to shutdown the software or leave open until you choose to go back online?",
-        buttonNames: ["Cancel", "Stay Open", "Shutdown"],
+        buttonNames: ["Cancel", "Keep Open", "Shutdown"],
+      },
+      startupInOfflineLabels: {
+        header: "Important!",
+        msgOne: "You are currently in offline mode.",
+        msgTwo: "Would you like to end offline mode and go back online? Stimulation will continue running.",
+        buttonNames: ["Stay Offline", "Stop"],
       },
       stim24hrTimer: null,
       disabledToolTip: "Controls disabled until connected to instrument.",
@@ -298,6 +336,10 @@ export default {
     isInOfflineMode: function () {
       // disable for both going offline and in offline, if going offline for some reason fails, the status will be handled elsewhere anyway.
       return [SYSTEM_STATUS.OFFLINE_STATE, SYSTEM_STATUS.GOING_OFFLINE_STATE].includes(this.statusUuid);
+    },
+    isOfflineButtonEnabled: function () {
+      // could only check if stim is active, but adding check for offline mode just in case
+      return this.isInOfflineMode || this.stimPlayState;
     },
     isStartStopButtonEnabled: function () {
       if (this.isStimInWaiting) return false;
@@ -363,12 +405,13 @@ export default {
         this.barcodes.stimBarcode.valid
       );
     },
-    svg__StimulationStudioControlsOfflineMode__dynamicClass: function () {
-      return `svg__stimulation-controls-offline-mode ${
-        this.isInOfflineMode || this.stimStatus === STIM_STATUS.STIM_ACTIVE
-          ? "svg__stimulation-controls-offline-mode--enabled"
-          : "svg__stimulation-controls-offline-mode--disabled"
-      }`;
+    offlineButtonDynamicStyle: function () {
+      return this.isOfflineButtonEnabled ? "cursor: pointer; z-index: 3" : "cursor: default; z-index: 0";
+    },
+    svg__computerOutline__dynamicClass: function () {
+      return this.isOfflineButtonEnabled
+        ? "svg__computer-outline--enabled"
+        : "svg__computer-outline--disabled";
     },
     svg__StimulationStudioControlsConfigCheckButton__dynamicClass: function () {
       return this.isConfigCheckButtonEnabled
@@ -376,17 +419,13 @@ export default {
         : "svg__stimulation-controls-config-check-button--disabled";
     },
     offlineModeTooltipLabels: function () {
-      if (!this.stimPlayState) {
-        return {
-          title: "Offline Mode Disabled",
-          message: "Stimulation must be running",
-        };
-      } else {
-        return {
-          title: "",
-          message: this.isInOfflineMode ? "Go back online" : "Go offline",
-        };
+      let message = "Disabled. Stimulation must be running.";
+
+      if (this.stimPlayState) {
+        message = this.isInOfflineMode ? "Go back online" : "Go offline";
       }
+
+      return { title: "Offline Mode", message };
     },
     configurationMessage: function () {
       if (!this.barcodes.stimBarcode.valid) {
@@ -433,10 +472,15 @@ export default {
     invalidImportedProtocols: function () {
       if (this.invalidImportedProtocols.length > 0) this.$bvModal.show("invalid-imported-protocols");
     },
-    statusUuid: function (new_status) {
+    statusUuid: function (new_status, old_status) {
       if (new_status == SYSTEM_STATUS.IDLE_READY_STATE) {
         this.disabled = false;
         this.disabledToolTip = "";
+      } else if (
+        new_status === SYSTEM_STATUS.OFFLINE_STATE &&
+        old_status !== SYSTEM_STATUS.GOING_OFFLINE_STATE
+      ) {
+        this.$bvModal.show("startup-in-offline-mode");
       }
     },
     isInOfflineMode() {
@@ -469,17 +513,25 @@ export default {
           this.$store.dispatch(`system/sendOfflineState`);
           // else show confirmation modal to initiate offline mode if not in a transition state
         } else if (this.statusUuid !== SYSTEM_STATUS.GOING_OFFLINE_STATE) {
-          this.$bvModal.show("offline-mode");
+          this.$bvModal.show("enter-offline-mode");
         }
       }
     },
-    closeOfflineModeModal(idx) {
-      this.$bvModal.hide("offline-mode");
+    closeStartupOfflineModal(idx) {
+      this.$bvModal.hide("startup-in-offline-mode");
+      // if idx === 0, do nothing and stay offline
+      if (idx === 1) {
+        // request to go back online
+        this.$store.dispatch(`system/sendOfflineState`);
+      }
+    },
+    async closeOfflineModeModal(idx) {
+      this.$bvModal.hide("enter-offline-mode");
 
       if (idx === 1) {
         this.$store.dispatch(`system/sendOfflineState`);
       } else if (idx === 2) {
-        // TODO handle shutting down software here
+        await this.$store.dispatch("system/sendShutdown");
       }
     },
     async startStimConfiguration() {
@@ -709,23 +761,12 @@ body {
   cursor: pointer;
 }
 
-.svg__stimulation-controls-offline-mode--disabled {
-  color: #2f2f2f;
-  z-index: 0;
-}
-
-.svg__stimulation-controls-offline-mode {
+.div__stimulation-controls-offline-mode {
   position: absolute;
-  height: 29px;
-  width: 33px;
-  top: 42px;
-  right: 47px;
-  font-size: 20px;
-}
-
-.svg__stimulation-controls-offline-mode--enabled {
-  color: #b7b7b7;
-  z-index: 3;
+  height: 37px;
+  width: 37px;
+  top: 36px;
+  right: 33px;
 }
 
 .svg__stimulation-controls-config-check-button--enabled:hover {
@@ -745,6 +786,30 @@ body {
   fill: none;
 }
 
+.path__green-check {
+  fill: #00af87;
+}
+.path__red-cross {
+  fill: #bb3533;
+}
+
+.svg__computer-outline--enabled {
+  fill: #b6b6b6;
+}
+.svg__computer-outline--enabled:hover {
+  fill: #ffffff;
+}
+
+.svg__computer-outline--disabled {
+  fill: #2f2f2f;
+}
+
+.path__green-check,
+.path__red-cross,
+.path__computer-outline {
+  stroke-width: 0px;
+}
+
 .span__start-stop-spinner {
   position: absolute;
   font-size: 20px;
@@ -759,7 +824,9 @@ body {
 #user-input-prompt-message,
 #open-circuit-warning,
 #stim-24hr-warning,
-#invalid-imported-protocols {
+#invalid-imported-protocols,
+#enter-offline-mode,
+#startup-in-offline-mode {
   position: fixed;
   margin: 5% auto;
   top: 15%;
