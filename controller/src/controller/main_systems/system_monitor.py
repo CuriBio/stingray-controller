@@ -197,7 +197,6 @@ class SystemMonitor:
             system_state = self._system_state_manager.data
 
             system_state_updates: dict[str, Any] = {}
-            logger.info(f"system monitor: {communication}")
 
             match communication:
                 case {"command": "login"}:
