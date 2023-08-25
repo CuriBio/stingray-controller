@@ -4,7 +4,7 @@ import {
   MAX_SUBPROTOCOL_DURATION_MS,
   MIN_CHARGE_MA,
   MAX_CHARGE_MA,
-  MIN_PHASE_DURATION_US,
+  MIN_PHASE_DURATION_US
 } from "@/store/modules/stimulation/enums";
 
 export const DEFAULT_SUBPROTOCOL_TEMPLATES = {
@@ -12,7 +12,7 @@ export const DEFAULT_SUBPROTOCOL_TEMPLATES = {
     type: "Delay",
     color: "",
     pulseSettings: { duration: "", unit: "milliseconds" },
-    subprotocols: [],
+    subprotocols: []
   },
   MONOPHASIC: {
     type: "Monophasic",
@@ -23,9 +23,9 @@ export const DEFAULT_SUBPROTOCOL_TEMPLATES = {
       numCycles: "",
       postphaseInterval: "",
       phaseOneDuration: "",
-      phaseOneCharge: "",
+      phaseOneCharge: ""
     },
-    subprotocols: [],
+    subprotocols: []
   },
   BIPHASIC: {
     type: "Biphasic",
@@ -39,10 +39,10 @@ export const DEFAULT_SUBPROTOCOL_TEMPLATES = {
       phaseOneCharge: "",
       interphaseInterval: "",
       phaseTwoCharge: "",
-      phaseTwoDuration: "",
+      phaseTwoDuration: ""
     },
-    subprotocols: [],
-  },
+    subprotocols: []
+  }
 };
 
 const invalidErrMsg = {
@@ -59,17 +59,17 @@ const invalidErrMsg = {
   minDelayDuration: `Duration must be >=${MIN_SUBPROTOCOL_DURATION_MS}ms`,
   maxDelayDuration: "Duration must be <= 24hrs",
   delayNumErr: "Must be a (+) number",
-  nonInteger: "Must be a whole number of ms",
+  nonInteger: "Must be a whole number of ms"
 };
 
-export const checkNumCyclesValidity = (numCycles) => {
+export const checkNumCyclesValidity = numCycles => {
   // check if value is a whole number greater than 0
   const errorMsgLabel =
     numCycles === "" || !Number.isInteger(+numCycles) || +numCycles <= 0 ? "numCycles" : "valid";
   return invalidErrMsg[errorMsgLabel];
 };
 
-export const checkPulseChargeValidity = (valueStr) => {
+export const checkPulseChargeValidity = valueStr => {
   let errorMessage;
   // if empty
   if (valueStr === "") {
@@ -184,11 +184,28 @@ export const checkDelayPulseValidity = (valueStr, selectedUnit) => {
   return errorMessage;
 };
 
-export const getMaxPulseDurationForFreq = (freq) => {
+export const getMaxPulseDurationForFreq = freq => {
   return Math.min(50, Math.trunc((1000 / freq) * 0.8));
 };
 
 export const getTotalActiveDuration = (type, protocol) => {
+  const settings =
+    type === "Monophasic"
+      ? protocol.phaseOneDuration + protocol.postphaseInterval
+      : protocol.phaseOneDuration +
+        protocol.phaseTwoDuration +
+        protocol.interphaseInterval +
+        protocol.postphaseInterval;
+
+  return settings * +protocol.numCycles;
+};
+
+export const getPulseFrequency = protocol => {
+  // assuming in ms
+  return Math.round(1000 / (protocol.totalActiveDuration.duration / protocol.numCycles));
+};
+
+export const getTotalPulseDuration = (type, protocol) => {
   return type === "Monophasic"
     ? +protocol.phaseOneDuration
     : +protocol.phaseOneDuration + +protocol.phaseTwoDuration + +protocol.interphaseInterval;
@@ -200,14 +217,14 @@ export const calculateNumCycles = (selectedUnit, totalActiveDuration, pulseFrequ
   return isFinite(numCycles) ? numCycles : "";
 };
 
-export const areValidPulses = (subprotocols) => {
-  return subprotocols.some((proto) => {
+export const areValidPulses = subprotocols => {
+  return subprotocols.some(proto => {
     if (proto.type === "loop") return areValidPulses(proto.subprotocols);
     else return proto.type === "Delay" ? !_isValidDelayPulse(proto) : !_isValidSinglePulse(proto);
   });
 };
 
-export const _isValidSinglePulse = (protocol) => {
+export const _isValidSinglePulse = protocol => {
   const { duration, unit } = protocol.totalActiveDuration;
   const isMonophasic = protocol.type === "Monophasic";
   const chargesToCheck = isMonophasic ? ["phaseOneCharge"] : ["phaseOneCharge", "phaseTwoCharge"];
@@ -216,12 +233,12 @@ export const _isValidSinglePulse = (protocol) => {
     : ["phaseOneDuration", "phaseTwoDuration", "interphaseInterval"];
 
   const maxPulseDurationForFreq = getMaxPulseDurationForFreq(protocol.frequency);
-  const totalActiveDuration = getTotalActiveDuration(protocol.type, protocol);
+  const totalActiveDuration = getTotalPulseDuration(protocol.type, protocol);
 
   // first check all durations are within max and min bounds
   const durationsAreValid =
     durationsToCheck.filter(
-      (duration) =>
+      duration =>
         checkPulseDurationValidity(
           protocol[duration],
           duration === "interphaseInterval",
@@ -232,7 +249,7 @@ export const _isValidSinglePulse = (protocol) => {
 
   // check if charges are within max and min bounds
   const chargesAreValid =
-    chargesToCheck.filter((charge) => checkPulseChargeValidity(protocol[charge]) !== "").length === 0;
+    chargesToCheck.filter(charge => checkPulseChargeValidity(protocol[charge]) !== "").length === 0;
 
   const completePulseValidity =
     checkPulseFrequencyValidity(protocol.frequency, maxPulseDurationForFreq) === "" &&
@@ -242,7 +259,7 @@ export const _isValidSinglePulse = (protocol) => {
   return durationsAreValid && chargesAreValid && completePulseValidity;
 };
 
-export const _isValidDelayPulse = (protocol) => {
+export const _isValidDelayPulse = protocol => {
   const { duration, unit } = protocol;
   return checkDelayPulseValidity(duration, unit) === "";
 };
@@ -266,30 +283,30 @@ export const convertProtocolCasing = (input, conversionFn) => {
   return input;
 };
 
-const _isObject = (input) => typeof input === "object";
+const _isObject = input => typeof input === "object";
 
-export const _convertObjToCamelCase = (obj) => {
+export const _convertObjToCamelCase = obj => {
   const convertedObj = {};
   for (const [key, value] of Object.entries(obj)) {
-    const camelCaseKey = key.replace(/_([a-z])/g, (matchedLetter) => matchedLetter[1].toUpperCase());
+    const camelCaseKey = key.replace(/_([a-z])/g, matchedLetter => matchedLetter[1].toUpperCase());
     convertedObj[camelCaseKey] = value;
   }
 
   return convertedObj;
 };
 
-export const _convertObjToSnakeCase = (obj) => {
+export const _convertObjToSnakeCase = obj => {
   const convertedObj = {};
 
   for (const [key, value] of Object.entries(obj)) {
-    const snakeCaseKey = key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
+    const snakeCaseKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
     convertedObj[snakeCaseKey] = value;
   }
 
   return convertedObj;
 };
 
-export const checkPulseCompatibility = (protocol) => {
+export const checkPulseCompatibility = protocol => {
   // if up-to-date protocol, just return
   if ("subprotocols" in protocol) return protocol;
 
@@ -306,12 +323,12 @@ export const checkPulseCompatibility = (protocol) => {
     runUntilStopped,
     stimulationType,
     subprotocols: compatibleSubprotocols.map(({ subprotocol }) => subprotocol),
-    detailedSubprotocols: compatibleSubprotocols.map(({ detailedSubprotocol }) => detailedSubprotocol),
+    detailedSubprotocols: compatibleSubprotocols.map(({ detailedSubprotocol }) => detailedSubprotocol)
   };
 };
 
-const _convertDetailedSubprotocols = (subprotocols) => {
-  return subprotocols.map((pulse) => {
+const _convertDetailedSubprotocols = subprotocols => {
+  return subprotocols.map(pulse => {
     switch (pulse.type) {
       case "Monophasic":
         return _createCompatiblePulse(pulse, "MONOPHASIC");
@@ -323,7 +340,7 @@ const _convertDetailedSubprotocols = (subprotocols) => {
   });
 };
 
-const _createCompatibleDelay = (pulse) => {
+const _createCompatibleDelay = pulse => {
   const detailedSubprotocol = JSON.parse(JSON.stringify(DEFAULT_SUBPROTOCOL_TEMPLATES.DELAY));
   // update color
   detailedSubprotocol.color = pulse.repeat.color;
@@ -334,8 +351,8 @@ const _createCompatibleDelay = (pulse) => {
     detailedSubprotocol,
     subprotocol: {
       type: detailedSubprotocol.type,
-      ...detailedSubprotocol.pulseSettings,
-    },
+      ...detailedSubprotocol.pulseSettings
+    }
   };
 };
 
@@ -371,8 +388,8 @@ const _createCompatiblePulse = (pulse, type) => {
     detailedSubprotocol,
     subprotocol: {
       type: detailedSubprotocol.type,
-      ...detailedSubprotocol.pulseSettings,
-    },
+      ...detailedSubprotocol.pulseSettings
+    }
   };
 };
 /*

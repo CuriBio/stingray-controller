@@ -377,6 +377,7 @@ class InstrumentComm:
     async def _manage_online_mode_tasks(self) -> None:
         main_task_name = self._wait_for_offline_state_change.__name__
 
+        # TODO clean up repetitive code
         pending = {
             asyncio.create_task(self._wait_for_offline_state_change(), name=main_task_name),
             asyncio.create_task(self._handle_sending_handshakes()),
@@ -411,7 +412,6 @@ class InstrumentComm:
                     }
 
     async def _wait_for_offline_state_change(self) -> None:
-        logger.info("inside wait task")
         await self._offline_state_change.wait()
         self._offline_state_change.clear()
 
@@ -419,7 +419,6 @@ class InstrumentComm:
         # Tanner (3/17/23): handshakes are not tracked as commands
         while True:
             logger.debug("Sending handshake")
-            logger.info("Sending handshake")
             await self._send_data_packet(SerialCommPacketTypes.HANDSHAKE)
             await asyncio.sleep(SERIAL_COMM_HANDSHAKE_PERIOD_SECONDS)
 
