@@ -172,11 +172,17 @@ export default {
     state.socket.send(wsMessage);
   },
   async sendOfflineState({ state }) {
+    const offlineState = state.statusUuid !== SYSTEM_STATUS.OFFLINE_STATE;
     // this can only be called if stimulation is already active
     const wsMessage = JSON.stringify({
       command: "set_offline_state",
-      offline_state: state.statusUuid !== SYSTEM_STATUS.OFFLINE_STATE,
+      offline_state: offlineState,
     });
+
+    if (offlineState) {
+      this.commit("stimulation/resetState");
+      this.commit("stimulation/setProtocolList", [{ letter: "", color: "", label: "Create New" }]);
+    }
 
     state.socket.send(wsMessage);
   },

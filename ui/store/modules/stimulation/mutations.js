@@ -94,6 +94,9 @@ export default {
   setProtocolList(state, list) {
     state.protocolList = [...list];
   },
+  setProtocolAssignments(state, assignments) {
+    state.protocolAssignments = assignments;
+  },
   setAxisValues(state, { xValues, yValues }) {
     state.xAxisValues = xValues;
     state.yAxisValues = yValues;

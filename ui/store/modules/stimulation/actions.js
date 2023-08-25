@@ -7,11 +7,9 @@ import {
   checkPulseCompatibility,
   _convertObjToCamelCase,
   _convertObjToSnakeCase,
-  getTotalActiveDuration,
-  DEFAULT_SUBPROTOCOL_TEMPLATES,
-  getPulseFrequency
+  _convertSubprotocolsFromFw,
+  _convertDetailedSubprotocolsFromFW,
 } from "@/js-utils/ProtocolValidation";
-import { generateRandomColor } from "@/js-utils/WaveformDataFormatter";
 
 export default {
   handleSelectedWells({ commit }, wells) {
@@ -29,19 +27,19 @@ export default {
     const yValues = [0];
     const colorAssignments = [];
     const subprotocols = [];
-    const getLast = array => array[array.length - 1];
+    const getLast = (array) => array[array.length - 1];
     const helper = (setting, type) => {
       let componentsToAdd = [];
       if (type === "Delay") {
         componentsToAdd = {
           x: [setting.duration * TIME_CONVERSION_TO_MILLIS[setting.unit]],
-          y: [0]
+          y: [0],
         };
       } else {
         // Add values for phase 1
         componentsToAdd = {
           x: [setting.phaseOneDuration],
-          y: [setting.phaseOneCharge]
+          y: [setting.phaseOneCharge],
         };
         // If biphasic, handle remaining pulse components
         if (setting.phaseTwoDuration != null) {
@@ -69,7 +67,7 @@ export default {
       yValues.push(0);
     };
 
-    await newSubprotocolOrder.map(async pulse => {
+    await newSubprotocolOrder.map(async (pulse) => {
       if (pulse.type !== "loop") {
         const { color } = pulse;
         let settings = pulse.pulseSettings;
@@ -77,7 +75,7 @@ export default {
 
         settings = {
           type: pulse.type,
-          ...settings
+          ...settings,
         };
 
         subprotocols.push(settings);
@@ -97,14 +95,14 @@ export default {
 
         // eslint-disable-next-line  no-unused-vars
         for (const _ of Array(pulse.numIterations).fill()) {
-          pulseCopy.subprotocols.map(innerPulse => {
+          pulseCopy.subprotocols.map((innerPulse) => {
             const { color } = innerPulse;
             let settings = innerPulse.pulseSettings;
             const startingRepeatIdx = xValues.length - 1;
 
             settings = {
               type: innerPulse.type,
-              ...settings
+              ...settings,
             };
 
             let remainingPulseCycles = innerPulse.type === "Delay" ? 1 : settings.numCycles;
@@ -119,11 +117,11 @@ export default {
           });
         }
 
-        pulseCopy.subprotocols = pulseCopy.subprotocols.map(loopedPulse => {
+        pulseCopy.subprotocols = pulseCopy.subprotocols.map((loopedPulse) => {
           const settings = loopedPulse.pulseSettings;
           return {
             type: loopedPulse.type,
-            ...settings
+            ...settings,
           };
         });
 
@@ -140,7 +138,7 @@ export default {
     commit("setSubprotocols", { subprotocols, newSubprotocolOrder });
     dispatch("handleRestDuration", {
       xValues,
-      yValues
+      yValues,
     });
   },
 
@@ -183,12 +181,12 @@ export default {
   async handleImportProtocol({ dispatch }, file) {
     const reader = new FileReader();
 
-    reader.onload = async function() {
+    reader.onload = async function () {
       const response = JSON.parse(reader.result);
       await dispatch("addImportedProtocol", response);
     };
 
-    reader.onerror = function() {
+    reader.onerror = function () {
       console.log(reader.onerror); // allow-log
     };
 
@@ -290,7 +288,7 @@ export default {
           protocolListCopy[idx] = {
             ...protocol,
             label: protocolEditor.name,
-            protocol: protocolEditor
+            protocol: protocolEditor,
           };
       });
 
@@ -311,11 +309,10 @@ export default {
   },
 
   async createProtocolMessage({ state }) {
-    // const status = true;
     const message = { protocols: [], protocol_assignments: {} };
 
-    const { protocolAssignments, stimulatorCircuitStatuses, protocolList } = state;
-    console.log(protocolList);
+    const { protocolAssignments, stimulatorCircuitStatuses } = state;
+
     for (let wellIdx = 0; wellIdx < 24; wellIdx++) {
       const wellName = twentyFourWellPlateDefinition.getWellNameFromWellIndex(wellIdx, false);
       message.protocol_assignments[wellName] = null;
@@ -339,7 +336,7 @@ export default {
             protocol_id: letter,
             stimulation_type: stimulationType,
             run_until_stopped: runUntilStopped,
-            subprotocols: convertedSubprotocols
+            subprotocols: convertedSubprotocols,
           };
 
           message.protocols.push(protocolModel);
@@ -398,12 +395,12 @@ export default {
     const { xAxisValues, yAxisValues, xAxisTimeIdx } = state;
 
     if (idx !== xAxisTimeIdx) {
-      const convertedXValues = xAxisValues.map(val => (idx === 1 ? val * 1e-3 : val * 1e3));
+      const convertedXValues = xAxisValues.map((val) => (idx === 1 ? val * 1e-3 : val * 1e3));
       commit("setXAxisTimeIdx", idx);
       if (convertedXValues.length > 0)
         dispatch("handleRestDuration", {
           xValues: convertedXValues,
-          yValues: yAxisValues
+          yValues: yAxisValues,
         });
     }
   },
@@ -417,7 +414,7 @@ export default {
       command: "start_stim_checks",
       well_indices: wellIndices,
       plate_barcode: plateBarcode,
-      stim_barcode: stimBarcode
+      stim_barcode: stimBarcode,
     });
 
     this.state.system.socket.send(wsMessage);
@@ -438,7 +435,7 @@ export default {
         }, 0);
 
       // loop through subprotocols x amount of times to highlight every instance in a loop
-      const indicesToUse = [...Array(originalPulse.numIterations).keys()].map(i => {
+      const indicesToUse = [...Array(originalPulse.numIterations).keys()].map((i) => {
         const numSubprotocols = originalPulse.subprotocols.length;
         const idxToUse = startingIdx + nestedIdx + i * numSubprotocols;
         return state.repeatColors[idxToUse][1];
@@ -446,7 +443,7 @@ export default {
       state.hoveredPulse = {
         idx,
         color: state.repeatColors[startingIdx + nestedIdx][0],
-        indices: indicesToUse
+        indices: indicesToUse,
       };
     } else {
       //  find the index by expanding any loops to find corresponding index in repeatColors
@@ -461,7 +458,7 @@ export default {
       state.hoveredPulse = {
         idx,
         indices: [state.repeatColors[idxToUse][1]],
-        color: state.repeatColors[idxToUse][0]
+        color: state.repeatColors[idxToUse][0],
       };
     }
   },
@@ -480,49 +477,20 @@ export default {
         .map(([idx, status]) => {
           return status == "open" ? +idx : undefined;
         })
-        .filter(i => i === 0 || i);
+        .filter((i) => i === 0 || i);
 
       commit("setStimulatorCircuitStatuses", filteredStatuses);
       commit("setStimStatus", STIM_STATUS.CONFIG_CHECK_COMPLETE);
     }
   },
-  populateStimAfterOffline({ commit, state }, { stim_info }) {
+  async populateStimAfterOffline({ commit, state }, { stim_info }) {
+    const { protocols, protocol_assignments } = stim_info;
     const protocolList = JSON.parse(JSON.stringify(state.protocolList));
 
-    for (const protocol of stim_info.protocols) {
+    for (const protocol of protocols) {
       const protocolName = `protocol_${protocol.protocol_id}`;
-      const subprotocols = protocol.subprotocols[0].subprotocols.map(sub => _convertObjToCamelCase(sub));
-      const formattedSubprotocols = subprotocols.map(sub => {
-        // needs to be pascal case
-        const pascalType = DEFAULT_SUBPROTOCOL_TEMPLATES[sub.type.toUpperCase()].type;
-        const body = DEFAULT_SUBPROTOCOL_TEMPLATES[sub.type.toUpperCase()].pulseSettings;
-        sub.type = pascalType;
-
-        Object.keys(sub).map(metric => {
-          body[metric] = sub[metric];
-
-          if (!isNaN(body[metric]) && metric !== "numCycles") {
-            body[metric] /= 1e3;
-          }
-        });
-
-        if (["Monophasic", "Biphasic"].includes(pascalType)) {
-          body.totalActiveDuration.duration = getTotalActiveDuration(pascalType, body);
-          body.frequency = getPulseFrequency(body);
-        }
-
-        return body;
-      });
-
-      const detailedSubprotocols = formattedSubprotocols.map(sub => {
-        const body = DEFAULT_SUBPROTOCOL_TEMPLATES[sub.type.toUpperCase()];
-
-        body.color = generateRandomColor(true);
-        delete sub.type;
-        body.pulseSettings = sub;
-
-        return body;
-      });
+      const formattedSubprotocols = _convertSubprotocolsFromFw(protocol.subprotocols[0].subprotocols);
+      const detailedSubprotocols = _convertDetailedSubprotocolsFromFW(formattedSubprotocols);
 
       protocolList.push({
         letter: protocol.protocol_id,
@@ -535,22 +503,33 @@ export default {
           runUntilStopped: protocol.run_until_stopped,
           stimulationType: protocol.stimulation_type,
           subprotocols: formattedSubprotocols,
-          timeUnit: "milliseconds"
-        }
+          timeUnit: "milliseconds",
+        },
       });
     }
 
+    const protocolAssignments = {};
+    Object.keys(protocol_assignments)
+      .filter((well) => protocol_assignments[well])
+      .map((well) => {
+        const wellIdx = twentyFourWellPlateDefinition.getWellIndexFromWellName(well);
+        protocolAssignments[wellIdx] = protocolList.find(
+          (protocol) => protocol.letter == protocol_assignments[well]
+        );
+      });
+
+    commit("setProtocolAssignments", protocolAssignments);
     commit("setProtocolList", protocolList);
-  }
+  },
 };
 
 const _getConvertedSettings = (subprotocols, conversion) => {
-  return subprotocols.map(pulse => {
+  return subprotocols.map((pulse) => {
     let typeSpecificSettings = {};
     if (pulse.type === "loop") {
       typeSpecificSettings = {
         num_iterations: pulse.numIterations,
-        subprotocols: _getConvertedSettings(pulse.subprotocols, conversion)
+        subprotocols: _getConvertedSettings(pulse.subprotocols, conversion),
       };
     } else if (pulse.type === "Delay")
       typeSpecificSettings.duration = pulse.duration * TIME_CONVERSION_TO_MILLIS[pulse.unit] * conversion;
@@ -559,7 +538,7 @@ const _getConvertedSettings = (subprotocols, conversion) => {
         num_cycles: pulse.numCycles,
         postphase_interval: Math.round(pulse.postphaseInterval * conversion), // sent in µs, also needs to be an integer value
         phase_one_duration: pulse.phaseOneDuration * conversion, // sent in µs
-        phase_one_charge: pulse.phaseOneCharge * conversion // sent in mV
+        phase_one_charge: pulse.phaseOneCharge * conversion, // sent in mV
       };
 
     if (pulse.type === "Biphasic")
@@ -567,12 +546,12 @@ const _getConvertedSettings = (subprotocols, conversion) => {
         ...typeSpecificSettings,
         interphase_interval: pulse.interphaseInterval * conversion, // sent in µs
         phase_two_charge: pulse.phaseTwoCharge * conversion, // sent in mV or µA
-        phase_two_duration: pulse.phaseTwoDuration * conversion // sent in µs
+        phase_two_duration: pulse.phaseTwoDuration * conversion, // sent in µs
       };
 
     return {
       type: pulse.type,
-      ...typeSpecificSettings
+      ...typeSpecificSettings,
     };
   });
 };
