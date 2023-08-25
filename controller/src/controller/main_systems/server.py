@@ -194,8 +194,8 @@ class Server:
 
             command = msg["command"]
 
-            allowed_comm = command in ("set_offline_state", "shutdown")
-            ignore_incoming_comm = not allowed_comm and self._get_offline_state()
+            allowed_comm_in_offline = command in ("set_offline_state", "shutdown")
+            ignore_incoming_comm = not allowed_comm_in_offline and self._get_offline_state()
 
             if not ignore_incoming_comm:
                 self._log_incoming_message(msg)
@@ -410,7 +410,7 @@ class Server:
             system_status != SystemStatuses.OFFLINE_STATE and not incoming_offline_state,
         )
 
-        if True in comms_to_ignore:
+        if any(comms_to_ignore):
             return  # nothing to do here
         if not _are_any_stim_protocols_running(system_state) and incoming_offline_state:
             raise WebsocketCommandError("Can only enter offline state if stimulation is active")

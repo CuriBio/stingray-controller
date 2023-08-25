@@ -59,8 +59,8 @@ from stdlib_utils import get_current_file_abs_directory
 from stdlib_utils import InfiniteProcess
 from stdlib_utils import resource_path
 
-from .constants import ConnectionStatuses
 from .constants import DEFAULT_SAMPLING_PERIOD
+from .constants import InstrumentConnectionStatuses
 from .constants import MICROSECONDS_PER_CENTIMILLISECOND
 from .constants import SERIAL_COMM_NUM_CHANNELS_PER_SENSOR
 from .constants import SERIAL_COMM_NUM_SENSORS_PER_WELL
@@ -516,7 +516,7 @@ class MantarrayMcSimulator(InfiniteProcess):
             response_body += convert_instrument_event_info_to_bytes(self.default_event_info)
         elif packet_type == SerialCommPacketTypes.CHECK_CONNECTION_STATUS:
             # change to mock headless mode on startup
-            response_body += bytes([ConnectionStatuses.CONNECTED.value])
+            response_body += bytes([InstrumentConnectionStatuses.CONNECTED.value])
             self._system_in_offline_mode = False
 
         elif packet_type == SerialCommPacketTypes.ERROR_ACK:  # pragma: no cover

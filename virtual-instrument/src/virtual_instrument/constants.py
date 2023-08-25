@@ -8,7 +8,7 @@ SERIAL_COMM_NUM_CHANNELS_PER_SENSOR = 3
 SERIAL_COMM_NUM_SENSORS_PER_WELL = 3
 
 
-class ConnectionStatuses(IntEnum):
+class InstrumentConnectionStatuses(IntEnum):
     DISCONNECTED = 0
     CONNECTED = 1
     HEADLESS = 2

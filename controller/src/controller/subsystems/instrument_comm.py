@@ -12,8 +12,8 @@ from aioserial import AioSerial
 import serial
 import serial.tools.list_ports as list_ports
 
-from ..constants import ConnectionStatuses
 from ..constants import CURI_VID
+from ..constants import InstrumentConnectionStatuses
 from ..constants import NUM_WELLS
 from ..constants import SERIAL_COMM_BAUD_RATE
 from ..constants import SERIAL_COMM_BYTESIZE
@@ -177,7 +177,6 @@ class InstrumentComm:
 
             tasks = {
                 asyncio.create_task(self._handle_comm_from_monitor()),
-                # create parent task for following four tasks
                 asyncio.create_task(self._manage_online_mode_tasks()),
             }
 
@@ -319,56 +318,57 @@ class InstrumentComm:
 
             ignore_incoming_comm = not is_offline_mode_comm and self._system_in_offline_mode
 
-            if not ignore_incoming_comm:
-                match comm_from_monitor:
-                    case {"command": "start_stim_checks", "well_indices": well_indices}:
-                        packet_type = SerialCommPacketTypes.STIM_IMPEDANCE_CHECK
-                        bytes_to_send = struct.pack(
-                            f"<{NUM_WELLS}?",
-                            *[
-                                STIM_MODULE_ID_TO_WELL_IDX[module_id] in well_indices
-                                for module_id in range(NUM_WELLS)
-                            ],
-                        )
-                    case {"command": "set_stim_protocols", "stim_info": stim_info}:
-                        packet_type = SerialCommPacketTypes.SET_STIM_PROTOCOL
-                        bytes_to_send = convert_stim_dict_to_bytes(stim_info)
-
-                        if self._is_stimulating and not self._hardware_test_mode:
-                            raise InstrumentCommandAttemptError(
-                                "Cannot update stimulation protocols while stimulating"
-                            )
-                        self._num_stim_protocols = len(stim_info["protocols"])
-                    case {"command": "start_stimulation"}:
-                        packet_type = SerialCommPacketTypes.START_STIM
-                    case {"command": "stop_stimulation"}:
-                        packet_type = SerialCommPacketTypes.STOP_STIM
-                    case {"command": "start_firmware_update"}:
-                        await self._handle_firmware_update(comm_from_monitor)
-                    case {
-                        "command": "trigger_firmware_error",
-                        "first_two_status_codes": first_two_status_codes,
-                    }:  # pragma: no cover
-                        packet_type = SerialCommPacketTypes.TRIGGER_ERROR
-                        bytes_to_send = bytes(first_two_status_codes)
-                    case {"command": "init_offline_mode"}:
-                        packet_type = SerialCommPacketTypes.INIT_OFFLINE_MODE
-                        self._system_in_offline_mode = True
-                    case {"command": "end_offline_mode"}:
-                        packet_type = SerialCommPacketTypes.END_OFFLINE_MODE
-                        # the _offline_state_change event needs to be triggered here instead of in process instrument comm because we first need to restart the task that handles instrument comm
-                        self._system_in_offline_mode = False
-                        self._offline_state_change.set()
-                    case {"command": "check_connection_status"}:
-                        packet_type = SerialCommPacketTypes.CHECK_CONNECTION_STATUS
-                    case invalid_comm:
-                        raise NotImplementedError(
-                            f"InstrumentComm received invalid comm from SystemMonitor: {invalid_comm}"
-                        )
-            else:
+            if ignore_incoming_comm:
                 logger.info(
                     f"Ignoring incoming command '{comm_from_monitor['command']}' in instrument comm while offline"
                 )
+                return
+
+            match comm_from_monitor:
+                case {"command": "start_stim_checks", "well_indices": well_indices}:
+                    packet_type = SerialCommPacketTypes.STIM_IMPEDANCE_CHECK
+                    bytes_to_send = struct.pack(
+                        f"<{NUM_WELLS}?",
+                        *[
+                            STIM_MODULE_ID_TO_WELL_IDX[module_id] in well_indices
+                            for module_id in range(NUM_WELLS)
+                        ],
+                    )
+                case {"command": "set_stim_protocols", "stim_info": stim_info}:
+                    packet_type = SerialCommPacketTypes.SET_STIM_PROTOCOL
+                    bytes_to_send = convert_stim_dict_to_bytes(stim_info)
+
+                    if self._is_stimulating and not self._hardware_test_mode:
+                        raise InstrumentCommandAttemptError(
+                            "Cannot update stimulation protocols while stimulating"
+                        )
+                    self._num_stim_protocols = len(stim_info["protocols"])
+                case {"command": "start_stimulation"}:
+                    packet_type = SerialCommPacketTypes.START_STIM
+                case {"command": "stop_stimulation"}:
+                    packet_type = SerialCommPacketTypes.STOP_STIM
+                case {"command": "start_firmware_update"}:
+                    await self._handle_firmware_update(comm_from_monitor)
+                case {
+                    "command": "trigger_firmware_error",
+                    "first_two_status_codes": first_two_status_codes,
+                }:  # pragma: no cover
+                    packet_type = SerialCommPacketTypes.TRIGGER_ERROR
+                    bytes_to_send = bytes(first_two_status_codes)
+                case {"command": "init_offline_mode"}:
+                    packet_type = SerialCommPacketTypes.INIT_OFFLINE_MODE
+                    self._system_in_offline_mode = True
+                case {"command": "end_offline_mode"}:
+                    packet_type = SerialCommPacketTypes.END_OFFLINE_MODE
+                    # the _offline_state_change event needs to be triggered here instead of in process instrument comm because we first need to restart the task that handles instrument comm
+                    self._system_in_offline_mode = False
+                    self._offline_state_change.set()
+                case {"command": "check_connection_status"}:
+                    packet_type = SerialCommPacketTypes.CHECK_CONNECTION_STATUS
+                case invalid_comm:
+                    raise NotImplementedError(
+                        f"InstrumentComm received invalid comm from SystemMonitor: {invalid_comm}"
+                    )
 
             if packet_type is not None:
                 await self._send_data_packet(packet_type, bytes_to_send)
@@ -611,6 +611,11 @@ class InstrumentComm:
                 if not metadata_dict.pop("is_stingray"):
                     raise IncorrectInstrumentConnectedError()
                 prev_command_info.update(metadata_dict)
+
+                await self._send_data_packet(SerialCommPacketTypes.CHECK_CONNECTION_STATUS)
+                await self._command_tracker.add(
+                    SerialCommPacketTypes.CHECK_CONNECTION_STATUS, {"command": "check_connection_status"}
+                )
             case "start_stim_checks":
                 stimulator_check_dict = convert_stimulator_check_bytes_to_dict(response_data)
 
@@ -654,9 +659,9 @@ class InstrumentComm:
                 await self._firmware_update_manager.update(command, response_data)
             case "check_connection_status":
                 prev_command_info["status"] = response_data[0]
-                self._system_in_offline_mode = response_data[0] == ConnectionStatuses.HEADLESS.value
-                self._offline_state_change.set()
+                self._system_in_offline_mode = response_data[0] == InstrumentConnectionStatuses.OFFLINE.value
                 if self._system_in_offline_mode:
+                    self._offline_state_change.set()
                     logger.info("Starting up in offline mode")
             case "end_offline_mode":
                 parsed_stim_dict = parse_end_offline_mode_bytes(response_data)

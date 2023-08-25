@@ -436,19 +436,11 @@ def convert_stim_dict_to_bytes(stim_dict: dict[str, Any]) -> bytes:
             )
             stim_bytes += subprotocol_bytes
 
-        if "protocol_id" in protocol_dict:
-            module_ids_assigned = [
-                convert_well_name_to_module_id(well_name, use_stim_mapping=True)
-                for well_name, assigned_protocol_id in stim_dict["protocol_assignments"].items()
-                if assigned_protocol_id == protocol_dict["protocol_id"]
-            ]
-
-        else:
-            module_ids_assigned = [
-                convert_well_name_to_module_id(well_name, use_stim_mapping=True)
-                for well_name, assigned_protocol_id in stim_dict["protocol_assignments"].items()
-                if assigned_protocol_id == idx
-            ]
+        module_ids_assigned = [
+            convert_well_name_to_module_id(well_name, use_stim_mapping=True)
+            for well_name, assigned_protocol_id in stim_dict["protocol_assignments"].items()
+            if assigned_protocol_id == protocol_dict.get("protocol_id", idx)
+        ]
 
         stim_bytes += bytes([len(module_ids_assigned)] + sorted(module_ids_assigned))
 

@@ -315,7 +315,7 @@ STIM_WELL_IDX_TO_MODULE_ID: immutabledict[int, int] = immutabledict(
 )
 
 
-class ConnectionStatuses(IntEnum):
+class InstrumentConnectionStatuses(IntEnum):
     DISCONNECTED = 0
     CONNECTED = 1
-    HEADLESS = 2
+    OFFLINE = 2
