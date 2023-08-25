@@ -13,7 +13,10 @@
           <StatusBar :stimSpecific="true" @send-confirmation="sendConfirmation" />
         </div>
         <div class="div__stimulation-controls-icon-container">
-          <StimulationStudioControls @save-account-info="saveAccountInfo" />
+          <StimulationStudioControls
+            @save-account-info="saveAccountInfo"
+            @send-confirmation="sendConfirmation"
+          />
         </div>
         <div class="div__simulation-mode-container">
           <SimulationMode />

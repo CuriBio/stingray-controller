@@ -3,6 +3,7 @@
 
 
 import datetime
+import logging
 import math
 import struct
 from typing import Any
@@ -43,6 +44,9 @@ from ..constants import STIM_SHORT_CIRCUIT_THRESHOLD_OHMS
 from ..constants import STIM_WELL_IDX_TO_MODULE_ID
 from ..constants import StimulatorCircuitStatuses
 
+# TODO remove
+
+logger = logging.getLogger(__name__)
 
 # Tanner (3/18/21): If/When additional cython is needed to improve serial communication, this file may be worth investigating
 
@@ -417,7 +421,7 @@ def convert_stim_dict_to_bytes(stim_dict: dict[str, Any]) -> bytes:
     """
     # add bytes for protocol definitions
     stim_bytes = bytes([len(stim_dict["protocols"])])  # number of unique protocols
-    for protocol_dict in stim_dict["protocols"]:
+    for idx, protocol_dict in enumerate(stim_dict["protocols"]):
         is_voltage_controlled = protocol_dict["stimulation_type"] == "V"
 
         # data type is always 0 as of 12/23/22
@@ -432,11 +436,20 @@ def convert_stim_dict_to_bytes(stim_dict: dict[str, Any]) -> bytes:
             )
             stim_bytes += subprotocol_bytes
 
-        module_ids_assigned = [
-            convert_well_name_to_module_id(well_name, use_stim_mapping=True)
-            for well_name, assigned_protocol_id in stim_dict["protocol_assignments"].items()
-            if assigned_protocol_id == protocol_dict["protocol_id"]
-        ]
+        if "protocol_id" in protocol_dict:
+            module_ids_assigned = [
+                convert_well_name_to_module_id(well_name, use_stim_mapping=True)
+                for well_name, assigned_protocol_id in stim_dict["protocol_assignments"].items()
+                if assigned_protocol_id == protocol_dict["protocol_id"]
+            ]
+
+        else:
+            module_ids_assigned = [
+                convert_well_name_to_module_id(well_name, use_stim_mapping=True)
+                for well_name, assigned_protocol_id in stim_dict["protocol_assignments"].items()
+                if assigned_protocol_id == idx
+            ]
+
         stim_bytes += bytes([len(module_ids_assigned)] + sorted(module_ids_assigned))
 
     return stim_bytes
@@ -486,3 +499,33 @@ def convert_stim_bytes_to_dict(stim_bytes: bytes) -> dict[str, Any]:
         curr_byte_idx += num_wells_assigned
 
     return stim_info_dict
+
+
+def parse_end_offline_mode_bytes(response_bytes: bytes) -> dict[str, Any]:
+    """Parse bytes containing stimulation info and return as Dict."""
+
+    stim_dict = convert_stim_bytes_to_dict(response_bytes[41:])
+    updated_stim_dict = format_stim_dict_with_ids(stim_dict)
+
+    return {
+        "system_dormant_timestamp": int.from_bytes(response_bytes[:8]),
+        "stim_active": bool(response_bytes[8]),
+        "last_stim_scheduled_start_timestamp": int.from_bytes(response_bytes[9:17]),
+        "stimulator_statuses": response_bytes[17:41],  # TODO will need to update with final dict here
+        "stim_info": updated_stim_dict,
+    }
+
+
+def format_stim_dict_with_ids(stim_dict: dict[str, Any]) -> dict[str, Any]:
+    """Add protocol IDs to stim dict from instrument after being offline."""
+    for idx, _ in enumerate(stim_dict["protocols"]):
+        protocol_id = chr(idx + 97).upper()
+        stim_dict["protocols"][idx]["protocol_id"] = protocol_id
+
+        stim_dict["protocol_assignments"] |= {
+            well: protocol_id
+            for well, assignment in stim_dict["protocol_assignments"].items()
+            if assignment == idx
+        }
+
+    return stim_dict

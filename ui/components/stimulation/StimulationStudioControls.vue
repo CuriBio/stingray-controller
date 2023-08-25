@@ -215,11 +215,11 @@
         @handle-confirmation="closeStartupOfflineModal"
       />
     </b-modal>
-    <!-- <div
+    <div
       v-if="disabled"
       v-b-popover.hover.bottom="disabledToolTip"
       class="div__stimulation-controls-overlay"
-    /> -->
+    />
   </div>
 </template>
 <script>
@@ -532,6 +532,8 @@ export default {
         this.$store.dispatch(`system/sendOfflineState`);
       } else if (idx === 2) {
         await this.$store.dispatch("system/sendShutdown");
+        // close window completely
+        this.$emit("send-confirmation", 1);
       }
     },
     async startStimConfiguration() {

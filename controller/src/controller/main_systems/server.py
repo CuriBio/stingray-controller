@@ -71,8 +71,6 @@ class Server:
 
         self._ui_connection_made = asyncio.Event()
         self.user_initiated_shutdown = False
-        # used to tell server to ignore all messages when offline
-        self.system_in_offline_mode = False
 
     async def run(
         self,
@@ -168,6 +166,11 @@ class Server:
         else:
             logger.error("UI has already disconnected, cannot send error message")
 
+    def _get_offline_state(self) -> bool:
+        system_state = self._get_system_state_ro()
+        system_status = system_state["system_status"]
+        return bool(system_status == SystemStatuses.OFFLINE_STATE)
+
     async def _handle_comm(self, websocket: WebSocketServerProtocol) -> None:
         producer = asyncio.create_task(self._producer(websocket))
         consumer = asyncio.create_task(self._consumer(websocket))
@@ -191,8 +194,8 @@ class Server:
 
             command = msg["command"]
 
-            is_offline_request = command != "set_offline_state"
-            ignore_incoming_comm = is_offline_request and self.system_in_offline_mode
+            allowed_comm = command in ("set_offline_state", "shutdown")
+            ignore_incoming_comm = not allowed_comm and self._get_offline_state()
 
             if not ignore_incoming_comm:
                 self._log_incoming_message(msg)
@@ -400,19 +403,19 @@ class Server:
 
         system_state = self._get_system_state_ro()
         system_status = system_state["system_status"]
+        incoming_offline_state = comm["offline_state"]
 
         comms_to_ignore = (
-            system_status == SystemStatuses.OFFLINE_STATE and comm["offline_state"],
-            system_status != SystemStatuses.OFFLINE_STATE and not comm["offline_state"],
+            system_status == SystemStatuses.OFFLINE_STATE and incoming_offline_state,
+            system_status != SystemStatuses.OFFLINE_STATE and not incoming_offline_state,
         )
 
         if True in comms_to_ignore:
             return  # nothing to do here
-        if not _are_any_stim_protocols_running(system_state):
+        if not _are_any_stim_protocols_running(system_state) and incoming_offline_state:
             raise WebsocketCommandError("Can only enter offline state if stimulation is active")
 
-        # used to tell server to ignore all messages when offline
-        self.system_in_offline_mode = comm["offline_state"]
+        comm = {"command": "init_offline_mode" if incoming_offline_state else "end_offline_mode"}
         await self._to_monitor_queue.put(comm)
 
 

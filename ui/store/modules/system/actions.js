@@ -84,6 +84,11 @@ export default {
               });
             }
             break;
+          case "end_offline_mode":
+            console.log("LUCI: ");
+            console.log(wsMessage);
+            dispatch("stimulation/populateStimAfterOffline", wsMessage);
+            break;
           case "sw_update":
             if (wsMessage.allow_software_update !== undefined) {
               commit("system/setallowSwUpdateInstall", wsMessage.allow_software_update);

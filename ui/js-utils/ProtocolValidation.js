@@ -280,6 +280,7 @@ export const _convertObjToCamelCase = (obj) => {
 
 export const _convertObjToSnakeCase = (obj) => {
   const convertedObj = {};
+
   for (const [key, value] of Object.entries(obj)) {
     const snakeCaseKey = key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
     convertedObj[snakeCaseKey] = value;

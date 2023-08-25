@@ -155,6 +155,7 @@ class SystemMonitor:
             for status_name in ("system_status", "stimulation_protocol_statuses", "in_simulation_mode")
             if (new_system_status := update_details.get(status_name))
         }
+
         if not status_update_details:
             return
 
@@ -196,6 +197,7 @@ class SystemMonitor:
             system_state = self._system_state_manager.data
 
             system_state_updates: dict[str, Any] = {}
+            logger.info(f"system monitor: {communication}")
 
             match communication:
                 case {"command": "login"}:
@@ -245,10 +247,10 @@ class SystemMonitor:
                         for well_idx in well_indices
                     }
                     await self._queues["to"]["instrument_comm"].put(communication)
-                case {"command": "set_offline_state", "offline_state": offline_state}:
-                    if offline_state:
-                        system_state_updates["system_status"] = SystemStatuses.GOING_OFFLINE_STATE
-
+                case {"command": "init_offline_mode"}:
+                    system_state_updates["system_status"] = SystemStatuses.GOING_OFFLINE_STATE
+                    await self._queues["to"]["instrument_comm"].put(communication)
+                case {"command": "end_offline_mode"}:
                     await self._queues["to"]["instrument_comm"].put(communication)
                 case invalid_comm:
                     raise NotImplementedError(f"Invalid communication from Server: {invalid_comm}")
@@ -326,9 +328,20 @@ class SystemMonitor:
                         os.remove(fw_file_path)
 
                     system_state_updates[key] = None
-                case {"command": "set_offline_state", "offline_state": offline_state}:
-                    system_state_updates["system_status"] = (
-                        SystemStatuses.OFFLINE_STATE if offline_state else SystemStatuses.IDLE_READY_STATE
+                case {"command": "init_offline_mode"}:
+                    system_state_updates["system_status"] = SystemStatuses.OFFLINE_STATE
+                case {"command": "end_offline_mode", "stim_state": stim_state}:
+                    stim_info = stim_state["stim_info"]
+                    # setup stim state entering online mode
+                    system_state_updates["stim_info"] = stim_info
+                    system_state_updates["stimulation_protocol_statuses"] = [StimulationStates.RUNNING] * len(
+                        stim_info["protocols"]
+                    )
+                    system_state_updates["system_status"] = SystemStatuses.IDLE_READY_STATE
+
+                    # just sending stim protocols to UI to repopulate stim studio
+                    await self._queues["to"]["server"].put(
+                        {"communication_type": "end_offline_mode", "stim_info": stim_info}
                     )
                 case {"command": "check_connection_status", "status": status}:
                     if status == ConnectionStatuses.HEADLESS.value:
@@ -416,7 +429,8 @@ class SystemMonitor:
                 case invalid_comm:
                     raise NotImplementedError(f"Invalid communication from CloudComm: {invalid_comm}")
 
-            if system_state_updates:
+            # only update system status if not in offline state, affects starting up in offline
+            if system_state_updates and system_state["system_status"] != SystemStatuses.OFFLINE_STATE:
                 await self._system_state_manager.update(system_state_updates)
 
     # HELPERS

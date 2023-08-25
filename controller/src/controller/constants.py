@@ -319,4 +319,3 @@ class ConnectionStatuses(IntEnum):
     DISCONNECTED = 0
     CONNECTED = 1
     HEADLESS = 2
-    ONE_HS_MISSED = 3
