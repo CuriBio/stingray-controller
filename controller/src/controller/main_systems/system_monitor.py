@@ -91,7 +91,7 @@ class SystemMonitor:
                     expected_software_version := system_state.get("expected_software_version")
                 ) and expected_software_version != CURRENT_SOFTWARE_VERSION:
                     raise ElectronControllerVersionMismatchError(expected_software_version)
-                new_system_status = SystemStatuses.SYSTEM_INITIALIZING_STATE
+                # new_system_status = SystemStatuses.SYSTEM_INITIALIZING_STATE
             case SystemStatuses.SYSTEM_INITIALIZING_STATE if (
                 # need to wait in SYSTEM_INITIALIZING_STATE until UI connects (indicated by
                 # latest_software_version being set) and instrument completes booting up (indicated by
@@ -342,8 +342,13 @@ class SystemMonitor:
                         {"communication_type": "end_offline_mode", "stim_info": stim_info}
                     )
                 case {"command": "check_connection_status", "status": status}:
-                    if status == InstrumentConnectionStatuses.OFFLINE.value:
-                        system_state_updates["system_status"] = SystemStatuses.OFFLINE_STATE
+                    # if not booting up offline, then set to system initializing to kick off cloud comm to check versions
+                    system_state_updates["system_status"] = (
+                        SystemStatuses.OFFLINE_STATE
+                        if status == InstrumentConnectionStatuses.OFFLINE.value
+                        else SystemStatuses.SYSTEM_INITIALIZING_STATE
+                    )
+
                 case invalid_comm:
                     raise NotImplementedError(f"Invalid communication from InstrumentComm: {invalid_comm}")
 

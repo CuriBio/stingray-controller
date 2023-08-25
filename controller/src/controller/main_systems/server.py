@@ -193,7 +193,6 @@ class Server:
                 return
 
             command = msg["command"]
-
             allowed_comm_in_offline = command in ("set_offline_state", "shutdown")
             ignore_incoming_comm = not allowed_comm_in_offline and self._get_offline_state()
 
