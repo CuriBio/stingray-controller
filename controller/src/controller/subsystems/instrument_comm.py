@@ -171,7 +171,6 @@ class InstrumentComm:
 
     async def run(self, system_error_future: asyncio.Future[tuple[int, dict[str, str]]]) -> None:
         logger.info("Starting InstrumentComm")
-        print("here")
         try:
             await self._setup()
 
