@@ -64,7 +64,6 @@ from ..utils.serial_comm import parse_instrument_event_info
 from ..utils.serial_comm import parse_metadata_bytes
 from ..utils.serial_comm import validate_instrument_metadata
 
-
 logger = logging.getLogger(__name__)
 
 ERROR_MSG = "IN INSTRUMENT COMM"
@@ -534,7 +533,7 @@ class InstrumentComm:
         data_packet = create_data_packet(get_serial_comm_timestamp(), packet_type, data_to_send)
         write_len = await self._instrument.write_async(data_packet)
         if write_len == 0:
-            logger.error(f"Serial data write reporting no bytes written")
+            logger.error("Serial data write reporting no bytes written")
 
     async def _report_instrument_fw_error(self, error_details: dict[Any, Any]) -> None:
         await self._send_data_packet(SerialCommPacketTypes.ERROR_ACK)
