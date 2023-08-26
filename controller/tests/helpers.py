@@ -213,8 +213,7 @@ def get_random_stim_pulse(*, pulse_type=None, total_subprotocol_dur_us=None, fre
     duty_cycle_dur_comps = all_pulse_components - charge_components - {"postphase_interval"}
 
     min_dur_per_duty_cycle_comp = max(
-        1,
-        (pulse_dur_us - MAX_POSTPHASE_INTERVAL_DUR_MICROSECONDS) // len(duty_cycle_dur_comps),
+        1, (pulse_dur_us - MAX_POSTPHASE_INTERVAL_DUR_MICROSECONDS) // len(duty_cycle_dur_comps)
     )
     max_dur_per_duty_cycle_comp = min(
         math.floor(pulse_dur_us * STIM_MAX_DUTY_CYCLE_PERCENTAGE), STIM_MAX_DUTY_CYCLE_DURATION_MICROSECONDS
@@ -232,6 +231,41 @@ def get_random_stim_pulse(*, pulse_type=None, total_subprotocol_dur_us=None, fre
     pulse.update({comp: randint(1, 100) * 10 for comp in charge_components})
 
     return pulse
+
+
+def get_generic_protocols(include_ids: bool = True):
+    protocols = [
+        {
+            "stimulation_type": "C",
+            "run_until_stopped": True,
+            "subprotocols": [get_random_monophasic_pulse(), get_random_stim_delay()],
+        },
+        {
+            "stimulation_type": "V",
+            "run_until_stopped": False,
+            "subprotocols": [
+                get_random_biphasic_pulse(),
+                {
+                    "type": "loop",
+                    "num_iterations": randint(1, 10),
+                    "subprotocols": [
+                        {
+                            "type": "loop",
+                            "num_iterations": randint(1, 10),
+                            "subprotocols": [get_random_subprotocol()],
+                        },
+                        get_random_subprotocol(),
+                    ],
+                },
+            ],
+        },
+    ]
+
+    if include_ids:
+        protocols[0]["protocol_id"] = "A"
+        protocols[1]["protocol_id"] = "B"
+
+    return protocols
 
 
 def _get_rand_num_cycles_from_pulse_dur(pulse_dur_us):
@@ -275,7 +309,7 @@ def create_random_stim_info():
                             )
                             for _ in range(randint(1, 2))
                         ],
-                    },
+                    }
                 ],
             }
             for pid in protocol_ids[1:]

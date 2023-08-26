@@ -16,7 +16,7 @@ export default {
 
     const socket = new W3CWebSocket("ws://localhost:4565");
 
-    socket.onerror = function() {
+    socket.onerror = function () {
       const baseLogMsg = "Error connecting to controller. ";
 
       if (numRetriesLeft) {
@@ -32,14 +32,14 @@ export default {
       }
     };
 
-    socket.onopen = function() {
+    socket.onopen = function () {
       console.log("Connected to controller");
       // Tanner (3/30/23): make sure to set the socket before updating isConnectedToController
       commit("system/setSocket", socket);
       commit("system/setIsConnectedToController", true);
     };
 
-    socket.onclose = function() {
+    socket.onclose = function () {
       if (!state.isConnectedToController) return;
 
       console.log("Disconnected from controller");
@@ -52,7 +52,7 @@ export default {
       }
     };
 
-    socket.onmessage = function(e) {
+    socket.onmessage = function (e) {
       if (typeof e.data === "string") {
         console.log(`Comm from controller: ${e.data}`); // allow-log
 
@@ -89,7 +89,7 @@ export default {
               const barcodeType = wsMessage.barcode_type.split("_")[0] + "Barcode";
               dispatch("system/validateBarcode", {
                 type: barcodeType,
-                newValue: wsMessage.new_barcode
+                newValue: wsMessage.new_barcode,
               });
             }
             break;
@@ -154,7 +154,7 @@ export default {
 
     const wsMessage = JSON.stringify({
       command: "set_firmware_update_confirmation",
-      update_accepted: updateAccepted
+      update_accepted: updateAccepted,
     });
 
     state.socket.send(wsMessage);
@@ -162,7 +162,7 @@ export default {
   async sendSetLatestSwVersion({ state }, latestSwVersionAvailable) {
     const wsMessage = JSON.stringify({
       command: "set_latest_software_version",
-      version: latestSwVersionAvailable
+      version: latestSwVersionAvailable,
     });
 
     state.socket.send(wsMessage);
@@ -173,7 +173,7 @@ export default {
     commit("setShutdownStatus", true);
 
     const wsMessage = JSON.stringify({
-      command: "shutdown"
+      command: "shutdown",
     });
 
     state.socket.send(wsMessage);
@@ -183,7 +183,7 @@ export default {
     // this can only be called if stimulation is already active
     const wsMessage = JSON.stringify({
       command: "set_offline_state",
-      offline_state: offlineState
+      offline_state: offlineState,
     });
 
     if (offlineState) {
@@ -192,5 +192,5 @@ export default {
     }
 
     state.socket.send(wsMessage);
-  }
+  },
 };

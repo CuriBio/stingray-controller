@@ -106,6 +106,40 @@ async def test_InstrumentComm__creates_connection_to_virtual_instrument_correctl
     }
 
 
+@pytest.mark.asyncio
+async def test_InstrumentComm__prompts_get_metadata_correctly(
+    patch_wait_tasks_clean, patch_comports, test_instrument_comm_obj, mocker
+):
+    # mocking to speed up test
+    mocker.patch.object(test_instrument_comm_obj, "_register_magic_word", autospec=True)
+    mocker.patch.object(test_instrument_comm_obj, "_send_data_packet", autospec=True)
+
+    spied_prompt = mocker.spy(test_instrument_comm_obj, "_prompt_instrument_for_metadata")
+
+    _, dummy_port_info = patch_comports
+    dummy_port_info.vid = None  # set this to None so no real instrument is found
+    mocked_aioserial = mocker.patch.object(instrument_comm, "AioSerial", autospec=True)
+    mocked_vic_init = mocker.patch.object(
+        instrument_comm.VirtualInstrumentConnection, "__init__", autospec=True, return_value=None
+    )
+    mocked_vic_connect = mocker.patch.object(
+        instrument_comm.VirtualInstrumentConnection, "connect", autospec=True
+    )
+
+    await test_instrument_comm_obj.run(asyncio.Future())
+
+    assert spied_prompt.call_args_list == [1]
+
+    mocked_aioserial.assert_not_called()
+    mocked_vic_init.assert_called_once_with(test_instrument_comm_obj._instrument)
+    mocked_vic_connect.assert_awaited_once_with(test_instrument_comm_obj._instrument)
+
+    assert test_instrument_comm_obj._to_monitor_queue.get_nowait() == {
+        "command": "get_board_connection_status",
+        "in_simulation_mode": True,
+    }
+
+
 # TODO assert correct message put into queue after connection
 
 

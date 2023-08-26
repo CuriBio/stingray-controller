@@ -329,7 +329,6 @@ def convert_subprotocol_pulse_bytes_to_dict(
 ) -> dict[str, Union[int, str]]:
     # duration_ms if subprotocols is a delay (null subprotocol), num_cycles o/w
     num_cycles_or_duration_ms = int.from_bytes(subprotocol_bytes[24:28], byteorder="little")
-
     # the final byte is a flag indicating whether or not this subprotocol is a delay
     if subprotocol_bytes[-1]:
         duration_us = num_cycles_or_duration_ms * MICROS_PER_MILLI
@@ -367,7 +366,6 @@ def convert_subprotocol_node_dict_to_bytes(
     subprotocol_node_bytes = bytes([is_loop])
 
     curr_idx = start_idx
-
     if is_loop:
         subprotocol_node_bytes += bytes([len(subprotocol_node_dict["subprotocols"])])
         subprotocol_node_bytes += subprotocol_node_dict["num_iterations"].to_bytes(4, byteorder="little")
@@ -430,6 +428,7 @@ def convert_stim_dict_to_bytes(stim_dict: dict[str, Any]) -> bytes:
         # TODO remove this since the top level should always be a loop
 
         curr_idx = 0
+
         for subprotocol_dict in protocol_dict["subprotocols"]:
             subprotocol_bytes, curr_idx = convert_subprotocol_node_dict_to_bytes(
                 subprotocol_dict, curr_idx, is_voltage=is_voltage_controlled

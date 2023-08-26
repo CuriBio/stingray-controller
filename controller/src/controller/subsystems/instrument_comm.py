@@ -171,7 +171,7 @@ class InstrumentComm:
 
     async def run(self, system_error_future: asyncio.Future[tuple[int, dict[str, str]]]) -> None:
         logger.info("Starting InstrumentComm")
-
+        print("here")
         try:
             await self._setup()
 
@@ -535,7 +535,7 @@ class InstrumentComm:
         data_packet = create_data_packet(get_serial_comm_timestamp(), packet_type, data_to_send)
         write_len = await self._instrument.write_async(data_packet)
         if write_len == 0:
-            logger.error("Serial data write reporting no bytes written")
+            logger.error(f"Serial data write reporting no bytes written")
 
     async def _report_instrument_fw_error(self, error_details: dict[Any, Any]) -> None:
         await self._send_data_packet(SerialCommPacketTypes.ERROR_ACK)
@@ -608,8 +608,10 @@ class InstrumentComm:
                 logger.info(f"Instrument metadata received: {metadata_dict_for_logging}")
                 # validate after logging so that every value still gets logged in case of a bad value
                 validate_instrument_metadata(metadata_dict)
+
                 if not metadata_dict.pop("is_stingray"):
                     raise IncorrectInstrumentConnectedError()
+
                 prev_command_info.update(metadata_dict)
 
                 await self._send_data_packet(SerialCommPacketTypes.CHECK_CONNECTION_STATUS)
