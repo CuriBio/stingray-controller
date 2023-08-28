@@ -391,6 +391,7 @@ class InstrumentComm:
                 task_name = task.get_name()
 
                 if task_name == main_task_name:
+                    # TODO consider making this it's own function
                     if self._system_in_offline_mode:
                         logger.info("Cancelling online mode tasks")
                         exc = await clean_up_tasks(pending, ERROR_MSG)
