@@ -328,8 +328,7 @@ class SystemMonitor:
                     system_state_updates[key] = None
                 case {"command": "init_offline_mode"}:
                     system_state_updates["system_status"] = SystemStatuses.OFFLINE_STATE
-                case {"command": "end_offline_mode", "stim_state": stim_state}:
-                    stim_info = stim_state["stim_info"]
+                case {"command": "end_offline_mode", "stim_info": stim_info}:
                     # setup stim state entering online mode
                     system_state_updates["stim_info"] = stim_info
                     system_state_updates["stimulation_protocol_statuses"] = [StimulationStates.RUNNING] * len(

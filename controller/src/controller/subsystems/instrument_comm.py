@@ -660,13 +660,13 @@ class InstrumentComm:
                 await self._firmware_update_manager.update(command, response_data)
             case "check_connection_status":
                 prev_command_info["status"] = response_data[0]
-                self._system_in_offline_mode = response_data[0] == InstrumentConnectionStatuses.OFFLINE.value
+                self._system_in_offline_mode = response_data[0] == InstrumentConnectionStatuses.OFFLINE
+
                 if self._system_in_offline_mode:
                     self._offline_state_change.set()
                     logger.info("Starting up in offline mode")
             case "end_offline_mode":
-                parsed_stim_dict = parse_end_offline_mode_bytes(response_data)
-                prev_command_info |= {"stim_state": parsed_stim_dict}
+                prev_command_info |= parse_end_offline_mode_bytes(response_data)
             case "init_offline_mode":
                 self._offline_state_change.set()
 

@@ -510,7 +510,7 @@ def parse_end_offline_mode_bytes(response_bytes: bytes) -> dict[str, Any]:
 def format_stim_dict_with_ids(stim_dict: dict[str, Any]) -> dict[str, Any]:
     """Add protocol IDs to stim dict from instrument after being offline."""
     for idx, _ in enumerate(stim_dict["protocols"]):
-        protocol_id = chr(idx + 97).upper()
+        protocol_id = chr(idx + ord("A"))
         stim_dict["protocols"][idx]["protocol_id"] = protocol_id
 
         stim_dict["protocol_assignments"] |= {
