@@ -683,13 +683,12 @@ class InstrumentComm:
 
         protocol_statuses: dict[int, Any] = parse_stim_data(*stim_stream_info.values())
 
-        logger.debug("Stim statuses received: %s", protocol_statuses)
-
         protocols_completed = [
             protocol_idx
             for protocol_idx, status_updates_arr in protocol_statuses.items()
             if status_updates_arr[1][-1] == STIM_COMPLETE_SUBPROTOCOL_IDX
         ]
+
         if protocols_completed:
             self._protocols_running -= set(protocols_completed)
             await self._to_monitor_queue.put(

@@ -41,7 +41,10 @@ from ..constants import STIM_MODULE_ID_TO_WELL_IDX
 from ..constants import STIM_OPEN_CIRCUIT_THRESHOLD_OHMS
 from ..constants import STIM_PULSE_BYTES_LEN
 from ..constants import STIM_SHORT_CIRCUIT_THRESHOLD_OHMS
+from ..constants import STIM_STATUS_BYTES_LEN
 from ..constants import STIM_WELL_IDX_TO_MODULE_ID
+from ..constants import StimProtocolStatuses
+from ..constants import StimulationStates
 from ..constants import StimulatorCircuitStatuses
 
 # TODO remove
@@ -495,16 +498,32 @@ def convert_stim_bytes_to_dict(stim_bytes: bytes) -> dict[str, Any]:
 def parse_end_offline_mode_bytes(response_bytes: bytes) -> dict[str, Any]:
     """Parse bytes containing stimulation info and return as Dict."""
 
-    stim_dict = convert_stim_bytes_to_dict(response_bytes[41:])
+    stim_dict = convert_stim_bytes_to_dict(response_bytes[281:])
     updated_stim_dict = format_stim_dict_with_ids(stim_dict)
+    num_protocols = len(updated_stim_dict["protocols"])
 
     return {
         "system_dormant_timestamp": int.from_bytes(response_bytes[:8]),
         "stim_active": bool(response_bytes[8]),
         "last_stim_scheduled_start_timestamp": int.from_bytes(response_bytes[9:17]),
-        "stimulator_statuses": response_bytes[17:41],  # TODO will need to update with final dict here
+        "stimulation_protocol_statuses": parse_stim_offline_statuses(response_bytes[17:281], num_protocols),
         "stim_info": updated_stim_dict,
     }
+
+
+def parse_stim_offline_statuses(status_bytes: bytes, num_protocols: int) -> list[StimulationStates]:
+    """Parse stimulator statuses bytes for active states."""
+    # 264 bytes are always returned, only parse bytes with running protocols
+    status_bytes_to_parse = num_protocols * STIM_STATUS_BYTES_LEN
+    stimulation_protocol_statuses = []
+
+    for byte_idx in range(9, len(status_bytes[:status_bytes_to_parse]), STIM_STATUS_BYTES_LEN):
+        status = status_bytes[byte_idx]
+        stimulation_protocol_statuses.append(
+            StimulationStates.RUNNING if status == StimProtocolStatuses.ACTIVE else StimulationStates.INACTIVE
+        )
+
+    return stimulation_protocol_statuses
 
 
 def format_stim_dict_with_ids(stim_dict: dict[str, Any]) -> dict[str, Any]:

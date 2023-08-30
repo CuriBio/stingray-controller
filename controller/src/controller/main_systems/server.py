@@ -169,7 +169,7 @@ class Server:
     def _get_offline_state(self) -> bool:
         system_state = self._get_system_state_ro()
         system_status = system_state["system_status"]
-        return bool(system_status == SystemStatuses.OFFLINE_STATE)
+        return system_status == SystemStatuses.OFFLINE_STATE  # type: ignore
 
     async def _handle_comm(self, websocket: WebSocketServerProtocol) -> None:
         producer = asyncio.create_task(self._producer(websocket))
@@ -401,15 +401,9 @@ class Server:
         """Initiate or terminate system offline mode."""
 
         system_state = self._get_system_state_ro()
-        system_status = system_state["system_status"]
         incoming_offline_state = comm["offline_state"]
 
-        comms_to_ignore = (
-            system_status == SystemStatuses.OFFLINE_STATE and incoming_offline_state,
-            system_status != SystemStatuses.OFFLINE_STATE and not incoming_offline_state,
-        )
-
-        if any(comms_to_ignore):
+        if incoming_offline_state is self._get_offline_state():
             return  # nothing to do here
         if not _are_any_stim_protocols_running(system_state) and incoming_offline_state:
             raise WebsocketCommandError("Can only enter offline state if stimulation is active")

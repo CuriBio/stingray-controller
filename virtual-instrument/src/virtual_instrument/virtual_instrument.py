@@ -360,7 +360,7 @@ class MantarrayMcSimulator(InfiniteProcess):
             self._handle_magnetometer_data_packet()
         if self._is_stimulating:
             self._handle_stimulation_packets()
-        # self._check_handshake()
+        self._check_handshake()
         self._handle_barcode()
 
     def _handle_comm_from_controller(self) -> None:
@@ -516,7 +516,7 @@ class MantarrayMcSimulator(InfiniteProcess):
             response_body += convert_instrument_event_info_to_bytes(self.default_event_info)
         elif packet_type == SerialCommPacketTypes.CHECK_CONNECTION_STATUS:
             # change to mock headless mode on startup
-            response_body += bytes([InstrumentConnectionStatuses.CONNECTED.value])
+            response_body += bytes([InstrumentConnectionStatuses.CONNECTED])
             self._system_in_offline_mode = False
 
         elif packet_type == SerialCommPacketTypes.ERROR_ACK:  # pragma: no cover
@@ -528,13 +528,43 @@ class MantarrayMcSimulator(InfiniteProcess):
             self._system_in_offline_mode = False
             test_time_index = self._get_global_timer()
 
+            is_stim_running = False
+
+            status_update_bytes = bytes(0)
+
+            for protocol_idx, is_protocol_running in enumerate(self._stim_running_statuses):
+                subprotocol_manager = self._stim_subprotocol_managers[protocol_idx]
+
+                if is_protocol_running:
+                    is_stim_running = True
+                    stim_status = StimProtocolStatuses.ACTIVE
+                    sub_idx = subprotocol_manager.idx()
+                else:
+                    stim_status = StimProtocolStatuses.FINISHED
+                    sub_idx = STIM_COMPLETE_SUBPROTOCOL_IDX
+
+                status_update_bytes += (
+                    bytes([protocol_idx])
+                    + test_time_index.to_bytes(8, byteorder="little")
+                    + bytes([stim_status])
+                    + bytes([sub_idx])
+                )
+
+            # fill rest of 24 possible protocols with null statuses
+            status_update_bytes += (
+                bytes([24])
+                + test_time_index.to_bytes(8, byteorder="little")
+                + bytes([StimProtocolStatuses.NULL])
+                + bytes([STIM_COMPLETE_SUBPROTOCOL_IDX])
+            ) * (24 - len(self._stim_running_statuses))
+
             response_body += (
                 test_time_index.to_bytes(
                     8, byteorder="little"
                 )  # Relative time of when system went dormant last
-                + bytes([True])  # is stim running?
+                + bytes([is_stim_running])  # is stim running?
                 + test_time_index.to_bytes(8, byteorder="little")  # Relative time of last stim schedule start
-                + bytes([False] * 24)  # stim statuses
+                + status_update_bytes  # stim statuses
                 + convert_stim_dict_to_bytes(self._stim_info)  # Protocol data
             )
         else:
@@ -597,6 +627,7 @@ class MantarrayMcSimulator(InfiniteProcess):
         num_status_updates = 0
         status_update_bytes = bytes(0)
         stop_time_index = self._get_global_timer()
+
         for protocol_idx, is_stim_running in enumerate(self._stim_running_statuses):
             if not is_stim_running:
                 continue
@@ -608,6 +639,7 @@ class MantarrayMcSimulator(InfiniteProcess):
                 + bytes([StimProtocolStatuses.FINISHED])
                 + bytes([STIM_COMPLETE_SUBPROTOCOL_IDX])
             )
+
         self._send_data_packet(
             SerialCommPacketTypes.STIM_STATUS, bytes([num_status_updates]) + status_update_bytes
         )

@@ -310,7 +310,6 @@ class SystemMonitor:
                         )
                 case {"command": "get_metadata", **metadata}:
                     system_state_updates["instrument_metadata"] = metadata
-                    # immediately check connection status
                 case {"command": "firmware_update_complete", "firmware_type": firmware_type}:
                     key = f"{firmware_type}_firmware_update"
                     fw_version = system_state[key]
@@ -327,12 +326,16 @@ class SystemMonitor:
                     system_state_updates[key] = None
                 case {"command": "init_offline_mode"}:
                     system_state_updates["system_status"] = SystemStatuses.OFFLINE_STATE
-                case {"command": "end_offline_mode", "stim_info": stim_info}:
+                case {
+                    "command": "end_offline_mode",
+                    "stim_info": stim_info,
+                    "stimulation_protocol_statuses": stimulation_protocol_statuses,
+                }:
+                    logger.info("STIM STATUSES: ")
+                    logger.info(stimulation_protocol_statuses)
                     # setup stim state entering online mode
                     system_state_updates["stim_info"] = stim_info
-                    system_state_updates["stimulation_protocol_statuses"] = [StimulationStates.RUNNING] * len(
-                        stim_info["protocols"]
-                    )
+                    system_state_updates["stimulation_protocol_statuses"] = stimulation_protocol_statuses
                     system_state_updates["system_status"] = SystemStatuses.IDLE_READY_STATE
 
                     # just sending stim protocols to UI to repopulate stim studio
@@ -343,7 +346,7 @@ class SystemMonitor:
                     # if not booting up offline, then set to system initializing to kick off cloud comm to check versions
                     system_state_updates["system_status"] = (
                         SystemStatuses.OFFLINE_STATE
-                        if status == InstrumentConnectionStatuses.OFFLINE.value
+                        if status == InstrumentConnectionStatuses.OFFLINE
                         else SystemStatuses.SYSTEM_INITIALIZING_STATE
                     )
 
