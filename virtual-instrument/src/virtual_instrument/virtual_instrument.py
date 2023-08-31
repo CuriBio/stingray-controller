@@ -27,6 +27,7 @@ from controller.constants import SERIAL_COMM_MAX_PAYLOAD_LENGTH_BYTES
 from controller.constants import SERIAL_COMM_MODULE_ID_TO_WELL_IDX
 from controller.constants import SERIAL_COMM_NICKNAME_BYTES_LENGTH
 from controller.constants import SERIAL_COMM_OKAY_CODE
+from controller.constants import SERIAL_COMM_PACKET_REMAINDER_SIZE_LENGTH_BYTES
 from controller.constants import SERIAL_COMM_PACKET_TYPE_INDEX
 from controller.constants import SERIAL_COMM_PAYLOAD_INDEX
 from controller.constants import SERIAL_COMM_STATUS_BEACON_PERIOD_SECONDS
@@ -359,14 +360,14 @@ class MantarrayMcSimulator(InfiniteProcess):
 
     def _handle_comm_from_controller(self) -> None:
         try:
-            magic_word = self.conn.recv(8)
+            magic_word = self.conn.recv(len(SERIAL_COMM_MAGIC_WORD_BYTES))
         except BlockingIOError:
             return
 
         if magic_word != SERIAL_COMM_MAGIC_WORD_BYTES:
             raise Exception(f"Incorrect magic word from controller: {list(magic_word)}")
 
-        packet_remainder_size_bytes = self.conn.recv(2)
+        packet_remainder_size_bytes = self.conn.recv(SERIAL_COMM_PACKET_REMAINDER_SIZE_LENGTH_BYTES)
         comm_from_controller = (
             magic_word
             + packet_remainder_size_bytes
