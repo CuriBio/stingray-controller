@@ -196,7 +196,9 @@ class Server:
             allowed_comm_in_offline = command in ("set_offline_state", "shutdown")
             ignore_incoming_comm = not allowed_comm_in_offline and self._get_offline_state()
 
-            if not ignore_incoming_comm:
+            if ignore_incoming_comm:
+                logger.info(f"Ignoring command '{command}' in server while offline")
+            else:
                 self._log_incoming_message(msg)
 
                 try:
@@ -211,8 +213,6 @@ class Server:
                 except WebsocketCommandError as e:
                     logger.error(f"Command {command} failed with error: {e.args[0]}")
                     raise
-            else:
-                logger.info(f"Ignoring command '{command}' in server while offline")
 
     def _log_incoming_message(self, msg: dict[str, Any]) -> None:
         if msg["command"] == "login":
