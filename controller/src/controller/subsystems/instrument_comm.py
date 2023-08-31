@@ -353,8 +353,9 @@ class InstrumentComm:
                     self._system_in_offline_mode = True
                 case {"command": "end_offline_mode"}:
                     packet_type = SerialCommPacketTypes.END_OFFLINE_MODE
-                    # the _offline_state_change event needs to be triggered here instead of in _process_instrument_comm because we first need to restart the task that handles instrument comm
                     self._system_in_offline_mode = False
+                    # this event needs to be triggered now instead of after the instrument responds to this command
+                    # because we need to restart the task that reads data from the instrument
                     self._offline_state_change.set()
                 case {"command": "check_connection_status"}:
                     packet_type = SerialCommPacketTypes.CHECK_CONNECTION_STATUS

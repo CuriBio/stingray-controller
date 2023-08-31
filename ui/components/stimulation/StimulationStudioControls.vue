@@ -307,7 +307,7 @@ export default {
       },
       startupInOfflineLabels: {
         header: "Important!",
-        msgOne: "This istrument is currently running in offline mode.",
+        msgOne: "This instrument is currently running in offline mode.",
         msgTwo:
           "Would you like to proceed in offline mode, or reconnect to the instrument and enter online mode? Stimulation will continue running on the instrument with either option.",
         buttonNames: ["Stay Offline", "Reconnect"],
