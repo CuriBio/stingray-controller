@@ -109,6 +109,8 @@ INTERMEDIATE_FIRMWARE_UPDATE_COMMANDS = (
     "end_of_firmware_update",
 )
 
+COMMANDS_ALLOWED_IN_OFFLINE_MODE = ("end_offline_mode",)
+
 
 class InstrumentComm:
     """Subsystem that manages communication with the Stingray Instrument."""
@@ -176,6 +178,7 @@ class InstrumentComm:
             tasks = {
                 asyncio.create_task(self._handle_comm_from_monitor()),
                 asyncio.create_task(self._manage_online_mode_tasks()),
+                asyncio.create_task(self._catch_expired_command()),
             }
 
             await wait_tasks_clean(tasks, error_msg=ERROR_MSG)
@@ -308,17 +311,11 @@ class InstrumentComm:
             bytes_to_send = bytes(0)
             packet_type: int | None = None
 
-            is_offline_mode_comm = comm_from_monitor["command"] in (
-                "end_offline_mode",
-                "check_connection_status",
-            )
-
-            ignore_incoming_comm = not is_offline_mode_comm and self._system_in_offline_mode
-
-            if ignore_incoming_comm:
-                logger.info(
-                    f"Ignoring incoming command '{comm_from_monitor['command']}' in instrument comm while offline"
-                )
+            if (
+                self._system_in_offline_mode
+                and (command := comm_from_monitor["command"]) not in COMMANDS_ALLOWED_IN_OFFLINE_MODE
+            ):
+                logger.info(f"Ignoring online-only command '{command}'")
                 return
 
             match comm_from_monitor:
@@ -356,7 +353,7 @@ class InstrumentComm:
                     self._system_in_offline_mode = True
                 case {"command": "end_offline_mode"}:
                     packet_type = SerialCommPacketTypes.END_OFFLINE_MODE
-                    # the _offline_state_change event needs to be triggered here instead of in process instrument comm because we first need to restart the task that handles instrument comm
+                    # the _offline_state_change event needs to be triggered here instead of in _process_instrument_comm because we first need to restart the task that handles instrument comm
                     self._system_in_offline_mode = False
                     self._offline_state_change.set()
                 case {"command": "check_connection_status"}:
@@ -373,14 +370,17 @@ class InstrumentComm:
     async def _manage_online_mode_tasks(self) -> None:
         main_task_name = self._wait_for_offline_state_change.__name__
 
-        # TODO clean up repetitive code
-        pending = {
-            asyncio.create_task(self._wait_for_offline_state_change(), name=main_task_name),
-            asyncio.create_task(self._handle_sending_handshakes()),
-            asyncio.create_task(self._handle_data_stream()),
-            asyncio.create_task(self._handle_beacon_tracking()),
-            asyncio.create_task(self._catch_expired_command()),
-        }
+        def _create_main_task() -> set[asyncio.Task[Any]]:
+            return {asyncio.create_task(self._wait_for_offline_state_change(), name=main_task_name)}
+
+        def _create_online_mode_tasks() -> set[asyncio.Task[Any]]:
+            return {
+                asyncio.create_task(self._handle_sending_handshakes()),
+                asyncio.create_task(self._handle_data_stream()),
+                asyncio.create_task(self._handle_beacon_tracking()),
+            }
+
+        pending = _create_main_task() | _create_online_mode_tasks()
 
         while True:
             done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
@@ -388,25 +388,20 @@ class InstrumentComm:
             for task in done:
                 task_name = task.get_name()
 
-                if task_name == main_task_name:
-                    # TODO consider making this it's own function
-                    if self._system_in_offline_mode:
-                        logger.info("Cancelling online mode tasks")
-                        exc = await clean_up_tasks(pending, ERROR_MSG)
-                        if exc:
-                            raise exc
-                    elif len(pending) == 0:
-                        logger.info("Creating online mode tasks")
-                        pending |= {
-                            asyncio.create_task(self._handle_sending_handshakes()),
-                            asyncio.create_task(self._handle_data_stream()),
-                            asyncio.create_task(self._handle_beacon_tracking()),
-                            asyncio.create_task(self._catch_expired_command()),
-                        }
+                if task_name != main_task_name:
+                    await clean_up_tasks(done | pending, ERROR_MSG, raise_error=True)
+                    return
 
-                    pending |= {
-                        asyncio.create_task(self._wait_for_offline_state_change(), name=main_task_name)
-                    }
+                if self._system_in_offline_mode:
+                    logger.info("Cancelling online mode tasks")
+                    await clean_up_tasks(pending, ERROR_MSG, raise_error=True)
+                    # all pending tasks have been cleaned up, so can discard them all now
+                    pending = set()
+                else:
+                    logger.info("Restarting online mode tasks")
+                    pending = _create_online_mode_tasks()
+
+                pending |= _create_main_task()
 
     async def _wait_for_offline_state_change(self) -> None:
         await self._offline_state_change.wait()
@@ -609,6 +604,7 @@ class InstrumentComm:
                     raise IncorrectInstrumentConnectedError()
                 prev_command_info.update(metadata_dict)
 
+                # TODO might be better to send this immediately after sending the get_metadata command
                 await self._send_data_packet(SerialCommPacketTypes.CHECK_CONNECTION_STATUS)
                 await self._command_tracker.add(
                     SerialCommPacketTypes.CHECK_CONNECTION_STATUS, {"command": "check_connection_status"}

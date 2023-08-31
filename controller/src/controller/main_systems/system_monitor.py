@@ -431,8 +431,7 @@ class SystemMonitor:
                 case invalid_comm:
                     raise NotImplementedError(f"Invalid communication from CloudComm: {invalid_comm}")
 
-            # only update system status if not in offline state, affects starting up in offline
-            if system_state_updates and system_state["system_status"] != SystemStatuses.OFFLINE_STATE:
+            if system_state_updates:
                 await self._system_state_manager.update(system_state_updates)
 
     # HELPERS

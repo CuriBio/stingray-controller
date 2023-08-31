@@ -16,17 +16,16 @@ from uuid import UUID
 from zlib import crc32
 
 from controller.constants import GOING_DORMANT_HANDSHAKE_TIMEOUT_CODE
+from controller.constants import InstrumentConnectionStatuses
 from controller.constants import MAX_MC_REBOOT_DURATION_SECONDS
 from controller.constants import MICRO_TO_BASE_CONVERSION
 from controller.constants import MICROS_PER_MILLI
 from controller.constants import SERIAL_COMM_CHECKSUM_LENGTH_BYTES
-from controller.constants import SERIAL_COMM_HANDSHAKE_PERIOD_SECONDS
 from controller.constants import SERIAL_COMM_HANDSHAKE_TIMEOUT_SECONDS
 from controller.constants import SERIAL_COMM_MAGIC_WORD_BYTES
 from controller.constants import SERIAL_COMM_MAX_PAYLOAD_LENGTH_BYTES
 from controller.constants import SERIAL_COMM_MODULE_ID_TO_WELL_IDX
 from controller.constants import SERIAL_COMM_NICKNAME_BYTES_LENGTH
-from controller.constants import SERIAL_COMM_NUM_ALLOWED_MISSED_HANDSHAKES
 from controller.constants import SERIAL_COMM_OKAY_CODE
 from controller.constants import SERIAL_COMM_PACKET_TYPE_INDEX
 from controller.constants import SERIAL_COMM_PAYLOAD_INDEX
@@ -60,12 +59,10 @@ from stdlib_utils import InfiniteProcess
 from stdlib_utils import resource_path
 
 from .constants import DEFAULT_SAMPLING_PERIOD
-from .constants import InstrumentConnectionStatuses
 from .constants import MICROSECONDS_PER_CENTIMILLISECOND
 from .constants import SERIAL_COMM_NUM_CHANNELS_PER_SENSOR
 from .constants import SERIAL_COMM_NUM_SENSORS_PER_WELL
 from .exceptions import SerialCommInvalidSamplingPeriodError
-from .exceptions import SerialCommTooManyMissedHandshakesError
 from .exceptions import UnrecognizedSerialCommPacketTypeError
 from .stimulation import StimulationProtocolManager
 
@@ -79,10 +76,6 @@ def _perf_counter_us() -> int:
     return perf_counter_ns() // 10**3
 
 
-def _get_secs_since_read_start(start: float) -> float:
-    return perf_counter() - start
-
-
 def _get_secs_since_last_handshake(last_time: float) -> float:
     return perf_counter() - last_time
 
@@ -93,10 +86,6 @@ def _get_secs_since_last_status_beacon(last_time: float) -> float:
 
 def _get_secs_since_reboot_command(command_time: float) -> float:
     return perf_counter() - command_time
-
-
-def _get_secs_since_last_comm_from_controller(last_time: float) -> float:
-    return perf_counter() - last_time
 
 
 def _get_us_since_last_data_packet(last_time_us: int) -> int:
@@ -136,7 +125,7 @@ class MantarrayMcSimulator(InfiniteProcess):
             "prev_system_going_dormant_timestamp": 6,
             "mag_data_stream_active": False,
             "stim_active": False,
-            "pc_connection_status": 1,
+            "pc_connection_status": InstrumentConnectionStatuses.DISCONNECTED,
             "prev_barcode_scanned": default_plate_barcode,
         }
     )
@@ -175,7 +164,6 @@ class MantarrayMcSimulator(InfiniteProcess):
         # self._setup_data_interpolator()
         # simulator values (set in _handle_boot_up_config)
         self._time_of_last_handshake_secs: float | None = None
-        self._time_of_last_comm_from_controller_secs: float | None = None
         self._reboot_again = False
         self._reboot_time_secs: float | None
         self._boot_up_time_secs: float | None = None
@@ -192,11 +180,18 @@ class MantarrayMcSimulator(InfiniteProcess):
         self._firmware_update_idx: int | None = None
         self._firmware_update_bytes: bytes | None
         self._new_nickname: str | None = None
-        self._system_in_offline_mode: bool = False
         self._handle_boot_up_config()
 
     def start(self) -> None:
         super().start()
+
+    @property
+    def _connection_status(self) -> InstrumentConnectionStatuses:
+        return self._metadata_dict["pc_connection_status"]
+
+    @_connection_status.setter
+    def _connection_status(self, value: InstrumentConnectionStatuses) -> None:
+        self._metadata_dict["pc_connection_status"] = value
 
     @property
     def _is_streaming_data(self) -> bool:
@@ -262,7 +257,6 @@ class MantarrayMcSimulator(InfiniteProcess):
 
     def _handle_boot_up_config(self, reboot: bool = False) -> None:
         self._time_of_last_handshake_secs = None
-        self._time_of_last_comm_from_controller_secs = None
         self._reset_start_time()
         self._reboot_time_secs = None
         self._status_codes = [SERIAL_COMM_OKAY_CODE] * (self._num_wells + 2)
@@ -360,14 +354,13 @@ class MantarrayMcSimulator(InfiniteProcess):
             self._handle_magnetometer_data_packet()
         if self._is_stimulating:
             self._handle_stimulation_packets()
-        self._check_handshake()
+        self._check_handshake_timeout()
         self._handle_barcode()
 
     def _handle_comm_from_controller(self) -> None:
         try:
             magic_word = self.conn.recv(8)
         except BlockingIOError:
-            self._check_handshake_timeout()
             return
 
         if magic_word != SERIAL_COMM_MAGIC_WORD_BYTES:
@@ -380,8 +373,6 @@ class MantarrayMcSimulator(InfiniteProcess):
             + self.conn.recv(int.from_bytes(packet_remainder_size_bytes, "little"))
         )
 
-        self._time_of_last_comm_from_controller_secs = perf_counter()
-
         # validate checksum before handling the communication
         checksum_is_valid = validate_checksum(comm_from_controller)
         if not checksum_is_valid:
@@ -392,14 +383,18 @@ class MantarrayMcSimulator(InfiniteProcess):
         self._process_main_module_command(comm_from_controller)
 
     def _check_handshake_timeout(self) -> None:
-        if self._time_of_last_comm_from_controller_secs is None:
+        if self._time_of_last_handshake_secs is None or self._connection_status in (
+            InstrumentConnectionStatuses.DISCONNECTED,
+            InstrumentConnectionStatuses.OFFLINE,
+        ):
             return
-        secs_since_last_comm_from_controller = _get_secs_since_last_comm_from_controller(
-            self._time_of_last_comm_from_controller_secs
-        )
-        if secs_since_last_comm_from_controller >= SERIAL_COMM_HANDSHAKE_TIMEOUT_SECONDS:
-            self._time_of_last_comm_from_controller_secs = None
+
+        if (
+            _get_secs_since_last_handshake(self._time_of_last_handshake_secs)
+            >= SERIAL_COMM_HANDSHAKE_TIMEOUT_SECONDS
+        ):
             # Tanner (3/23/22): real board will also stop stimulation and magnetometer data streaming here, but adding this to the simulator is not entirely necessary as there is no risk to leaving these processes on
+            self._connection_status = InstrumentConnectionStatuses.DISCONNECTED
             self._send_data_packet(
                 SerialCommPacketTypes.GOING_DORMANT, bytes([GOING_DORMANT_HANDSHAKE_TIMEOUT_CODE])
             )
@@ -415,6 +410,7 @@ class MantarrayMcSimulator(InfiniteProcess):
         if packet_type == SerialCommPacketTypes.REBOOT:
             self._reboot_time_secs = perf_counter()
         elif packet_type == SerialCommPacketTypes.HANDSHAKE:
+            self._connection_status = InstrumentConnectionStatuses.CONNECTED
             self._time_of_last_handshake_secs = perf_counter()
             response_body += bytes(self._status_codes)
         elif packet_type == SerialCommPacketTypes.SET_STIM_PROTOCOL:
@@ -515,17 +511,16 @@ class MantarrayMcSimulator(InfiniteProcess):
         elif packet_type == SerialCommPacketTypes.GET_ERROR_DETAILS:  # pragma: no cover
             response_body += convert_instrument_event_info_to_bytes(self.default_event_info)
         elif packet_type == SerialCommPacketTypes.CHECK_CONNECTION_STATUS:
-            # change to mock headless mode on startup
             response_body += bytes([InstrumentConnectionStatuses.CONNECTED])
-            self._system_in_offline_mode = False
-
         elif packet_type == SerialCommPacketTypes.ERROR_ACK:  # pragma: no cover
             # Tanner (3/24/22): As of right now, simulator does not need to handle this message at all, so it is the responsibility of tests to prompt simulator to go through the rest of the error handling procedure
             pass
         elif packet_type == SerialCommPacketTypes.INIT_OFFLINE_MODE:
-            self._system_in_offline_mode = True
+            self._connection_status = InstrumentConnectionStatuses.OFFLINE
         elif packet_type == SerialCommPacketTypes.END_OFFLINE_MODE:
-            self._system_in_offline_mode = False
+            self._connection_status = InstrumentConnectionStatuses.CONNECTED
+            self._time_of_last_handshake_secs = perf_counter()
+            # TODO clean this up
             test_time_index = self._get_global_timer()
 
             is_stim_running = False
@@ -599,19 +594,6 @@ class MantarrayMcSimulator(InfiniteProcess):
     def _send_status_beacon(self, truncate: bool = False) -> None:
         self._time_of_last_status_beacon_secs = perf_counter()
         self._send_data_packet(SerialCommPacketTypes.STATUS_BEACON, bytes(self._status_codes), truncate)
-
-    def _check_handshake(self) -> None:
-        if self._time_of_last_handshake_secs is None:
-            return
-
-        time_of_last_handshake_secs = _get_secs_since_last_handshake(self._time_of_last_handshake_secs)
-
-        if (
-            time_of_last_handshake_secs
-            >= SERIAL_COMM_HANDSHAKE_PERIOD_SECONDS * SERIAL_COMM_NUM_ALLOWED_MISSED_HANDSHAKES
-            and not self._system_in_offline_mode
-        ):
-            raise SerialCommTooManyMissedHandshakesError()
 
     def _handle_barcode(self) -> None:
         if self._ready_to_send_barcode:

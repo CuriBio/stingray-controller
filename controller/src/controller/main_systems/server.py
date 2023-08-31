@@ -33,6 +33,8 @@ logger = logging.getLogger(__name__)
 
 ERROR_MSG = "IN SERVER"
 
+COMMANDS_ALLOWED_IN_OFFLINE_MODE = ("set_offline_state", "shutdown")
+
 
 def mark_handler(fn: Callable[..., Any]) -> Callable[..., Any]:
     fn._is_handler = True  # type: ignore
@@ -166,11 +168,6 @@ class Server:
         else:
             logger.error("UI has already disconnected, cannot send error message")
 
-    def _get_offline_state(self) -> bool:
-        system_state = self._get_system_state_ro()
-        system_status = system_state["system_status"]
-        return system_status == SystemStatuses.OFFLINE_STATE  # type: ignore
-
     async def _handle_comm(self, websocket: WebSocketServerProtocol) -> None:
         producer = asyncio.create_task(self._producer(websocket))
         consumer = asyncio.create_task(self._consumer(websocket))
@@ -192,27 +189,29 @@ class Server:
             except websockets.ConnectionClosed:
                 return
 
+            self._log_incoming_message(msg)
+
             command = msg["command"]
-            allowed_comm_in_offline = command in ("set_offline_state", "shutdown")
-            ignore_incoming_comm = not allowed_comm_in_offline and self._get_offline_state()
 
-            if ignore_incoming_comm:
-                logger.info(f"Ignoring command '{command}' in server while offline")
-            else:
-                self._log_incoming_message(msg)
+            if (
+                _is_in_offline_mode(self._get_system_state_ro())
+                and command not in COMMANDS_ALLOWED_IN_OFFLINE_MODE
+            ):
+                logger.info(f"Ignoring online-only command '{command}'")
+                return
 
-                try:
-                    # TODO try using pydantic to define message schema + some other message schema generator (nano message, ask Jason)
-                    handler = self._handlers[command]
-                except KeyError as e:
-                    raise WebsocketCommandError(f"Unrecognized command from UI: {command}") from e
+            try:
+                # TODO try using pydantic to define message schema + some other message schema generator (nano message, ask Jason)
+                handler = self._handlers[command]
+            except KeyError as e:
+                raise WebsocketCommandError(f"Unrecognized command from UI: {command}") from e
 
-                # TODO make sure the error handling works here
-                try:
-                    await handler(self, msg)
-                except WebsocketCommandError as e:
-                    logger.error(f"Command {command} failed with error: {e.args[0]}")
-                    raise
+            # TODO make sure the error handling works here
+            try:
+                await handler(self, msg)
+            except WebsocketCommandError as e:
+                logger.error(f"Command {command} failed with error: {e.args[0]}")
+                raise
 
     def _log_incoming_message(self, msg: dict[str, Any]) -> None:
         if msg["command"] == "login":
@@ -399,11 +398,11 @@ class Server:
     @mark_handler
     async def _set_offline_state(self, comm: dict[str, Any]) -> None:
         """Initiate or terminate system offline mode."""
-
         system_state = self._get_system_state_ro()
+
         incoming_offline_state = comm["offline_state"]
 
-        if incoming_offline_state is self._get_offline_state():
+        if incoming_offline_state is _is_in_offline_mode(system_state):
             return  # nothing to do here
         if not _are_any_stim_protocols_running(system_state) and incoming_offline_state:
             raise WebsocketCommandError("Can only enter offline state if stimulation is active")
@@ -413,6 +412,11 @@ class Server:
 
 
 # HELPERS
+
+
+def _is_in_offline_mode(system_state: ReadOnlyDict) -> bool:
+    system_status = system_state["system_status"]
+    return system_status == SystemStatuses.OFFLINE_STATE  # type: ignore  # for some reason mypy thinks the type here is Any
 
 
 def _are_any_stim_protocols_running(system_state: ReadOnlyDict) -> bool:
