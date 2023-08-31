@@ -10,10 +10,8 @@ if __name__ == "__main__":
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.bind((HOST, PORT))
         s.listen(1)
+        s.setblocking(False)
         print("WAITING")  # allow-print
-        conn, addr = s.accept()
-        print(f"CONNECTION MADE: {addr}")  # allow-print
-        with conn:
-            conn.setblocking(False)
-            simulator = MantarrayMcSimulator(conn)
-            simulator.run()
+
+        simulator = MantarrayMcSimulator(s)
+        simulator.run()

@@ -655,7 +655,10 @@ class InstrumentComm:
                 self._system_in_offline_mode = response_data[0] == InstrumentConnectionStatuses.OFFLINE
                 if self._system_in_offline_mode:
                     self._offline_state_change.set()
-                    logger.info("Starting up in offline mode")
+
+                logger.info(
+                    f"Instrument running in {'offline' if self._system_in_offline_mode else 'online'} mode at time of connection"
+                )
             case "end_offline_mode":
                 prev_command_info |= parse_end_offline_mode_bytes(response_data)
             case "init_offline_mode":

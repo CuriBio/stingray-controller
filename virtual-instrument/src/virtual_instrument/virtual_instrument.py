@@ -145,11 +145,12 @@ class MantarrayMcSimulator(InfiniteProcess):
     default_adc_reading = 0xFF00
     global_timer_offset_secs = 2.5  # TODO Tanner (11/17/21): figure out if this should be removed
 
-    def __init__(self, conn: socket.socket, logging_level: int = logging.INFO, num_wells: int = 24) -> None:
+    def __init__(self, sock: socket.socket, logging_level: int = logging.INFO, num_wells: int = 24) -> None:
         # InfiniteProcess values
         super().__init__(Queue(), logging_level=logging_level)
         # socket connections
-        self.conn = conn
+        self.sock = sock
+        self.conn = None
         # plate values
         self._num_wells = num_wells
         # simulator values (not set in _handle_boot_up_config)
@@ -324,7 +325,8 @@ class MantarrayMcSimulator(InfiniteProcess):
             data_packet = data_packet[trunc_index:]
         print("SEND:", packet_type)  # allow-print
 
-        self.conn.sendall(data_packet)
+        if self.conn:
+            self.conn.sendall(data_packet)
 
     def _commands_for_each_run_iteration(self) -> None:
         """Ordered actions to perform each iteration.
@@ -338,6 +340,8 @@ class MantarrayMcSimulator(InfiniteProcess):
         7. Check if the handshake from the Controller is overdue. This should be done after checking for data sent from the Controller since the next packet might be a handshake.
         8. Check if the barcode is ready to send. This is currently the lowest priority.
         """
+        self._check_socket()
+
         if self.is_rebooting():  # Tanner (1/24/22): currently checks if self._reboot_time_secs is not None
             secs_since_reboot = _get_secs_since_reboot_command(self._reboot_time_secs)  # type: ignore
             # if secs_since_reboot is less than the reboot duration, simulator is still in the 'reboot' phase. Commands from Controller will be ignored and status beacons will not be sent
@@ -349,6 +353,7 @@ class MantarrayMcSimulator(InfiniteProcess):
             if self._reboot_again:
                 self._reboot_time_secs = perf_counter()
             self._reboot_again = False
+
         self._handle_comm_from_controller()
         self._handle_status_beacon()
         if self._is_streaming_data:
@@ -358,11 +363,37 @@ class MantarrayMcSimulator(InfiniteProcess):
         self._check_handshake_timeout()
         self._handle_barcode()
 
+    def _check_socket(self):
+        if self.conn:
+            return
+
+        try:
+            self.conn, addr = self.sock.accept()
+        except BlockingIOError:
+            return
+
+        print(f"CONNECTION MADE: {addr}")  # allow-print
+        self.conn.setblocking(False)
+
     def _handle_comm_from_controller(self) -> None:
+        if not self.conn:
+            return
+
         try:
             magic_word = self.conn.recv(len(SERIAL_COMM_MAGIC_WORD_BYTES))
         except BlockingIOError:
             return
+        except ConnectionResetError:
+            if self._connection_status != InstrumentConnectionStatuses.OFFLINE:
+                raise
+
+            self.conn.close()
+            self.conn = None
+            return
+        else:
+            if not magic_word:
+                # assume that the controller disconnected here and ignore
+                return
 
         if magic_word != SERIAL_COMM_MAGIC_WORD_BYTES:
             raise Exception(f"Incorrect magic word from controller: {list(magic_word)}")
@@ -411,7 +442,8 @@ class MantarrayMcSimulator(InfiniteProcess):
         if packet_type == SerialCommPacketTypes.REBOOT:
             self._reboot_time_secs = perf_counter()
         elif packet_type == SerialCommPacketTypes.HANDSHAKE:
-            self._connection_status = InstrumentConnectionStatuses.CONNECTED
+            if self._connection_status == InstrumentConnectionStatuses.DISCONNECTED:
+                self._connection_status = InstrumentConnectionStatuses.CONNECTED
             self._time_of_last_handshake_secs = perf_counter()
             response_body += bytes(self._status_codes)
         elif packet_type == SerialCommPacketTypes.SET_STIM_PROTOCOL:
@@ -512,7 +544,7 @@ class MantarrayMcSimulator(InfiniteProcess):
         elif packet_type == SerialCommPacketTypes.GET_ERROR_DETAILS:  # pragma: no cover
             response_body += convert_instrument_event_info_to_bytes(self.default_event_info)
         elif packet_type == SerialCommPacketTypes.CHECK_CONNECTION_STATUS:
-            response_body += bytes([InstrumentConnectionStatuses.CONNECTED])
+            response_body += bytes([self._connection_status])
         elif packet_type == SerialCommPacketTypes.ERROR_ACK:  # pragma: no cover
             # Tanner (3/24/22): As of right now, simulator does not need to handle this message at all, so it is the responsibility of tests to prompt simulator to go through the rest of the error handling procedure
             pass
