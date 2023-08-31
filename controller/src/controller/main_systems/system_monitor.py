@@ -154,7 +154,6 @@ class SystemMonitor:
             for status_name in ("system_status", "stimulation_protocol_statuses", "in_simulation_mode")
             if (new_system_status := update_details.get(status_name))
         }
-
         if not status_update_details:
             return
 
@@ -331,13 +330,12 @@ class SystemMonitor:
                     "stim_info": stim_info,
                     "stimulation_protocol_statuses": stimulation_protocol_statuses,
                 }:
-                    logger.info("STIM STATUSES: ")
-                    logger.info(stimulation_protocol_statuses)
                     # setup stim state entering online mode
-                    system_state_updates["stim_info"] = stim_info
-                    system_state_updates["stimulation_protocol_statuses"] = stimulation_protocol_statuses
-                    system_state_updates["system_status"] = SystemStatuses.IDLE_READY_STATE
-
+                    system_state_updates |= {
+                        "stim_info": stim_info,
+                        "stimulation_protocol_statuses": stimulation_protocol_statuses,
+                        "system_status": SystemStatuses.IDLE_READY_STATE,
+                    }
                     # just sending stim protocols to UI to repopulate stim studio
                     await self._queues["to"]["server"].put(
                         {"communication_type": "end_offline_mode", "stim_info": stim_info}

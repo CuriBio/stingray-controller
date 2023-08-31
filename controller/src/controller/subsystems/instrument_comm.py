@@ -223,7 +223,6 @@ class InstrumentComm:
         if not self._instrument:
             logger.info("No live instrument detected, checking for virtual instrument")
             virtual_instrument = VirtualInstrumentConnection()
-
             try:
                 await virtual_instrument.connect()
             except BaseException as e:  # TODO make this a specific exception?
@@ -335,7 +334,6 @@ class InstrumentComm:
                 case {"command": "set_stim_protocols", "stim_info": stim_info}:
                     packet_type = SerialCommPacketTypes.SET_STIM_PROTOCOL
                     bytes_to_send = convert_stim_dict_to_bytes(stim_info)
-
                     if self._is_stimulating and not self._hardware_test_mode:
                         raise InstrumentCommandAttemptError(
                             "Cannot update stimulation protocols while stimulating"
@@ -607,10 +605,8 @@ class InstrumentComm:
                 logger.info(f"Instrument metadata received: {metadata_dict_for_logging}")
                 # validate after logging so that every value still gets logged in case of a bad value
                 validate_instrument_metadata(metadata_dict)
-
                 if not metadata_dict.pop("is_stingray"):
                     raise IncorrectInstrumentConnectedError()
-
                 prev_command_info.update(metadata_dict)
 
                 await self._send_data_packet(SerialCommPacketTypes.CHECK_CONNECTION_STATUS)
@@ -661,7 +657,6 @@ class InstrumentComm:
             case "check_connection_status":
                 prev_command_info["status"] = response_data[0]
                 self._system_in_offline_mode = response_data[0] == InstrumentConnectionStatuses.OFFLINE
-
                 if self._system_in_offline_mode:
                     self._offline_state_change.set()
                     logger.info("Starting up in offline mode")
@@ -683,12 +678,13 @@ class InstrumentComm:
 
         protocol_statuses: dict[int, Any] = parse_stim_data(*stim_stream_info.values())
 
+        logger.debug("Stim statuses received: %s", protocol_statuses)
+
         protocols_completed = [
             protocol_idx
             for protocol_idx, status_updates_arr in protocol_statuses.items()
             if status_updates_arr[1][-1] == STIM_COMPLETE_SUBPROTOCOL_IDX
         ]
-
         if protocols_completed:
             self._protocols_running -= set(protocols_completed)
             await self._to_monitor_queue.put(
@@ -702,7 +698,6 @@ class InstrumentComm:
         self._update_timepoints_of_events("status_beacon_received")
 
         status_codes_msg = f"{comm_type} received from instrument. Status Codes: {status_codes_dict}"
-
         if any(status_codes_dict.values()):
             logger.error(status_codes_msg)
             self._instrument_error_detected = True

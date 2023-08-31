@@ -3,7 +3,6 @@
 
 
 import datetime
-import logging
 import math
 import struct
 from typing import Any
@@ -46,10 +45,6 @@ from ..constants import STIM_WELL_IDX_TO_MODULE_ID
 from ..constants import StimProtocolStatuses
 from ..constants import StimulationStates
 from ..constants import StimulatorCircuitStatuses
-
-# TODO remove
-
-logger = logging.getLogger(__name__)
 
 # Tanner (3/18/21): If/When additional cython is needed to improve serial communication, this file may be worth investigating
 
@@ -112,7 +107,6 @@ def create_data_packet(timestamp: int, packet_type: int, packet_payload: bytes =
     data_packet += packet_base
     data_packet += packet_payload
     data_packet += _get_checksum_bytes(data_packet)
-
     return data_packet
 
 
@@ -431,7 +425,6 @@ def convert_stim_dict_to_bytes(stim_dict: dict[str, Any]) -> bytes:
         # TODO remove this since the top level should always be a loop
 
         curr_idx = 0
-
         for subprotocol_dict in protocol_dict["subprotocols"]:
             subprotocol_bytes, curr_idx = convert_subprotocol_node_dict_to_bytes(
                 subprotocol_dict, curr_idx, is_voltage=is_voltage_controlled
@@ -443,7 +436,6 @@ def convert_stim_dict_to_bytes(stim_dict: dict[str, Any]) -> bytes:
             for well_name, assigned_protocol_id in stim_dict["protocol_assignments"].items()
             if assigned_protocol_id == protocol_dict.get("protocol_id", idx)
         ]
-
         stim_bytes += bytes([len(module_ids_assigned)] + sorted(module_ids_assigned))
 
     return stim_bytes
@@ -513,7 +505,7 @@ def parse_end_offline_mode_bytes(response_bytes: bytes) -> dict[str, Any]:
 
 def parse_stim_offline_statuses(status_bytes: bytes, num_protocols: int) -> list[StimulationStates]:
     """Parse stimulator statuses bytes for active states."""
-    # 264 bytes are always returned, only parse bytes with running protocols
+    # 264 bytes are always returned, only parse bytes with protocols assigned
     status_bytes_to_parse = num_protocols * STIM_STATUS_BYTES_LEN
     stimulation_protocol_statuses = []
 
