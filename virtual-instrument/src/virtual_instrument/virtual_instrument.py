@@ -20,6 +20,8 @@ from controller.constants import InstrumentConnectionStatuses
 from controller.constants import MAX_MC_REBOOT_DURATION_SECONDS
 from controller.constants import MICRO_TO_BASE_CONVERSION
 from controller.constants import MICROS_PER_MILLI
+from controller.constants import NUM_WELLS
+from controller.constants import PROTOCOL_STATUS_BYTES_LEN
 from controller.constants import SERIAL_COMM_CHECKSUM_LENGTH_BYTES
 from controller.constants import SERIAL_COMM_HANDSHAKE_TIMEOUT_SECONDS
 from controller.constants import SERIAL_COMM_MAGIC_WORD_BYTES
@@ -145,7 +147,9 @@ class MantarrayMcSimulator(InfiniteProcess):
     default_adc_reading = 0xFF00
     global_timer_offset_secs = 2.5  # TODO Tanner (11/17/21): figure out if this should be removed
 
-    def __init__(self, sock: socket.socket, logging_level: int = logging.INFO, num_wells: int = 24) -> None:
+    def __init__(
+        self, sock: socket.socket, logging_level: int = logging.INFO, num_wells: int = NUM_WELLS
+    ) -> None:
         # InfiniteProcess values
         super().__init__(Queue(), logging_level=logging_level)
         # socket connections
@@ -447,7 +451,7 @@ class MantarrayMcSimulator(InfiniteProcess):
             self._time_of_last_handshake_secs = perf_counter()
             response_body += bytes(self._status_codes)
         elif packet_type == SerialCommPacketTypes.SET_STIM_PROTOCOL:
-            # command fails if > 24 unique protocols given, the length of the array of protocol IDs != 24, or if > 50 subprotocols are in a single protocol
+            # command fails if more unique protocols given than wells, the length of the array of protocol IDs != the number of wells, or if > 50 subprotocols are in a single protocol
             stim_info_dict = convert_stim_bytes_to_dict(
                 comm_from_controller[SERIAL_COMM_PAYLOAD_INDEX:-SERIAL_COMM_CHECKSUM_LENGTH_BYTES]
             )
@@ -578,13 +582,9 @@ class MantarrayMcSimulator(InfiniteProcess):
                     + bytes([sub_idx])
                 )
 
-            # fill rest of 24 possible protocols with null statuses
-            status_update_bytes += (
-                bytes([24])
-                + test_time_index.to_bytes(8, byteorder="little")
-                + bytes([StimProtocolStatuses.NULL])
-                + bytes([STIM_COMPLETE_SUBPROTOCOL_IDX])
-            ) * (24 - len(self._stim_running_statuses))
+            # there is one protocol status block per possible protocol, so fill the remaining slots with arbitrary data
+            num_unused_protocols = self._num_wells - len(self._stim_running_statuses)
+            status_update_bytes += bytes(num_unused_protocols * PROTOCOL_STATUS_BYTES_LEN)
 
             response_body += (
                 test_time_index.to_bytes(

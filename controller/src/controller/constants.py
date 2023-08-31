@@ -250,7 +250,7 @@ VALID_SUBPROTOCOL_TYPES = frozenset(["delay", "monophasic", "biphasic", "loop"])
 
 # does not include subprotocol idx
 STIM_PULSE_BYTES_LEN = 29
-STIM_STATUS_BYTES_LEN = 11
+PROTOCOL_STATUS_BYTES_LEN = 11
 
 
 # Stim Checks
