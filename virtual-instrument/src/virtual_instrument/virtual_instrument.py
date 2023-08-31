@@ -40,6 +40,7 @@ from controller.utils.serial_comm import convert_adc_readings_to_circuit_status
 from controller.utils.serial_comm import convert_instrument_event_info_to_bytes
 from controller.utils.serial_comm import convert_metadata_to_bytes
 from controller.utils.serial_comm import convert_stim_bytes_to_dict
+from controller.utils.serial_comm import convert_stim_dict_to_bytes
 from controller.utils.serial_comm import create_data_packet
 from controller.utils.serial_comm import is_null_subprotocol
 from controller.utils.serial_comm import validate_checksum
@@ -59,6 +60,7 @@ from stdlib_utils import InfiniteProcess
 from stdlib_utils import resource_path
 
 from .constants import DEFAULT_SAMPLING_PERIOD
+from .constants import InstrumentConnectionStatuses
 from .constants import MICROSECONDS_PER_CENTIMILLISECOND
 from .constants import SERIAL_COMM_NUM_CHANNELS_PER_SENSOR
 from .constants import SERIAL_COMM_NUM_SENSORS_PER_WELL
@@ -115,7 +117,7 @@ class MantarrayMcSimulator(InfiniteProcess):
 
     # values for V1 instrument as of 6/17/22
     initial_magnet_finding_params: immutabledict[str, int] = immutabledict(
-        {"X": 0, "Y": 2, "Z": -5, "REMN": 1200},
+        {"X": 0, "Y": 2, "Z": -5, "REMN": 1200}
     )
 
     default_mantarray_nickname = "Vrtl Stingray"
@@ -153,12 +155,7 @@ class MantarrayMcSimulator(InfiniteProcess):
     default_adc_reading = 0xFF00
     global_timer_offset_secs = 2.5  # TODO Tanner (11/17/21): figure out if this should be removed
 
-    def __init__(
-        self,
-        conn: socket.socket,
-        logging_level: int = logging.INFO,
-        num_wells: int = 24,
-    ) -> None:
+    def __init__(self, conn: socket.socket, logging_level: int = logging.INFO, num_wells: int = 24) -> None:
         # InfiniteProcess values
         super().__init__(Queue(), logging_level=logging_level)
         # socket connections
@@ -195,6 +192,7 @@ class MantarrayMcSimulator(InfiniteProcess):
         self._firmware_update_idx: int | None = None
         self._firmware_update_bytes: bytes | None
         self._new_nickname: str | None = None
+        self._system_in_offline_mode: bool = False
         self._handle_boot_up_config()
 
     def start(self) -> None:
@@ -259,8 +257,7 @@ class MantarrayMcSimulator(InfiniteProcess):
             simulated_data_timepoints = next(csv.reader(csvfile, delimiter=","))
             simulated_data_values = next(csv.reader(csvfile, delimiter=","))
         self._interpolator = interpolate.interp1d(
-            np.array(simulated_data_timepoints, dtype=np.uint64),
-            simulated_data_values,
+            np.array(simulated_data_timepoints, dtype=np.uint64), simulated_data_values
         )
 
     def _handle_boot_up_config(self, reboot: bool = False) -> None:
@@ -283,8 +280,7 @@ class MantarrayMcSimulator(InfiniteProcess):
                     else SerialCommPacketTypes.MF_UPDATE_COMPLETE
                 )
                 self._send_data_packet(
-                    packet_type,
-                    bytes([0, 0, 0]),  # TODO make this the new firmware version
+                    packet_type, bytes([0, 0, 0])  # TODO make this the new firmware version
                 )
             elif self._new_nickname is not None:
                 self._send_data_packet(
@@ -322,10 +318,7 @@ class MantarrayMcSimulator(InfiniteProcess):
         return self._get_absolute_timer()
 
     def _send_data_packet(
-        self,
-        packet_type: int,
-        data_to_send: bytes = bytes(0),
-        truncate: bool = False,
+        self, packet_type: int, data_to_send: bytes = bytes(0), truncate: bool = False
     ) -> None:
         timestamp = self._get_timestamp()
         data_packet = create_data_packet(timestamp, packet_type, data_to_send)
@@ -521,9 +514,59 @@ class MantarrayMcSimulator(InfiniteProcess):
                 self._reboot_again = True
         elif packet_type == SerialCommPacketTypes.GET_ERROR_DETAILS:  # pragma: no cover
             response_body += convert_instrument_event_info_to_bytes(self.default_event_info)
+        elif packet_type == SerialCommPacketTypes.CHECK_CONNECTION_STATUS:
+            # change to mock headless mode on startup
+            response_body += bytes([InstrumentConnectionStatuses.CONNECTED])
+            self._system_in_offline_mode = False
+
         elif packet_type == SerialCommPacketTypes.ERROR_ACK:  # pragma: no cover
             # Tanner (3/24/22): As of right now, simulator does not need to handle this message at all, so it is the responsibility of tests to prompt simulator to go through the rest of the error handling procedure
             pass
+        elif packet_type == SerialCommPacketTypes.INIT_OFFLINE_MODE:
+            self._system_in_offline_mode = True
+        elif packet_type == SerialCommPacketTypes.END_OFFLINE_MODE:
+            self._system_in_offline_mode = False
+            test_time_index = self._get_global_timer()
+
+            is_stim_running = False
+
+            status_update_bytes = bytes(0)
+
+            for protocol_idx, is_protocol_running in enumerate(self._stim_running_statuses):
+                subprotocol_manager = self._stim_subprotocol_managers[protocol_idx]
+
+                if is_protocol_running:
+                    is_stim_running = True
+                    stim_status = StimProtocolStatuses.ACTIVE
+                    sub_idx = subprotocol_manager.idx()
+                else:
+                    stim_status = StimProtocolStatuses.FINISHED
+                    sub_idx = STIM_COMPLETE_SUBPROTOCOL_IDX
+
+                status_update_bytes += (
+                    bytes([protocol_idx])
+                    + test_time_index.to_bytes(8, byteorder="little")
+                    + bytes([stim_status])
+                    + bytes([sub_idx])
+                )
+
+            # fill rest of 24 possible protocols with null statuses
+            status_update_bytes += (
+                bytes([24])
+                + test_time_index.to_bytes(8, byteorder="little")
+                + bytes([StimProtocolStatuses.NULL])
+                + bytes([STIM_COMPLETE_SUBPROTOCOL_IDX])
+            ) * (24 - len(self._stim_running_statuses))
+
+            response_body += (
+                test_time_index.to_bytes(
+                    8, byteorder="little"
+                )  # Relative time of when system went dormant last
+                + bytes([is_stim_running])  # is stim running?
+                + test_time_index.to_bytes(8, byteorder="little")  # Relative time of last stim schedule start
+                + status_update_bytes  # stim statuses
+                + convert_stim_dict_to_bytes(self._stim_info)  # Protocol data
+            )
         else:
             raise UnrecognizedSerialCommPacketTypeError(f"Packet Type ID: {packet_type} is not defined")
 
@@ -560,10 +603,13 @@ class MantarrayMcSimulator(InfiniteProcess):
     def _check_handshake(self) -> None:
         if self._time_of_last_handshake_secs is None:
             return
+
         time_of_last_handshake_secs = _get_secs_since_last_handshake(self._time_of_last_handshake_secs)
+
         if (
             time_of_last_handshake_secs
             >= SERIAL_COMM_HANDSHAKE_PERIOD_SECONDS * SERIAL_COMM_NUM_ALLOWED_MISSED_HANDSHAKES
+            and not self._system_in_offline_mode
         ):
             raise SerialCommTooManyMissedHandshakesError()
 
@@ -581,6 +627,7 @@ class MantarrayMcSimulator(InfiniteProcess):
         num_status_updates = 0
         status_update_bytes = bytes(0)
         stop_time_index = self._get_global_timer()
+
         for protocol_idx, is_stim_running in enumerate(self._stim_running_statuses):
             if not is_stim_running:
                 continue
@@ -592,6 +639,7 @@ class MantarrayMcSimulator(InfiniteProcess):
                 + bytes([StimProtocolStatuses.FINISHED])
                 + bytes([STIM_COMPLETE_SUBPROTOCOL_IDX])
             )
+
         self._send_data_packet(
             SerialCommPacketTypes.STIM_STATUS, bytes([num_status_updates]) + status_update_bytes
         )

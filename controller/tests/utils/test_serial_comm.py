@@ -24,6 +24,7 @@ from controller.utils.serial_comm import convert_subprotocol_pulse_dict_to_bytes
 from controller.utils.serial_comm import convert_well_name_to_module_id
 from controller.utils.serial_comm import create_data_packet
 from controller.utils.serial_comm import get_serial_comm_timestamp
+from controller.utils.serial_comm import parse_end_offline_mode_bytes
 from controller.utils.serial_comm import parse_instrument_event_info
 from controller.utils.serial_comm import parse_metadata_bytes
 from controller.utils.serial_comm import SERIAL_COMM_CHECKSUM_LENGTH_BYTES
@@ -43,6 +44,7 @@ import pytest
 
 from ..helpers import assert_subprotocol_node_bytes_are_expected
 from ..helpers import assert_subprotocol_pulse_bytes_are_expected
+from ..helpers import get_generic_protocols
 from ..helpers import get_random_biphasic_pulse
 from ..helpers import get_random_monophasic_pulse
 from ..helpers import get_random_stim_delay
@@ -605,8 +607,16 @@ def test_convert_subprotocol_node_dict_to_bytes__returns_expected_bytes__when_no
     assert actual == expected_bytes
 
 
-def test_convert_stim_dict_to_bytes__return_expected_bytes():
-    protocol_assignments_dict = {"D1": "A", "D2": "D"}
+@pytest.mark.parametrize(
+    "protocols,assignments",
+    [
+        [get_generic_protocols(), {"D1": "A", "D2": "B"}],
+        # format from firmware returning to online mode
+        [get_generic_protocols(include_ids=False), {"D1": 0, "D2": 1}],
+    ],
+)
+def test_convert_stim_dict_to_bytes__return_expected_bytes(protocols, assignments):
+    protocol_assignments_dict = assignments
     protocol_assignments_dict.update(
         {
             well_name: None
@@ -616,37 +626,7 @@ def test_convert_stim_dict_to_bytes__return_expected_bytes():
         }
     )
 
-    stim_info_dict = {
-        "protocols": [
-            {
-                "protocol_id": "A",
-                "stimulation_type": "C",
-                "run_until_stopped": True,
-                "subprotocols": [get_random_monophasic_pulse(), get_random_stim_delay()],
-            },
-            {
-                "protocol_id": "D",
-                "stimulation_type": "V",
-                "run_until_stopped": False,
-                "subprotocols": [
-                    get_random_biphasic_pulse(),
-                    {
-                        "type": "loop",
-                        "num_iterations": randint(1, 10),
-                        "subprotocols": [
-                            {
-                                "type": "loop",
-                                "num_iterations": randint(1, 10),
-                                "subprotocols": [get_random_subprotocol()],
-                            },
-                            get_random_subprotocol(),
-                        ],
-                    },
-                ],
-            },
-        ],
-        "protocol_assignments": protocol_assignments_dict,
-    }
+    stim_info_dict = {"protocols": protocols, "protocol_assignments": protocol_assignments_dict}
 
     # Tanner (12/23/22): this test is also dependent on convert_subprotocol_node_dict_to_bytes working properly. If this test fails, make sure the tests for this func are passing first
 
@@ -715,7 +695,7 @@ def test_convert_stim_bytes_to_dict__can_correctly_recreate_stim_dict__except_fo
                             },
                             get_random_biphasic_pulse(),
                         ],
-                    },
+                    }
                 ],
             },
             {
@@ -743,4 +723,78 @@ def test_convert_stim_bytes_to_dict__can_correctly_recreate_stim_dict__except_fo
     ):
         original_protocol.pop("protocol_id")  # this is not needed in the recreated dict
         assert recreated_protocol == original_protocol, f"Protocol {protocol_idx}"
+
     assert recreated_stim_info_dict["protocol_assignments"] == original_stim_info_dict["protocol_assignments"]
+
+
+def test_parse_end_offline_mode_bytes__correctly_recreates_stim_info():
+    protocol_assignments_dict = {
+        GENERIC_24_WELL_DEFINITION.get_well_name_from_well_index(well_idx): randint(0, 1)
+        for well_idx in range(24)
+    }
+
+    # make sure at least one well is unassigned
+    well_to_unassign = choice(["A", "B", "C", "D"]) + str(randint(1, 6))
+    protocol_assignments_dict[well_to_unassign] = None
+
+    original_stim_info_dict = {
+        "protocols": [
+            {
+                "stimulation_type": "V",
+                "run_until_stopped": False,
+                "subprotocols": [
+                    {
+                        "type": "loop",
+                        "num_iterations": randint(1, 10),
+                        "subprotocols": [
+                            *[get_random_subprotocol() for _ in range(randint(1, 3))],
+                            {
+                                "type": "loop",
+                                "num_iterations": randint(1, 10),
+                                "subprotocols": [get_random_subprotocol() for _ in range(randint(1, 3))],
+                            },
+                            get_random_biphasic_pulse(),
+                        ],
+                    }
+                ],
+            },
+            {
+                "stimulation_type": "C",
+                "run_until_stopped": True,
+                "subprotocols": [
+                    {
+                        "type": "loop",
+                        "num_iterations": randint(1, 10),
+                        "subprotocols": [get_random_subprotocol() for _ in range(randint(1, 3))],
+                    }
+                ],
+            },
+        ],
+        "protocol_assignments": protocol_assignments_dict,
+    }
+
+    test_timestamp = 100
+    test_stim_bytes = convert_stim_dict_to_bytes(copy.deepcopy(original_stim_info_dict))
+
+    expected_bytes = (
+        test_timestamp.to_bytes(8, byteorder="little")  # Relative time of when system went dormant last
+        + bytes([True])  # is stim running?
+        + test_timestamp.to_bytes(8, byteorder="little")  # Relative time of last stim schedule start
+        + bytes([False] * 24)  # stim statuses
+        + test_stim_bytes  # Protocol data
+    )
+
+    offline_stim_info_dict = parse_end_offline_mode_bytes(expected_bytes)
+
+    for protocol_idx, (recreated_protocol, original_protocol) in enumerate(
+        zip(offline_stim_info_dict["stim_info"]["protocols"], original_stim_info_dict["protocols"])
+    ):
+        recreated_protocol.pop("protocol_id")  # this is not needed in the recreated dict
+        assert recreated_protocol == original_protocol, f"Protocol {protocol_idx}"
+
+    for recreated_assignment, original_assignment in zip(
+        offline_stim_info_dict["stim_info"]["protocol_assignments"].values(),
+        original_stim_info_dict["protocol_assignments"].values(),
+    ):
+        if recreated_assignment is not None:
+            assert recreated_assignment == chr(original_assignment + 97).upper()

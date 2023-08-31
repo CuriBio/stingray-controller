@@ -1,4 +1,4 @@
-import { ERROR_CODES } from "@/store/modules/system/enums";
+import { ERROR_CODES, SYSTEM_STATUS } from "@/store/modules/system/enums";
 import { STIM_STATUS } from "@/store/modules/stimulation/enums";
 import { TextValidation } from "@/js-utils/TextValidation.js";
 
@@ -62,8 +62,17 @@ export default {
         switch (wsMessage.communication_type) {
           case "status_update":
             if ("system_status" in wsMessage) commit("system/setStatusUuid", wsMessage.system_status);
-            if ("stimulation_protocols_running" in wsMessage) {
-              const stimPlayState = wsMessage.stimulation_protocols_running.includes(true);
+            // want to start stim if not already started if offline mode status is sent
+            // stim will initially be inactive if booting up SW in offline mode
+            if (
+              "stimulation_protocols_running" in wsMessage ||
+              wsMessage.system_status === SYSTEM_STATUS.OFFLINE_STATE
+            ) {
+              const stimPlayState =
+                ("stimulation_protocols_running" in wsMessage &&
+                  wsMessage.stimulation_protocols_running.includes(true)) ||
+                wsMessage.system_status === SYSTEM_STATUS.OFFLINE_STATE;
+
               commit(
                 "stimulation/setStimStatus",
                 stimPlayState ? STIM_STATUS.STIM_ACTIVE : STIM_STATUS.READY
@@ -83,6 +92,9 @@ export default {
                 newValue: wsMessage.new_barcode,
               });
             }
+            break;
+          case "end_offline_mode":
+            dispatch("stimulation/populateStimAfterOffline", wsMessage);
             break;
           case "sw_update":
             if (wsMessage.allow_software_update !== undefined) {
@@ -163,6 +175,21 @@ export default {
     const wsMessage = JSON.stringify({
       command: "shutdown",
     });
+
+    state.socket.send(wsMessage);
+  },
+  async sendOfflineState({ state }) {
+    const offlineState = state.statusUuid !== SYSTEM_STATUS.OFFLINE_STATE;
+    // this can only be called if stimulation is already active
+    const wsMessage = JSON.stringify({
+      command: "set_offline_state",
+      offline_state: offlineState,
+    });
+
+    if (offlineState) {
+      this.commit("stimulation/resetState");
+      this.commit("stimulation/setProtocolList", [{ letter: "", color: "", label: "Create New" }]);
+    }
 
     state.socket.send(wsMessage);
   },

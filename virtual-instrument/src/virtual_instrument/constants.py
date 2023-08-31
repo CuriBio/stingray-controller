@@ -1,7 +1,15 @@
 # -*- coding: utf-8 -*-
+from enum import IntEnum
 
 DEFAULT_SAMPLING_PERIOD = 10000  # valid as of 4/12/22
 MICROSECONDS_PER_CENTIMILLISECOND = 10
 
 SERIAL_COMM_NUM_CHANNELS_PER_SENSOR = 3
 SERIAL_COMM_NUM_SENSORS_PER_WELL = 3
+
+
+class InstrumentConnectionStatuses(IntEnum):
+    DISCONNECTED = 0
+    CONNECTED = 1
+    HEADLESS = 2
+    ONE_HS_MISSED = 3

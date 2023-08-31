@@ -269,7 +269,6 @@ export default {
     confirmationRequest: async function () {
       const stimOpsInProgress =
         this.stimStatus === STIM_STATUS.CONFIG_CHECK_IN_PROGRESS || this.stimPlayState;
-
       const fwUpdateInProgress =
         this.statusUuid === SYSTEM_STATUS.DOWNLOADING_UPDATES_STATE ||
         this.statusUuid === SYSTEM_STATUS.INSTALLING_UPDATES_STATE;
@@ -336,6 +335,12 @@ export default {
           break;
         case SYSTEM_STATUS.INSTALLING_UPDATES_STATE:
           this.alertTxt = `Installing Firmware Updates...`;
+          break;
+        case SYSTEM_STATUS.GOING_OFFLINE_STATE:
+          this.alertTxt = `Going offline...`;
+          break;
+        case SYSTEM_STATUS.OFFLINE_STATE:
+          this.alertTxt = `Offline`;
           break;
         case SYSTEM_STATUS.UPDATES_COMPLETE_STATE:
           this.alertTxt = `Firmware Updates Complete`;

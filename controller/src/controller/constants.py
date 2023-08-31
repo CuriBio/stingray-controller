@@ -64,6 +64,8 @@ class SystemStatuses(Enum):
     DOWNLOADING_UPDATES_STATE = uuid.UUID("b623c5fa-af01-46d3-9282-748e19fe374c")
     INSTALLING_UPDATES_STATE = uuid.UUID("19c9c2d6-0de4-4334-8cb3-a4c7ab0eab00")
     UPDATES_COMPLETE_STATE = uuid.UUID("31f8fbc9-9b41-4191-8598-6462b7490789")
+    OFFLINE_STATE = uuid.UUID("9cf862e0-805e-4aa5-b345-eef298c11317")
+    GOING_OFFLINE_STATE = uuid.UUID("74362035-a23f-4cba-9e82-106872cb2b13")
 
 
 class StimulationStates(Enum):
@@ -168,6 +170,7 @@ class SerialCommPacketTypes(IntEnum):
     STATUS_BEACON = 0
     MAGNETOMETER_DATA = 1
     REBOOT = 2
+    CHECK_CONNECTION_STATUS = 3
     HANDSHAKE = 4
     PLATE_EVENT = 6
     GOING_DORMANT = 10
@@ -177,6 +180,9 @@ class SerialCommPacketTypes(IntEnum):
     STOP_STIM = 22
     STIM_STATUS = 23
     STIM_IMPEDANCE_CHECK = 27
+    # offline mode
+    INIT_OFFLINE_MODE = 40
+    END_OFFLINE_MODE = 41
     # Magnetometer
     SET_SAMPLING_PERIOD = 50
     START_DATA_STREAMING = 52
@@ -242,6 +248,7 @@ VALID_SUBPROTOCOL_TYPES = frozenset(["delay", "monophasic", "biphasic", "loop"])
 
 # does not include subprotocol idx
 STIM_PULSE_BYTES_LEN = 29
+STIM_STATUS_BYTES_LEN = 11
 
 
 # Stim Checks
@@ -307,3 +314,9 @@ STIM_MODULE_ID_TO_WELL_IDX: immutabledict[int, int] = immutabledict(
 STIM_WELL_IDX_TO_MODULE_ID: immutabledict[int, int] = immutabledict(
     {well_idx: module_id for module_id, well_idx in STIM_MODULE_ID_TO_WELL_IDX.items()}
 )
+
+
+class InstrumentConnectionStatuses(IntEnum):
+    DISCONNECTED = 0
+    CONNECTED = 1
+    OFFLINE = 2

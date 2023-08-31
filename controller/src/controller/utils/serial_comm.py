@@ -40,9 +40,11 @@ from ..constants import STIM_MODULE_ID_TO_WELL_IDX
 from ..constants import STIM_OPEN_CIRCUIT_THRESHOLD_OHMS
 from ..constants import STIM_PULSE_BYTES_LEN
 from ..constants import STIM_SHORT_CIRCUIT_THRESHOLD_OHMS
+from ..constants import STIM_STATUS_BYTES_LEN
 from ..constants import STIM_WELL_IDX_TO_MODULE_ID
+from ..constants import StimProtocolStatuses
+from ..constants import StimulationStates
 from ..constants import StimulatorCircuitStatuses
-
 
 # Tanner (3/18/21): If/When additional cython is needed to improve serial communication, this file may be worth investigating
 
@@ -93,11 +95,7 @@ def _get_checksum_bytes(packet: bytes) -> bytes:
     return crc32(packet).to_bytes(SERIAL_COMM_CHECKSUM_LENGTH_BYTES, byteorder="little")
 
 
-def create_data_packet(
-    timestamp: int,
-    packet_type: int,
-    packet_payload: bytes = bytes(0),
-) -> bytes:
+def create_data_packet(timestamp: int, packet_type: int, packet_payload: bytes = bytes(0)) -> bytes:
     """Create a data packet to send to the PC."""
     packet_base = convert_to_timestamp_bytes(timestamp) + bytes([packet_type])
     packet_remainder_size = len(packet_base) + len(packet_payload) + SERIAL_COMM_CHECKSUM_LENGTH_BYTES
@@ -114,10 +112,7 @@ def create_data_packet(
 
 def validate_checksum(comm_from_pc: bytes) -> bool:
     expected_checksum = crc32(comm_from_pc[:-SERIAL_COMM_CHECKSUM_LENGTH_BYTES])
-    actual_checksum = int.from_bytes(
-        comm_from_pc[-SERIAL_COMM_CHECKSUM_LENGTH_BYTES:],
-        byteorder="little",
-    )
+    actual_checksum = int.from_bytes(comm_from_pc[-SERIAL_COMM_CHECKSUM_LENGTH_BYTES:], byteorder="little")
     return actual_checksum == expected_checksum
 
 
@@ -331,7 +326,6 @@ def convert_subprotocol_pulse_bytes_to_dict(
 ) -> dict[str, Union[int, str]]:
     # duration_ms if subprotocols is a delay (null subprotocol), num_cycles o/w
     num_cycles_or_duration_ms = int.from_bytes(subprotocol_bytes[24:28], byteorder="little")
-
     # the final byte is a flag indicating whether or not this subprotocol is a delay
     if subprotocol_bytes[-1]:
         duration_us = num_cycles_or_duration_ms * MICROS_PER_MILLI
@@ -369,7 +363,6 @@ def convert_subprotocol_node_dict_to_bytes(
     subprotocol_node_bytes = bytes([is_loop])
 
     curr_idx = start_idx
-
     if is_loop:
         subprotocol_node_bytes += bytes([len(subprotocol_node_dict["subprotocols"])])
         subprotocol_node_bytes += subprotocol_node_dict["num_iterations"].to_bytes(4, byteorder="little")
@@ -423,7 +416,7 @@ def convert_stim_dict_to_bytes(stim_dict: dict[str, Any]) -> bytes:
     """
     # add bytes for protocol definitions
     stim_bytes = bytes([len(stim_dict["protocols"])])  # number of unique protocols
-    for protocol_dict in stim_dict["protocols"]:
+    for idx, protocol_dict in enumerate(stim_dict["protocols"]):
         is_voltage_controlled = protocol_dict["stimulation_type"] == "V"
 
         # data type is always 0 as of 12/23/22
@@ -441,7 +434,7 @@ def convert_stim_dict_to_bytes(stim_dict: dict[str, Any]) -> bytes:
         module_ids_assigned = [
             convert_well_name_to_module_id(well_name, use_stim_mapping=True)
             for well_name, assigned_protocol_id in stim_dict["protocol_assignments"].items()
-            if assigned_protocol_id == protocol_dict["protocol_id"]
+            if assigned_protocol_id == protocol_dict.get("protocol_id", idx)
         ]
         stim_bytes += bytes([len(module_ids_assigned)] + sorted(module_ids_assigned))
 
@@ -492,3 +485,49 @@ def convert_stim_bytes_to_dict(stim_bytes: bytes) -> dict[str, Any]:
         curr_byte_idx += num_wells_assigned
 
     return stim_info_dict
+
+
+def parse_end_offline_mode_bytes(response_bytes: bytes) -> dict[str, Any]:
+    """Parse bytes containing stimulation info and return as Dict."""
+
+    stim_dict = convert_stim_bytes_to_dict(response_bytes[281:])
+    updated_stim_dict = format_stim_dict_with_ids(stim_dict)
+    num_protocols = len(updated_stim_dict["protocols"])
+
+    return {
+        "system_dormant_timestamp": int.from_bytes(response_bytes[:8]),
+        "stim_active": bool(response_bytes[8]),
+        "last_stim_scheduled_start_timestamp": int.from_bytes(response_bytes[9:17]),
+        "stimulation_protocol_statuses": parse_stim_offline_statuses(response_bytes[17:281], num_protocols),
+        "stim_info": updated_stim_dict,
+    }
+
+
+def parse_stim_offline_statuses(status_bytes: bytes, num_protocols: int) -> list[StimulationStates]:
+    """Parse stimulator statuses bytes for active states."""
+    # 264 bytes are always returned, only parse bytes with protocols assigned
+    status_bytes_to_parse = num_protocols * STIM_STATUS_BYTES_LEN
+    stimulation_protocol_statuses = []
+
+    for byte_idx in range(9, len(status_bytes[:status_bytes_to_parse]), STIM_STATUS_BYTES_LEN):
+        status = status_bytes[byte_idx]
+        stimulation_protocol_statuses.append(
+            StimulationStates.RUNNING if status == StimProtocolStatuses.ACTIVE else StimulationStates.INACTIVE
+        )
+
+    return stimulation_protocol_statuses
+
+
+def format_stim_dict_with_ids(stim_dict: dict[str, Any]) -> dict[str, Any]:
+    """Add protocol IDs to stim dict from instrument after being offline."""
+    for idx, _ in enumerate(stim_dict["protocols"]):
+        protocol_id = chr(idx + ord("A"))
+        stim_dict["protocols"][idx]["protocol_id"] = protocol_id
+
+        stim_dict["protocol_assignments"] |= {
+            well: protocol_id
+            for well, assignment in stim_dict["protocol_assignments"].items()
+            if assignment == idx
+        }
+
+    return stim_dict

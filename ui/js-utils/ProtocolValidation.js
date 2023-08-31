@@ -6,6 +6,11 @@ import {
   MAX_CHARGE_MA,
   MIN_PHASE_DURATION_US,
 } from "@/store/modules/stimulation/enums";
+import { generateRandomColor } from "@/js-utils/WaveformDataFormatter";
+
+const deepCopy = (input) => {
+  return JSON.parse(JSON.stringify(input));
+};
 
 export const DEFAULT_SUBPROTOCOL_TEMPLATES = {
   DELAY: {
@@ -188,7 +193,24 @@ export const getMaxPulseDurationForFreq = (freq) => {
   return Math.min(50, Math.trunc((1000 / freq) * 0.8));
 };
 
-export const getTotalActiveDuration = (type, protocol) => {
+export const _getTotalActiveDuration = (type, protocol) => {
+  const settings =
+    type === "Monophasic"
+      ? protocol.phaseOneDuration + protocol.postphaseInterval
+      : protocol.phaseOneDuration +
+        protocol.phaseTwoDuration +
+        protocol.interphaseInterval +
+        protocol.postphaseInterval;
+
+  return settings * +protocol.numCycles;
+};
+
+export const _getPulseFrequency = (protocol) => {
+  // assuming in ms
+  return Math.round(1000 / (protocol.totalActiveDuration.duration / protocol.numCycles));
+};
+
+export const getTotalPulseDuration = (type, protocol) => {
   return type === "Monophasic"
     ? +protocol.phaseOneDuration
     : +protocol.phaseOneDuration + +protocol.phaseTwoDuration + +protocol.interphaseInterval;
@@ -216,7 +238,7 @@ export const _isValidSinglePulse = (protocol) => {
     : ["phaseOneDuration", "phaseTwoDuration", "interphaseInterval"];
 
   const maxPulseDurationForFreq = getMaxPulseDurationForFreq(protocol.frequency);
-  const totalActiveDuration = getTotalActiveDuration(protocol.type, protocol);
+  const totalActiveDuration = getTotalPulseDuration(protocol.type, protocol);
 
   // first check all durations are within max and min bounds
   const durationsAreValid =
@@ -280,6 +302,7 @@ export const _convertObjToCamelCase = (obj) => {
 
 export const _convertObjToSnakeCase = (obj) => {
   const convertedObj = {};
+
   for (const [key, value] of Object.entries(obj)) {
     const snakeCaseKey = key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
     convertedObj[snakeCaseKey] = value;
@@ -323,7 +346,7 @@ const _convertDetailedSubprotocols = (subprotocols) => {
 };
 
 const _createCompatibleDelay = (pulse) => {
-  const detailedSubprotocol = JSON.parse(JSON.stringify(DEFAULT_SUBPROTOCOL_TEMPLATES.DELAY));
+  const detailedSubprotocol = deepCopy(DEFAULT_SUBPROTOCOL_TEMPLATES.DELAY);
   // update color
   detailedSubprotocol.color = pulse.repeat.color;
   // update delay duration and unit
@@ -339,7 +362,7 @@ const _createCompatibleDelay = (pulse) => {
 };
 
 const _createCompatiblePulse = (pulse, type) => {
-  const detailedSubprotocol = JSON.parse(JSON.stringify(DEFAULT_SUBPROTOCOL_TEMPLATES[type]));
+  const detailedSubprotocol = deepCopy(DEFAULT_SUBPROTOCOL_TEMPLATES[type]);
   // update color
   detailedSubprotocol.color = pulse.repeat.color;
   // match any keys that are in both object structures
@@ -373,6 +396,68 @@ const _createCompatiblePulse = (pulse, type) => {
       ...detailedSubprotocol.pulseSettings,
     },
   };
+};
+
+export const _convertSubprotocolsFromFw = (subprotocols) => {
+  const camelSubs = subprotocols.map((sub) => _convertObjToCamelCase(sub));
+  return camelSubs.map((sub) => {
+    let body;
+    if (sub.type !== "loop") {
+      // needs to be pascal case
+      const pascalType = deepCopy(DEFAULT_SUBPROTOCOL_TEMPLATES[sub.type.toUpperCase()].type);
+      body = deepCopy(DEFAULT_SUBPROTOCOL_TEMPLATES[sub.type.toUpperCase()].pulseSettings);
+      sub.type = pascalType;
+
+      Object.keys(sub).map((metric) => {
+        body[metric] = sub[metric];
+
+        if (!isNaN(body[metric]) && metric !== "numCycles") {
+          body[metric] /= 1e3;
+        }
+      });
+
+      if (["Monophasic", "Biphasic"].includes(pascalType)) {
+        body.totalActiveDuration.duration = _getTotalActiveDuration(pascalType, body);
+        body.frequency = _getPulseFrequency(body);
+      }
+    } else {
+      body = {
+        numIterations: sub.numIterations,
+        type: "loop",
+        subprotocols: _convertSubprotocolsFromFw(sub.subprotocols),
+      };
+    }
+
+    return body;
+  });
+};
+
+export const _convertDetailedSubprotocolsFromFW = (subprotocols) => {
+  const detailedSubprotocols = [];
+
+  for (const [idx, sub] of Object.entries(subprotocols)) {
+    let body;
+    const subCopy = deepCopy(sub);
+
+    if (subCopy.type !== "loop") {
+      body = deepCopy(DEFAULT_SUBPROTOCOL_TEMPLATES[subCopy.type.toUpperCase()]);
+      body.color =
+        idx > 0 ? generateRandomColor(true, detailedSubprotocols[idx - 1].color) : generateRandomColor(true);
+
+      delete subCopy.type;
+      body.pulseSettings = subCopy;
+    } else {
+      body = {
+        numIterations: subCopy.numIterations,
+        type: "loop",
+        subprotocols: _convertDetailedSubprotocolsFromFW(subCopy.subprotocols),
+      };
+    }
+
+    detailedSubprotocols.push(body);
+  }
+
+  return detailedSubprotocols;
 };
 /*
     BIPHASIC

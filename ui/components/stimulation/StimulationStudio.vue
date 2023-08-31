@@ -1,28 +1,31 @@
 <template>
-  <div class="div__stimulationstudio-layout-background">
-    <span class="span__stimulationstudio-header-label">Stimulation Studio</span>
-    <StimulationStudioWidget class="stimulationstudio_widget-container" />
-    <StimulationStudioCreateAndEdit
-      class="stimulationstudio_createandedit-container"
-      :disablEdits="disableEdits"
-      @handle-selection-change="handleSelectionChange"
-    />
-    <StimulationStudioDragAndDropPanel
-      class="stimulationstudio_draganddroppanel-container"
-      :disableEdits="disableEdits"
-    />
-    <StimulationStudioBlockViewEditor
-      class="stimulationstudio_blockvieweditor-container"
-      @rest-duration-validity="setNewRestDuration"
-    />
-    <StimulationStudioProtocolViewer class="stimulationstudio_protocolviewer-container" />
-    <div class="button-background">
-      <div v-for="(value, idx) in btnLabels" :id="value" :key="value" @click.exact="handleClick(idx)">
-        <div v-b-popover.hover.top="btnHover" :class="getBtnClass(idx)">
-          <span :class="getBtnLabelClass(idx)">{{ value }}</span>
+  <div>
+    <div class="div__stimulationstudio-layout-background">
+      <span class="span__stimulationstudio-header-label">Stimulation Studio</span>
+      <StimulationStudioWidget class="stimulationstudio_widget-container" />
+      <StimulationStudioCreateAndEdit
+        class="stimulationstudio_createandedit-container"
+        :disablEdits="disableEdits"
+        @handle-selection-change="handleSelectionChange"
+      />
+      <StimulationStudioDragAndDropPanel
+        class="stimulationstudio_draganddroppanel-container"
+        :disableEdits="disableEdits"
+      />
+      <StimulationStudioBlockViewEditor
+        class="stimulationstudio_blockvieweditor-container"
+        @rest-duration-validity="setNewRestDuration"
+      />
+      <StimulationStudioProtocolViewer class="stimulationstudio_protocolviewer-container" />
+      <div class="button-background">
+        <div v-for="(value, idx) in btnLabels" :id="value" :key="value" @click.exact="handleClick(idx)">
+          <div v-b-popover.hover.top="btnHover" :class="getBtnClass(idx)">
+            <span :class="getBtnLabelClass(idx)">{{ value }}</span>
+          </div>
         </div>
       </div>
     </div>
+    <div v-if="isInOfflineMode" class="div__stimulationstudio-overlay" />
   </div>
 </template>
 <script>
@@ -32,6 +35,7 @@ import StimulationStudioDragAndDropPanel from "@/components/stimulation/Stimulat
 import StimulationStudioBlockViewEditor from "@/components/stimulation/StimulationStudioBlockViewEditor.vue";
 import StimulationStudioProtocolViewer from "@/components/stimulation/StimulationStudioProtocolViewer.vue";
 import { STIM_STATUS } from "@/store/modules/stimulation/enums";
+import { SYSTEM_STATUS } from "@/store/modules/system/enums";
 
 import { mapState } from "vuex";
 
@@ -67,6 +71,7 @@ export default {
   },
   computed: {
     ...mapState("stimulation", ["stimStatus", "protocolEditor"]),
+    ...mapState("system", ["statusUuid"]),
     disableEdits: function () {
       return this.stimStatus === STIM_STATUS.STIM_ACTIVE;
     },
@@ -75,6 +80,10 @@ export default {
         content: "Cannot make changes to stim settings while actively stimulating",
         disabled: !this.disableEdits,
       };
+    },
+    isInOfflineMode: function () {
+      // disable if going offline or in offline
+      return [SYSTEM_STATUS.OFFLINE_STATE, SYSTEM_STATUS.GOING_OFFLINE_STATE].includes(this.statusUuid);
     },
   },
   methods: {
@@ -224,5 +233,15 @@ body {
 .stimulationstudio_protocolviewer-container {
   top: 570px;
   left: 6px;
+}
+
+.div__stimulationstudio-overlay {
+  width: 1629px;
+  height: 885px;
+  position: absolute;
+  top: 0;
+  background: rgb(0, 0, 0);
+  z-index: 100;
+  opacity: 0.5;
 }
 </style>

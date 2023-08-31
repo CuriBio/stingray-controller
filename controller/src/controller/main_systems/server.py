@@ -166,6 +166,11 @@ class Server:
         else:
             logger.error("UI has already disconnected, cannot send error message")
 
+    def _get_offline_state(self) -> bool:
+        system_state = self._get_system_state_ro()
+        system_status = system_state["system_status"]
+        return system_status == SystemStatuses.OFFLINE_STATE  # type: ignore
+
     async def _handle_comm(self, websocket: WebSocketServerProtocol) -> None:
         producer = asyncio.create_task(self._producer(websocket))
         consumer = asyncio.create_task(self._consumer(websocket))
@@ -187,22 +192,27 @@ class Server:
             except websockets.ConnectionClosed:
                 return
 
-            self._log_incoming_message(msg)
-
             command = msg["command"]
+            allowed_comm_in_offline = command in ("set_offline_state", "shutdown")
+            ignore_incoming_comm = not allowed_comm_in_offline and self._get_offline_state()
 
-            try:
-                # TODO try using pydantic to define message schema + some other message schema generator (nano message, ask Jason)
-                handler = self._handlers[command]
-            except KeyError as e:
-                raise WebsocketCommandError(f"Unrecognized command from UI: {command}") from e
+            if ignore_incoming_comm:
+                logger.info(f"Ignoring command '{command}' in server while offline")
+            else:
+                self._log_incoming_message(msg)
 
-            # TODO make sure the error handling works here
-            try:
-                await handler(self, msg)
-            except WebsocketCommandError as e:
-                logger.error(f"Command {command} failed with error: {e.args[0]}")
-                raise
+                try:
+                    # TODO try using pydantic to define message schema + some other message schema generator (nano message, ask Jason)
+                    handler = self._handlers[command]
+                except KeyError as e:
+                    raise WebsocketCommandError(f"Unrecognized command from UI: {command}") from e
+
+                # TODO make sure the error handling works here
+                try:
+                    await handler(self, msg)
+                except WebsocketCommandError as e:
+                    logger.error(f"Command {command} failed with error: {e.args[0]}")
+                    raise
 
     def _log_incoming_message(self, msg: dict[str, Any]) -> None:
         if msg["command"] == "login":
@@ -384,6 +394,21 @@ class Server:
             if _are_any_stimulator_circuits_short(system_state):
                 raise WebsocketCommandError("Cannot start stimulation when a stimulator has a short circuit")
 
+        await self._to_monitor_queue.put(comm)
+
+    @mark_handler
+    async def _set_offline_state(self, comm: dict[str, Any]) -> None:
+        """Initiate or terminate system offline mode."""
+
+        system_state = self._get_system_state_ro()
+        incoming_offline_state = comm["offline_state"]
+
+        if incoming_offline_state is self._get_offline_state():
+            return  # nothing to do here
+        if not _are_any_stim_protocols_running(system_state) and incoming_offline_state:
+            raise WebsocketCommandError("Can only enter offline state if stimulation is active")
+
+        comm = {"command": "init_offline_mode" if incoming_offline_state else "end_offline_mode"}
         await self._to_monitor_queue.put(comm)
 
 

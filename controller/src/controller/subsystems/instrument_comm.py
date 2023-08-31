@@ -13,6 +13,7 @@ import serial
 import serial.tools.list_ports as list_ports
 
 from ..constants import CURI_VID
+from ..constants import InstrumentConnectionStatuses
 from ..constants import NUM_WELLS
 from ..constants import SERIAL_COMM_BAUD_RATE
 from ..constants import SERIAL_COMM_BYTESIZE
@@ -45,6 +46,7 @@ from ..exceptions import SerialCommPacketRegistrationReadEmptyError
 from ..exceptions import SerialCommPacketRegistrationSearchExhaustedError
 from ..exceptions import SerialCommStatusBeaconTimeoutError
 from ..exceptions import SerialCommUntrackedCommandResponseError
+from ..utils.aio import clean_up_tasks
 from ..utils.aio import wait_tasks_clean
 from ..utils.command_tracking import CommandTracker
 from ..utils.data_parsing_cy import parse_stim_data
@@ -57,10 +59,10 @@ from ..utils.serial_comm import convert_stimulator_check_bytes_to_dict
 from ..utils.serial_comm import create_data_packet
 from ..utils.serial_comm import get_serial_comm_timestamp
 from ..utils.serial_comm import METADATA_TAGS_FOR_LOGGING
+from ..utils.serial_comm import parse_end_offline_mode_bytes
 from ..utils.serial_comm import parse_instrument_event_info
 from ..utils.serial_comm import parse_metadata_bytes
 from ..utils.serial_comm import validate_instrument_metadata
-
 
 logger = logging.getLogger(__name__)
 
@@ -94,6 +96,9 @@ COMMAND_PACKET_TYPES = frozenset(
         SerialCommPacketTypes.BEGIN_FIRMWARE_UPDATE,
         SerialCommPacketTypes.FIRMWARE_UPDATE,
         SerialCommPacketTypes.END_FIRMWARE_UPDATE,
+        SerialCommPacketTypes.INIT_OFFLINE_MODE,
+        SerialCommPacketTypes.END_OFFLINE_MODE,
+        SerialCommPacketTypes.CHECK_CONNECTION_STATUS,
     ]
 )
 
@@ -136,6 +141,9 @@ class InstrumentComm:
         self._firmware_update_manager: FirmwareUpdateManager | None = None
         # comm tracking
         self._timepoints_of_events = TimepointsOfEvents()
+        # used to tell instrument comm to ignore all messages when offline
+        self._system_in_offline_mode: bool = False
+        self._offline_state_change = asyncio.Event()
 
     # PROPERTIES
 
@@ -162,17 +170,14 @@ class InstrumentComm:
 
     async def run(self, system_error_future: asyncio.Future[tuple[int, dict[str, str]]]) -> None:
         logger.info("Starting InstrumentComm")
-
         try:
             await self._setup()
 
             tasks = {
                 asyncio.create_task(self._handle_comm_from_monitor()),
-                asyncio.create_task(self._handle_sending_handshakes()),
-                asyncio.create_task(self._handle_data_stream()),
-                asyncio.create_task(self._handle_beacon_tracking()),
-                asyncio.create_task(self._catch_expired_command()),
+                asyncio.create_task(self._manage_online_mode_tasks()),
             }
+
             await wait_tasks_clean(tasks, error_msg=ERROR_MSG)
         except asyncio.CancelledError:
             logger.info("InstrumentComm cancelled")
@@ -300,9 +305,21 @@ class InstrumentComm:
     async def _handle_comm_from_monitor(self) -> None:
         while True:
             comm_from_monitor = await self._from_monitor_queue.get()
-
             bytes_to_send = bytes(0)
             packet_type: int | None = None
+
+            is_offline_mode_comm = comm_from_monitor["command"] in (
+                "end_offline_mode",
+                "check_connection_status",
+            )
+
+            ignore_incoming_comm = not is_offline_mode_comm and self._system_in_offline_mode
+
+            if ignore_incoming_comm:
+                logger.info(
+                    f"Ignoring incoming command '{comm_from_monitor['command']}' in instrument comm while offline"
+                )
+                return
 
             match comm_from_monitor:
                 case {"command": "start_stim_checks", "well_indices": well_indices}:
@@ -334,6 +351,16 @@ class InstrumentComm:
                 }:  # pragma: no cover
                     packet_type = SerialCommPacketTypes.TRIGGER_ERROR
                     bytes_to_send = bytes(first_two_status_codes)
+                case {"command": "init_offline_mode"}:
+                    packet_type = SerialCommPacketTypes.INIT_OFFLINE_MODE
+                    self._system_in_offline_mode = True
+                case {"command": "end_offline_mode"}:
+                    packet_type = SerialCommPacketTypes.END_OFFLINE_MODE
+                    # the _offline_state_change event needs to be triggered here instead of in process instrument comm because we first need to restart the task that handles instrument comm
+                    self._system_in_offline_mode = False
+                    self._offline_state_change.set()
+                case {"command": "check_connection_status"}:
+                    packet_type = SerialCommPacketTypes.CHECK_CONNECTION_STATUS
                 case invalid_comm:
                     raise NotImplementedError(
                         f"InstrumentComm received invalid comm from SystemMonitor: {invalid_comm}"
@@ -342,6 +369,48 @@ class InstrumentComm:
             if packet_type is not None:
                 await self._send_data_packet(packet_type, bytes_to_send)
                 await self._command_tracker.add(packet_type, comm_from_monitor)
+
+    async def _manage_online_mode_tasks(self) -> None:
+        main_task_name = self._wait_for_offline_state_change.__name__
+
+        # TODO clean up repetitive code
+        pending = {
+            asyncio.create_task(self._wait_for_offline_state_change(), name=main_task_name),
+            asyncio.create_task(self._handle_sending_handshakes()),
+            asyncio.create_task(self._handle_data_stream()),
+            asyncio.create_task(self._handle_beacon_tracking()),
+            asyncio.create_task(self._catch_expired_command()),
+        }
+
+        while True:
+            done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
+
+            for task in done:
+                task_name = task.get_name()
+
+                if task_name == main_task_name:
+                    # TODO consider making this it's own function
+                    if self._system_in_offline_mode:
+                        logger.info("Cancelling online mode tasks")
+                        exc = await clean_up_tasks(pending, ERROR_MSG)
+                        if exc:
+                            raise exc
+                    elif len(pending) == 0:
+                        logger.info("Creating online mode tasks")
+                        pending |= {
+                            asyncio.create_task(self._handle_sending_handshakes()),
+                            asyncio.create_task(self._handle_data_stream()),
+                            asyncio.create_task(self._handle_beacon_tracking()),
+                            asyncio.create_task(self._catch_expired_command()),
+                        }
+
+                    pending |= {
+                        asyncio.create_task(self._wait_for_offline_state_change(), name=main_task_name)
+                    }
+
+    async def _wait_for_offline_state_change(self) -> None:
+        await self._offline_state_change.wait()
+        self._offline_state_change.clear()
 
     async def _handle_sending_handshakes(self) -> None:
         # Tanner (3/17/23): handshakes are not tracked as commands
@@ -433,10 +502,7 @@ class InstrumentComm:
         await self._wait_for_reboot()
 
         await self._to_monitor_queue.put(
-            {
-                "command": "firmware_update_complete",
-                "firmware_type": comm_from_monitor["firmware_type"],
-            }
+            {"command": "firmware_update_complete", "firmware_type": comm_from_monitor["firmware_type"]}
         )
 
     async def _wait_for_reboot(self) -> None:
@@ -464,7 +530,6 @@ class InstrumentComm:
             self._update_timepoints_of_events("command_sent")
 
         data_packet = create_data_packet(get_serial_comm_timestamp(), packet_type, data_to_send)
-
         write_len = await self._instrument.write_async(data_packet)
         if write_len == 0:
             logger.error("Serial data write reporting no bytes written")
@@ -543,6 +608,11 @@ class InstrumentComm:
                 if not metadata_dict.pop("is_stingray"):
                     raise IncorrectInstrumentConnectedError()
                 prev_command_info.update(metadata_dict)
+
+                await self._send_data_packet(SerialCommPacketTypes.CHECK_CONNECTION_STATUS)
+                await self._command_tracker.add(
+                    SerialCommPacketTypes.CHECK_CONNECTION_STATUS, {"command": "check_connection_status"}
+                )
             case "start_stim_checks":
                 stimulator_check_dict = convert_stimulator_check_bytes_to_dict(response_data)
 
@@ -584,6 +654,16 @@ class InstrumentComm:
                 if self._firmware_update_manager is None:
                     raise NotImplementedError("_firmware_update_manager should never be None here")
                 await self._firmware_update_manager.update(command, response_data)
+            case "check_connection_status":
+                prev_command_info["status"] = response_data[0]
+                self._system_in_offline_mode = response_data[0] == InstrumentConnectionStatuses.OFFLINE
+                if self._system_in_offline_mode:
+                    self._offline_state_change.set()
+                    logger.info("Starting up in offline mode")
+            case "end_offline_mode":
+                prev_command_info |= parse_end_offline_mode_bytes(response_data)
+            case "init_offline_mode":
+                self._offline_state_change.set()
 
         if prev_command_info["command"] not in INTERMEDIATE_FIRMWARE_UPDATE_COMMANDS:
             await self._to_monitor_queue.put(prev_command_info)
