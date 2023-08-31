@@ -553,7 +553,7 @@ class MantarrayMcSimulator(InfiniteProcess):
         elif packet_type == SerialCommPacketTypes.END_OFFLINE_MODE:
             self._connection_status = InstrumentConnectionStatuses.CONNECTED
             self._time_of_last_handshake_secs = perf_counter()
-            # TODO clean this up
+            # TODO change this so it sends accurate values
             test_time_index = self._get_global_timer()
 
             is_stim_running = False

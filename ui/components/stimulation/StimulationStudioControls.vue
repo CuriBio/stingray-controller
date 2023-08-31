@@ -307,9 +307,10 @@ export default {
       },
       startupInOfflineLabels: {
         header: "Important!",
-        msgOne: "You are currently in offline mode.",
-        msgTwo: "Would you like to end offline mode and go back online? Stimulation will continue running.",
-        buttonNames: ["Stay Offline", "Stop"],
+        msgOne: "This istrument is currently running in offline mode.",
+        msgTwo:
+          "Would you like to proceed in offline mode, or reconnect to the instrument and enter online mode? Stimulation will continue running on the instrument with either option.",
+        buttonNames: ["Stay Offline", "Reconnect"],
       },
       stim24hrTimer: null,
       disabledToolTip: "Controls disabled until connected to instrument.",
@@ -530,6 +531,7 @@ export default {
       if (idx === 1) {
         this.$store.dispatch(`system/sendOfflineState`);
       } else if (idx === 2) {
+        this.$store.dispatch(`system/sendOfflineState`);
         await this.$store.dispatch("system/sendShutdown");
         // close window completely
         this.$emit("send-confirmation", 1);
