@@ -6,10 +6,13 @@ from random import randint
 from zlib import crc32
 
 from controller.constants import GENERIC_24_WELL_DEFINITION
+from controller.constants import NUM_WELLS
 from controller.constants import SERIAL_COMM_PACKET_BASE_LENGTH_BYTES
 from controller.constants import SERIAL_COMM_STATUS_CODE_LENGTH_BYTES
 from controller.constants import STIM_OPEN_CIRCUIT_THRESHOLD_OHMS
 from controller.constants import STIM_SHORT_CIRCUIT_THRESHOLD_OHMS
+from controller.constants import StimProtocolStatuses
+from controller.constants import StimulationStates
 from controller.constants import StimulatorCircuitStatuses
 from controller.utils import serial_comm
 from controller.utils.serial_comm import convert_adc_readings_to_circuit_status
@@ -47,10 +50,12 @@ from ..helpers import assert_subprotocol_pulse_bytes_are_expected
 from ..helpers import get_generic_protocols
 from ..helpers import get_random_biphasic_pulse
 from ..helpers import get_random_monophasic_pulse
+from ..helpers import get_random_protocol_status
 from ..helpers import get_random_stim_delay
 from ..helpers import get_random_stim_pulse
 from ..helpers import get_random_subprotocol
 from ..helpers import random_bool
+from ..helpers import random_timestamp
 from ..helpers import TEST_EVENT_INFO
 from ..helpers import TEST_INITIAL_MAGNET_FINDING_PARAMS
 from ..helpers import TEST_SERIAL_NUMBER
@@ -727,7 +732,7 @@ def test_convert_stim_bytes_to_dict__can_correctly_recreate_stim_dict__except_fo
     assert recreated_stim_info_dict["protocol_assignments"] == original_stim_info_dict["protocol_assignments"]
 
 
-def test_parse_end_offline_mode_bytes__correctly_recreates_stim_info():
+def test_parse_end_offline_mode_bytes__correctly_recreates_stim_info(mocker):
     protocol_assignments_dict = {
         GENERIC_24_WELL_DEFINITION.get_well_name_from_well_index(well_idx): randint(0, 1)
         for well_idx in range(24)
@@ -772,29 +777,58 @@ def test_parse_end_offline_mode_bytes__correctly_recreates_stim_info():
         ],
         "protocol_assignments": protocol_assignments_dict,
     }
+    num_protocols = len(original_stim_info_dict["protocols"])
 
-    test_timestamp = 100
+    # this value is not actually used right now
+    test_is_stim_running = random_bool()
+
+    test_dormant_timestamp = random_timestamp()
+    test_stim_start_timestamp = random_timestamp()
     test_stim_bytes = convert_stim_dict_to_bytes(copy.deepcopy(original_stim_info_dict))
 
-    expected_bytes = (
-        test_timestamp.to_bytes(8, byteorder="little")  # Relative time of when system went dormant last
-        + bytes([True])  # is stim running?
-        + test_timestamp.to_bytes(8, byteorder="little")  # Relative time of last stim schedule start
-        + bytes([False] * 24)  # stim statuses
-        + test_stim_bytes  # Protocol data
+    # only stim status is parsed out of protocol status at the moment
+    test_protocol_statuses = [
+        choice([StimulationStates.RUNNING, StimulationStates.INACTIVE]) for _ in range(NUM_WELLS)
+    ]
+    test_protocol_statuses_bytes = bytes([])
+    for test_protocol_status in test_protocol_statuses:
+        possible_stim_statuses = (
+            (StimProtocolStatuses.ACTIVE, StimProtocolStatuses.NULL)
+            if test_protocol_status == StimulationStates.RUNNING
+            else (StimProtocolStatuses.FINISHED, StimProtocolStatuses.ERROR)
+        )
+        test_stim_status = choice(possible_stim_statuses)
+        test_protocol_statuses_bytes += get_random_protocol_status(stim_status=test_stim_status)
+
+    test_bytes = (
+        test_dormant_timestamp.to_bytes(8, byteorder="little")
+        + bytes([test_is_stim_running])
+        + test_stim_start_timestamp.to_bytes(8, byteorder="little")
+        + test_protocol_statuses_bytes
+        + test_stim_bytes
     )
 
-    offline_stim_info_dict = parse_end_offline_mode_bytes(expected_bytes)
+    offline_stim_info_dict = parse_end_offline_mode_bytes(test_bytes)
 
+    actual_stim_info = offline_stim_info_dict.pop("stim_info")
+
+    assert offline_stim_info_dict == {
+        "system_dormant_timestamp": test_dormant_timestamp,
+        "stim_active": test_is_stim_running,
+        "last_stim_scheduled_start_timestamp": test_stim_start_timestamp,
+        "stimulation_protocol_statuses": test_protocol_statuses[:num_protocols],
+    }
+
+    # TODO should eventually split this test out and just assert that it the correct function was used on the correct bytes
     for protocol_idx, (recreated_protocol, original_protocol) in enumerate(
-        zip(offline_stim_info_dict["stim_info"]["protocols"], original_stim_info_dict["protocols"])
+        zip(actual_stim_info["protocols"], original_stim_info_dict["protocols"])
     ):
         recreated_protocol.pop("protocol_id")  # this is not needed in the recreated dict
         assert recreated_protocol == original_protocol, f"Protocol {protocol_idx}"
 
     for recreated_assignment, original_assignment in zip(
-        offline_stim_info_dict["stim_info"]["protocol_assignments"].values(),
+        actual_stim_info["protocol_assignments"].values(),
         original_stim_info_dict["protocol_assignments"].values(),
     ):
         if recreated_assignment is not None:
-            assert recreated_assignment == chr(original_assignment + 97).upper()
+            assert recreated_assignment == chr(original_assignment + ord("A"))

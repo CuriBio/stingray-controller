@@ -502,9 +502,11 @@ def parse_end_offline_mode_bytes(response_bytes: bytes) -> dict[str, Any]:
     )
 
     return {
-        "system_dormant_timestamp": int.from_bytes(response_bytes[:8]),
+        "system_dormant_timestamp": int.from_bytes(response_bytes[:8], byteorder="little"),
         "stim_active": bool(response_bytes[8]),
-        "last_stim_scheduled_start_timestamp": int.from_bytes(response_bytes[9:protocol_status_start_idx]),
+        "last_stim_scheduled_start_timestamp": int.from_bytes(
+            response_bytes[9:protocol_status_start_idx], byteorder="little"
+        ),
         "stimulation_protocol_statuses": stimulation_protocol_statuses,
         "stim_info": updated_stim_dict,
     }
@@ -524,7 +526,11 @@ def parse_stim_offline_statuses(status_bytes: bytes, num_protocols: int) -> list
 
 
 def _stim_status_to_state(status: int) -> StimulationStates:
-    return StimulationStates.RUNNING if status == StimProtocolStatuses.ACTIVE else StimulationStates.INACTIVE
+    return (
+        StimulationStates.RUNNING
+        if status in (StimProtocolStatuses.ACTIVE, StimProtocolStatuses.NULL)
+        else StimulationStates.INACTIVE
+    )
 
 
 # TODO consider just adding this into convert_stim_bytes_to_dict
