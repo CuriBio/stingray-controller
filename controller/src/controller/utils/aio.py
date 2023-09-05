@@ -21,12 +21,12 @@ async def wait_tasks_clean(
     try:
         await asyncio.wait(tasks, return_when=return_when)
     finally:
-        exc = await clean_up_tasks(tasks, error_msg)
-        if exc:
-            raise exc
+        await clean_up_tasks(tasks, error_msg, raise_error=True)
 
 
-async def clean_up_tasks(tasks: set[GenericTask], error_msg: str = CLEANUP_ERROR_MSG) -> BaseException | None:
+async def clean_up_tasks(
+    tasks: set[GenericTask], error_msg: str = CLEANUP_ERROR_MSG, raise_error: bool = False
+) -> BaseException | None:
     # Tanner (3/31/23): assuming there will only be one exception per set of tasks
     exc = None
 
@@ -42,10 +42,13 @@ async def clean_up_tasks(tasks: set[GenericTask], error_msg: str = CLEANUP_ERROR
         except BaseException as e:
             # TODO use an exception group here?
             if exc is None:
-                # catch the first exception raised and return to caller. Assume that if it needs to be logged, it will be logged by caller
+                # catch the first exception raised. Assume that if it needs to be logged, it will be logged by caller
                 exc = e
             else:
                 # if there are other exceptions, log them here since only the first exception found will be returned
                 logger.exception(error_msg)  # type: ignore  # mypy thinks this is unreachable for some reason
+
+    if exc and raise_error:
+        raise exc
 
     return exc

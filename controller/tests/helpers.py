@@ -12,6 +12,7 @@ from controller.constants import STIM_MAX_DUTY_CYCLE_PERCENTAGE
 from controller.constants import STIM_MAX_SUBPROTOCOL_DURATION_MICROSECONDS
 from controller.constants import STIM_MIN_SUBPROTOCOL_DURATION_MICROSECONDS
 from controller.constants import STIM_PULSE_BYTES_LEN
+from controller.constants import StimProtocolStatuses
 from controller.constants import VALID_STIMULATION_TYPES
 from controller.utils.serial_comm import convert_subprotocol_pulse_bytes_to_dict
 from controller.utils.serial_comm import SUBPROTOCOL_BIPHASIC_ONLY_COMPONENTS
@@ -60,6 +61,10 @@ def random_well_idx():
 
 def random_stim_type():
     return choice(list(VALID_STIMULATION_TYPES))
+
+
+def random_timestamp():
+    return randint(0, 2**64 - 1)
 
 
 def get_random_subprotocol(*, allow_loop=False, total_subprotocol_dur_us=None):
@@ -328,6 +333,25 @@ def create_random_stim_info():
         stim_info["protocol_assignments"]["A1"] = None
 
     return stim_info
+
+
+def get_random_protocol_status(
+    *, protocol_id=None, subprotocol_start_time_idx=None, stim_status=None, subprotocol_idx=None
+):
+    if protocol_id is None:
+        protocol_id = randint(0, NUM_WELLS)
+    if subprotocol_start_time_idx is None:
+        subprotocol_start_time_idx = random_timestamp()
+    if stim_status is None:
+        stim_status = choice(StimProtocolStatuses.__members__.values())
+    if subprotocol_idx is None:
+        subprotocol_idx = randint(0, 0xFF)
+
+    return (
+        bytes([protocol_id])
+        + subprotocol_start_time_idx.to_bytes(8, byteorder="little")
+        + bytes([stim_status, subprotocol_idx])
+    )
 
 
 def assert_subprotocol_pulse_bytes_are_expected(actual, expected, include_idx=False, err_msg=None):

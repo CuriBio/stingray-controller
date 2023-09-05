@@ -331,6 +331,7 @@ class SystemMonitor:
                     "stimulation_protocol_statuses": stimulation_protocol_statuses,
                 }:
                     # setup stim state entering online mode
+                    logger.info(f"Stim info loaded on instrument in offline mode: {stim_info}")
                     system_state_updates |= {
                         "stim_info": stim_info,
                         "stimulation_protocol_statuses": stimulation_protocol_statuses,
@@ -431,8 +432,7 @@ class SystemMonitor:
                 case invalid_comm:
                     raise NotImplementedError(f"Invalid communication from CloudComm: {invalid_comm}")
 
-            # only update system status if not in offline state, affects starting up in offline
-            if system_state_updates and system_state["system_status"] != SystemStatuses.OFFLINE_STATE:
+            if system_state_updates:
                 await self._system_state_manager.update(system_state_updates)
 
     # HELPERS

@@ -5,9 +5,5 @@ class SerialCommInvalidSamplingPeriodError(Exception):
     pass
 
 
-class SerialCommTooManyMissedHandshakesError(Exception):
-    pass
-
-
 class UnrecognizedSerialCommPacketTypeError(Exception):
     pass

@@ -27,6 +27,7 @@ from pulse3D.constants import TOTAL_WORKING_HOURS_UUID
 from ..constants import GENERIC_24_WELL_DEFINITION
 from ..constants import MICROS_PER_MILLI
 from ..constants import NUM_WELLS
+from ..constants import PROTOCOL_STATUS_BYTES_LEN
 from ..constants import SERIAL_COMM_CHECKSUM_LENGTH_BYTES
 from ..constants import SERIAL_COMM_MAGIC_WORD_BYTES
 from ..constants import SERIAL_COMM_MODULE_ID_TO_WELL_IDX
@@ -40,7 +41,6 @@ from ..constants import STIM_MODULE_ID_TO_WELL_IDX
 from ..constants import STIM_OPEN_CIRCUIT_THRESHOLD_OHMS
 from ..constants import STIM_PULSE_BYTES_LEN
 from ..constants import STIM_SHORT_CIRCUIT_THRESHOLD_OHMS
-from ..constants import STIM_STATUS_BYTES_LEN
 from ..constants import STIM_WELL_IDX_TO_MODULE_ID
 from ..constants import StimProtocolStatuses
 from ..constants import StimulationStates
@@ -222,7 +222,7 @@ def convert_status_code_bytes_to_dict(status_code_bytes: bytes) -> dict[str, int
     status_code_labels = (
         "main_status",
         "index_of_thread_with_error",
-        *[f"module_{i}_status" for i in range(24)],
+        *[f"module_{i}_status" for i in range(NUM_WELLS)],
     )
     return {label: status_code_bytes[i] for i, label in enumerate(status_code_labels)}
 
@@ -446,7 +446,8 @@ def convert_stim_bytes_to_dict(stim_bytes: bytes) -> dict[str, Any]:
     stim_info_dict: dict[str, Any] = {
         "protocols": [],
         "protocol_assignments": {
-            GENERIC_24_WELL_DEFINITION.get_well_name_from_well_index(well_idx): None for well_idx in range(24)
+            GENERIC_24_WELL_DEFINITION.get_well_name_from_well_index(well_idx): None
+            for well_idx in range(NUM_WELLS)
         },
     }
 
@@ -488,36 +489,51 @@ def convert_stim_bytes_to_dict(stim_bytes: bytes) -> dict[str, Any]:
 
 
 def parse_end_offline_mode_bytes(response_bytes: bytes) -> dict[str, Any]:
-    """Parse bytes containing stimulation info and return as Dict."""
+    """Parse bytes containing stimulation info and return as dict."""
+    protocol_status_start_idx = 17
+    protocol_status_stop_idx = protocol_status_start_idx + PROTOCOL_STATUS_BYTES_LEN * NUM_WELLS
 
-    stim_dict = convert_stim_bytes_to_dict(response_bytes[281:])
+    stim_dict = convert_stim_bytes_to_dict(response_bytes[protocol_status_stop_idx:])
     updated_stim_dict = format_stim_dict_with_ids(stim_dict)
+
     num_protocols = len(updated_stim_dict["protocols"])
+    stimulation_protocol_statuses = parse_stim_offline_statuses(
+        response_bytes[protocol_status_start_idx:protocol_status_stop_idx], num_protocols
+    )
 
     return {
-        "system_dormant_timestamp": int.from_bytes(response_bytes[:8]),
+        "system_dormant_timestamp": int.from_bytes(response_bytes[:8], byteorder="little"),
         "stim_active": bool(response_bytes[8]),
-        "last_stim_scheduled_start_timestamp": int.from_bytes(response_bytes[9:17]),
-        "stimulation_protocol_statuses": parse_stim_offline_statuses(response_bytes[17:281], num_protocols),
+        "last_stim_scheduled_start_timestamp": int.from_bytes(
+            response_bytes[9:protocol_status_start_idx], byteorder="little"
+        ),
+        "stimulation_protocol_statuses": stimulation_protocol_statuses,
         "stim_info": updated_stim_dict,
     }
 
 
 def parse_stim_offline_statuses(status_bytes: bytes, num_protocols: int) -> list[StimulationStates]:
     """Parse stimulator statuses bytes for active states."""
-    # 264 bytes are always returned, only parse bytes with protocols assigned
-    status_bytes_to_parse = num_protocols * STIM_STATUS_BYTES_LEN
-    stimulation_protocol_statuses = []
+    stimulator_status_idx = 9
 
-    for byte_idx in range(9, len(status_bytes[:status_bytes_to_parse]), STIM_STATUS_BYTES_LEN):
-        status = status_bytes[byte_idx]
-        stimulation_protocol_statuses.append(
-            StimulationStates.RUNNING if status == StimProtocolStatuses.ACTIVE else StimulationStates.INACTIVE
+    status_bytes_to_parse = num_protocols * PROTOCOL_STATUS_BYTES_LEN
+    return [
+        _stim_status_to_state(status_bytes[status_idx])
+        for status_idx in range(
+            stimulator_status_idx, len(status_bytes[:status_bytes_to_parse]), PROTOCOL_STATUS_BYTES_LEN
         )
+    ]
 
-    return stimulation_protocol_statuses
+
+def _stim_status_to_state(status: int) -> StimulationStates:
+    return (
+        StimulationStates.RUNNING
+        if status in (StimProtocolStatuses.ACTIVE, StimProtocolStatuses.NULL)
+        else StimulationStates.INACTIVE
+    )
 
 
+# TODO consider just adding this into convert_stim_bytes_to_dict
 def format_stim_dict_with_ids(stim_dict: dict[str, Any]) -> dict[str, Any]:
     """Add protocol IDs to stim dict from instrument after being offline."""
     for idx, _ in enumerate(stim_dict["protocols"]):
