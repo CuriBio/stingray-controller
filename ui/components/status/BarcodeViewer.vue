@@ -3,7 +3,7 @@
     <span class="span__plate-barcode-text" :style="dynamicLabelStyle">{{ barcodeLabel }}</span>
     <input
       id="plateinfo"
-      :disabled="isDisabled"
+      :disabled="isTextBoxDisabled"
       type="text"
       spellcheck="false"
       class="input__plate-barcode-entry"
@@ -12,7 +12,7 @@
       @input="setBarcodeManually"
     />
     <div
-      v-if="barcodeManualMode && activeProcesses"
+      v-if="barcodeManualMode && isTextBoxDisabled"
       v-b-popover.hover.top="tooltipText"
       :title="barcodeLabel"
       class="div__disabled-input-popover"
@@ -24,7 +24,7 @@
       class="input__plate-barcode-manual-entry-enable"
     >
       <span class="input__plate-barcode-manual-entry-enable-icon">
-        <div id="edit-plate-barcode" @click="activeProcesses || $bvModal.show('edit-plate-barcode-modal')">
+        <div id="edit-plate-barcode" @click="isEditBtnDisabled || $bvModal.show('edit-plate-barcode-modal')">
           <FontAwesomeIcon :icon="['fa', 'pencil-alt']" />
         </div>
       </span>
@@ -44,6 +44,7 @@ import { faPencilAlt } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import StatusWarningWidget from "@/components/status/StatusWarningWidget.vue";
 import { STIM_STATUS } from "@/store/modules/stimulation/enums";
+import { SYSTEM_STATUS } from "@/store/modules/system/enums";
 import Vue from "vue";
 import { VBPopover } from "bootstrap-vue";
 
@@ -77,7 +78,7 @@ export default {
     };
   },
   computed: {
-    ...mapState("system", ["barcodes", "barcodeWarning", "barcodeManualMode"]),
+    ...mapState("system", ["barcodes", "barcodeWarning", "barcodeManualMode", "statusUuid"]),
     ...mapState("stimulation", ["stimStatus"]),
     barcodeInfo: function () {
       return this.barcodes[this.barcodeType];
@@ -88,15 +89,30 @@ export default {
     dynamicLabelStyle: function () {
       return this.barcodeType == "plateBarcode" ? "left: 17px;" : "left: 0px;";
     },
-
     tooltipText: function () {
-      return this.activeProcesses ? "Cannot edit barcodes while stimulating..." : "Click to edit";
+      if (this.isInOfflineMode) {
+        return "Cannot edit barcodes while in offline mode...";
+      } else if (this.activeProcesses) {
+        return "Cannot edit barcodes while stimulating...";
+      } else {
+        return "Click to edit";
+      }
+    },
+    isInOfflineMode: function () {
+      // disable if going offline or in offline
+      return [SYSTEM_STATUS.OFFLINE_STATE, SYSTEM_STATUS.GOING_OFFLINE_STATE].includes(this.statusUuid);
     },
     activeProcesses: function () {
       return [STIM_STATUS.CONFIG_CHECK_IN_PROGRESS, STIM_STATUS.STIM_ACTIVE].includes(this.stimStatus);
     },
-    isDisabled: function () {
-      return this.activeProcesses || !this.barcodeManualMode;
+    isEditingDisabled: function () {
+      return this.activeProcesses || this.isInOfflineMode;
+    },
+    isTextBoxDisabled: function () {
+      return this.isEditingDisabled || !this.barcodeManualMode;
+    },
+    isEditBtnDisabled: function () {
+      return this.isEditingDisabled || this.barcodeManualMode;
     },
   },
   watch: {

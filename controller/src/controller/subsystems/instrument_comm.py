@@ -316,7 +316,7 @@ class InstrumentComm:
                 and (command := comm_from_monitor["command"]) not in COMMANDS_ALLOWED_IN_OFFLINE_MODE
             ):
                 logger.info(f"Ignoring online-only command '{command}'")
-                return
+                continue
 
             match comm_from_monitor:
                 case {"command": "start_stim_checks", "well_indices": well_indices}:
