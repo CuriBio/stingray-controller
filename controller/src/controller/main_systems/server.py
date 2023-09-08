@@ -198,7 +198,7 @@ class Server:
                 and command not in COMMANDS_ALLOWED_IN_OFFLINE_MODE
             ):
                 logger.info(f"Ignoring online-only command '{command}'")
-                return
+                continue
 
             try:
                 # TODO try using pydantic to define message schema + some other message schema generator (nano message, ask Jason)
