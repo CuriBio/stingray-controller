@@ -1,12 +1,14 @@
 import { WellTitle as LabwareDefinition } from "@/js-utils/LabwareCalculations.js";
 const twentyFourWellPlateDefinition = new LabwareDefinition(4, 6);
-import { STIM_STATUS, TIME_CONVERSION_TO_MILLIS } from "./enums";
+import { STIM_STATUS, TIME_CONVERSION_TO_MILLIS, COLOR_PALETTE } from "./enums";
 import {
   areValidPulses,
   convertProtocolCasing,
   checkPulseCompatibility,
   _convertObjToCamelCase,
   _convertObjToSnakeCase,
+  _convertSubprotocolsFromFw,
+  _convertDetailedSubprotocolsFromFW,
 } from "@/js-utils/ProtocolValidation";
 
 export default {
@@ -307,7 +309,6 @@ export default {
   },
 
   async createProtocolMessage({ state }) {
-    // const status = true;
     const message = { protocols: [], protocol_assignments: {} };
 
     const { protocolAssignments, stimulatorCircuitStatuses } = state;
@@ -329,7 +330,7 @@ export default {
         if (!uniqueProtocolIds.has(letter)) {
           uniqueProtocolIds.add(letter);
           // this needs to be converted before sent because stim type changes independently of pulse settings
-          const convertedSubprotocols = _getConvertedSettings(subprotocols);
+          const convertedSubprotocols = _getConvertedSettings(subprotocols, 1e3);
 
           const protocolModel = {
             protocol_id: letter,
@@ -340,9 +341,10 @@ export default {
 
           message.protocols.push(protocolModel);
         }
-        // assign letter to well number
-        const wellNumber = twentyFourWellPlateDefinition.getWellNameFromWellIndex(well, false);
-        message.protocol_assignments[wellNumber] = letter;
+
+        // assign letter to well name
+        const wellName = twentyFourWellPlateDefinition.getWellNameFromWellIndex(well, false);
+        message.protocol_assignments[wellName] = letter;
       }
     }
     const wsProtocolMessage = JSON.stringify({ command: "set_stim_protocols", stim_info: message });
@@ -481,35 +483,70 @@ export default {
       commit("setStimStatus", STIM_STATUS.CONFIG_CHECK_COMPLETE);
     }
   },
+  async populateStimAfterOffline({ commit, state }, { stim_info }) {
+    const { protocols, protocol_assignments } = stim_info;
+    const protocolList = JSON.parse(JSON.stringify(state.protocolList));
+
+    for (const protocol of protocols) {
+      const protocolName = `protocol_${protocol.protocol_id}`;
+      const formattedSubprotocols = _convertSubprotocolsFromFw(protocol.subprotocols[0].subprotocols);
+      const detailedSubprotocols = _convertDetailedSubprotocolsFromFW(formattedSubprotocols);
+
+      protocolList.push({
+        letter: protocol.protocol_id,
+        label: protocolName,
+        color: COLOR_PALETTE[(protocolList.length - 1) % 26],
+        protocol: {
+          detailedSubprotocols,
+          name: protocolName,
+          restDuration: 0,
+          runUntilStopped: protocol.run_until_stopped,
+          stimulationType: protocol.stimulation_type,
+          subprotocols: formattedSubprotocols,
+          timeUnit: "milliseconds",
+        },
+      });
+    }
+
+    const protocolAssignments = {};
+    Object.keys(protocol_assignments)
+      .filter((well) => protocol_assignments[well])
+      .map((well) => {
+        const wellIdx = twentyFourWellPlateDefinition.getWellIndexFromWellName(well);
+        protocolAssignments[wellIdx] = protocolList.find(
+          (protocol) => protocol.letter == protocol_assignments[well]
+        );
+      });
+
+    commit("setProtocolAssignments", protocolAssignments);
+    commit("setProtocolList", protocolList);
+  },
 };
 
-const _getConvertedSettings = (subprotocols) => {
-  const milliToMicro = 1e3;
-  const chargeConversion = milliToMicro;
-
+const _getConvertedSettings = (subprotocols, conversion) => {
   return subprotocols.map((pulse) => {
     let typeSpecificSettings = {};
     if (pulse.type === "loop") {
       typeSpecificSettings = {
         num_iterations: pulse.numIterations,
-        subprotocols: _getConvertedSettings(pulse.subprotocols),
+        subprotocols: _getConvertedSettings(pulse.subprotocols, conversion),
       };
     } else if (pulse.type === "Delay")
-      typeSpecificSettings.duration = pulse.duration * TIME_CONVERSION_TO_MILLIS[pulse.unit] * milliToMicro;
+      typeSpecificSettings.duration = pulse.duration * TIME_CONVERSION_TO_MILLIS[pulse.unit] * conversion;
     else
       typeSpecificSettings = {
         num_cycles: pulse.numCycles,
-        postphase_interval: Math.round(pulse.postphaseInterval * milliToMicro), // sent in µs, also needs to be an integer value
-        phase_one_duration: pulse.phaseOneDuration * milliToMicro, // sent in µs
-        phase_one_charge: pulse.phaseOneCharge * chargeConversion, // sent in mV
+        postphase_interval: Math.round(pulse.postphaseInterval * conversion), // sent in µs, also needs to be an integer value
+        phase_one_duration: pulse.phaseOneDuration * conversion, // sent in µs
+        phase_one_charge: pulse.phaseOneCharge * conversion, // sent in mV
       };
 
     if (pulse.type === "Biphasic")
       typeSpecificSettings = {
         ...typeSpecificSettings,
-        interphase_interval: pulse.interphaseInterval * milliToMicro, // sent in µs
-        phase_two_charge: pulse.phaseTwoCharge * chargeConversion, // sent in mV or µA
-        phase_two_duration: pulse.phaseTwoDuration * milliToMicro, // sent in µs
+        interphase_interval: pulse.interphaseInterval * conversion, // sent in µs
+        phase_two_charge: pulse.phaseTwoCharge * conversion, // sent in mV or µA
+        phase_two_duration: pulse.phaseTwoDuration * conversion, // sent in µs
       };
 
     return {

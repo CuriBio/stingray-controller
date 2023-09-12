@@ -24,7 +24,9 @@
         </span>
       </div>
     </div>
-    <div class="div__top-header-bar" />
+    <div class="div__top-header-bar">
+      <div v-if="stimPlayState" class="div__offline-status-banner-container">{{ offlineStatusText }}</div>
+    </div>
     <div class="div__nuxt-page">
       <nuxt />
     </div>
@@ -38,6 +40,7 @@ import StimulationStudioControls from "@/components/stimulation/StimulationStudi
 import StatusBar from "@/components/status/StatusBar";
 import SimulationMode from "@/components/status/SimulationMode";
 
+import { SYSTEM_STATUS } from "@/store/modules/system/enums";
 import { mapState } from "vuex";
 import { VBPopover, VBToggle } from "bootstrap-vue";
 
@@ -61,8 +64,12 @@ export default {
   computed: {
     ...mapState("stimulation", ["stimPlayState"]),
     ...mapState("system", ["statusUuid", "allowSwUpdateInstall"]),
+    offlineStatusText: function () {
+      return this.statusUuid === SYSTEM_STATUS.OFFLINE_STATE
+        ? "Stimulation in Progress - Offline Mode"
+        : "Stimulation in Progress - Online Mode";
+    },
   },
-
   methods: {
     sendConfirmation: function (idx) {
       this.$store.commit("system/setConfirmationRequest", false);
@@ -70,7 +77,6 @@ export default {
   },
 };
 </script>
-
 <style type="text/css">
 body {
   background-color: #000000;
@@ -114,6 +120,18 @@ body {
   width: 2px;
   height: 930px;
   background-color: #0e0e0e;
+}
+
+.div__offline-status-banner-container {
+  position: absolute;
+  width: 400px;
+  height: 45px;
+  background: #f44336;
+  color: white;
+  text-align: center;
+  left: 484px;
+  font-size: 12px;
+  line-height: 3.4;
 }
 
 /* DATA-ACQUISITION */

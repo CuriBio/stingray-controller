@@ -40,7 +40,7 @@ MICRO_TO_BASE_CONVERSION = int(1e6)
 # Cloud APIs
 CLOUD_ENDPOINT_USER_OPTION = "REPLACETHISWITHENDPOINTDURINGBUILD"
 CLOUD_ENDPOINT_VALID_OPTIONS: immutabledict[str, str] = immutabledict(
-    {"test": "curibio-test", "prod": "curibio"}
+    {"test": "curibio-test", "modl": "curibio-modl", "prod": "curibio"}
 )
 CLOUD_DOMAIN = CLOUD_ENDPOINT_VALID_OPTIONS.get(CLOUD_ENDPOINT_USER_OPTION, "curibio-test")
 CLOUD_API_ENDPOINT = f"apiv2.{CLOUD_DOMAIN}.com"
@@ -64,6 +64,8 @@ class SystemStatuses(Enum):
     DOWNLOADING_UPDATES_STATE = uuid.UUID("b623c5fa-af01-46d3-9282-748e19fe374c")
     INSTALLING_UPDATES_STATE = uuid.UUID("19c9c2d6-0de4-4334-8cb3-a4c7ab0eab00")
     UPDATES_COMPLETE_STATE = uuid.UUID("31f8fbc9-9b41-4191-8598-6462b7490789")
+    OFFLINE_STATE = uuid.UUID("9cf862e0-805e-4aa5-b345-eef298c11317")
+    GOING_OFFLINE_STATE = uuid.UUID("74362035-a23f-4cba-9e82-106872cb2b13")
 
 
 class StimulationStates(Enum):
@@ -111,7 +113,7 @@ MAX_MC_REBOOT_DURATION_SECONDS = 15
 MAX_MAIN_FIRMWARE_UPDATE_DURATION_SECONDS = 60
 MAX_CHANNEL_FIRMWARE_UPDATE_DURATION_SECONDS = 600
 
-SERIAL_COMM_NUM_ALLOWED_MISSED_HANDSHAKES = 3
+SERIAL_COMM_NUM_ALLOWED_MISSED_HANDSHAKES = 2
 
 SERIAL_COMM_TIMESTAMP_EPOCH = datetime.datetime(year=2021, month=1, day=1, tzinfo=datetime.timezone.utc)
 
@@ -120,8 +122,10 @@ SERIAL_COMM_HANDSHAKE_PERIOD_SECONDS = 5
 SERIAL_COMM_REGISTRATION_TIMEOUT_SECONDS = 8
 # Tanner (3/22/22): The following values are probably much larger than they need to be, not sure best duration of time to use now that a command might be sent right before or during a FW reboot initiated automatically by a FW error
 SERIAL_COMM_STATUS_BEACON_TIMEOUT_SECONDS = SERIAL_COMM_STATUS_BEACON_PERIOD_SECONDS * 2
-SERIAL_COMM_HANDSHAKE_TIMEOUT_SECONDS = SERIAL_COMM_HANDSHAKE_PERIOD_SECONDS * 2
 SERIAL_COMM_RESPONSE_TIMEOUT_SECONDS = SERIAL_COMM_STATUS_BEACON_PERIOD_SECONDS * 2
+SERIAL_COMM_HANDSHAKE_TIMEOUT_SECONDS = (
+    SERIAL_COMM_HANDSHAKE_PERIOD_SECONDS * SERIAL_COMM_NUM_ALLOWED_MISSED_HANDSHAKES
+)
 
 # general packet components
 SERIAL_COMM_MAGIC_WORD_BYTES = b"CURI BIO"
@@ -168,6 +172,7 @@ class SerialCommPacketTypes(IntEnum):
     STATUS_BEACON = 0
     MAGNETOMETER_DATA = 1
     REBOOT = 2
+    CHECK_CONNECTION_STATUS = 3
     HANDSHAKE = 4
     PLATE_EVENT = 6
     GOING_DORMANT = 10
@@ -177,6 +182,9 @@ class SerialCommPacketTypes(IntEnum):
     STOP_STIM = 22
     STIM_STATUS = 23
     STIM_IMPEDANCE_CHECK = 27
+    # offline mode
+    INIT_OFFLINE_MODE = 40
+    END_OFFLINE_MODE = 41
     # Magnetometer
     SET_SAMPLING_PERIOD = 50
     START_DATA_STREAMING = 52
@@ -242,6 +250,7 @@ VALID_SUBPROTOCOL_TYPES = frozenset(["delay", "monophasic", "biphasic", "loop"])
 
 # does not include subprotocol idx
 STIM_PULSE_BYTES_LEN = 29
+PROTOCOL_STATUS_BYTES_LEN = 11
 
 
 # Stim Checks
@@ -307,3 +316,9 @@ STIM_MODULE_ID_TO_WELL_IDX: immutabledict[int, int] = immutabledict(
 STIM_WELL_IDX_TO_MODULE_ID: immutabledict[int, int] = immutabledict(
     {well_idx: module_id for module_id, well_idx in STIM_MODULE_ID_TO_WELL_IDX.items()}
 )
+
+
+class InstrumentConnectionStatuses(IntEnum):
+    DISCONNECTED = 0
+    CONNECTED = 1
+    OFFLINE = 2

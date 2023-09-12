@@ -12,6 +12,7 @@ from controller.constants import STIM_MAX_DUTY_CYCLE_PERCENTAGE
 from controller.constants import STIM_MAX_SUBPROTOCOL_DURATION_MICROSECONDS
 from controller.constants import STIM_MIN_SUBPROTOCOL_DURATION_MICROSECONDS
 from controller.constants import STIM_PULSE_BYTES_LEN
+from controller.constants import StimProtocolStatuses
 from controller.constants import VALID_STIMULATION_TYPES
 from controller.utils.serial_comm import convert_subprotocol_pulse_bytes_to_dict
 from controller.utils.serial_comm import SUBPROTOCOL_BIPHASIC_ONLY_COMPONENTS
@@ -60,6 +61,10 @@ def random_well_idx():
 
 def random_stim_type():
     return choice(list(VALID_STIMULATION_TYPES))
+
+
+def random_timestamp():
+    return randint(0, 2**64 - 1)
 
 
 def get_random_subprotocol(*, allow_loop=False, total_subprotocol_dur_us=None):
@@ -213,8 +218,7 @@ def get_random_stim_pulse(*, pulse_type=None, total_subprotocol_dur_us=None, fre
     duty_cycle_dur_comps = all_pulse_components - charge_components - {"postphase_interval"}
 
     min_dur_per_duty_cycle_comp = max(
-        1,
-        (pulse_dur_us - MAX_POSTPHASE_INTERVAL_DUR_MICROSECONDS) // len(duty_cycle_dur_comps),
+        1, (pulse_dur_us - MAX_POSTPHASE_INTERVAL_DUR_MICROSECONDS) // len(duty_cycle_dur_comps)
     )
     max_dur_per_duty_cycle_comp = min(
         math.floor(pulse_dur_us * STIM_MAX_DUTY_CYCLE_PERCENTAGE), STIM_MAX_DUTY_CYCLE_DURATION_MICROSECONDS
@@ -232,6 +236,41 @@ def get_random_stim_pulse(*, pulse_type=None, total_subprotocol_dur_us=None, fre
     pulse.update({comp: randint(1, 100) * 10 for comp in charge_components})
 
     return pulse
+
+
+def get_generic_protocols(include_ids: bool = True):
+    protocols = [
+        {
+            "stimulation_type": "C",
+            "run_until_stopped": True,
+            "subprotocols": [get_random_monophasic_pulse(), get_random_stim_delay()],
+        },
+        {
+            "stimulation_type": "V",
+            "run_until_stopped": False,
+            "subprotocols": [
+                get_random_biphasic_pulse(),
+                {
+                    "type": "loop",
+                    "num_iterations": randint(1, 10),
+                    "subprotocols": [
+                        {
+                            "type": "loop",
+                            "num_iterations": randint(1, 10),
+                            "subprotocols": [get_random_subprotocol()],
+                        },
+                        get_random_subprotocol(),
+                    ],
+                },
+            ],
+        },
+    ]
+
+    if include_ids:
+        protocols[0]["protocol_id"] = "A"
+        protocols[1]["protocol_id"] = "B"
+
+    return protocols
 
 
 def _get_rand_num_cycles_from_pulse_dur(pulse_dur_us):
@@ -275,7 +314,7 @@ def create_random_stim_info():
                             )
                             for _ in range(randint(1, 2))
                         ],
-                    },
+                    }
                 ],
             }
             for pid in protocol_ids[1:]
@@ -294,6 +333,25 @@ def create_random_stim_info():
         stim_info["protocol_assignments"]["A1"] = None
 
     return stim_info
+
+
+def get_random_protocol_status(
+    *, protocol_id=None, subprotocol_start_time_idx=None, stim_status=None, subprotocol_idx=None
+):
+    if protocol_id is None:
+        protocol_id = randint(0, NUM_WELLS)
+    if subprotocol_start_time_idx is None:
+        subprotocol_start_time_idx = random_timestamp()
+    if stim_status is None:
+        stim_status = choice(StimProtocolStatuses.__members__.values())
+    if subprotocol_idx is None:
+        subprotocol_idx = randint(0, 0xFF)
+
+    return (
+        bytes([protocol_id])
+        + subprotocol_start_time_idx.to_bytes(8, byteorder="little")
+        + bytes([stim_status, subprotocol_idx])
+    )
 
 
 def assert_subprotocol_pulse_bytes_are_expected(actual, expected, include_idx=False, err_msg=None):

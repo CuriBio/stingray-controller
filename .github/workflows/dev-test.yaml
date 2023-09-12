@@ -14,6 +14,7 @@ on:
         type: choice
         options:
           - test
+          - modl
           - prod
   schedule:
     - cron: "0 5 * * *"
@@ -185,18 +186,17 @@ jobs:
           cd controller/
           poetry run pyinstaller pyinstaller.spec --log-level=DEBUG --distpath=../electron/dist-python --workpath=build-python
 
-      # TODO
-      # - name: Run Python Tests on Executable with randomly generated seed
-      #   if: github.event.inputs.randomlyseed == ''
-      #   run: |
-      #     cd controller/
-      #     poetry run pytest tests/test_exe.py -xsvv --only-exe --no-cov
+      - name: Run Python Tests on Executable with randomly generated seed
+        if: github.event.inputs.randomlyseed == ''
+        run: |
+          cd controller/
+          poetry run pytest tests/test_exe.py -xsvv --only-exe --no-cov
 
-      # - name: Run Python Tests on Executable with supplied pytest-randomly seed
-      #   if: github.event.inputs.randomlyseed != ''
-      #   run: |
-      #     cd controller/
-      #     poetry run pytest tests/test_exe.py -xsvv --only-exe --no-cov --randomly-seed=${{ github.event.inputs.randomlyseed }}
+      - name: Run Python Tests on Executable with supplied pytest-randomly seed
+        if: github.event.inputs.randomlyseed != ''
+        run: |
+          cd controller/
+          poetry run pytest tests/test_exe.py -xsvv --only-exe --no-cov --randomly-seed=${{ github.event.inputs.randomlyseed }}
 
       - name: Upload coverage to Codecov
         # only upload coverage from fastest job

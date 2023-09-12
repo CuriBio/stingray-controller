@@ -33,6 +33,8 @@ logger = logging.getLogger(__name__)
 
 ERROR_MSG = "IN SERVER"
 
+COMMANDS_ALLOWED_IN_OFFLINE_MODE = ("set_offline_state", "shutdown")
+
 
 def mark_handler(fn: Callable[..., Any]) -> Callable[..., Any]:
     fn._is_handler = True  # type: ignore
@@ -190,6 +192,13 @@ class Server:
             self._log_incoming_message(msg)
 
             command = msg["command"]
+
+            if (
+                _is_in_offline_mode(self._get_system_state_ro())
+                and command not in COMMANDS_ALLOWED_IN_OFFLINE_MODE
+            ):
+                logger.info(f"Ignoring online-only command '{command}'")
+                continue
 
             try:
                 # TODO try using pydantic to define message schema + some other message schema generator (nano message, ask Jason)
@@ -386,8 +395,28 @@ class Server:
 
         await self._to_monitor_queue.put(comm)
 
+    @mark_handler
+    async def _set_offline_state(self, comm: dict[str, Any]) -> None:
+        """Initiate or terminate system offline mode."""
+        system_state = self._get_system_state_ro()
+
+        incoming_offline_state = comm["offline_state"]
+
+        if incoming_offline_state is _is_in_offline_mode(system_state):
+            return  # nothing to do here
+        if not _are_any_stim_protocols_running(system_state) and incoming_offline_state:
+            raise WebsocketCommandError("Can only enter offline state if stimulation is active")
+
+        comm = {"command": "init_offline_mode" if incoming_offline_state else "end_offline_mode"}
+        await self._to_monitor_queue.put(comm)
+
 
 # HELPERS
+
+
+def _is_in_offline_mode(system_state: ReadOnlyDict) -> bool:
+    system_status = system_state["system_status"]
+    return system_status == SystemStatuses.OFFLINE_STATE  # type: ignore  # for some reason mypy thinks the type here is Any
 
 
 def _are_any_stim_protocols_running(system_state: ReadOnlyDict) -> bool:

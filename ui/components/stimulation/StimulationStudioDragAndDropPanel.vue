@@ -616,16 +616,6 @@ img {
   margin-top: 80px;
 }
 
-.div__modal-overlay {
-  width: 1629px;
-  height: 885px;
-  position: absolute;
-  top: 0;
-  background: rgb(0, 0, 0);
-  z-index: 5;
-  opacity: 0.6;
-}
-
 .div__scroll-container {
   position: absolute;
   top: 460px;

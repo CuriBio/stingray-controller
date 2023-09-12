@@ -2,11 +2,13 @@ Changelog for Stingray Controller
 =================================
 
 
-0.3.1 (unreleased)
+0.4.0 (unreleased)
 ------------------
 
 Added:
 ^^^^^^
+- Offline mode
+- Support for barcodes of MA Mini Plates
 - Handling for new firmware error reporting
 
 Fixed:

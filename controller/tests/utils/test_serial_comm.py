@@ -6,10 +6,13 @@ from random import randint
 from zlib import crc32
 
 from controller.constants import GENERIC_24_WELL_DEFINITION
+from controller.constants import NUM_WELLS
 from controller.constants import SERIAL_COMM_PACKET_BASE_LENGTH_BYTES
 from controller.constants import SERIAL_COMM_STATUS_CODE_LENGTH_BYTES
 from controller.constants import STIM_OPEN_CIRCUIT_THRESHOLD_OHMS
 from controller.constants import STIM_SHORT_CIRCUIT_THRESHOLD_OHMS
+from controller.constants import StimProtocolStatuses
+from controller.constants import StimulationStates
 from controller.constants import StimulatorCircuitStatuses
 from controller.utils import serial_comm
 from controller.utils.serial_comm import convert_adc_readings_to_circuit_status
@@ -24,6 +27,8 @@ from controller.utils.serial_comm import convert_subprotocol_pulse_dict_to_bytes
 from controller.utils.serial_comm import convert_well_name_to_module_id
 from controller.utils.serial_comm import create_data_packet
 from controller.utils.serial_comm import get_serial_comm_timestamp
+from controller.utils.serial_comm import parse_end_offline_mode_bytes
+from controller.utils.serial_comm import parse_instrument_event_info
 from controller.utils.serial_comm import parse_metadata_bytes
 from controller.utils.serial_comm import SERIAL_COMM_CHECKSUM_LENGTH_BYTES
 from controller.utils.serial_comm import SERIAL_COMM_MAGIC_WORD_BYTES
@@ -42,12 +47,15 @@ import pytest
 
 from ..helpers import assert_subprotocol_node_bytes_are_expected
 from ..helpers import assert_subprotocol_pulse_bytes_are_expected
+from ..helpers import get_generic_protocols
 from ..helpers import get_random_biphasic_pulse
 from ..helpers import get_random_monophasic_pulse
+from ..helpers import get_random_protocol_status
 from ..helpers import get_random_stim_delay
 from ..helpers import get_random_stim_pulse
 from ..helpers import get_random_subprotocol
 from ..helpers import random_bool
+from ..helpers import random_timestamp
 from ..helpers import TEST_EVENT_INFO
 from ..helpers import TEST_INITIAL_MAGNET_FINDING_PARAMS
 from ..helpers import TEST_SERIAL_NUMBER
@@ -121,6 +129,13 @@ def test_parse_metadata_bytes__returns_expected_value():
         "is_stingray": is_stingray,
         **TEST_EVENT_INFO,
     }
+
+
+def test_parse_instrument_event_info__parses_default_metadata_values_without_error():
+    event_info_len = 64
+    test_bytes = bytes([0xFF] * event_info_len)
+    actual = parse_instrument_event_info(test_bytes)
+    assert actual["prev_barcode_scanned"] == "N/A"
 
 
 @freeze_time("2021-04-07 13:14:07.234987")
@@ -597,8 +612,16 @@ def test_convert_subprotocol_node_dict_to_bytes__returns_expected_bytes__when_no
     assert actual == expected_bytes
 
 
-def test_convert_stim_dict_to_bytes__return_expected_bytes():
-    protocol_assignments_dict = {"D1": "A", "D2": "D"}
+@pytest.mark.parametrize(
+    "protocols,assignments",
+    [
+        [get_generic_protocols(), {"D1": "A", "D2": "B"}],
+        # format from firmware returning to online mode
+        [get_generic_protocols(include_ids=False), {"D1": 0, "D2": 1}],
+    ],
+)
+def test_convert_stim_dict_to_bytes__return_expected_bytes(protocols, assignments):
+    protocol_assignments_dict = assignments
     protocol_assignments_dict.update(
         {
             well_name: None
@@ -608,37 +631,7 @@ def test_convert_stim_dict_to_bytes__return_expected_bytes():
         }
     )
 
-    stim_info_dict = {
-        "protocols": [
-            {
-                "protocol_id": "A",
-                "stimulation_type": "C",
-                "run_until_stopped": True,
-                "subprotocols": [get_random_monophasic_pulse(), get_random_stim_delay()],
-            },
-            {
-                "protocol_id": "D",
-                "stimulation_type": "V",
-                "run_until_stopped": False,
-                "subprotocols": [
-                    get_random_biphasic_pulse(),
-                    {
-                        "type": "loop",
-                        "num_iterations": randint(1, 10),
-                        "subprotocols": [
-                            {
-                                "type": "loop",
-                                "num_iterations": randint(1, 10),
-                                "subprotocols": [get_random_subprotocol()],
-                            },
-                            get_random_subprotocol(),
-                        ],
-                    },
-                ],
-            },
-        ],
-        "protocol_assignments": protocol_assignments_dict,
-    }
+    stim_info_dict = {"protocols": protocols, "protocol_assignments": protocol_assignments_dict}
 
     # Tanner (12/23/22): this test is also dependent on convert_subprotocol_node_dict_to_bytes working properly. If this test fails, make sure the tests for this func are passing first
 
@@ -707,7 +700,7 @@ def test_convert_stim_bytes_to_dict__can_correctly_recreate_stim_dict__except_fo
                             },
                             get_random_biphasic_pulse(),
                         ],
-                    },
+                    }
                 ],
             },
             {
@@ -735,4 +728,107 @@ def test_convert_stim_bytes_to_dict__can_correctly_recreate_stim_dict__except_fo
     ):
         original_protocol.pop("protocol_id")  # this is not needed in the recreated dict
         assert recreated_protocol == original_protocol, f"Protocol {protocol_idx}"
+
     assert recreated_stim_info_dict["protocol_assignments"] == original_stim_info_dict["protocol_assignments"]
+
+
+def test_parse_end_offline_mode_bytes__correctly_recreates_stim_info(mocker):
+    protocol_assignments_dict = {
+        GENERIC_24_WELL_DEFINITION.get_well_name_from_well_index(well_idx): randint(0, 1)
+        for well_idx in range(24)
+    }
+
+    # make sure at least one well is unassigned
+    well_to_unassign = choice(["A", "B", "C", "D"]) + str(randint(1, 6))
+    protocol_assignments_dict[well_to_unassign] = None
+
+    original_stim_info_dict = {
+        "protocols": [
+            {
+                "stimulation_type": "V",
+                "run_until_stopped": False,
+                "subprotocols": [
+                    {
+                        "type": "loop",
+                        "num_iterations": randint(1, 10),
+                        "subprotocols": [
+                            *[get_random_subprotocol() for _ in range(randint(1, 3))],
+                            {
+                                "type": "loop",
+                                "num_iterations": randint(1, 10),
+                                "subprotocols": [get_random_subprotocol() for _ in range(randint(1, 3))],
+                            },
+                            get_random_biphasic_pulse(),
+                        ],
+                    }
+                ],
+            },
+            {
+                "stimulation_type": "C",
+                "run_until_stopped": True,
+                "subprotocols": [
+                    {
+                        "type": "loop",
+                        "num_iterations": randint(1, 10),
+                        "subprotocols": [get_random_subprotocol() for _ in range(randint(1, 3))],
+                    }
+                ],
+            },
+        ],
+        "protocol_assignments": protocol_assignments_dict,
+    }
+    num_protocols = len(original_stim_info_dict["protocols"])
+
+    # this value is not actually used right now
+    test_is_stim_running = random_bool()
+
+    test_dormant_timestamp = random_timestamp()
+    test_stim_start_timestamp = random_timestamp()
+    test_stim_bytes = convert_stim_dict_to_bytes(copy.deepcopy(original_stim_info_dict))
+
+    # only stim status is parsed out of protocol status at the moment
+    test_protocol_statuses = [
+        choice([StimulationStates.RUNNING, StimulationStates.INACTIVE]) for _ in range(NUM_WELLS)
+    ]
+    test_protocol_statuses_bytes = bytes([])
+    for test_protocol_status in test_protocol_statuses:
+        possible_stim_statuses = (
+            (StimProtocolStatuses.ACTIVE, StimProtocolStatuses.NULL)
+            if test_protocol_status == StimulationStates.RUNNING
+            else (StimProtocolStatuses.FINISHED, StimProtocolStatuses.ERROR)
+        )
+        test_stim_status = choice(possible_stim_statuses)
+        test_protocol_statuses_bytes += get_random_protocol_status(stim_status=test_stim_status)
+
+    test_bytes = (
+        test_dormant_timestamp.to_bytes(8, byteorder="little")
+        + bytes([test_is_stim_running])
+        + test_stim_start_timestamp.to_bytes(8, byteorder="little")
+        + test_protocol_statuses_bytes
+        + test_stim_bytes
+    )
+
+    offline_stim_info_dict = parse_end_offline_mode_bytes(test_bytes)
+
+    actual_stim_info = offline_stim_info_dict.pop("stim_info")
+
+    assert offline_stim_info_dict == {
+        "system_dormant_timestamp": test_dormant_timestamp,
+        "stim_active": test_is_stim_running,
+        "last_stim_scheduled_start_timestamp": test_stim_start_timestamp,
+        "stimulation_protocol_statuses": test_protocol_statuses[:num_protocols],
+    }
+
+    # TODO should eventually split this test out and just assert that it the correct function was used on the correct bytes
+    for protocol_idx, (recreated_protocol, original_protocol) in enumerate(
+        zip(actual_stim_info["protocols"], original_stim_info_dict["protocols"])
+    ):
+        recreated_protocol.pop("protocol_id")  # this is not needed in the recreated dict
+        assert recreated_protocol == original_protocol, f"Protocol {protocol_idx}"
+
+    for recreated_assignment, original_assignment in zip(
+        actual_stim_info["protocol_assignments"].values(),
+        original_stim_info_dict["protocol_assignments"].values(),
+    ):
+        if recreated_assignment is not None:
+            assert recreated_assignment == chr(original_assignment + ord("A"))

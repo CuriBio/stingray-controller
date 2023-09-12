@@ -1,172 +1,224 @@
 <template>
-  <div v-b-popover.hover.bottom="disabledToolTip" :style="isDisabledStyles">
-    <div :style="div__preventInteraction">
-      <div class="div__stimulation-controls-container">
-        <!-- Tanner (2/1/22): Only need controls block until SVGs are made of all the buttons in this widget and they can be shaded manually when inactive-->
-
-        <span class="span__additional-controls-header">Stimulation Controls</span>
-        <div class="div__border-container">
-          <svg class="svg__stimulation-active-button" height="20" width="20">
-            <defs>
-              <radialGradient id="greenGradient">
-                <stop offset="10%" :stop-color="currentGradient[0]" />
-                <stop offset="95%" :stop-color="currentGradient[1]" />
-              </radialGradient>
-            </defs>
-            <circle cx="10" cy="10" r="10" fill="url('#greenGradient')" />
-          </svg>
-          <svg class="svg__stimulation-controls-loop-button" viewBox="0 0 72 72">
-            <path
-              d="M63.1,42,40,52.9a1.5,1.5,0,0,0-.2,2.5l4.1,2.8A23.7,23.7,0,0,1,12.4,37.1,1.4,1.4,0,0,0,11,35.7H1.6A1.4,1.4,0,0,0,.2,37.1a27.9,27.9,0,0,0,.7,5.8.4.4,0,0,0,0,.5,35.4,35.4,0,0,0,9.7,18A36.2,36.2,0,0,0,36,71.9a35.7,35.7,0,0,0,19.4-5.7L60.8,70A1.4,1.4,0,0,0,63,68.9l2.1-25.5A1.4,1.4,0,0,0,63.1,42Z"
-            />
-            <path
-              d="M71.2,29.2a.5.5,0,0,0,0-.5A35.8,35.8,0,0,0,36.1.2,35.7,35.7,0,0,0,16.7,5.9L11.3,2.1A1.4,1.4,0,0,0,9.1,3.2L7,28.6A1.4,1.4,0,0,0,9,30L32.1,19.2a1.5,1.5,0,0,0,.2-2.5l-4.1-2.9a23.9,23.9,0,0,1,27.2,8.7A23.5,23.5,0,0,1,59.7,35a1.3,1.3,0,0,0,1.4,1.3h9.4a1.5,1.5,0,0,0,1.4-1.5A27.8,27.8,0,0,0,71.2,29.2Z"
-            />
-          </svg>
-          <span :class="svg__StimulationStudioControlsPlayStopButton__dynamicClass" @click="handlePlayStop">
-            <div
-              v-b-popover.hover.bottom="playState ? stopStimLabel : startStimLabel"
-              :title="playState ? 'Stop Stimulation' : 'Start Stimulation'"
-            >
-              <span :id="playState ? 'stop-popover-msg' : 'start-popover-msg'" style="display: none">{{
-                playState ? stopStimLabel : startStimLabel
-              }}</span>
-              <FontAwesomeIcon
-                class="fontawesome-icon-class"
-                :icon="playState ? ['fa', 'stop-circle'] : ['fa', 'play-circle']"
-              />
-              <span v-show="isStimInWaiting" class="span__start-stop-spinner">
-                <FontAwesomeIcon :style="'fill: #ececed;'" :icon="['fa', 'spinner']" pulse />
-              </span>
-            </div>
-          </span>
-        </div>
+  <div class="div__stimulation-controls-container">
+    <!-- Tanner (2/1/22): Only need controls block until SVGs are made of all the buttons in this widget and they can be shaded manually when inactive-->
+    <span class="span__additional-controls-header">Stimulation Controls</span>
+    <div class="div__border-container">
+      <svg class="svg__stimulation-active-button" height="20" width="20">
+        <defs>
+          <radialGradient id="greenGradient">
+            <stop offset="10%" :stop-color="currentGradient[0]" />
+            <stop offset="95%" :stop-color="currentGradient[1]" />
+          </radialGradient>
+        </defs>
+        <circle cx="10" cy="10" r="10" fill="url('#greenGradient')" />
+      </svg>
+      <svg class="svg__stimulation-controls-loop-button" viewBox="0 0 72 72">
+        <path
+          d="M63.1,42,40,52.9a1.5,1.5,0,0,0-.2,2.5l4.1,2.8A23.7,23.7,0,0,1,12.4,37.1,1.4,1.4,0,0,0,11,35.7H1.6A1.4,1.4,0,0,0,.2,37.1a27.9,27.9,0,0,0,.7,5.8.4.4,0,0,0,0,.5,35.4,35.4,0,0,0,9.7,18A36.2,36.2,0,0,0,36,71.9a35.7,35.7,0,0,0,19.4-5.7L60.8,70A1.4,1.4,0,0,0,63,68.9l2.1-25.5A1.4,1.4,0,0,0,63.1,42Z"
+        />
+        <path
+          d="M71.2,29.2a.5.5,0,0,0,0-.5A35.8,35.8,0,0,0,36.1.2,35.7,35.7,0,0,0,16.7,5.9L11.3,2.1A1.4,1.4,0,0,0,9.1,3.2L7,28.6A1.4,1.4,0,0,0,9,30L32.1,19.2a1.5,1.5,0,0,0,.2-2.5l-4.1-2.9a23.9,23.9,0,0,1,27.2,8.7A23.5,23.5,0,0,1,59.7,35a1.3,1.3,0,0,0,1.4,1.3h9.4a1.5,1.5,0,0,0,1.4-1.5A27.8,27.8,0,0,0,71.2,29.2Z"
+        />
+      </svg>
+      <span :class="svg__StimulationStudioControlsPlayStopButton__dynamicClass" @click="handlePlayStop">
         <div
-          v-b-popover.hover.bottomright="'Edit account settings'"
-          :title="'Settings'"
-          class="div__settings-button-container"
-          @click="$bvModal.show('settings-form')"
+          v-b-popover.hover.bottom="playState ? stopStimLabel : startStimLabel"
+          :title="playState ? 'Stop Stimulation' : 'Start Stimulation'"
         >
-          <SettingsButton />
-        </div>
-        <div
-          v-b-popover.hover.bottom="configurationMessage"
-          title="Configuration Check"
-          class="div__config-check-container"
-        >
-          <svg
-            class="svg__config-check-container"
-            x="0px"
-            y="0px"
-            viewBox="-10 -10 100 100"
-            @click="startStimConfiguration"
-          >
-            <path
-              :class="svg__StimulationStudioControlsConfigCheckButton__dynamicClass"
-              d="M30.9,2.4c15.71,0,28.5,12.79,28.5,28.5c0,15.71-12.79,28.5-28.5,28.5S2.4,46.61,2.4,30.9
-	C2.4,15.18,15.18,2.4,30.9,2.4"
-            />
-            <g>
-              <g>
-                <g>
-                  <g>
-                    <path
-                      class="svg__inner-circle"
-                      d="M17.26,28.81c1.14,0,2.07,0.93,2.07,2.07c0,1.14-0.93,2.07-2.07,2.07s-2.07-0.93-2.07-2.07
-					C15.2,29.73,16.12,28.81,17.26,28.81 M17.26,24.81c-3.35,0-6.07,2.72-6.07,6.07c0,3.35,2.72,6.07,6.07,6.07
-					c3.35,0,6.07-2.72,6.07-6.07C23.33,27.52,20.61,24.81,17.26,24.81L17.26,24.81z"
-                    />
-                  </g>
-                </g>
-              </g>
-              <g>
-                <g>
-                  <g>
-                    <path
-                      class="svg__inner-circle"
-                      d="M45.26,28.81c1.14,0,2.07,0.93,2.07,2.07c0,1.14-0.93,2.07-2.07,2.07s-2.07-0.93-2.07-2.07
-					C43.2,29.73,44.12,28.81,45.26,28.81 M45.26,24.81c-3.35,0-6.07,2.72-6.07,6.07c0,3.35,2.72,6.07,6.07,6.07
-					c3.35,0,6.07-2.72,6.07-6.07C51.33,27.52,48.61,24.81,45.26,24.81L45.26,24.81z"
-                    />
-                  </g>
-                </g>
-              </g>
-            </g>
-            <line class="svg__inner-line" x1="11.73" y1="30.87" x2="3.48" y2="30.87" />
-            <line class="svg__inner-line" x1="34.8" y1="17.28" x2="21.16" y2="30.91" />
-            <line class="svg__inner-line" x1="58.73" y1="30.87" x2="50.48" y2="30.87" />
-          </svg>
-          <span v-show="configCheckInProgress" class="span__config-check-spinner">
+          <span :id="playState ? 'stop-popover-msg' : 'start-popover-msg'" style="display: none">{{
+            playState ? stopStimLabel : startStimLabel
+          }}</span>
+          <FontAwesomeIcon
+            class="fontawesome-icon-class"
+            :icon="playState ? ['fa', 'stop-circle'] : ['fa', 'play-circle']"
+          />
+          <span v-show="isStimInWaiting" class="span__start-stop-spinner">
             <FontAwesomeIcon :style="'fill: #ececed;'" :icon="['fa', 'spinner']" pulse />
           </span>
         </div>
-        <b-modal
-          id="open-circuit-warning"
-          size="sm"
-          hide-footer
-          hide-header
-          hide-header-close
-          :static="true"
-          :no-close-on-backdrop="true"
-        >
-          <StatusWarningWidget
-            :modalLabels="openCircuitLabels"
-            @handle-confirmation="$bvModal.hide('open-circuit-warning')"
-          />
-        </b-modal>
-        <b-modal
-          id="stim-24hr-warning"
-          size="sm"
-          hide-footer
-          hide-header
-          hide-header-close
-          :static="true"
-          :no-close-on-backdrop="true"
-        >
-          <StatusWarningWidget :modalLabels="timerWarningLabels" @handle-confirmation="closeTimerModal" />
-        </b-modal>
-        <b-modal
-          id="settings-form"
-          hide-footer
-          hide-header
-          hide-header-close
-          :no-close-on-backdrop="true"
-          :static="true"
-        >
-          <SettingsForm @close-modal="closeSettingsModal" />
-        </b-modal>
-        <b-modal
-          id="user-input-prompt-message"
-          size="sm"
-          hide-footer
-          hide-header
-          hide-header-close
-          :static="true"
-          :no-close-on-backdrop="true"
-        >
-          <!-- Tanner (4/6/23): This modal lives in this compenent since the settings modal is always opened after it's closed. It's possible to refactor and move this to StatusBar however, but for keeping here right now for simplicity -->
-          <StatusWarningWidget
-            id="user-input-prompt"
-            :modalLabels="userInputPromptLabels"
-            @handle-confirmation="closeUserInputPromptModal"
-          />
-        </b-modal>
-        <b-modal
-          id="invalid-imported-protocols"
-          size="sm"
-          hide-footer
-          hide-header
-          hide-header-close
-          :static="true"
-          :no-close-on-backdrop="true"
-        >
-          <StatusWarningWidget
-            :modalLabels="invalidImportedProtocolsLabels"
-            @handle-confirmation="closeInvalidProtocolModal"
-          />
-        </b-modal>
-      </div>
+      </span>
     </div>
+    <div
+      v-b-popover.hover.bottomright="'Edit account settings'"
+      :title="'Settings'"
+      class="div__settings-button-container"
+      @click="$bvModal.show('settings-form')"
+    >
+      <SettingsButton />
+    </div>
+    <div
+      v-b-popover.hover.bottom="configurationMessage"
+      title="Configuration Check"
+      class="div__config-check-container"
+    >
+      <svg
+        class="svg__config-check-container"
+        x="0px"
+        y="0px"
+        viewBox="-10 -10 100 100"
+        @click="startStimConfiguration"
+      >
+        <path
+          :class="svg__StimulationStudioControlsConfigCheckButton__dynamicClass"
+          d="M30.9,2.4c15.71,0,28.5,12.79,28.5,28.5c0,15.71-12.79,28.5-28.5,28.5S2.4,46.61,2.4,30.9
+	C2.4,15.18,15.18,2.4,30.9,2.4"
+        />
+        <g>
+          <g>
+            <g>
+              <g>
+                <path
+                  class="svg__inner-circle"
+                  d="M17.26,28.81c1.14,0,2.07,0.93,2.07,2.07c0,1.14-0.93,2.07-2.07,2.07s-2.07-0.93-2.07-2.07
+					C15.2,29.73,16.12,28.81,17.26,28.81 M17.26,24.81c-3.35,0-6.07,2.72-6.07,6.07c0,3.35,2.72,6.07,6.07,6.07
+					c3.35,0,6.07-2.72,6.07-6.07C23.33,27.52,20.61,24.81,17.26,24.81L17.26,24.81z"
+                />
+              </g>
+            </g>
+          </g>
+          <g>
+            <g>
+              <g>
+                <path
+                  class="svg__inner-circle"
+                  d="M45.26,28.81c1.14,0,2.07,0.93,2.07,2.07c0,1.14-0.93,2.07-2.07,2.07s-2.07-0.93-2.07-2.07
+					C43.2,29.73,44.12,28.81,45.26,28.81 M45.26,24.81c-3.35,0-6.07,2.72-6.07,6.07c0,3.35,2.72,6.07,6.07,6.07
+					c3.35,0,6.07-2.72,6.07-6.07C51.33,27.52,48.61,24.81,45.26,24.81L45.26,24.81z"
+                />
+              </g>
+            </g>
+          </g>
+        </g>
+        <line class="svg__inner-line" x1="11.73" y1="30.87" x2="3.48" y2="30.87" />
+        <line class="svg__inner-line" x1="34.8" y1="17.28" x2="21.16" y2="30.91" />
+        <line class="svg__inner-line" x1="58.73" y1="30.87" x2="50.48" y2="30.87" />
+      </svg>
+      <span v-show="configCheckInProgress" class="span__config-check-spinner">
+        <FontAwesomeIcon :style="'fill: #ececed;'" :icon="['fa', 'spinner']" pulse />
+      </span>
+    </div>
+    <div class="div__stimulation-controls-offline-mode" :style="offlineButtonDynamicStyle">
+      <svg
+        v-b-popover.hover.bottom="offlineModeTooltipLabels.message"
+        :class="svg__computerOutline__dynamicClass"
+        viewBox="0 0 150 150"
+        :title="offlineModeTooltipLabels.title"
+        @click="handleOfflineMode"
+      >
+        <path
+          d="m134.25,33.48c.93,0,1.68.75,1.68,1.68v77.71c0,.93-.75,1.68-1.68,1.68H16.4c-.93,0-1.68-.75-1.68-1.68V35.16c0-.93.75-1.68,1.68-1.68h117.85m0-4.67H16.4c-3.51,0-6.35,2.84-6.35,6.35v77.71c0,3.51,2.84,6.35,6.35,6.35h117.85c3.51,0,6.35-2.84,6.35-6.35V35.16c0-3.51-2.84-6.35-6.35-6.35h0Z"
+        />
+        <path d="m139.24,121.98H11.07c-.51,0-9.45,6.37-9.62,6.53h147.4c-.28-.26-9.28-6.53-9.62-6.53h0Z" />
+        <path
+          d="m1.16,130.74c-.06,0-.04,1.15-.04,2.48s1.07,2.48,2.4,2.48h143.54c1.33,0,2.4-1.11,2.4-2.48s.04-2.39-.04-2.48H1.16s0,0,0,0h0Z"
+        />
+        <path
+          v-if="isInOfflineMode"
+          class="path__red-cross"
+          d="m80.13,74.53l19.53-19.53c1.33-1.33,1.33-3.5,0-4.83-1.33-1.33-3.5-1.33-4.83,0l-19.53,19.53-19.53-19.53c-1.33-1.33-3.5-1.33-4.83,0-1.33,1.33-1.33,3.5,0,4.83l19.53,19.53-19.53,19.53c-1.33,1.33-1.33,3.5,0,4.83.65.64,1.51,1,2.42,1s1.77-.36,2.42-1l19.53-19.53,19.53,19.53c.65.64,1.51,1,2.42,1s1.77-.36,2.42-1c1.33-1.33,1.33-3.5,0-4.83l-19.53-19.53Z"
+        />
+        <path
+          v-if="!isInOfflineMode && stimPlayState"
+          class="path__green-check"
+          d="m72.9,100.52c-.73,0-1.45-.26-2.02-.74l-17.12-14.47c-1.32-1.12-1.49-3.1-.37-4.42,1.12-1.32,3.09-1.49,4.42-.37l14,11.84,19.28-40.79c.74-1.56,2.6-2.23,4.18-1.5,1.56.74,2.23,2.61,1.49,4.17l-21.02,44.48c-.42.88-1.22,1.52-2.17,1.72-.22.05-.44.07-.66.07Z"
+        />
+      </svg>
+    </div>
+    <b-modal
+      id="open-circuit-warning"
+      size="sm"
+      hide-footer
+      hide-header
+      hide-header-close
+      :static="true"
+      :no-close-on-backdrop="true"
+    >
+      <StatusWarningWidget
+        :modalLabels="openCircuitLabels"
+        @handle-confirmation="$bvModal.hide('open-circuit-warning')"
+      />
+    </b-modal>
+    <b-modal
+      id="stim-24hr-warning"
+      size="sm"
+      hide-footer
+      hide-header
+      hide-header-close
+      :static="true"
+      :no-close-on-backdrop="true"
+    >
+      <StatusWarningWidget :modalLabels="timerWarningLabels" @handle-confirmation="closeTimerModal" />
+    </b-modal>
+    <b-modal
+      id="settings-form"
+      hide-footer
+      hide-header
+      hide-header-close
+      :no-close-on-backdrop="true"
+      :static="true"
+    >
+      <SettingsForm @close-modal="closeSettingsModal" />
+    </b-modal>
+    <b-modal
+      id="user-input-prompt-message"
+      size="sm"
+      hide-footer
+      hide-header
+      hide-header-close
+      :static="true"
+      :no-close-on-backdrop="true"
+    >
+      <!-- Tanner (4/6/23): This modal lives in this compenent since the settings modal is always opened after it's closed. It's possible to refactor and move this to StatusBar however, but for keeping here right now for simplicity -->
+      <StatusWarningWidget
+        id="user-input-prompt"
+        :modalLabels="userInputPromptLabels"
+        @handle-confirmation="closeUserInputPromptModal"
+      />
+    </b-modal>
+    <b-modal
+      id="invalid-imported-protocols"
+      size="sm"
+      hide-footer
+      hide-header
+      hide-header-close
+      :static="true"
+      :no-close-on-backdrop="true"
+    >
+      <StatusWarningWidget
+        :modalLabels="invalidImportedProtocolsLabels"
+        @handle-confirmation="closeInvalidProtocolModal"
+      />
+    </b-modal>
+    <b-modal
+      id="enter-offline-mode"
+      size="sm"
+      hide-footer
+      hide-header
+      hide-header-close
+      :static="true"
+      :no-close-on-backdrop="true"
+    >
+      <StatusWarningWidget :modalLabels="offlineModeLabels" @handle-confirmation="closeOfflineModeModal" />
+    </b-modal>
+    <b-modal
+      id="startup-in-offline-mode"
+      size="sm"
+      hide-footer
+      hide-header
+      hide-header-close
+      :static="true"
+      :no-close-on-backdrop="true"
+    >
+      <StatusWarningWidget
+        :modalLabels="startupInOfflineLabels"
+        @handle-confirmation="closeStartupOfflineModal"
+      />
+    </b-modal>
+    <div
+      v-if="disabled"
+      v-b-popover.hover.bottom="disabledToolTip"
+      class="div__stimulation-controls-overlay"
+    />
   </div>
 </template>
 <script>
@@ -246,6 +298,20 @@ export default {
         msgTwo: "Please input them to begin the download",
         buttonNames: ["Okay"],
       },
+      // TODO change these to better labels
+      offlineModeLabels: {
+        header: "Important!",
+        msgOne: "You are entering offline mode.",
+        msgTwo: "Would you like to shutdown the software or leave open until you choose to go back online?",
+        buttonNames: ["Cancel", "Keep Open", "Shutdown"],
+      },
+      startupInOfflineLabels: {
+        header: "Important!",
+        msgOne: "This instrument is currently running in offline mode.",
+        msgTwo:
+          "Would you like to proceed in offline mode, or reconnect to the instrument and enter online mode? Stimulation will continue running on the instrument with either option.",
+        buttonNames: ["Stay Offline", "Reconnect"],
+      },
       stim24hrTimer: null,
       disabledToolTip: "Controls disabled until connected to instrument.",
       disabled: true,
@@ -264,18 +330,16 @@ export default {
     ...mapGetters({
       statusUuid: "system/statusId",
     }),
-    div__preventInteraction: function () {
-      return {
-        pointerEvents: this.disabled ? "none" : "auto",
-      };
-    },
-    isDisabledStyles: function () {
-      return {
-        opacity: this.disabled ? 0.5 : 1,
-      };
-    },
     isStimInWaiting: function () {
       return this.stimStatus === STIM_STATUS.WAITING;
+    },
+    isInOfflineMode: function () {
+      // disable for both going offline and in offline, if going offline for some reason fails, the status will be handled elsewhere anyway.
+      return [SYSTEM_STATUS.OFFLINE_STATE, SYSTEM_STATUS.GOING_OFFLINE_STATE].includes(this.statusUuid);
+    },
+    isOfflineButtonEnabled: function () {
+      // could only check if stim is active, but adding check for offline mode just in case
+      return this.isInOfflineMode || this.stimPlayState;
     },
     isStartStopButtonEnabled: function () {
       if (this.isStimInWaiting) return false;
@@ -322,6 +386,7 @@ export default {
         return "Start Stimulation";
       }
     },
+
     stopStimLabel: function () {
       // Tanner (7/27/22): there used to be multiple values, so leaving this as a function in case more values get added in future
       return "Stop Stimulation";
@@ -340,10 +405,27 @@ export default {
         this.barcodes.stimBarcode.valid
       );
     },
+    offlineButtonDynamicStyle: function () {
+      return this.isOfflineButtonEnabled ? "cursor: pointer; z-index: 3" : "cursor: default; z-index: 0";
+    },
+    svg__computerOutline__dynamicClass: function () {
+      return this.isOfflineButtonEnabled
+        ? "svg__computer-outline--enabled"
+        : "svg__computer-outline--disabled";
+    },
     svg__StimulationStudioControlsConfigCheckButton__dynamicClass: function () {
       return this.isConfigCheckButtonEnabled
         ? "svg__stimulation-controls-config-check-button--enabled"
         : "svg__stimulation-controls-config-check-button--disabled";
+    },
+    offlineModeTooltipLabels: function () {
+      let message = "Disabled. Stimulation must be running.";
+
+      if (this.stimPlayState) {
+        message = this.isInOfflineMode ? "Go back online" : "Go offline";
+      }
+
+      return { title: "Offline Mode", message };
     },
     configurationMessage: function () {
       if (!this.barcodes.stimBarcode.valid) {
@@ -390,10 +472,21 @@ export default {
     invalidImportedProtocols: function () {
       if (this.invalidImportedProtocols.length > 0) this.$bvModal.show("invalid-imported-protocols");
     },
-    statusUuid: function (new_status) {
+    statusUuid: function (new_status, old_status) {
       if (new_status == SYSTEM_STATUS.IDLE_READY_STATE) {
         this.disabled = false;
         this.disabledToolTip = "";
+      } else if (
+        new_status === SYSTEM_STATUS.OFFLINE_STATE &&
+        old_status !== SYSTEM_STATUS.GOING_OFFLINE_STATE
+      ) {
+        this.$bvModal.show("startup-in-offline-mode");
+      }
+    },
+    isInOfflineMode() {
+      if (this.isInOfflineMode) {
+        this.disabled = true;
+        this.disabledToolTip = "Disabled while offline";
       }
     },
   },
@@ -410,6 +503,38 @@ export default {
           await this.$store.dispatch(`stimulation/createProtocolMessage`);
           this.start24hrTimer();
         }
+      }
+    },
+    async handleOfflineMode() {
+      // Can only enter or end offline mode if stim is already active
+      if (this.playState) {
+        // if already in offline mode, just turn off
+        if (this.isInOfflineMode) {
+          this.$store.dispatch(`system/sendOfflineState`);
+          // else show confirmation modal to initiate offline mode if not in a transition state
+        } else if (this.statusUuid !== SYSTEM_STATUS.GOING_OFFLINE_STATE) {
+          this.$bvModal.show("enter-offline-mode");
+        }
+      }
+    },
+    closeStartupOfflineModal(idx) {
+      this.$bvModal.hide("startup-in-offline-mode");
+      // if idx === 0, do nothing and stay offline
+      if (idx === 1) {
+        // request to go back online
+        this.$store.dispatch(`system/sendOfflineState`);
+      }
+    },
+    async closeOfflineModeModal(idx) {
+      this.$bvModal.hide("enter-offline-mode");
+
+      if (idx === 1) {
+        this.$store.dispatch(`system/sendOfflineState`);
+      } else if (idx === 2) {
+        this.$store.dispatch(`system/sendOfflineState`);
+        await this.$store.dispatch("system/sendShutdown");
+        // close window completely
+        this.$emit("send-confirmation", 1);
       }
     },
     async startStimConfiguration() {
@@ -546,6 +671,15 @@ body {
   cursor: pointer;
 }
 
+.div__stimulation-controls-overlay {
+  position: relative;
+  height: 100%;
+  width: 100%;
+  z-index: 2;
+  background: black;
+  opacity: 0.4;
+}
+
 .svg__stimulation-controls-loop-button {
   position: relative;
   fill: #b7b7b7;
@@ -630,6 +764,14 @@ body {
   cursor: pointer;
 }
 
+.div__stimulation-controls-offline-mode {
+  position: absolute;
+  height: 37px;
+  width: 37px;
+  top: 36px;
+  right: 33px;
+}
+
 .svg__stimulation-controls-config-check-button--enabled:hover {
   fill: #ffffff;
   stroke: #ffffff;
@@ -647,6 +789,30 @@ body {
   fill: none;
 }
 
+.path__green-check {
+  fill: #00af87;
+}
+.path__red-cross {
+  fill: #bb3533;
+}
+
+.svg__computer-outline--enabled {
+  fill: #b6b6b6;
+}
+.svg__computer-outline--enabled:hover {
+  fill: #ffffff;
+}
+
+.svg__computer-outline--disabled {
+  fill: #2f2f2f;
+}
+
+.path__green-check,
+.path__red-cross,
+.path__computer-outline {
+  stroke-width: 0px;
+}
+
 .span__start-stop-spinner {
   position: absolute;
   font-size: 20px;
@@ -661,7 +827,9 @@ body {
 #user-input-prompt-message,
 #open-circuit-warning,
 #stim-24hr-warning,
-#invalid-imported-protocols {
+#invalid-imported-protocols,
+#enter-offline-mode,
+#startup-in-offline-mode {
   position: fixed;
   margin: 5% auto;
   top: 15%;

@@ -102,4 +102,27 @@ export class WellTitle {
   getWellIdxFromRowAndColumn(rowIdx, columnIdx) {
     return columnIdx * this.numRows + rowIdx;
   }
+
+  /**
+   * Get the row and column from the well name
+   *
+   * @param {string} wellName - The row index within the labware
+   * @return {object}
+   */
+  getRowColumnFromWellName(wellName) {
+    const rowChar = wellName[0];
+    const column = +wellName[1] - 1;
+    const row = rowChar.charCodeAt(0) - 65;
+    return { row, column };
+  }
+  /**
+   * Get the well index from the well name
+   *
+   * @param {string} wellName - The row index within the labware
+   * @return {int}
+   */
+  getWellIndexFromWellName(wellName) {
+    const { row, column } = this.getRowColumnFromWellName(wellName);
+    return this.getWellIdxFromRowAndColumn(row, column);
+  }
 }

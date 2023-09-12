@@ -32,6 +32,7 @@ const defaultState = {
   allowSwUpdateInstall: false,
   confirmationRequest: false,
   loginAttemptStatus: null,
+  offlineMode: false,
 };
 
 // adapted from https://itnext.io/eating-my-advice-efficiently-improving-on-understanding-and-using-nuxt-vuex-6d00769014a2

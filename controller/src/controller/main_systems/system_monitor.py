@@ -13,6 +13,7 @@ from pulse3D.constants import MANTARRAY_SERIAL_NUMBER_UUID as INSTRUMENT_SERIAL_
 
 from ..constants import CURRENT_SOFTWARE_VERSION
 from ..constants import FW_UPDATE_SUBDIR
+from ..constants import InstrumentConnectionStatuses
 from ..constants import StimulationStates
 from ..constants import StimulatorCircuitStatuses
 from ..constants import SystemStatuses
@@ -90,7 +91,6 @@ class SystemMonitor:
                     expected_software_version := system_state.get("expected_software_version")
                 ) and expected_software_version != CURRENT_SOFTWARE_VERSION:
                     raise ElectronControllerVersionMismatchError(expected_software_version)
-                new_system_status = SystemStatuses.SYSTEM_INITIALIZING_STATE
             case SystemStatuses.SYSTEM_INITIALIZING_STATE if (
                 # need to wait in SYSTEM_INITIALIZING_STATE until UI connects (indicated by
                 # latest_software_version being set) and instrument completes booting up (indicated by
@@ -244,6 +244,11 @@ class SystemMonitor:
                         for well_idx in well_indices
                     }
                     await self._queues["to"]["instrument_comm"].put(communication)
+                case {"command": "init_offline_mode"}:
+                    system_state_updates["system_status"] = SystemStatuses.GOING_OFFLINE_STATE
+                    await self._queues["to"]["instrument_comm"].put(communication)
+                case {"command": "end_offline_mode"}:
+                    await self._queues["to"]["instrument_comm"].put(communication)
                 case invalid_comm:
                     raise NotImplementedError(f"Invalid communication from Server: {invalid_comm}")
 
@@ -314,8 +319,36 @@ class SystemMonitor:
                             FW_UPDATE_SUBDIR,
                             f"{firmware_type}-{fw_version}.bin",
                         )
+
                         os.remove(fw_file_path)
+
                     system_state_updates[key] = None
+                case {"command": "init_offline_mode"}:
+                    system_state_updates["system_status"] = SystemStatuses.OFFLINE_STATE
+                case {
+                    "command": "end_offline_mode",
+                    "stim_info": stim_info,
+                    "stimulation_protocol_statuses": stimulation_protocol_statuses,
+                }:
+                    # setup stim state entering online mode
+                    logger.info(f"Stim info loaded on instrument in offline mode: {stim_info}")
+                    system_state_updates |= {
+                        "stim_info": stim_info,
+                        "stimulation_protocol_statuses": stimulation_protocol_statuses,
+                        "system_status": SystemStatuses.IDLE_READY_STATE,
+                    }
+                    # just sending stim protocols to UI to repopulate stim studio
+                    await self._queues["to"]["server"].put(
+                        {"communication_type": "end_offline_mode", "stim_info": stim_info}
+                    )
+                case {"command": "check_connection_status", "status": status}:
+                    # if not booting up offline, then set to system initializing to kick off cloud comm to check versions
+                    system_state_updates["system_status"] = (
+                        SystemStatuses.OFFLINE_STATE
+                        if status == InstrumentConnectionStatuses.OFFLINE
+                        else SystemStatuses.SYSTEM_INITIALIZING_STATE
+                    )
+
                 case invalid_comm:
                     raise NotImplementedError(f"Invalid communication from InstrumentComm: {invalid_comm}")
 
@@ -353,12 +386,10 @@ class SystemMonitor:
                         required_sw_for_fw, system_state["latest_software_version"]
                     )
                     main_fw_update_needed = semver_gt(
-                        latest_main_fw,
-                        system_state["instrument_metadata"][MAIN_FIRMWARE_VERSION_UUID],
+                        latest_main_fw, system_state["instrument_metadata"][MAIN_FIRMWARE_VERSION_UUID]
                     )
                     channel_fw_update_needed = semver_gt(
-                        latest_channel_fw,
-                        system_state["instrument_metadata"][CHANNEL_FIRMWARE_VERSION_UUID],
+                        latest_channel_fw, system_state["instrument_metadata"][CHANNEL_FIRMWARE_VERSION_UUID]
                     )
 
                     # FW updates are only available if the required SW can be downloaded

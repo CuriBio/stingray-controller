@@ -207,6 +207,7 @@ cpdef dict parse_stim_data(unsigned char [:] stim_packet_bytes, int num_stim_pac
         num_status_updates = stim_packet_bytes[bytes_idx]
         bytes_idx += 1
         for _ in range(num_status_updates):
+            # TODO find a way to share this code with parse_stim_offline_statuses
             protocol_idx = stim_packet_bytes[bytes_idx]
             time_index = (<uint64_t *> &stim_packet_bytes[bytes_idx + 1])[0]
             stim_status = stim_packet_bytes[bytes_idx + 2]
