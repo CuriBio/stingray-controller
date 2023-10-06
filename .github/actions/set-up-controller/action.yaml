@@ -1,12 +1,22 @@
 name: "Set Up Controller"
 description: "Set up tools needed to run controller"
+inputs:
+  aws-access-key-id:
+    description: "AWS access key"
+    required: true
+  aws-secret-key-id:
+    description: "AWS secret key"
+    required: true
 runs:
   using: composite
   steps:
     - name: Download zlib Library
       shell: bash
+      env:
+        AWS_ACCESS_KEY_ID: ${{ inputs.aws-access-key-id }}
+        AWS_SECRET_ACCESS_KEY: ${{  inputs.aws-secret-key-id }}
       run: |
-        pip install requests
+        pip install boto3==1.28.62
         python .github/actions/run_zlib_download.py
 
     - name: Install Poetry
