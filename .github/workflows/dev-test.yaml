@@ -16,8 +16,6 @@ on:
           - test
           - modl
           - prod
-  schedule:
-    - cron: "0 5 * * *"
   push:
     branches:
       - main
