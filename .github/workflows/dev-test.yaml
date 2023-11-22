@@ -115,6 +115,9 @@ jobs:
           echo ${{steps.product-name.outputs.prop}}
 
       - name: Set Up Controller
+        with:
+          aws-access-key-id: ${{ secrets.CI_IAM_GIT_PUBLISH_ACCESS_KEY }}
+          aws-secret-key-id: ${{ secrets.CI_IAM_GIT_PUBLISH_SECRET_KEY }}
         uses: ./.github/actions/set-up-controller
 
       # TODO put these into Set Up Controller and rename the action
