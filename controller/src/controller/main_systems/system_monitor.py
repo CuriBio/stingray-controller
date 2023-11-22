@@ -378,9 +378,9 @@ class SystemMonitor:
                 case {"command": "check_versions"}:
                     system_state_updates["firmware_updates_require_download"] = communication["download"]
 
-                    required_sw_for_fw = communication["latest_versions"]["sw"]
-                    latest_main_fw = communication["latest_versions"]["main-fw"]
-                    latest_channel_fw = communication["latest_versions"]["channel-fw"]
+                    required_sw_for_fw = communication["latest_versions"]["sting_sw"]
+                    latest_main_fw = communication["latest_versions"]["main_fw"]
+                    latest_channel_fw = communication["latest_versions"]["channel_fw"]
 
                     min_sw_version_available = not semver_gt(
                         required_sw_for_fw, system_state["latest_software_version"]
