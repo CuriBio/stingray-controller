@@ -21,6 +21,7 @@ from ..constants import CLOUD_API_ENDPOINT
 from ..constants import CLOUD_PULSE3D_ENDPOINT
 from ..constants import ConfigSettings
 from ..constants import CURRENT_SOFTWARE_VERSION
+from ..constants import SOFTWARE_RELEASE_CHANNEL
 from ..exceptions import FirmwareAndSoftwareNotCompatibleError
 from ..exceptions import FirmwareDownloadError
 from ..exceptions import LoginFailedError
@@ -214,13 +215,14 @@ class CloudComm:
             if not (range["min_sting_sw"] <= sw_version_semver <= range["max_sting_sw"]):
                 raise FirmwareAndSoftwareNotCompatibleError(range["max_sting_sw"])
 
+        is_prod = SOFTWARE_RELEASE_CHANNEL == "prod"
         get_versions_response = await self._request(
             "get",
-            f"https://{CLOUD_API_ENDPOINT}/mantarray/versions/{command['serial_number']}",
+            f"https://{CLOUD_API_ENDPOINT}/mantarray/versions/{command['serial_number']}/{is_prod}",
             auth_required=False,
             error_message="Error getting latest firmware versions",
         )
-        return {"latest_versions": get_versions_response.json()["latest_versions"], "download": True}
+        return {"latest_versions": get_versions_response.json(), "download": True}
 
     async def _download_firmware_updates(self, command: dict[str, str]) -> dict[str, bytes]:
         try:

@@ -168,6 +168,9 @@ jobs:
           sed -i 's/REPLACETHISWITHRELEASECHANNELDURINGBUILD/'"${{env.RELEASE_CHANNEL}}"'/g' controller/src/controller/constants.py
 
       - name: Set Up Controller
+        with:
+          aws-access-key-id: ${{ secrets.CI_IAM_GIT_PUBLISH_ACCESS_KEY }}
+          aws-secret-key-id: ${{ secrets.CI_IAM_GIT_PUBLISH_SECRET_KEY }}
         uses: ./.github/actions/set-up-controller
 
       - name: Compile the Python Executable
@@ -197,6 +200,8 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.CI_IAM_GIT_PUBLISH_ACCESS_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.CI_IAM_GIT_PUBLISH_SECRET_KEY }}
+          CLOUD_ACCOUNT_USERNAME: ${{ secrets.CLOUD_ACCOUNT_USERNAME }}
+          CLOUD_ACCOUNT_PASSWORD: ${{ secrets.CLOUD_ACCOUNT_PASSWORD }}
         run: |
           cd electron/
           node s3_publish.js --file="${{steps.product-name.outputs.prop}}-Setup-${{env.RELEASE_CHANNEL}}-${{steps.software-version.outputs.prop}}.exe" --buildDir=./dist --channel=${{env.RELEASE_CHANNEL}}
