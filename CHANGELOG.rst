@@ -1,8 +1,15 @@
 Changelog for Stingray Controller
 =================================
 
+0.4.1 (unreleased)
+------------------
 
-0.4.0 (unreleased)
+Added:
+^^^^^^
+- Compatibility with new FW update procedure in cloud
+
+
+0.4.0 (2023-09-12)
 ------------------
 
 Added:
