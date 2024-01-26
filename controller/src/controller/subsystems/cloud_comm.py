@@ -209,8 +209,10 @@ class CloudComm:
         )
         range = check_sw_response.json()
 
+        current_version_no_pre = CURRENT_SOFTWARE_VERSION.split("-pre")[0]
+
         try:
-            sw_version_semver = VersionInfo.parse(CURRENT_SOFTWARE_VERSION)
+            sw_version_semver = VersionInfo.parse(current_version_no_pre)
         except ValueError:
             pass  # CURRENT_SOFTWARE_VERSION will not be a valid semver in dev mode
         else:
