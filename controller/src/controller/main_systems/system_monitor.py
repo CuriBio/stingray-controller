@@ -382,9 +382,9 @@ class SystemMonitor:
                     latest_main_fw = communication["latest_versions"]["main_fw"]
                     latest_channel_fw = communication["latest_versions"]["channel_fw"]
 
-                    min_sw_version_available = not semver_gt(
-                        required_sw_for_fw, system_state["latest_software_version"]
-                    )
+                    latest_version_no_pre = system_state["latest_software_version"].split("-pre")[0]
+
+                    min_sw_version_available = not semver_gt(required_sw_for_fw, latest_version_no_pre)
                     main_fw_update_needed = semver_gt(
                         latest_main_fw, system_state["instrument_metadata"][MAIN_FIRMWARE_VERSION_UUID]
                     )

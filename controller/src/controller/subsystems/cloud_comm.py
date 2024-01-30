@@ -38,6 +38,8 @@ logger = logging.getLogger(__name__)
 
 ERROR_MSG = "IN CLOUD COMM"
 
+IS_PROD = SOFTWARE_RELEASE_CHANNEL == "prod"
+
 
 def _get_tokens(response_json: dict[str, Any]) -> AuthTokens:
     return AuthTokens(access=response_json["access"]["token"], refresh=response_json["refresh"]["token"])
@@ -201,24 +203,25 @@ class CloudComm:
 
         check_sw_response = await self._request(
             "get",
-            f"https://{CLOUD_API_ENDPOINT}/mantarray/software-range/{command['main_fw_version']}",
+            f"https://{CLOUD_API_ENDPOINT}/mantarray/software-range/{command['main_fw_version']}/{IS_PROD}",
             auth_required=False,
             error_message="Error checking software/firmware compatibility",
         )
         range = check_sw_response.json()
 
+        current_version_no_pre = CURRENT_SOFTWARE_VERSION.split("-pre")[0]
+
         try:
-            sw_version_semver = VersionInfo.parse(CURRENT_SOFTWARE_VERSION)
+            sw_version_semver = VersionInfo.parse(current_version_no_pre)
         except ValueError:
             pass  # CURRENT_SOFTWARE_VERSION will not be a valid semver in dev mode
         else:
             if not (range["min_sting_sw"] <= sw_version_semver <= range["max_sting_sw"]):
                 raise FirmwareAndSoftwareNotCompatibleError(range["max_sting_sw"])
 
-        is_prod = SOFTWARE_RELEASE_CHANNEL == "prod"
         get_versions_response = await self._request(
             "get",
-            f"https://{CLOUD_API_ENDPOINT}/mantarray/versions/{command['serial_number']}/{is_prod}",
+            f"https://{CLOUD_API_ENDPOINT}/mantarray/versions/{command['serial_number']}/{IS_PROD}",
             auth_required=False,
             error_message="Error getting latest firmware versions",
         )
