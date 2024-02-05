@@ -25,6 +25,7 @@
           v-b-popover.hover.bottom="playState ? stopStimLabel : startStimLabel"
           :title="playState ? 'Stop Stimulation' : 'Start Stimulation'"
         >
+          <!-- this is here for testing the popover message -->
           <span :id="playState ? 'stop-popover-msg' : 'start-popover-msg'" style="display: none">{{
             playState ? stopStimLabel : startStimLabel
           }}</span>
@@ -350,6 +351,8 @@ export default {
         // open circuits, and that there are no other errors with stim lid
         return (
           this.assignedOpenCircuits.length === 0 &&
+          this.barcodes.plateBarcode.valid &&
+          this.barcodes.stimBarcode.valid &&
           ![
             STIM_STATUS.ERROR,
             STIM_STATUS.NO_PROTOCOLS_ASSIGNED,
@@ -377,8 +380,11 @@ export default {
         this.stimStatus === STIM_STATUS.CONFIG_CHECK_IN_PROGRESS
       ) {
         return "Configuration check needed";
-      } else if (!this.barcodes.stimBarcode.valid) return "Must have a valid Stimulation Lid Barcode";
-      else if (this.stimStatus === STIM_STATUS.NO_PROTOCOLS_ASSIGNED) {
+      } else if (!this.barcodes.stimBarcode.valid) {
+        return "Must have a valid Stimulation Lid Barcode";
+      } else if (!this.barcodes.plateBarcode.valid) {
+        return "Must have a valid Plate Barcode";
+      } else if (this.stimStatus === STIM_STATUS.NO_PROTOCOLS_ASSIGNED) {
         return "No protocols have been assigned";
       } else if (this.assignedOpenCircuits.length !== 0) {
         return "Cannot start stimulation with a protocol assigned to a well with an open circuit.";
@@ -402,7 +408,8 @@ export default {
     isConfigCheckButtonEnabled: function () {
       return (
         [STIM_STATUS.CONFIG_CHECK_NEEDED, STIM_STATUS.READY].includes(this.stimStatus) &&
-        this.barcodes.stimBarcode.valid
+        this.barcodes.stimBarcode.valid &&
+        this.barcodes.plateBarcode.valid
       );
     },
     offlineButtonDynamicStyle: function () {
@@ -430,6 +437,8 @@ export default {
     configurationMessage: function () {
       if (!this.barcodes.stimBarcode.valid) {
         return "Must have a valid Stimulation Lid Barcode";
+      } else if (!this.barcodes.plateBarcode.valid) {
+        return "Must have a valid Plate Barcode";
       } else if (this.stimStatus == STIM_STATUS.ERROR || this.stimStatus == STIM_STATUS.SHORT_CIRCUIT_ERROR) {
         return "Cannot run a configuration on this stim lid as a short has been detected on it";
       } else if (this.stimStatus === STIM_STATUS.NO_PROTOCOLS_ASSIGNED) {
