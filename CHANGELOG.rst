@@ -8,6 +8,12 @@ Added:
 ^^^^^^
 - Compatibility with new FW update procedure in cloud
 
+Fixed:
+^^^^^^
+- Issue restarting stim after re-entering online mode
+- Well selection is no longer editable in stim studio while stim is running
+- Running stim checks and starting stim are no longer able to be performed when an invalid barcode is present
+
 
 0.4.0 (2023-09-12)
 ------------------

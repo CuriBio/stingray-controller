@@ -62,7 +62,7 @@ export default {
     SelectDropDown,
   },
   props: {
-    disableEdits: { type: Boolean, default: false }, // TODO actually pass this prop in
+    disableEdits: { type: Boolean, default: false },
   },
   data() {
     return {
