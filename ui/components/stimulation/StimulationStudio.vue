@@ -5,7 +5,7 @@
       <StimulationStudioWidget class="stimulationstudio_widget-container" />
       <StimulationStudioCreateAndEdit
         class="stimulationstudio_createandedit-container"
-        :disablEdits="disableEdits"
+        :disableEdits="disableEdits"
         @handle-selection-change="handleSelectionChange"
       />
       <StimulationStudioDragAndDropPanel

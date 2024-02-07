@@ -13,6 +13,7 @@ from pulse3D.constants import MANTARRAY_SERIAL_NUMBER_UUID as INSTRUMENT_SERIAL_
 
 from ..constants import CURRENT_SOFTWARE_VERSION
 from ..constants import FW_UPDATE_SUBDIR
+from ..constants import GENERIC_24_WELL_DEFINITION
 from ..constants import InstrumentConnectionStatuses
 from ..constants import StimulationStates
 from ..constants import StimulatorCircuitStatuses
@@ -225,9 +226,11 @@ class SystemMonitor:
                     else:
                         command = "stop_stimulation"
                         stim_status_updates = [
-                            StimulationStates.STOPPING
-                            if current_status in (StimulationStates.STARTING, StimulationStates.RUNNING)
-                            else current_status
+                            (
+                                StimulationStates.STOPPING
+                                if current_status in (StimulationStates.STARTING, StimulationStates.RUNNING)
+                                else current_status
+                            )
                             for current_status in system_state["stimulation_protocol_statuses"]
                         ]
                     system_state_updates["stimulation_protocol_statuses"] = stim_status_updates
@@ -337,6 +340,15 @@ class SystemMonitor:
                         "stimulation_protocol_statuses": stimulation_protocol_statuses,
                         "system_status": SystemStatuses.IDLE_READY_STATE,
                     }
+                    # need to also set the circuit statuses for any wells running stimulation at the time of connection.
+                    # the assumption being made is that any well that is stimulating should be checked off
+                    system_state_updates["stimulator_circuit_statuses"] = {
+                        GENERIC_24_WELL_DEFINITION.get_well_index_from_well_name(well_name): (
+                            StimulatorCircuitStatuses.MEDIA.name.lower()
+                        )
+                        for well_name, protocol_id in stim_info["protocol_assignments"].items()
+                        if protocol_id is not None
+                    }
                     # just sending stim protocols to UI to repopulate stim studio
                     await self._queues["to"]["server"].put(
                         {"communication_type": "end_offline_mode", "stim_info": stim_info}
@@ -378,13 +390,13 @@ class SystemMonitor:
                 case {"command": "check_versions"}:
                     system_state_updates["firmware_updates_require_download"] = communication["download"]
 
-                    required_sw_for_fw = communication["latest_versions"]["sw"]
-                    latest_main_fw = communication["latest_versions"]["main-fw"]
-                    latest_channel_fw = communication["latest_versions"]["channel-fw"]
+                    required_sw_for_fw = communication["latest_versions"]["sting_sw"]
+                    latest_main_fw = communication["latest_versions"]["main_fw"]
+                    latest_channel_fw = communication["latest_versions"]["channel_fw"]
 
-                    min_sw_version_available = not semver_gt(
-                        required_sw_for_fw, system_state["latest_software_version"]
-                    )
+                    latest_version_no_pre = system_state["latest_software_version"].split("-pre")[0]
+
+                    min_sw_version_available = not semver_gt(required_sw_for_fw, latest_version_no_pre)
                     main_fw_update_needed = semver_gt(
                         latest_main_fw, system_state["instrument_metadata"][MAIN_FIRMWARE_VERSION_UUID]
                     )

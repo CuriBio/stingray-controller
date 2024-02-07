@@ -21,6 +21,7 @@ from ..constants import CLOUD_API_ENDPOINT
 from ..constants import CLOUD_PULSE3D_ENDPOINT
 from ..constants import ConfigSettings
 from ..constants import CURRENT_SOFTWARE_VERSION
+from ..constants import SOFTWARE_RELEASE_CHANNEL
 from ..exceptions import FirmwareAndSoftwareNotCompatibleError
 from ..exceptions import FirmwareDownloadError
 from ..exceptions import LoginFailedError
@@ -36,6 +37,8 @@ from ..utils.generic import handle_system_error
 logger = logging.getLogger(__name__)
 
 ERROR_MSG = "IN CLOUD COMM"
+
+IS_PROD = SOFTWARE_RELEASE_CHANNEL == "prod"
 
 
 def _get_tokens(response_json: dict[str, Any]) -> AuthTokens:
@@ -200,14 +203,16 @@ class CloudComm:
 
         check_sw_response = await self._request(
             "get",
-            f"https://{CLOUD_API_ENDPOINT}/mantarray/software-range/{command['main_fw_version']}",
+            f"https://{CLOUD_API_ENDPOINT}/mantarray/software-range/{command['main_fw_version']}/{IS_PROD}",
             auth_required=False,
             error_message="Error checking software/firmware compatibility",
         )
         range = check_sw_response.json()
 
+        current_version_no_pre = CURRENT_SOFTWARE_VERSION.split("-pre")[0]
+
         try:
-            sw_version_semver = VersionInfo.parse(CURRENT_SOFTWARE_VERSION)
+            sw_version_semver = VersionInfo.parse(current_version_no_pre)
         except ValueError:
             pass  # CURRENT_SOFTWARE_VERSION will not be a valid semver in dev mode
         else:
@@ -216,11 +221,11 @@ class CloudComm:
 
         get_versions_response = await self._request(
             "get",
-            f"https://{CLOUD_API_ENDPOINT}/mantarray/versions/{command['serial_number']}",
+            f"https://{CLOUD_API_ENDPOINT}/mantarray/versions/{command['serial_number']}/{IS_PROD}",
             auth_required=False,
             error_message="Error getting latest firmware versions",
         )
-        return {"latest_versions": get_versions_response.json()["latest_versions"], "download": True}
+        return {"latest_versions": get_versions_response.json(), "download": True}
 
     async def _download_firmware_updates(self, command: dict[str, str]) -> dict[str, bytes]:
         try:
