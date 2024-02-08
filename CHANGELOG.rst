@@ -1,7 +1,15 @@
 Changelog for Stingray Controller
 =================================
 
-0.4.1 (unreleased)
+0.4.2 (unreleased)
+------------------
+
+Fixed:
+^^^^^^
+- Dropdown overflow syling.
+
+
+0.4.1 (2024-02-06)
 ------------------
 
 Added:
