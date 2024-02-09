@@ -10,6 +10,7 @@ const defaultState = {
   statusUuid: SYSTEM_STATUS.SERVER_INITIALIZING_STATE,
   simulationMode: false,
   barcodeManualMode: false,
+  barcodeWarning: false,
   isConnectedToController: false,
   socket: null,
   barcodes: {

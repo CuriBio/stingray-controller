@@ -136,8 +136,8 @@ export default {
     const result = TextValidationPlateBarcode.validate(newValue, type);
     const isValid = result == "";
 
-    // stop all running processes if either barcode changes regardless of validity
-    if (this.state.stimulation.stimPlayState) {
+    // stop all running processes if either barcode changes regardless of validity, but only if that barcode type has already been set
+    if (this.state.stimulation.stimPlayState && state.barcodes[type].value) {
       await this.dispatch("stimulation/stopStimulation");
       commit("setBarcodeWarning", true);
     }
