@@ -10,6 +10,7 @@ import {
   _convertSubprotocolsFromFw,
   _convertDetailedSubprotocolsFromFW,
 } from "@/js-utils/ProtocolValidation";
+import { SYSTEM_STATUS } from "@/store/modules/system/enums";
 
 export default {
   handleSelectedWells({ commit }, wells) {
@@ -404,7 +405,7 @@ export default {
         });
     }
   },
-  async startStimConfiguration({ state, commit }) {
+  async startStimConfiguration({ state, dispatch }) {
     const { barcodes } = this.state.system;
     const plateBarcode = barcodes.plateBarcode.value;
     const stimBarcode = barcodes.stimBarcode.value;
@@ -418,7 +419,7 @@ export default {
     });
 
     this.state.system.socket.send(wsMessage);
-    commit("setStimStatus", STIM_STATUS.CONFIG_CHECK_IN_PROGRESS);
+    dispatch("setStimStatus", STIM_STATUS.CONFIG_CHECK_IN_PROGRESS);
   },
   async onPulseMouseenter({ state }, { idx, nestedIdx }) {
     const originalPulse = state.protocolEditor.detailedSubprotocols[idx];
@@ -463,14 +464,14 @@ export default {
     }
   },
 
-  checkStimulatorCircuitStatuses({ commit }, stimulatorStatusesObj) {
+  checkStimulatorCircuitStatuses({ commit, dispatch }, stimulatorStatusesObj) {
     // possible status values: open, short, media, error
     const stimulatorStatuses = Object.values(stimulatorStatusesObj);
 
     if (stimulatorStatuses.includes("short") || stimulatorStatuses.includes("error")) {
       // set stim error status
       commit("resetState");
-      commit("setStimStatus", STIM_STATUS.SHORT_CIRCUIT_ERROR);
+      dispatch("setStimStatus", STIM_STATUS.SHORT_CIRCUIT_ERROR);
     } else {
       // set the stim status that other components watch, only saves indices
       const filteredStatuses = Object.entries(stimulatorStatusesObj)
@@ -480,9 +481,28 @@ export default {
         .filter((i) => i === 0 || i);
 
       commit("setStimulatorCircuitStatuses", filteredStatuses);
-      commit("setStimStatus", STIM_STATUS.CONFIG_CHECK_COMPLETE);
+      dispatch("setStimStatus", STIM_STATUS.CONFIG_CHECK_COMPLETE);
     }
   },
+  setStimStatus({ state, rootState }, status) {
+    if (
+      Object.keys(state.protocolAssignments).length === 0 &&
+      ![STIM_STATUS.ERROR, STIM_STATUS.SHORT_CIRCUIT_ERROR, STIM_STATUS.CONFIG_CHECK_COMPLETE].includes(
+        status
+      ) &&
+      rootState.system.statusUuid !== SYSTEM_STATUS.OFFLINE_STATE
+    ) {
+      state.stimStatus = STIM_STATUS.NO_PROTOCOLS_ASSIGNED;
+    } else if (
+      state.stimStatus === STIM_STATUS.CONFIG_CHECK_NEEDED &&
+      status !== STIM_STATUS.CONFIG_CHECK_IN_PROGRESS
+    ) {
+      state.stimStatus = STIM_STATUS.CONFIG_CHECK_NEEDED;
+    } else {
+      state.stimStatus = status;
+    }
+  },
+
   async populateStimAfterOffline({ commit, state }, { stim_info }) {
     const { protocols, protocol_assignments } = stim_info;
     const protocolList = JSON.parse(JSON.stringify(state.protocolList));

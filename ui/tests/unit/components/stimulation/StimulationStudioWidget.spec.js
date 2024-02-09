@@ -256,7 +256,7 @@ describe("StimulationStudioWidget.vue", () => {
       store,
       localVue,
     });
-    await store.commit("stimulation/setStimStatus", STIM_STATUS.SHORT_CIRCUIT_ERROR);
+    await store.dispatch("stimulation/setStimStatus", STIM_STATUS.SHORT_CIRCUIT_ERROR);
     expect(wrapper.find(".div__simulationstudio-disable-overlay").isVisible()).toBe(true);
   });
 });
