@@ -388,7 +388,7 @@ export default {
       ) {
         this.$emit("send-confirmation", 0);
       } else if (ids.includes("failed-qc-check") || ids.includes("success-qc-check")) {
-        this.$store.commit("stimulation/setStimStatus", STIM_STATUS.READY);
+        this.$store.dispatch("stimulation/setStimStatus", STIM_STATUS.READY);
       } else if (ids.includes("error-catch")) {
         // TODO Tanner: does something need to happen here? Previously the /shutdown route was sent, but now the controller will already exit gracefully just by disconnecting from it. Still might be worth sending the shutdown command here
       }

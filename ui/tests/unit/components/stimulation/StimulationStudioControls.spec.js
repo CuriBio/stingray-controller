@@ -42,7 +42,7 @@ describe("store/stimulation", () => {
       localVue,
     });
 
-    await store.commit("stimulation/setStimStatus", STIM_STATUS.STIM_ACTIVE);
+    await store.dispatch("stimulation/setStimStatus", STIM_STATUS.STIM_ACTIVE);
     wrapper.vm.playState = true;
     // direct call to bypass bootstrap component, jest can't find bootstrap elements
     const testEvent = { preventDefault: jest.fn() };
@@ -71,7 +71,7 @@ describe("store/stimulation", () => {
     store.state.stimulation.protocolAssignments = {
       test: "assignment",
     };
-    await store.commit("stimulation/setStimStatus", STIM_STATUS.READY);
+    await store.dispatch("stimulation/setStimStatus", STIM_STATUS.READY);
     const wrapper = mount(StimulationStudioControls, {
       store,
       localVue,
@@ -128,7 +128,7 @@ describe("store/stimulation", () => {
       store.state.stimulation.protocolAssignments = { 1: {} };
 
       await store.commit("stimulation/setStimPlayState", false);
-      await store.commit("stimulation/setStimStatus", STIM_STATUS[status]);
+      await store.dispatch("stimulation/setStimStatus", STIM_STATUS[status]);
 
       expect(wrapper.find("#start-popover-msg").text()).toBe(expectedMessage);
       expect(wrapper.vm.playState).toBe(false);
@@ -155,7 +155,7 @@ describe("store/stimulation", () => {
       });
 
       await store.commit("stimulation/setStimPlayState", false);
-      await store.commit("stimulation/setStimStatus", STIM_STATUS[status]);
+      await store.dispatch("stimulation/setStimStatus", STIM_STATUS[status]);
 
       expect(wrapper.find("#start-popover-msg").text()).toBe(expectedMessage);
       expect(wrapper.vm.playState).toBe(false);
@@ -173,7 +173,7 @@ describe("store/stimulation", () => {
         localVue,
       });
       await store.commit("stimulation/setStimPlayState", false);
-      await store.commit("stimulation/setStimStatus", STIM_STATUS.READY);
+      await store.dispatch("stimulation/setStimStatus", STIM_STATUS.READY);
       await store.commit("system/setBarcode", {
         type: "stimBarcode",
         newValue,
@@ -198,7 +198,7 @@ describe("store/stimulation", () => {
       store.state.stimulation.protocolAssignments = {
         4: {},
       };
-      await store.commit("stimulation/setStimStatus", STIM_STATUS[stimStatus]);
+      await store.dispatch("stimulation/setStimStatus", STIM_STATUS[stimStatus]);
       await store.commit("stimulation/setStimPlayState", playState);
       await store.commit("system/setBarcode", {
         type: "stimBarcode",

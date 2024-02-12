@@ -264,7 +264,8 @@ input:focus {
   background-color: rgb(0, 0, 0, 0.5);
 }
 
-/* Center the edit-plate-barcode-modal pop-up dialog within the viewport */
+/* Center these modal pop-up dialogs within the viewport */
+#barcode-warning,
 #edit-plate-barcode-modal {
   position: fixed;
   margin: 5% auto;

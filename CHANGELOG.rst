@@ -6,7 +6,10 @@ Changelog for Stingray Controller
 
 Fixed:
 ^^^^^^
-- Dropdown overflow syling.
+- Dropdown overflow styling
+- Initial barcode read after reconnecting to an instrument in offline mode will no longer stop stimulation
+- Barcode change warning now displays in the correct position
+- Barcode change while stimulating now correctly requires another stim configuration check before restarting stimulation
 
 
 0.4.1 (2024-02-06)

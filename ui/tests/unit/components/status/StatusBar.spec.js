@@ -242,7 +242,7 @@ describe("StatusWidget.vue", () => {
         await store.commit("system/setStatusUuid", SYSTEM_STATUS[systemVuexState]);
         store.state.stimulation.protocolAssignments = assignments;
 
-        await store.commit("stimulation/setStimStatus", STIM_STATUS[vuexState]);
+        await store.dispatch("stimulation/setStimStatus", STIM_STATUS[vuexState]);
         expect(wrapper.find(textSelector).text()).toBe(expectedText);
       }
     );
