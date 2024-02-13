@@ -503,7 +503,7 @@ export default {
     async handlePlayStop(e) {
       e.preventDefault();
       if (this.isStartStopButtonEnabled) {
-        this.$store.commit("stimulation/setStimStatus", STIM_STATUS.WAITING);
+        this.$store.dispatch("stimulation/setStimStatus", STIM_STATUS.WAITING);
 
         if (this.playState) {
           this.$store.dispatch(`stimulation/stopStimulation`);

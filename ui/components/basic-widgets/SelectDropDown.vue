@@ -25,7 +25,7 @@
       </div>
       <div class="arrow" :class="{ expanded: visible }" />
       <div :class="{ hidden: !visible, visible }">
-        <ul>
+        <ul class="ul__dropdown-content-container">
           <li v-for="item in filteredOptions" :key="item.id" :value="item" @click="changeSelection(item.id)">
             <span :style="'color:' + item.color">{{ item.letter }}</span
             >{{ item.name }}
@@ -102,7 +102,7 @@ export default {
       this.$emit("selection-changed", idx);
     },
     toggle() {
-      this.visible = !this.visible;
+      if (this.dropdownOptions.length > 1) this.visible = !this.visible;
     },
   },
 };
@@ -212,6 +212,26 @@ li:hover {
 }
 .visible {
   visibility: visible;
+}
+
+::-webkit-scrollbar {
+  -webkit-appearance: none;
+  height: 5px;
+  overflow: visible;
+}
+::-webkit-scrollbar-thumb {
+  background-color: #2f2f2f;
+  overflow: visible;
+}
+::-webkit-scrollbar-track {
+  background-color: #727171;
+  overflow: visible;
+}
+
+.ul__dropdown-content-container {
+  max-height: 450px;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 .div__chosen-option-container {
   width: 255px;

@@ -10,6 +10,7 @@ const defaultState = {
   statusUuid: SYSTEM_STATUS.SERVER_INITIALIZING_STATE,
   simulationMode: false,
   barcodeManualMode: false,
+  barcodeWarning: false,
   isConnectedToController: false,
   socket: null,
   barcodes: {
@@ -32,7 +33,6 @@ const defaultState = {
   allowSwUpdateInstall: false,
   confirmationRequest: false,
   loginAttemptStatus: null,
-  offlineMode: false,
 };
 
 // adapted from https://itnext.io/eating-my-advice-efficiently-improving-on-understanding-and-using-nuxt-vuex-6d00769014a2

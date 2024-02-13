@@ -494,7 +494,7 @@ class MantarrayMcSimulator(InfiniteProcess):
         elif packet_type == SerialCommPacketTypes.GET_METADATA:
             response_body += convert_metadata_to_bytes(self._metadata_dict)
             # wait until this command is received and then start sending barcodes
-            self._ready_to_send_barcode = True
+            self._ready_to_send_barcode = self._connection_status != InstrumentConnectionStatuses.OFFLINE
         elif packet_type == SerialCommPacketTypes.SET_NICKNAME:
             send_response = False
             start_idx = SERIAL_COMM_PAYLOAD_INDEX
@@ -555,6 +555,8 @@ class MantarrayMcSimulator(InfiniteProcess):
         elif packet_type == SerialCommPacketTypes.INIT_OFFLINE_MODE:
             self._connection_status = InstrumentConnectionStatuses.OFFLINE
         elif packet_type == SerialCommPacketTypes.END_OFFLINE_MODE:
+            self._ready_to_send_barcode = True
+
             self._connection_status = InstrumentConnectionStatuses.CONNECTED
             self._time_of_last_handshake_secs = perf_counter()
             # TODO change this so it sends accurate values

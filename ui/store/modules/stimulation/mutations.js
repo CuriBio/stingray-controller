@@ -85,7 +85,9 @@ export default {
       unit: timeUnit,
     };
     state.delayBlocks = [delay];
-    if (!isNaN(convertedDelayDuration) && convertedDelayDuration !== 0) subprotocols.push(delayPulseModel);
+    if (!isNaN(convertedDelayDuration) && convertedDelayDuration !== 0) {
+      subprotocols.push(delayPulseModel);
+    }
   },
   setSubprotocols({ protocolEditor }, { subprotocols, newSubprotocolOrder }) {
     protocolEditor.subprotocols = subprotocols;
@@ -109,18 +111,9 @@ export default {
     // this contradictory state occurs when 'Stimulate until complete' was selected for a stimulation.
     // the system status pinging returns a isStimulating key that constantly updates the stimPlayState
     // currently no other way set up for the FE to know on it's own that a stimulation has run to completion
-    if (!state.stimPlayState && state.stimStatus === STIM_STATUS.STIM_ACTIVE)
+    if (!state.stimPlayState && state.stimStatus === STIM_STATUS.STIM_ACTIVE) {
       state.stimStatus = STIM_STATUS.READY;
-  },
-  setStimStatus(state, status) {
-    if (
-      Object.keys(state.protocolAssignments).length === 0 &&
-      ![STIM_STATUS.ERROR, STIM_STATUS.SHORT_CIRCUIT_ERROR, STIM_STATUS.CONFIG_CHECK_COMPLETE].includes(
-        status
-      )
-    )
-      state.stimStatus = STIM_STATUS.NO_PROTOCOLS_ASSIGNED;
-    else state.stimStatus = status;
+    }
   },
   setEditMode({ editMode }, { label, letter }) {
     editMode.status = true;
