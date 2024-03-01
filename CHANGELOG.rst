@@ -1,7 +1,16 @@
 Changelog for Stingray Controller
 =================================
 
-0.4.2 (unreleased)
+
+0.4.3 (unreleased)
+------------------
+
+Changed:
+^^^^^^^^
+- Barcodes for plates with variable post stiffness are no longer allowed
+
+
+0.4.2 (2024-02-12)
 ------------------
 
 Fixed:
