@@ -211,14 +211,15 @@ export class TextValidation {
       return " ";
     }
     // check that experiment code is between 0 and 499 inclusive
-    if (parseInt(barcode.slice(7, 10)) < 0 || parseInt(barcode.slice(7, 10)) > 499) {
+    const experimentId = parseInt(barcode.slice(7, 10));
+    if (experimentId < 0 || experimentId > 499) {
       return " ";
     }
     // check if in beta one or two mode. if last digit invalid then mark the barcode as invalid
     if (barcode[11] !== "2") {
       return " ";
     }
-    return "";
+    return this._checkVarStiffness(experimentId);
   }
   /**
    * Returns the feedback text for the old plate barcode validation
@@ -248,8 +249,28 @@ export class TextValidation {
     if (day < 1 || day > 366) {
       return " ";
     }
+
+    const experimentId = parseInt(barcode.slice(-3));
+    if (Number.isNaN(experimentId)) {
+      return " ";
+    }
+    return this._checkVarStiffness(experimentId);
+  }
+
+  /**
+   * Returns the feedback text for whether or not this is an experiment ID for a variable stiffness plate
+   *
+   * @param  {int} experimentId The uuidtext on which the validation rules are verified
+   * @return {string} The string is either empty on valid or invalid text
+   *
+   */
+  _checkVarStiffness(experimentId) {
+    if (200 <= experimentId && experimentId <= 299) {
+      return " ";
+    }
     return "";
   }
+
   /**
    * Returns the feedback text for the uuidBase57 encoding validation
    *

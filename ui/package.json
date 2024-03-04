@@ -72,7 +72,6 @@
     "jscpd": "^3.3.19",
     "jsdoc": "^3.6.6",
     "jsdoc-vuejs": "^3.0.8",
-    "npm-merge-driver": "~2.3.6",
     "nuxt": "^2.14.12",
     "sinon": "^10.0.0",
     "socket.io": "^4.1.3",
