@@ -1,7 +1,15 @@
 Changelog for Stingray Controller
 =================================
 
-0.4.2 (unreleased)
+0.4.3 (unreleased)
+------------------
+
+Added:
+^^^^^^
+- Biphasic stim check
+
+
+0.4.2 (2024-02-12)
 ------------------
 
 Fixed:
