@@ -477,7 +477,7 @@ class MantarrayMcSimulator(InfiniteProcess):
             # Tanner (4/8/22): currently assuming that stim checks will take a negligible amount of time
             for module_readings in self._adc_readings:
                 status = convert_adc_readings_to_circuit_status(*module_readings)
-                response_body += struct.pack("<HHB", *module_readings, status)
+                response_body += struct.pack("<HHB", *module_readings, status) * 2
         elif packet_type == SerialCommPacketTypes.SET_SAMPLING_PERIOD:
             response_body += self._update_sampling_period(comm_from_controller)
         elif packet_type == SerialCommPacketTypes.START_DATA_STREAMING:
