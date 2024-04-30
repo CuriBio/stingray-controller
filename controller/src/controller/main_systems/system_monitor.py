@@ -290,7 +290,12 @@ class SystemMonitor:
                     "command": "start_stim_checks",
                     "stimulator_circuit_statuses": stimulator_circuit_statuses,
                 }:
-                    update = {"stimulator_circuit_statuses": stimulator_circuit_statuses}
+
+                    status_combined = {
+                        well_idx: list(StimulatorCircuitStatuses)[max(statuses.values()) + 1].name.lower()
+                        for well_idx, statuses in stimulator_circuit_statuses.items()
+                    }
+                    update = {"stimulator_circuit_statuses": status_combined}
                     system_state_updates.update(update)
                     await self._queues["to"]["server"].put(
                         {"communication_type": "stimulator_circuit_statuses", **update}

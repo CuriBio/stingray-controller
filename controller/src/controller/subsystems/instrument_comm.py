@@ -30,7 +30,6 @@ from ..constants import SERIAL_COMM_STATUS_CODE_LENGTH_BYTES
 from ..constants import SerialCommPacketTypes
 from ..constants import STIM_COMPLETE_SUBPROTOCOL_IDX
 from ..constants import STIM_MODULE_ID_TO_WELL_IDX
-from ..constants import StimulatorCircuitStatuses
 from ..constants import STM_VID
 from ..exceptions import FirmwareGoingDormantError
 from ..exceptions import IncorrectInstrumentConnectedError
@@ -613,16 +612,22 @@ class InstrumentComm:
             case "start_stim_checks":
                 stimulator_check_dict = convert_stimulator_check_bytes_to_dict(response_data)
 
-                stimulator_circuit_statuses: dict[int, str] = {}
-                adc_readings: dict[int, tuple[int, int]] = {}
+                stimulator_circuit_statuses: dict[int, dict[str, str]] = {}
+                adc_readings: dict[int, dict[str, tuple[int, int]]] = {}
 
-                for module_id, (adc8, adc9, status_int) in enumerate(zip(*stimulator_check_dict.values())):
+                for module_id, (
+                    adc8_pos,
+                    adc9_pos,
+                    status_int_pos,
+                    adc8_neg,
+                    adc9_neg,
+                    status_int_neg,
+                ) in enumerate(zip(*stimulator_check_dict.values())):
                     well_idx = STIM_MODULE_ID_TO_WELL_IDX[module_id]
                     if well_idx not in prev_command_info["well_indices"]:
                         continue
-                    status_str = list(StimulatorCircuitStatuses)[status_int + 1].name.lower()
-                    stimulator_circuit_statuses[well_idx] = status_str
-                    adc_readings[well_idx] = (adc8, adc9)
+                    stimulator_circuit_statuses[well_idx] = {"pos": status_int_pos, "neg": status_int_neg}
+                    adc_readings[well_idx] = {"pos": (adc8_pos, adc9_pos), "neg": (adc8_neg, adc9_neg)}
 
                 prev_command_info["stimulator_circuit_statuses"] = stimulator_circuit_statuses
                 prev_command_info["adc_readings"] = adc_readings

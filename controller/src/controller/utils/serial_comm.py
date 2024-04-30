@@ -239,15 +239,16 @@ def get_serial_comm_timestamp() -> int:
 
 
 def convert_stimulator_check_bytes_to_dict(stimulator_check_bytes: bytes) -> dict[str, list[int]]:
-    stimulator_checks_as_ints = struct.unpack("<" + "HHB" * NUM_WELLS, stimulator_check_bytes)
+    stimulator_checks_as_ints = struct.unpack("<" + "HHB" * NUM_WELLS * 2, stimulator_check_bytes)
     # convert to lists of adc8, adc9, and status where the index of each list is the module id. Only creating an array here to reshape easily
     stimulator_checks_list = (
         np.array(stimulator_checks_as_ints, copy=False)
-        .reshape((3, len(stimulator_checks_as_ints) // 3), order="F")
+        .reshape((6, len(stimulator_checks_as_ints) // 6), order="F")
         .tolist()
     )
     stimulator_checks_dict = {
-        key: stimulator_checks_list[i] for i, key in enumerate(["adc8", "adc9", "status"])
+        key: stimulator_checks_list[i]
+        for i, key in enumerate(["adc8_pos", "adc9_pos", "status_pos", "adc8_neg", "adc9_neg", "status_neg"])
     }
     return stimulator_checks_dict
 
