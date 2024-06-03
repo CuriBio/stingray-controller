@@ -11,13 +11,14 @@ from zlib import crc32
 from aioserial import AioSerial
 import serial
 import serial.tools.list_ports as list_ports
+from stdlib_utils import is_system_windows
 
 from ..constants import CURI_VID
 from ..constants import InstrumentConnectionStatuses
 from ..constants import NUM_WELLS
 from ..constants import SERIAL_COMM_BAUD_RATE
 from ..constants import SERIAL_COMM_BYTESIZE
-from ..constants import SERIAL_COMM_HANDSHAKE_PERIOD_SECONDS
+from ..constants import SERIAL_COMM_HANDSHAKE_PERIOD_SECONDS, SERIAL_COMM_BUFFER_RX_SIZE
 from ..constants import SERIAL_COMM_MAGIC_WORD_BYTES
 from ..constants import SERIAL_COMM_MAX_FULL_PACKET_LENGTH_BYTES
 from ..constants import SERIAL_COMM_MAX_PAYLOAD_LENGTH_BYTES
@@ -219,6 +220,9 @@ class InstrumentComm:
                     timeout=SERIAL_COMM_READ_TIMEOUT,
                     stopbits=serial.STOPBITS_ONE,
                 )
+                if is_system_windows():
+                    logger.info(f"Setting buffer size to {SERIAL_COMM_BUFFER_RX_SIZE}")
+                    self._instrument.set_buffer_size(rx_size=SERIAL_COMM_BUFFER_RX_SIZE)
                 break
 
         # if a real instrument is not found, check for a virtual instrument
