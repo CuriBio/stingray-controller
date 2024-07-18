@@ -1,7 +1,16 @@
 Changelog for Stingray Controller
 =================================
 
-0.4.3 (unreleased)
+
+0.4.4 (2024-07-17)
+------------------
+
+Changed:
+^^^^^^^^
+- Serial buffer size is now 1MB
+
+
+0.4.3 (2024-04-29)
 ------------------
 
 Added:
