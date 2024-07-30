@@ -2,6 +2,14 @@ Changelog for Stingray Controller
 =================================
 
 
+0.4.5 (unreleased)
+------------------
+
+Added:
+^^^^^^
+- Better handling of errors during Stimulation Configuration Check
+
+
 0.4.4 (2024-07-17)
 ------------------
 

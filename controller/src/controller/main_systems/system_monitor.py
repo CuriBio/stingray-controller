@@ -19,6 +19,7 @@ from ..constants import StimulationStates
 from ..constants import StimulatorCircuitStatuses
 from ..constants import SystemStatuses
 from ..exceptions import ElectronControllerVersionMismatchError
+from ..exceptions import InvalidStimulatorCircuitStatus
 from ..utils.aio import wait_tasks_clean
 from ..utils.generic import handle_system_error
 from ..utils.generic import semver_gt
@@ -290,11 +291,21 @@ class SystemMonitor:
                     "command": "start_stim_checks",
                     "stimulator_circuit_statuses": stimulator_circuit_statuses,
                 }:
-
-                    status_combined = {
-                        well_idx: list(StimulatorCircuitStatuses)[max(statuses.values()) + 1].name.lower()
-                        for well_idx, statuses in stimulator_circuit_statuses.items()
-                    }
+                    status_combined = {}
+                    bad_statuses = {}
+                    for well_idx, statuses in stimulator_circuit_statuses.items():
+                        try:
+                            status_combined[well_idx] = StimulatorCircuitStatuses.from_int(
+                                max(statuses.values())
+                            ).name.lower()
+                        except InvalidStimulatorCircuitStatus:
+                            bad_statuses[
+                                GENERIC_24_WELL_DEFINITION.get_well_name_from_well_index(well_idx)
+                            ] = statuses
+                    if bad_statuses:
+                        raise InvalidStimulatorCircuitStatus(
+                            f"Invalid stimulator circuit statuses reported: {bad_statuses}"
+                        )
                     update = {"stimulator_circuit_statuses": status_combined}
                     system_state_updates.update(update)
                     await self._queues["to"]["server"].put(

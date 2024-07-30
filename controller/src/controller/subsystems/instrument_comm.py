@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import asyncio
 from collections import namedtuple
+import copy
 import datetime
 import logging
 import struct
@@ -14,6 +15,7 @@ import serial.tools.list_ports as list_ports
 from stdlib_utils import is_system_windows
 
 from ..constants import CURI_VID
+from ..constants import GENERIC_24_WELL_DEFINITION
 from ..constants import InstrumentConnectionStatuses
 from ..constants import NUM_WELLS
 from ..constants import SERIAL_COMM_BAUD_RATE
@@ -637,7 +639,16 @@ class InstrumentComm:
                 prev_command_info["stimulator_circuit_statuses"] = stimulator_circuit_statuses
                 prev_command_info["adc_readings"] = adc_readings
 
-                logger.info(f"Stim circuit check results: {prev_command_info}")
+                copy_for_logging = copy.deepcopy(prev_command_info)
+                copy_for_logging["stimulator_circuit_statuses"] = {
+                    GENERIC_24_WELL_DEFINITION.get_well_name_from_well_index(well_idx): statuses
+                    for well_idx, statuses in copy_for_logging["stimulator_circuit_statuses"].items()
+                }
+                copy_for_logging["adc_readings"] = {
+                    GENERIC_24_WELL_DEFINITION.get_well_name_from_well_index(well_idx): readings
+                    for well_idx, readings in copy_for_logging["adc_readings"].items()
+                }
+                logger.info(f"Stim circuit check results: {copy_for_logging}")
             case "set_protocols":
                 if response_data[0]:
                     if not self._hardware_test_mode:

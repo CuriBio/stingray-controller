@@ -77,6 +77,10 @@ class SerialCommIncorrectChecksumFromInstrumentError(InstrumentBadDataError):
     pass
 
 
+class InvalidStimulatorCircuitStatus(InstrumentBadDataError):
+    pass
+
+
 # TODO might need to make this a subclass of a different error (Tanner: not sure why anymore)
 class SerialCommCommandProcessingError(InstrumentBadDataError):
     pass
