@@ -10,6 +10,8 @@ import uuid
 from immutabledict import immutabledict
 from labware_domain_models import LabwareDefinition
 
+from .exceptions import InvalidStimulatorCircuitStatus
+
 
 # General
 CURRENT_SOFTWARE_VERSION = "REPLACETHISWITHVERSIONDURINGBUILD"
@@ -262,6 +264,14 @@ class StimulatorCircuitStatuses(IntEnum):
     SHORT = 2
     ERROR = 3
     NOT_CHECKED = 4
+
+    @classmethod
+    def from_int(cls, status: int) -> "StimulatorCircuitStatuses":
+        cls_list: list["StimulatorCircuitStatuses"] = list(cls)
+        try:
+            return cls_list[status + 1]
+        except IndexError as e:
+            raise InvalidStimulatorCircuitStatus from e
 
 
 class StimProtocolStatuses(IntEnum):
