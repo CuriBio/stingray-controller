@@ -9,6 +9,10 @@ Added:
 ^^^^^^
 - Better handling of errors during Stimulation Configuration Check
 
+Changed:
+^^^^^^^^
+- Stim pulse images
+
 Fixed:
 ^^^^^^
 - Issue with deletion of one stim protocol resulting in deletion of other stim protocols
