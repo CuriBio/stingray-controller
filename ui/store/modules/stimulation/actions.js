@@ -378,14 +378,19 @@ export default {
 
   async handleProtocolEditorReset({ commit, state }) {
     const { protocolList, editMode, protocolAssignments } = state;
-    const { status, label } = editMode;
+    const { status, letter } = editMode;
 
     if (status) {
-      protocolList.map((protocol, idx) => {
-        if (protocol.label === label) protocolList.splice(idx, 1);
-      });
+      for (const [i, protocol] of protocolList.entries()) {
+        if (protocol.letter === letter) {
+          protocolList.splice(i, 1);
+          break;
+        }
+      }
       for (const well in protocolAssignments) {
-        if (protocolAssignments[well].label === label) delete protocolAssignments[well];
+        if (protocolAssignments[well].letter === letter) {
+          delete protocolAssignments[well];
+        }
       }
       await commit("setEditModeOff");
     }

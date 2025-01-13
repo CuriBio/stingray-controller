@@ -13,6 +13,10 @@ Changed:
 ^^^^^^^^
 - Stim pulse images
 
+Fixed:
+^^^^^^
+- Issue with deletion of one stim protocol resulting in deletion of other stim protocols
+
 
 0.4.4 (2024-07-17)
 ------------------
