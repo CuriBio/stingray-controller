@@ -9,6 +9,10 @@ Added:
 ^^^^^^
 - Better handling of errors during Stimulation Configuration Check
 
+Changed:
+^^^^^^^^
+- Stim pulse images
+
 
 0.4.4 (2024-07-17)
 ------------------
