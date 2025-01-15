@@ -58,7 +58,7 @@ export default {
   data: function () {
     return {
       packageVersion: "",
-      currentYear: "2023", // TODO look into better ways of handling this. Not sure if just using the system's current year is the best approach
+      currentYear: "2025", // TODO look into better ways of handling this. Not sure if just using the system's current year is the best approach
     };
   },
   computed: {
