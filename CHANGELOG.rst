@@ -2,7 +2,7 @@ Changelog for Stingray Controller
 =================================
 
 
-0.4.5 (unreleased)
+0.4.5 (2024-01-28)
 ------------------
 
 Added:
