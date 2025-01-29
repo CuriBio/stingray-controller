@@ -1,6 +1,13 @@
 Changelog for Stingray Controller
 =================================
 
+0.4.6 (unreleased)
+------------------
+
+Changed:
+^^^^^^^^
+- Installer now prompts whether to install for only the current user or for all users
+
 
 0.4.5 (2024-01-28)
 ------------------
