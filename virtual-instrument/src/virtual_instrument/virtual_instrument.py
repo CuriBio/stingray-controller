@@ -45,7 +45,6 @@ from controller.utils.serial_comm import convert_stim_bytes_to_dict
 from controller.utils.serial_comm import convert_stim_dict_to_bytes
 from controller.utils.serial_comm import create_data_packet
 from controller.utils.serial_comm import is_null_subprotocol
-from controller.utils.serial_comm import validate_checksum
 from controller.utils.stimulation import get_subprotocol_dur_us
 from immutabledict import immutabledict
 from nptyping import NDArray
@@ -167,8 +166,9 @@ class MantarrayMcSimulator(InfiniteProcess):
         self._simulated_data: NDArray[np.uint16] = np.array([], dtype=np.uint16)
         self._metadata_dict: dict[UUID | str, Any] = dict()
         self._reset_metadata_dict()
-        # self._setup_data_interpolator()
+        self._setup_data_interpolator()
         # simulator values (set in _handle_boot_up_config)
+        self._packet_sent_while_connected = False
         self._time_of_last_handshake_secs: float | None = None
         self._reboot_again = False
         self._reboot_time_secs: float | None
@@ -249,10 +249,8 @@ class MantarrayMcSimulator(InfiniteProcess):
 
         This function should only be called once.
         """
-        relative_path = os.path.join("src", "simulated_data", "simulated_twitch.csv")
-        absolute_path = os.path.normcase(
-            os.path.join(get_current_file_abs_directory(), os.pardir, os.pardir, os.pardir)
-        )
+        relative_path = os.path.join("simulated_data", "simulated_twitch.csv")
+        absolute_path = os.path.normcase(os.path.join(get_current_file_abs_directory(), os.pardir))
         file_path = resource_path(relative_path, base_path=absolute_path)
         with open(file_path, newline="") as csvfile:
             simulated_data_timepoints = next(csv.reader(csvfile, delimiter=","))
@@ -327,9 +325,11 @@ class MantarrayMcSimulator(InfiniteProcess):
                 0, len(data_packet) - 1
             )
             data_packet = data_packet[trunc_index:]
-        print("SEND:", packet_type)  # allow-print
+
+        print("SEND:", packet_type, list(data_packet))  # allow-print
 
         if self.conn:
+            self._packet_sent_while_connected = True
             self.conn.sendall(data_packet)
 
     def _commands_for_each_run_iteration(self) -> None:
@@ -395,9 +395,8 @@ class MantarrayMcSimulator(InfiniteProcess):
             self.conn = None
             return
         else:
-            if not magic_word:
-                # assume that the controller disconnected here and ignore
-                return
+            if len(magic_word) == 0 and self._connection_status != InstrumentConnectionStatuses.OFFLINE:
+                raise Exception("Controller disconnected")
 
         if magic_word != SERIAL_COMM_MAGIC_WORD_BYTES:
             raise Exception(f"Incorrect magic word from controller: {list(magic_word)}")
@@ -409,13 +408,14 @@ class MantarrayMcSimulator(InfiniteProcess):
             + self.conn.recv(int.from_bytes(packet_remainder_size_bytes, "little"))
         )
 
-        # validate checksum before handling the communication
-        checksum_is_valid = validate_checksum(comm_from_controller)
-        if not checksum_is_valid:
-            # remove magic word before returning message to Controller
-            trimmed_comm_from_controller = comm_from_controller[MAGIC_WORD_LEN:]
-            self._send_data_packet(SerialCommPacketTypes.CHECKSUM_FAILURE, trimmed_comm_from_controller)
-            return
+        # TODO uncomment this
+        # # validate checksum before handling the communication
+        # checksum_is_valid = validate_checksum(comm_from_controller)
+        # if not checksum_is_valid:
+        #     # remove magic word before returning message to Controller
+        #     trimmed_comm_from_controller = comm_from_controller[MAGIC_WORD_LEN:]
+        #     self._send_data_packet(SerialCommPacketTypes.CHECKSUM_FAILURE, trimmed_comm_from_controller)
+        #     return
         self._process_main_module_command(comm_from_controller)
 
     def _check_handshake_timeout(self) -> None:
@@ -619,12 +619,13 @@ class MantarrayMcSimulator(InfiniteProcess):
         return update_status_byte
 
     def _handle_status_beacon(self) -> None:
+        truncate = not self._packet_sent_while_connected and self._time_of_last_handshake_secs is None
         if self._time_of_last_status_beacon_secs is None:
-            self._send_status_beacon(truncate=self._time_of_last_handshake_secs is None)
+            self._send_status_beacon(truncate=truncate)
             return
         seconds_elapsed = _get_secs_since_last_status_beacon(self._time_of_last_status_beacon_secs)
         if seconds_elapsed >= SERIAL_COMM_STATUS_BEACON_PERIOD_SECONDS:
-            self._send_status_beacon(truncate=False)
+            self._send_status_beacon(truncate=truncate)
 
     def _send_status_beacon(self, truncate: bool = False) -> None:
         self._time_of_last_status_beacon_secs = perf_counter()
@@ -669,6 +670,8 @@ class MantarrayMcSimulator(InfiniteProcess):
         """
         if self._timepoint_of_last_data_packet_us is None:  # making mypy happy
             raise NotImplementedError("_timepoint_of_last_data_packet_us should never be None here")
+        if not self.conn:
+            raise NotImplementedError("streaming data while not connected")
         us_since_last_data_packet = _get_us_since_last_data_packet(self._timepoint_of_last_data_packet_us)
         num_packets_to_send = us_since_last_data_packet // self._sampling_period_us
         if num_packets_to_send < 1:
@@ -686,7 +689,9 @@ class MantarrayMcSimulator(InfiniteProcess):
             # increment values
             self._time_index_us += self._sampling_period_us
             self._simulated_data_index = (self._simulated_data_index + 1) % simulated_data_len
-        # TODO self._output_queue.put_nowait(data_packet_bytes)
+
+        # print("MAG DATA (n):", num_packets_to_send)
+        self.conn.sendall(data_packet_bytes)
         # update timepoint
         self._timepoint_of_last_data_packet_us += num_packets_to_send * self._sampling_period_us
 
