@@ -484,8 +484,7 @@ class MantarrayMcSimulator(InfiniteProcess):
             is_data_already_streaming = self._is_streaming_data
             response_body += bytes([is_data_already_streaming])
             self._is_streaming_data = True
-            if not is_data_already_streaming:
-                response_body += self._time_index_us.to_bytes(8, byteorder="little")
+            response_body += self._time_index_us.to_bytes(8, byteorder="little")
         elif packet_type == SerialCommPacketTypes.STOP_DATA_STREAMING:
             response_body += bytes([not self._is_streaming_data])
             if self._is_streaming_data and self._is_first_data_stream:
