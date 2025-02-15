@@ -45,6 +45,7 @@ from controller.utils.serial_comm import convert_stim_bytes_to_dict
 from controller.utils.serial_comm import convert_stim_dict_to_bytes
 from controller.utils.serial_comm import create_data_packet
 from controller.utils.serial_comm import is_null_subprotocol
+from controller.utils.serial_comm import validate_checksum
 from controller.utils.stimulation import get_subprotocol_dur_us
 from immutabledict import immutabledict
 from nptyping import NDArray
@@ -408,14 +409,14 @@ class MantarrayMcSimulator(InfiniteProcess):
             + self.conn.recv(int.from_bytes(packet_remainder_size_bytes, "little"))
         )
 
-        # TODO uncomment this
-        # # validate checksum before handling the communication
-        # checksum_is_valid = validate_checksum(comm_from_controller)
-        # if not checksum_is_valid:
-        #     # remove magic word before returning message to Controller
-        #     trimmed_comm_from_controller = comm_from_controller[MAGIC_WORD_LEN:]
-        #     self._send_data_packet(SerialCommPacketTypes.CHECKSUM_FAILURE, trimmed_comm_from_controller)
-        #     return
+        # validate checksum before handling the communication
+        checksum_is_valid = validate_checksum(comm_from_controller)
+        if not checksum_is_valid:
+            print("INVALID CHECKSUM:", list(comm_from_controller))  # allow-print
+            # remove magic word before returning message to Controller
+            trimmed_comm_from_controller = comm_from_controller[MAGIC_WORD_LEN:]
+            self._send_data_packet(SerialCommPacketTypes.CHECKSUM_FAILURE, trimmed_comm_from_controller)
+            return
         self._process_main_module_command(comm_from_controller)
 
     def _check_handshake_timeout(self) -> None:
