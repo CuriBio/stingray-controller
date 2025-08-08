@@ -198,6 +198,7 @@ class MantarrayMcSimulator(InfiniteProcess):
 
     @_connection_status.setter
     def _connection_status(self, value: InstrumentConnectionStatuses) -> None:
+        print(f"CONNECTION STATUS UPDATE: {value}")  # allow-print
         self._metadata_dict["pc_connection_status"] = value
 
     @property
@@ -395,10 +396,11 @@ class MantarrayMcSimulator(InfiniteProcess):
             self.conn.close()
             self.conn = None
             return
-        else:
-            if len(magic_word) == 0 and self._connection_status != InstrumentConnectionStatuses.OFFLINE:
-                raise Exception("Controller disconnected")
 
+        if len(magic_word) == 0:
+            if self._connection_status == InstrumentConnectionStatuses.CONNECTED:
+                raise Exception("Controller disconnected")
+            return
         if magic_word != SERIAL_COMM_MAGIC_WORD_BYTES:
             raise Exception(f"Incorrect magic word from controller: {list(magic_word)}")
 
