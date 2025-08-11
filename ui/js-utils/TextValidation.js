@@ -214,8 +214,13 @@ export class TextValidation {
     if (parseInt(barcode.slice(7, 10)) < 0 || parseInt(barcode.slice(7, 10)) > 499) {
       return " ";
     }
-    // check if in beta one or two mode. if last digit invalid then mark the barcode as invalid
-    if (barcode[11] !== "2") {
+    if (barcode[1] === "L") {
+      // allow any magnet type for plate barcodes
+      if (["1", "3", "4"].includes(barcode[11])) {
+        return " ";
+      }
+    } else if (barcode[11] !== "2") {
+      // stim barcodes must end with 2
       return " ";
     }
     return "";

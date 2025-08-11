@@ -4,9 +4,17 @@ Changelog for Stingray Controller
 0.4.6 (unreleased)
 ------------------
 
+Added:
+^^^^^^
+- ML barcodes may end in any digit other than ``1``, ``3``, or ``4``
+
 Changed:
 ^^^^^^^^
 - Installer now prompts whether to install for only the current user or for all users
+
+Fixed:
+^^^^^^
+- Error and warning modals are no longer hidden when clicking outside of them
 
 
 0.4.5 (2024-01-28)

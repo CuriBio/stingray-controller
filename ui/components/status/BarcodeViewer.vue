@@ -29,10 +29,24 @@
         </div>
       </span>
     </div>
-    <b-modal id="edit-plate-barcode-modal" size="sm" hide-footer hide-header hide-header-close>
+    <b-modal
+      id="edit-plate-barcode-modal"
+      size="sm"
+      hide-footer
+      hide-header
+      hide-header-close
+      :no-close-on-backdrop="true"
+    >
       <StatusWarningWidget :modalLabels="barcodeManualLabels" @handle-confirmation="handleManualModeChoice" />
     </b-modal>
-    <b-modal id="barcode-warning" size="sm" hide-footer hide-header hide-header-close>
+    <b-modal
+      id="barcode-warning"
+      size="sm"
+      hide-footer
+      hide-header
+      hide-header-close
+      :no-close-on-backdrop="true"
+    >
       <StatusWarningWidget :modalLabels="barcodeWarningLabels" @handle-confirmation="closeWarningModal" />
     </b-modal>
   </div>
