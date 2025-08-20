@@ -278,7 +278,7 @@ class CloudComm:
     async def _sub_task_wrapper(self, coro: Coroutine[Any, Any, dict[str, str]]) -> dict[str, str]:
         try:
             return await coro
-        except (RequestFailedError, httpx.ConnectError) as e:
+        except (RequestFailedError, httpx.HTTPError) as e:
             return {"error": repr(e)}
 
     async def _get_cloud_api_tokens(self, customer_id: str, username: str, password: str) -> None:
