@@ -16,7 +16,7 @@ Fixed:
 ^^^^^^
 - Error and warning modals are no longer hidden when clicking outside of them
 - Network connection timeouts (i.e. when checking for FW updates) are no longer treated as fatal errors
-- Remove horizontal scrollbar
+- Remove vertical scrollbar
 
 
 0.4.5 (2024-01-28)
