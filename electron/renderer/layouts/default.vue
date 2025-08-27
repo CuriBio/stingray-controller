@@ -267,7 +267,7 @@ body {
   overflow: hidden;
   width: 286px;
   height: 16px;
-  top: 907px;
+  top: 857px;
   left: -0.252101px;
   padding: 5px;
   user-select: none;
