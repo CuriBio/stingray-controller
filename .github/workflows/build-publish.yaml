@@ -105,7 +105,7 @@ jobs:
 
       - name: Check release tag (If not unstable)
         id: check-tag
-        if: env.RELEASE_CHANNEL == 'unstable'
+        if: env.RELEASE_CHANNEL != 'unstable'
         run: |
           git fetch --tags
           echo "::set-output name=TAG::$(git tag -l ${{ steps.software-version.outputs.prop }})"
