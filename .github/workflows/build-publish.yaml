@@ -6,11 +6,12 @@ on:
       release_channel:
         description: "Release channel"
         required: true
-        default: "unstable"
+        default: "beta96"
         type: choice
         options:
           - unstable
           - prod
+          - beta96
       api_endpoint:
         description: "Cloud API endpoint"
         required: true
@@ -104,7 +105,7 @@ jobs:
 
       - name: Check release tag (If not unstable)
         id: check-tag
-        if: env.RELEASE_CHANNEL != 'unstable'
+        if: env.RELEASE_CHANNEL == 'unstable'
         run: |
           git fetch --tags
           echo "::set-output name=TAG::$(git tag -l ${{ steps.software-version.outputs.prop }})"
