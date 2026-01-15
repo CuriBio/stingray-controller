@@ -2,7 +2,15 @@
   <div class="div__status-bar">
     <span class="span__status-bar-text">Status: {{ alertTxt }}</span>
     <span>
-      <b-modal id="error-catch" size="sm" hide-footer hide-header hide-header-close :static="true">
+      <b-modal
+        id="error-catch"
+        size="sm"
+        hide-footer
+        hide-header
+        hide-header-close
+        :static="true"
+        :no-close-on-backdrop="true"
+      >
         <ErrorCatchWidget :logFilepath="logPath" @ok-clicked="closeModalsById(['error-catch'])" />
       </b-modal>
       <b-modal
