@@ -20,7 +20,6 @@ from controller.constants import InstrumentConnectionStatuses
 from controller.constants import MAX_MC_REBOOT_DURATION_SECONDS
 from controller.constants import MICRO_TO_BASE_CONVERSION
 from controller.constants import MICROS_PER_MILLI
-from controller.constants import NUM_WELLS
 from controller.constants import PROTOCOL_STATUS_BYTES_LEN
 from controller.constants import SERIAL_COMM_CHECKSUM_LENGTH_BYTES
 from controller.constants import SERIAL_COMM_HANDSHAKE_TIMEOUT_SECONDS
@@ -37,7 +36,10 @@ from controller.constants import SERIAL_COMM_TIME_INDEX_LENGTH_BYTES
 from controller.constants import SERIAL_COMM_TIME_OFFSET_LENGTH_BYTES
 from controller.constants import SerialCommPacketTypes
 from controller.constants import STIM_COMPLETE_SUBPROTOCOL_IDX
+from controller.constants import STIM_MAX_NUM_PROTOCOLS
+from controller.constants import StimLidType
 from controller.constants import StimProtocolStatuses
+from controller.constants import StimScheduleType
 from controller.utils.serial_comm import convert_adc_readings_to_circuit_status
 from controller.utils.serial_comm import convert_instrument_event_info_to_bytes
 from controller.utils.serial_comm import convert_metadata_to_bytes
@@ -147,16 +149,15 @@ class MantarrayMcSimulator(InfiniteProcess):
     default_adc_reading = 0xFF00
     global_timer_offset_secs = 2.5  # TODO Tanner (11/17/21): figure out if this should be removed
 
-    def __init__(
-        self, sock: socket.socket, logging_level: int = logging.INFO, num_wells: int = NUM_WELLS
-    ) -> None:
+    def __init__(self, sock: socket.socket, logging_level: int = logging.INFO) -> None:
         # InfiniteProcess values
         super().__init__(Queue(), logging_level=logging_level)
         # socket connections
         self.sock = sock
         self.conn = None
         # plate values
-        self._num_wells = num_wells
+        self._num_wells = 96
+        self._set_96w = False  # this needs to be set before doing anything stim related
         # simulator values (not set in _handle_boot_up_config)
         self._time_of_last_status_beacon_secs: float | None = None
         self._ready_to_send_barcode = False
@@ -177,6 +178,7 @@ class MantarrayMcSimulator(InfiniteProcess):
         self._sampling_period_us: int
         self._adc_readings: list[tuple[int, int]]
         self._stim_info: dict[str, Any]
+        self._stim_schedule_type: StimScheduleType = StimScheduleType.STANDARD
         # TODO move all the stim info below into StimulationProtocolManager?
         self._stim_running_statuses: list[bool] = []
         self._timepoints_of_subprotocols_start: list[int | None]
@@ -456,13 +458,16 @@ class MantarrayMcSimulator(InfiniteProcess):
                 comm_from_controller[SERIAL_COMM_PAYLOAD_INDEX:-SERIAL_COMM_CHECKSUM_LENGTH_BYTES]
             )
             # TODO handle too many subprotocols?
-            command_failed = self._is_stimulating or len(stim_info_dict["protocols"]) > self._num_wells
+            command_failed = self._is_stimulating or len(stim_info_dict["protocols"]) > STIM_MAX_NUM_PROTOCOLS
             if not command_failed:
                 self._stim_info = stim_info_dict
             response_body += bytes([command_failed])
         elif packet_type == SerialCommPacketTypes.START_STIM:
-            # command fails if protocols are not set or if stimulation is already running
-            command_failed = "protocol_assignments" not in self._stim_info or self._is_stimulating
+            # command fails if protocols are not set, or if stimulation is already running.
+            # STv2 Beta SW only supports 96 wells, so also fail if not set to 96 wells yet
+            command_failed = (
+                not self._set_96w or "protocol_assignments" not in self._stim_info or self._is_stimulating
+            )
             response_body += bytes([command_failed])
             if not command_failed:
                 self._is_stimulating = True
@@ -474,10 +479,34 @@ class MantarrayMcSimulator(InfiniteProcess):
                 self._handle_manual_stim_stop()
                 self._is_stimulating = False
         elif packet_type == SerialCommPacketTypes.STIM_IMPEDANCE_CHECK:
-            # Tanner (4/8/22): currently assuming that stim checks will take a negligible amount of time
+            raise Exception("Use STIM_IMPEDANCE_CHECK_96 instead of STIM_IMPEDANCE_CHECK")
+        elif packet_type == SerialCommPacketTypes.SET_LID_TYPE:
+            lid_type = comm_from_controller[SERIAL_COMM_PAYLOAD_INDEX]
+            is_96w = lid_type == StimLidType.L96
+            if is_96w:
+                self._set_96w = True
+            # STv2 Beta SW only needs 96w support, so fail otherwise
+            response_body += bytes([not is_96w])
+        elif packet_type == SerialCommPacketTypes.STIM_IMPEDANCE_CHECK_96:
+            if not self._set_96w:
+                # this command has no failure response defined, so raise error instead
+                raise Exception("Lid type must be set to 96w before executing STIM_IMPEDANCE_CHECK_96")
             for module_readings in self._adc_readings:
                 status = convert_adc_readings_to_circuit_status(*module_readings)
                 response_body += struct.pack("<HHB", *module_readings, status) * 2
+        elif packet_type == SerialCommPacketTypes.SET_STIM_SCHEDULE_TYPE:
+            stim_schedule_type = comm_from_controller[SERIAL_COMM_PAYLOAD_INDEX]
+            try:
+                stim_schedule_type = StimScheduleType(stim_schedule_type)
+            except ValueError:
+                command_failed = True
+            else:
+                self._stim_schedule_type = stim_schedule_type
+                command_failed = False
+            response_body += bytes([command_failed])
+        elif packet_type == SerialCommPacketTypes.SET_SUB_WELLS:
+            command_failed = True  # STv2 Beta SW does not need this command, so it always fails
+            response_body += bytes([command_failed])
         elif packet_type == SerialCommPacketTypes.SET_SAMPLING_PERIOD:
             response_body += self._update_sampling_period(comm_from_controller)
         elif packet_type == SerialCommPacketTypes.START_DATA_STREAMING:

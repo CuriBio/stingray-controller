@@ -185,6 +185,12 @@ class SerialCommPacketTypes(IntEnum):
     STOP_STIM = 22
     STIM_STATUS = 23
     STIM_IMPEDANCE_CHECK = 27
+    # stingray v2
+    SET_LID_TYPE = 30
+    STIM_IMPEDANCE_CHECK_96 = 31
+    SET_STIM_SCHEDULE_TYPE = 32
+    SET_SUB_WELLS = 33
+    STIM_GROUP_STATUS = 34  # TODO
     # offline mode
     INIT_OFFLINE_MODE = 40
     END_OFFLINE_MODE = 41
@@ -209,6 +215,16 @@ class SerialCommPacketTypes(IntEnum):
     GET_ERROR_DETAILS = 253
     ERROR_ACK = 254
     CHECKSUM_FAILURE = 255
+
+
+class StimLidType(IntEnum):
+    L24 = 0
+    L96 = 1
+
+
+class StimScheduleType(IntEnum):
+    STANDARD = 0
+    SYNC = 1
 
 
 # Instrument Status Codes
@@ -237,6 +253,7 @@ STIM_MAX_CHUNKED_SUBPROTOCOL_DUR_MICROSECONDS = (
     STIM_MAX_CHUNKED_SUBPROTOCOL_DUR_MINS * 60 * MICRO_TO_BASE_CONVERSION
 )
 
+STIM_MAX_NUM_PROTOCOLS = 24
 STIM_MAX_NUM_SUBPROTOCOLS_PER_PROTOCOL = 50
 
 STIM_COMPLETE_SUBPROTOCOL_IDX = 255
