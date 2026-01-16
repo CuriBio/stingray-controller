@@ -15,7 +15,7 @@ import serial.tools.list_ports as list_ports
 from stdlib_utils import is_system_windows
 
 from ..constants import CURI_VID
-from ..constants import GENERIC_24_WELL_DEFINITION
+from ..constants import GENERIC_96_WELL_DEFINITION
 from ..constants import InstrumentConnectionStatuses
 from ..constants import NUM_WELLS
 from ..constants import SERIAL_COMM_BAUD_RATE
@@ -34,6 +34,7 @@ from ..constants import SERIAL_COMM_STATUS_CODE_LENGTH_BYTES
 from ..constants import SerialCommPacketTypes
 from ..constants import STIM_COMPLETE_SUBPROTOCOL_IDX
 from ..constants import STIM_MODULE_ID_TO_WELL_IDX
+from ..constants import StimLidType
 from ..constants import STM_VID
 from ..exceptions import FirmwareGoingDormantError
 from ..exceptions import IncorrectInstrumentConnectedError
@@ -92,6 +93,11 @@ COMMAND_PACKET_TYPES = frozenset(
         SerialCommPacketTypes.START_STIM,
         SerialCommPacketTypes.STOP_STIM,
         SerialCommPacketTypes.STIM_IMPEDANCE_CHECK,
+        SerialCommPacketTypes.SET_LID_TYPE,
+        SerialCommPacketTypes.STIM_IMPEDANCE_CHECK_96,
+        SerialCommPacketTypes.SET_LID_TYPE,
+        SerialCommPacketTypes.SET_STIM_SCHEDULE_TYPE,
+        SerialCommPacketTypes.SET_SUB_WELLS,
         SerialCommPacketTypes.SET_SAMPLING_PERIOD,
         SerialCommPacketTypes.START_DATA_STREAMING,
         SerialCommPacketTypes.STOP_DATA_STREAMING,
@@ -202,8 +208,10 @@ class InstrumentComm:
         await self._send_data_packet(SerialCommPacketTypes.HANDSHAKE)
         # register magic word to sync with data stream before starting other tasks
         await self._register_magic_word()
-        # now that the magic word is registered,
+        # now that the magic word is registered, get metadata
         await self._prompt_instrument_for_metadata()
+        # and set the lid type
+        await self._set_lid_type_96w()
 
         logger.info("Instrument ready")
 
@@ -303,6 +311,11 @@ class InstrumentComm:
         logger.info("Prompting instrument for metadata")
         await self._send_data_packet(SerialCommPacketTypes.GET_METADATA)
         await self._command_tracker.add(SerialCommPacketTypes.GET_METADATA, {"command": "get_metadata"})
+
+    async def _set_lid_type_96w(self) -> None:
+        logger.info("Setting lid type to 96w")
+        await self._send_data_packet(SerialCommPacketTypes.SET_LID_TYPE, bytes([StimLidType.L96]))
+        await self._command_tracker.add(SerialCommPacketTypes.SET_LID_TYPE, {"command": "set_lid_type"})
 
     async def _catch_expired_command(self) -> None:
         expired_command = await self._command_tracker.wait_for_expired_command()
@@ -641,11 +654,11 @@ class InstrumentComm:
 
                 copy_for_logging = copy.deepcopy(prev_command_info)
                 copy_for_logging["stimulator_circuit_statuses"] = {
-                    GENERIC_24_WELL_DEFINITION.get_well_name_from_well_index(well_idx): statuses
+                    GENERIC_96_WELL_DEFINITION.get_well_name_from_well_index(well_idx): statuses
                     for well_idx, statuses in copy_for_logging["stimulator_circuit_statuses"].items()
                 }
                 copy_for_logging["adc_readings"] = {
-                    GENERIC_24_WELL_DEFINITION.get_well_name_from_well_index(well_idx): readings
+                    GENERIC_96_WELL_DEFINITION.get_well_name_from_well_index(well_idx): readings
                     for well_idx, readings in copy_for_logging["adc_readings"].items()
                 }
                 logger.info(f"Stim circuit check results: {copy_for_logging}")

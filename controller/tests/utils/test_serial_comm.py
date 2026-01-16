@@ -5,7 +5,7 @@ from random import choice
 from random import randint
 from zlib import crc32
 
-from controller.constants import GENERIC_24_WELL_DEFINITION
+from controller.constants import GENERIC_96_WELL_DEFINITION
 from controller.constants import NUM_WELLS
 from controller.constants import SERIAL_COMM_PACKET_BASE_LENGTH_BYTES
 from controller.constants import SERIAL_COMM_STATUS_CODE_LENGTH_BYTES
@@ -626,7 +626,7 @@ def test_convert_stim_dict_to_bytes__return_expected_bytes(protocols, assignment
         {
             well_name: None
             for well_idx in range(24)
-            if (well_name := GENERIC_24_WELL_DEFINITION.get_well_name_from_well_index(well_idx))
+            if (well_name := GENERIC_96_WELL_DEFINITION.get_well_name_from_well_index(well_idx))
             not in protocol_assignments_dict
         }
     )
@@ -673,7 +673,7 @@ def test_convert_stim_dict_to_bytes__return_expected_bytes(protocols, assignment
 
 def test_convert_stim_bytes_to_dict__can_correctly_recreate_stim_dict__except_for_protocol_ids():
     protocol_assignments_dict = {
-        GENERIC_24_WELL_DEFINITION.get_well_name_from_well_index(well_idx): randint(0, 1)
+        GENERIC_96_WELL_DEFINITION.get_well_name_from_well_index(well_idx): randint(0, 1)
         for well_idx in range(24)
     }
     # make sure at least one well is unassigned
@@ -734,7 +734,7 @@ def test_convert_stim_bytes_to_dict__can_correctly_recreate_stim_dict__except_fo
 
 def test_parse_end_offline_mode_bytes__correctly_recreates_stim_info(mocker):
     protocol_assignments_dict = {
-        GENERIC_24_WELL_DEFINITION.get_well_name_from_well_index(well_idx): randint(0, 1)
+        GENERIC_96_WELL_DEFINITION.get_well_name_from_well_index(well_idx): randint(0, 1)
         for well_idx in range(24)
     }
 

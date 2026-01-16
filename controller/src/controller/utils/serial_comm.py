@@ -24,7 +24,7 @@ from pulse3D.constants import PCB_SERIAL_NUMBER_UUID
 from pulse3D.constants import TAMPER_FLAG_UUID
 from pulse3D.constants import TOTAL_WORKING_HOURS_UUID
 
-from ..constants import GENERIC_24_WELL_DEFINITION
+from ..constants import GENERIC_96_WELL_DEFINITION
 from ..constants import MICROS_PER_MILLI
 from ..constants import NUM_WELLS
 from ..constants import PROTOCOL_STATUS_BYTES_LEN
@@ -81,13 +81,13 @@ SUBPROTOCOL_BIPHASIC_ONLY_COMPONENTS = frozenset(
 
 def convert_module_id_to_well_name(module_id: int, use_stim_mapping: bool = False) -> str:
     mapping = STIM_MODULE_ID_TO_WELL_IDX if use_stim_mapping else SERIAL_COMM_MODULE_ID_TO_WELL_IDX
-    well_name: str = GENERIC_24_WELL_DEFINITION.get_well_name_from_well_index(mapping[module_id])
+    well_name: str = GENERIC_96_WELL_DEFINITION.get_well_name_from_well_index(mapping[module_id])
     return well_name
 
 
 def convert_well_name_to_module_id(well_name: str, use_stim_mapping: bool = False) -> int:
     mapping = STIM_WELL_IDX_TO_MODULE_ID if use_stim_mapping else SERIAL_COMM_WELL_IDX_TO_MODULE_ID
-    module_id: int = mapping[GENERIC_24_WELL_DEFINITION.get_well_index_from_well_name(well_name)]
+    module_id: int = mapping[GENERIC_96_WELL_DEFINITION.get_well_index_from_well_name(well_name)]
     return module_id
 
 
@@ -181,6 +181,7 @@ def convert_metadata_to_bytes(metadata_dict: dict[UUID | str, Any]) -> bytes:
         + convert_semver_str_to_bytes(metadata_dict[MAIN_FIRMWARE_VERSION_UUID])
         + convert_semver_str_to_bytes(metadata_dict[CHANNEL_FIRMWARE_VERSION_UUID])
         # this function is only used in the simulator, so always send default status code
+        # TODO will this change with 96 well stim?
         + bytes([SERIAL_COMM_OKAY_CODE] * (NUM_WELLS + 2))
         + metadata_dict[INITIAL_MAGNET_FINDING_PARAMS_UUID]["X"].to_bytes(1, byteorder="little", signed=True)
         + metadata_dict[INITIAL_MAGNET_FINDING_PARAMS_UUID]["Y"].to_bytes(1, byteorder="little", signed=True)
@@ -447,7 +448,7 @@ def convert_stim_bytes_to_dict(stim_bytes: bytes) -> dict[str, Any]:
     stim_info_dict: dict[str, Any] = {
         "protocols": [],
         "protocol_assignments": {
-            GENERIC_24_WELL_DEFINITION.get_well_name_from_well_index(well_idx): None
+            GENERIC_96_WELL_DEFINITION.get_well_name_from_well_index(well_idx): None
             for well_idx in range(NUM_WELLS)
         },
     }
@@ -492,6 +493,7 @@ def convert_stim_bytes_to_dict(stim_bytes: bytes) -> dict[str, Any]:
 def parse_end_offline_mode_bytes(response_bytes: bytes) -> dict[str, Any]:
     """Parse bytes containing stimulation info and return as dict."""
     protocol_status_start_idx = 17
+    # TODO will this change with 96 well stim?
     protocol_status_stop_idx = protocol_status_start_idx + PROTOCOL_STATUS_BYTES_LEN * NUM_WELLS
 
     stim_dict = convert_stim_bytes_to_dict(response_bytes[protocol_status_stop_idx:])

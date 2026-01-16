@@ -3,12 +3,13 @@ import math
 from random import choice
 from random import randint
 
-from controller.constants import GENERIC_24_WELL_DEFINITION
+from controller.constants import GENERIC_96_WELL_DEFINITION
 from controller.constants import MICRO_TO_BASE_CONVERSION
 from controller.constants import MICROS_PER_MILLI
 from controller.constants import NUM_WELLS
 from controller.constants import STIM_MAX_DUTY_CYCLE_DURATION_MICROSECONDS
 from controller.constants import STIM_MAX_DUTY_CYCLE_PERCENTAGE
+from controller.constants import STIM_MAX_NUM_PROTOCOLS
 from controller.constants import STIM_MAX_SUBPROTOCOL_DURATION_MICROSECONDS
 from controller.constants import STIM_MIN_SUBPROTOCOL_DURATION_MICROSECONDS
 from controller.constants import STIM_PULSE_BYTES_LEN
@@ -320,7 +321,7 @@ def create_random_stim_info():
             for pid in protocol_ids[1:]
         ],
         "protocol_assignments": {
-            GENERIC_24_WELL_DEFINITION.get_well_name_from_well_index(well_idx): choice(protocol_ids)
+            GENERIC_96_WELL_DEFINITION.get_well_name_from_well_index(well_idx): choice(protocol_ids)
             for well_idx in range(24)
         },
     }
@@ -339,7 +340,7 @@ def get_random_protocol_status(
     *, protocol_id=None, subprotocol_start_time_idx=None, stim_status=None, subprotocol_idx=None
 ):
     if protocol_id is None:
-        protocol_id = randint(0, NUM_WELLS)
+        protocol_id = randint(0, STIM_MAX_NUM_PROTOCOLS)
     if subprotocol_start_time_idx is None:
         subprotocol_start_time_idx = random_timestamp()
     if stim_status is None:
