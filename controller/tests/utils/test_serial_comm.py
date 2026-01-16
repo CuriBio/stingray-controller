@@ -6,9 +6,9 @@ from random import randint
 from zlib import crc32
 
 from controller.constants import GENERIC_96_WELL_DEFINITION
-from controller.constants import NUM_WELLS
 from controller.constants import SERIAL_COMM_PACKET_BASE_LENGTH_BYTES
 from controller.constants import SERIAL_COMM_STATUS_CODE_LENGTH_BYTES
+from controller.constants import STIM_MAX_NUM_PROTOCOLS
 from controller.constants import STIM_OPEN_CIRCUIT_THRESHOLD_OHMS
 from controller.constants import STIM_SHORT_CIRCUIT_THRESHOLD_OHMS
 from controller.constants import StimProtocolStatuses
@@ -649,7 +649,7 @@ def test_convert_stim_dict_to_bytes__return_expected_bytes(protocols, assignment
         )[0]
         + bytes([1])  # num wells that protocol A is assigned to
         + bytes(
-            [convert_well_name_to_module_id(list(protocol_assignments_dict.keys())[0], use_stim_mapping=True)]
+            [convert_well_name_to_module_id(list(protocol_assignments_dict.keys())[0])]
         )  # module ID(s) that protocol A is assigned to
         # bytes for protocol D
         + bytes([1])  # control method
@@ -663,7 +663,7 @@ def test_convert_stim_dict_to_bytes__return_expected_bytes(protocols, assignment
         )[0]
         + bytes([1])  # num wells that protocol D is assigned to
         + bytes(
-            [convert_well_name_to_module_id(list(protocol_assignments_dict.keys())[1], use_stim_mapping=True)]
+            [convert_well_name_to_module_id(list(protocol_assignments_dict.keys())[1])]
         )  # module ID(s) that protocol A is assigned to
     )
 
@@ -788,7 +788,7 @@ def test_parse_end_offline_mode_bytes__correctly_recreates_stim_info(mocker):
 
     # only stim status is parsed out of protocol status at the moment
     test_protocol_statuses = [
-        choice([StimulationStates.RUNNING, StimulationStates.INACTIVE]) for _ in range(NUM_WELLS)
+        choice([StimulationStates.RUNNING, StimulationStates.INACTIVE]) for _ in range(STIM_MAX_NUM_PROTOCOLS)
     ]
     test_protocol_statuses_bytes = bytes([])
     for test_protocol_status in test_protocol_statuses:

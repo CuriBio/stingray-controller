@@ -37,7 +37,6 @@ from controller.constants import SERIAL_COMM_TIME_OFFSET_LENGTH_BYTES
 from controller.constants import SerialCommPacketTypes
 from controller.constants import STIM_COMPLETE_SUBPROTOCOL_IDX
 from controller.constants import STIM_MAX_NUM_PROTOCOLS
-from controller.constants import StimLidType
 from controller.constants import StimProtocolStatuses
 from controller.constants import StimScheduleType
 from controller.utils.serial_comm import convert_adc_readings_to_circuit_status
@@ -157,7 +156,6 @@ class MantarrayMcSimulator(InfiniteProcess):
         self.conn = None
         # plate values
         self._num_wells = 96
-        self._set_96w = False  # this needs to be set before doing anything stim related
         # simulator values (not set in _handle_boot_up_config)
         self._time_of_last_status_beacon_secs: float | None = None
         self._ready_to_send_barcode = False
@@ -464,10 +462,7 @@ class MantarrayMcSimulator(InfiniteProcess):
             response_body += bytes([command_failed])
         elif packet_type == SerialCommPacketTypes.START_STIM:
             # command fails if protocols are not set, or if stimulation is already running.
-            # STv2 Beta SW only supports 96 wells, so also fail if not set to 96 wells yet
-            command_failed = (
-                not self._set_96w or "protocol_assignments" not in self._stim_info or self._is_stimulating
-            )
+            command_failed = "protocol_assignments" not in self._stim_info or self._is_stimulating
             response_body += bytes([command_failed])
             if not command_failed:
                 self._is_stimulating = True
@@ -480,17 +475,7 @@ class MantarrayMcSimulator(InfiniteProcess):
                 self._is_stimulating = False
         elif packet_type == SerialCommPacketTypes.STIM_IMPEDANCE_CHECK:
             raise Exception("Use STIM_IMPEDANCE_CHECK_96 instead of STIM_IMPEDANCE_CHECK")
-        elif packet_type == SerialCommPacketTypes.SET_LID_TYPE:
-            lid_type = comm_from_controller[SERIAL_COMM_PAYLOAD_INDEX]
-            is_96w = lid_type == StimLidType.L96
-            if is_96w:
-                self._set_96w = True
-            # STv2 Beta SW only needs 96w support, so fail otherwise
-            response_body += bytes([not is_96w])
         elif packet_type == SerialCommPacketTypes.STIM_IMPEDANCE_CHECK_96:
-            if not self._set_96w:
-                # this command has no failure response defined, so raise error instead
-                raise Exception("Lid type must be set to 96w before executing STIM_IMPEDANCE_CHECK_96")
             for module_readings in self._adc_readings:
                 status = convert_adc_readings_to_circuit_status(*module_readings)
                 response_body += struct.pack("<HHB", *module_readings, status) * 2

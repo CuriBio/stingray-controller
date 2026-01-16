@@ -20,6 +20,7 @@ SOFTWARE_RELEASE_CHANNEL = "REPLACETHISWITHRELEASECHANNELDURINGBUILD"
 
 DEFAULT_SERVER_PORT_NUMBER = 4565
 
+NUM_INSTRUMENT_WELL_MICROCONTROLLERS = 24
 NUM_WELLS = 96
 GENERIC_96_WELL_DEFINITION = LabwareDefinition(row_count=8, column_count=12)
 
@@ -155,8 +156,8 @@ SERIAL_COMM_MAX_FULL_PACKET_LENGTH_BYTES = (
     SERIAL_COMM_PACKET_METADATA_LENGTH_BYTES + SERIAL_COMM_MAX_PAYLOAD_LENGTH_BYTES
 )
 
-# TODO will this change with 96 well stim?
-SERIAL_COMM_STATUS_CODE_LENGTH_BYTES = 2 + NUM_WELLS  # main micro, idx of thread with error, 24 wells
+# main micro, idx of thread with error, 24 well micros
+SERIAL_COMM_STATUS_CODE_LENGTH_BYTES = 2 + NUM_INSTRUMENT_WELL_MICROCONTROLLERS
 # data stream components
 SERIAL_COMM_TIME_INDEX_LENGTH_BYTES = 8
 SERIAL_COMM_TIME_OFFSET_LENGTH_BYTES = 2
@@ -187,11 +188,10 @@ class SerialCommPacketTypes(IntEnum):
     STIM_STATUS = 23
     STIM_IMPEDANCE_CHECK = 27
     # stingray v2
-    SET_LID_TYPE = 30
     STIM_IMPEDANCE_CHECK_96 = 31
     SET_STIM_SCHEDULE_TYPE = 32
     SET_SUB_WELLS = 33
-    STIM_GROUP_STATUS = 34  # TODO
+    STIM_SEXTANT_STATUS = 34  # TODO set the actual packet ID
     # offline mode
     INIT_OFFLINE_MODE = 40
     END_OFFLINE_MODE = 41
@@ -328,21 +328,10 @@ SERIAL_COMM_MODULE_ID_TO_WELL_IDX: immutabledict[int, int] = immutabledict(
     {module_id: well_idx for well_idx, module_id in SERIAL_COMM_WELL_IDX_TO_MODULE_ID.items()}
 )
 
-# fmt: off
 STIM_MODULE_ID_TO_WELL_IDX: immutabledict[int, int] = immutabledict(
-    {
-        module_id: well_idx
-        for module_id, well_idx in enumerate(
-            [
-                3, 7, 11, 15, 19, 23,  # D wells
-                2, 6, 10, 14, 18, 22,  # C wells
-                1, 5, 9, 13, 17, 21,   # B wells
-                0, 4, 8, 12, 16, 20    # A wells
-            ],
-        )
-    }
+    {well_idx + 1: well_idx for well_idx in range(NUM_WELLS)}
 )
-# fmt: on
+
 STIM_WELL_IDX_TO_MODULE_ID: immutabledict[int, int] = immutabledict(
     {well_idx: module_id for module_id, well_idx in STIM_MODULE_ID_TO_WELL_IDX.items()}
 )

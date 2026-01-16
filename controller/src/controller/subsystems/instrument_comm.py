@@ -4,7 +4,6 @@ from collections import namedtuple
 import copy
 import datetime
 import logging
-import struct
 from time import perf_counter
 from typing import Any
 from zlib import crc32
@@ -34,7 +33,6 @@ from ..constants import SERIAL_COMM_STATUS_CODE_LENGTH_BYTES
 from ..constants import SerialCommPacketTypes
 from ..constants import STIM_COMPLETE_SUBPROTOCOL_IDX
 from ..constants import STIM_MODULE_ID_TO_WELL_IDX
-from ..constants import StimLidType
 from ..constants import STM_VID
 from ..exceptions import FirmwareGoingDormantError
 from ..exceptions import IncorrectInstrumentConnectedError
@@ -76,7 +74,8 @@ ERROR_MSG = "IN INSTRUMENT COMM"
 TRACKED_EVENT_NAMES = (
     "handshake_sent",
     "command_sent",
-    "stim_data_received",
+    "stim_status_received",
+    "stim_sextant_status_received",
     "command_response_received",
     "status_beacon_received",
 )
@@ -84,6 +83,8 @@ TRACKED_EVENT_NAMES = (
 TimepointsOfEvents = namedtuple(  # type: ignore
     "TimepointsOfEvents", TRACKED_EVENT_NAMES, defaults=[None] * len(TRACKED_EVENT_NAMES)  # type: ignore
 )
+
+FINAL_SEXTANT = 6
 
 
 COMMAND_PACKET_TYPES = frozenset(
@@ -93,9 +94,7 @@ COMMAND_PACKET_TYPES = frozenset(
         SerialCommPacketTypes.START_STIM,
         SerialCommPacketTypes.STOP_STIM,
         SerialCommPacketTypes.STIM_IMPEDANCE_CHECK,
-        SerialCommPacketTypes.SET_LID_TYPE,
         SerialCommPacketTypes.STIM_IMPEDANCE_CHECK_96,
-        SerialCommPacketTypes.SET_LID_TYPE,
         SerialCommPacketTypes.SET_STIM_SCHEDULE_TYPE,
         SerialCommPacketTypes.SET_SUB_WELLS,
         SerialCommPacketTypes.SET_SAMPLING_PERIOD,
@@ -134,7 +133,6 @@ class InstrumentComm:
         self._from_monitor_queue = from_monitor_queue
         self._to_monitor_queue = to_monitor_queue
 
-        # TODO try making some kind of container for all this data?
         # instrument
         self._instrument: AioSerial | VirtualInstrumentConnection | None = None
         self._instrument_error_detected = False  # Tanner (7/18/23): this flag currently only used to decide which command response to grab the system stats from when reporting a FW error
@@ -148,6 +146,7 @@ class InstrumentComm:
         # stimulation values
         self._num_stim_protocols: int = 0
         self._protocols_running: set[int] = set()
+        self._current_stim_sextant: int | None = None
         # firmware updating
         self._firmware_update_manager: FirmwareUpdateManager | None = None
         # comm tracking
@@ -168,10 +167,12 @@ class InstrumentComm:
 
     @property
     def _is_stimulating(self) -> bool:
-        return len(self._protocols_running) > 0
+        any_protocols_running = len(self._protocols_running) > 0
+        return self._current_stim_sextant not in (None, FINAL_SEXTANT) or any_protocols_running
 
     @_is_stimulating.setter
     def _is_stimulating(self, value: bool) -> None:
+        self._current_stim_sextant = None
         if value:
             self._protocols_running = set(range(self._num_stim_protocols))
         else:
@@ -210,8 +211,6 @@ class InstrumentComm:
         await self._register_magic_word()
         # now that the magic word is registered, get metadata
         await self._prompt_instrument_for_metadata()
-        # and set the lid type
-        await self._set_lid_type_96w()
 
         logger.info("Instrument ready")
 
@@ -312,11 +311,6 @@ class InstrumentComm:
         await self._send_data_packet(SerialCommPacketTypes.GET_METADATA)
         await self._command_tracker.add(SerialCommPacketTypes.GET_METADATA, {"command": "get_metadata"})
 
-    async def _set_lid_type_96w(self) -> None:
-        logger.info("Setting lid type to 96w")
-        await self._send_data_packet(SerialCommPacketTypes.SET_LID_TYPE, bytes([StimLidType.L96]))
-        await self._command_tracker.add(SerialCommPacketTypes.SET_LID_TYPE, {"command": "set_lid_type"})
-
     async def _catch_expired_command(self) -> None:
         expired_command = await self._command_tracker.wait_for_expired_command()
         # TODO raise FirmwareUpdateTimeoutError when necessary
@@ -338,15 +332,8 @@ class InstrumentComm:
                 continue
 
             match comm_from_monitor:
-                case {"command": "start_stim_checks", "well_indices": well_indices}:
-                    packet_type = SerialCommPacketTypes.STIM_IMPEDANCE_CHECK
-                    bytes_to_send = struct.pack(
-                        f"<{NUM_WELLS}?",
-                        *[
-                            STIM_MODULE_ID_TO_WELL_IDX[module_id] in well_indices
-                            for module_id in range(NUM_WELLS)
-                        ],
-                    )
+                case {"command": "start_stim_checks"}:
+                    packet_type = SerialCommPacketTypes.STIM_IMPEDANCE_CHECK_96
                 case {"command": "set_stim_protocols", "stim_info": stim_info}:
                     packet_type = SerialCommPacketTypes.SET_STIM_PROTOCOL
                     bytes_to_send = convert_stim_dict_to_bytes(stim_info)
@@ -355,6 +342,17 @@ class InstrumentComm:
                             "Cannot update stimulation protocols while stimulating"
                         )
                     self._num_stim_protocols = len(stim_info["protocols"])
+                case {"command": "set_stim_schedule_type", "schedule_type": schedule_type}:
+                    packet_type = SerialCommPacketTypes.SET_STIM_SCHEDULE_TYPE
+                    bytes_to_send = bytes([schedule_type])
+                case {"command": "set_active_wells", "well_indices": well_indices}:
+                    packet_type = SerialCommPacketTypes.SET_SUB_WELLS
+                    bytes_to_send = bytes(
+                        [
+                            STIM_MODULE_ID_TO_WELL_IDX[module_id] in well_indices
+                            for module_id in range(NUM_WELLS)
+                        ]
+                    )
                 case {"command": "start_stimulation"}:
                     packet_type = SerialCommPacketTypes.START_STIM
                 case {"command": "stop_stimulation"}:
@@ -574,6 +572,14 @@ class InstrumentComm:
                 await self._process_command_response(packet_type, packet_payload)
             case SerialCommPacketTypes.STIM_STATUS:
                 raise NotImplementedError("Should never receive stim status packets when not stimulating")
+            case SerialCommPacketTypes.STIM_SEXTANT_STATUS:
+                self._update_timepoints_of_events("stim_sextant_status_received")
+                self._current_stim_sextant = packet_payload[0]
+                logger.info(f"Stim sextant update: {self._current_stim_sextant}")
+                # TODO handle this message in the monitor
+                await self._to_monitor_queue.put(
+                    {"command": "stim_sextant_status_update", "sextant": self._current_stim_sextant}
+                )
             case SerialCommPacketTypes.CF_UPDATE_COMPLETE | SerialCommPacketTypes.MF_UPDATE_COMPLETE:
                 if self._firmware_update_manager is None:
                     raise NotImplementedError("_firmware_update_manager should never be None here")
@@ -630,7 +636,10 @@ class InstrumentComm:
                     SerialCommPacketTypes.CHECK_CONNECTION_STATUS, {"command": "check_connection_status"}
                 )
             case "start_stim_checks":
-                stimulator_check_dict = convert_stimulator_check_bytes_to_dict(response_data)
+                if response_data[0]:
+                    raise InstrumentCommandResponseError("start_stim_checks")
+
+                stimulator_check_dict = convert_stimulator_check_bytes_to_dict(response_data[1:])
 
                 stimulator_circuit_statuses: dict[int, dict[str, str]] = {}
                 adc_readings: dict[int, dict[str, tuple[int, int]]] = {}
@@ -662,11 +671,17 @@ class InstrumentComm:
                     for well_idx, readings in copy_for_logging["adc_readings"].items()
                 }
                 logger.info(f"Stim circuit check results: {copy_for_logging}")
-            case "set_protocols":
+            case "set_stim_protocols":
                 if response_data[0]:
                     if not self._hardware_test_mode:
-                        raise InstrumentCommandResponseError("set_protocols")
+                        raise InstrumentCommandResponseError("set_stim_protocols")
                     prev_command_info["hardware_test_message"] = "Command failed"  # pragma: no cover
+            case "set_stim_schedule_type":
+                if response_data[0]:
+                    raise InstrumentCommandResponseError("set_stim_schedule_type")
+            case "set_active_wells":
+                if response_data[0]:
+                    raise InstrumentCommandResponseError("set_active_wells")
             case "start_stimulation":
                 # Tanner (10/25/21): if needed, can save _base_global_time_of_data_stream here
                 if response_data[0]:
@@ -706,7 +721,7 @@ class InstrumentComm:
         if not stim_stream_info["num_packets"]:
             return
 
-        self._update_timepoints_of_events("stim_data_received")
+        self._update_timepoints_of_events("stim_status_received")
 
         # Tanner (2/28/23): there is currently no data stream, so only need to check for protocols that have completed
 
