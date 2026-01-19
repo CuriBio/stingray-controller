@@ -172,6 +172,7 @@ class SystemMonitor:
                 StimulationStates.STARTING in new_stim_statuses
                 or StimulationStates.STOPPING in new_stim_statuses
             ):
+                # TODO keep track of sextant status in sync mode?
                 status_update_details["stimulation_protocols_running"] = [
                     stim_status == StimulationStates.RUNNING for stim_status in new_stim_statuses
                 ]
@@ -247,6 +248,8 @@ class SystemMonitor:
                         well_idx: StimulatorCircuitStatuses.CALCULATING.name.lower()
                         for well_idx in well_indices
                     }
+                    set_active_wells_cmd = {"command": "set_active_wells", "well_indices": well_indices}
+                    await self._queues["to"]["instrument_comm"].put(set_active_wells_cmd)
                     await self._queues["to"]["instrument_comm"].put(communication)
                 case {"command": "init_offline_mode"}:
                     system_state_updates["system_status"] = SystemStatuses.GOING_OFFLINE_STATE
@@ -278,6 +281,7 @@ class SystemMonitor:
                         system_state["stim_info"]["protocols"]
                     )
                 case {"command": "stop_stimulation"}:
+                    # TODO anything different to do here in sync mode?
                     pass  # Tanner (3/31/23): let the stim status updates handle setting all the running statuses back to False
                 case {"command": "stim_status_update", "protocols_completed": protocols_completed}:
                     system_state_updates["stimulation_protocol_statuses"] = list(
@@ -287,6 +291,8 @@ class SystemMonitor:
                         system_state_updates["stimulation_protocol_statuses"][
                             protocol_idx
                         ] = StimulationStates.INACTIVE
+                case {"command": "set_active_wells"}:
+                    pass  # nothing to do here
                 case {
                     "command": "start_stim_checks",
                     "stimulator_circuit_statuses": stimulator_circuit_statuses,
@@ -376,7 +382,6 @@ class SystemMonitor:
                         if status == InstrumentConnectionStatuses.OFFLINE
                         else SystemStatuses.SYSTEM_INITIALIZING_STATE
                     )
-
                 case invalid_comm:
                     raise NotImplementedError(f"Invalid communication from InstrumentComm: {invalid_comm}")
 
