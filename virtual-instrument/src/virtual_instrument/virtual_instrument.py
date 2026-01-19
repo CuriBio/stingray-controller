@@ -39,6 +39,8 @@ from controller.constants import STIM_COMPLETE_SUBPROTOCOL_IDX
 from controller.constants import STIM_MAX_NUM_PROTOCOLS
 from controller.constants import StimProtocolStatuses
 from controller.constants import StimScheduleType
+from controller.src.controller.constants import GENERIC_96_WELL_DEFINITION
+from controller.src.controller.constants import STIM_MODULE_ID_TO_WELL_IDX
 from controller.utils.serial_comm import convert_adc_readings_to_circuit_status
 from controller.utils.serial_comm import convert_instrument_event_info_to_bytes
 from controller.utils.serial_comm import convert_metadata_to_bytes
@@ -176,7 +178,8 @@ class MantarrayMcSimulator(InfiniteProcess):
         self._sampling_period_us: int
         self._adc_readings: list[tuple[int, int]]
         self._stim_info: dict[str, Any]
-        self._stim_schedule_type: StimScheduleType = StimScheduleType.STANDARD
+        self._stim_schedule_type: StimScheduleType = StimScheduleType.STANDARD  # TODO handle this
+        self._stim_active_wells: set[int] = set()
         # TODO move all the stim info below into StimulationProtocolManager?
         self._stim_running_statuses: list[bool] = []
         self._timepoints_of_subprotocols_start: list[int | None]
@@ -455,6 +458,15 @@ class MantarrayMcSimulator(InfiniteProcess):
             stim_info_dict = convert_stim_bytes_to_dict(
                 comm_from_controller[SERIAL_COMM_PAYLOAD_INDEX:-SERIAL_COMM_CHECKSUM_LENGTH_BYTES]
             )
+            updated_assignments = {
+                GENERIC_96_WELL_DEFINITION.get_well_name_from_well_index(well_idx): None
+                for well_idx in range(STIM_MAX_NUM_PROTOCOLS)
+            }
+            for well_idx in self._stim_active_wells:
+                well_name = GENERIC_96_WELL_DEFINITION.get_well_name_from_well_index(well_idx)
+                updated_assignments[well_name] = stim_info_dict["protocol_assignments"][well_name]
+            stim_info_dict["protocol_assignments"] = updated_assignments
+            print("Protocol assignments:", updated_assignments)  # allow-print
             # TODO handle too many subprotocols?
             command_failed = self._is_stimulating or len(stim_info_dict["protocols"]) > STIM_MAX_NUM_PROTOCOLS
             if not command_failed:
@@ -490,7 +502,21 @@ class MantarrayMcSimulator(InfiniteProcess):
                 command_failed = False
             response_body += bytes([command_failed])
         elif packet_type == SerialCommPacketTypes.SET_SUB_WELLS:
-            command_failed = True  # STv2 Beta SW does not need this command, so it always fails
+            command_failed = self._is_stimulating
+            if not command_failed:
+                self._stim_active_wells = set()
+                enabled_flags = comm_from_controller[
+                    SERIAL_COMM_PAYLOAD_INDEX:-SERIAL_COMM_CHECKSUM_LENGTH_BYTES
+                ]
+                for module_id, enabled in enumerate(enabled_flags):
+                    if enabled:
+                        well_idx = STIM_MODULE_ID_TO_WELL_IDX[module_id]
+                        self._stim_active_wells.add(well_idx)
+                active_well_names = [
+                    GENERIC_96_WELL_DEFINITION.get_well_name_from_well_index(well_idx)
+                    for well_idx in self._stim_active_wells
+                ]
+                print("Active wells:", active_well_names)  # allow-print
             response_body += bytes([command_failed])
         elif packet_type == SerialCommPacketTypes.SET_SAMPLING_PERIOD:
             response_body += self._update_sampling_period(comm_from_controller)
@@ -700,7 +726,7 @@ class MantarrayMcSimulator(InfiniteProcess):
             # increment values
             self._time_index_us += self._sampling_period_us
             self._simulated_data_index = (self._simulated_data_index + 1) % simulated_data_len
-        # TODO self._output_queue.put_nowait(data_packet_bytes)
+        # self._output_queue.put_nowait(data_packet_bytes)
         # update timepoint
         self._timepoint_of_last_data_packet_us += num_packets_to_send * self._sampling_period_us
 

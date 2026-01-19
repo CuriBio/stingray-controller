@@ -36,11 +36,13 @@ from ..constants import SERIAL_COMM_PACKET_REMAINDER_SIZE_LENGTH_BYTES
 from ..constants import SERIAL_COMM_STATUS_CODE_LENGTH_BYTES
 from ..constants import SERIAL_COMM_TIMESTAMP_EPOCH
 from ..constants import SERIAL_COMM_TIMESTAMP_LENGTH_BYTES
+from ..constants import STIM_CLUSTER_IDX_TO_WELL_IDXS
 from ..constants import STIM_MAX_NUM_PROTOCOLS
 from ..constants import STIM_MODULE_ID_TO_WELL_IDX
 from ..constants import STIM_OPEN_CIRCUIT_THRESHOLD_OHMS
 from ..constants import STIM_PULSE_BYTES_LEN
 from ..constants import STIM_SHORT_CIRCUIT_THRESHOLD_OHMS
+from ..constants import STIM_WELL_IDX_TO_CLUSTER_IDX
 from ..constants import STIM_WELL_IDX_TO_MODULE_ID
 from ..constants import StimProtocolStatuses
 from ..constants import StimulationStates
@@ -432,13 +434,14 @@ def convert_stim_dict_to_bytes(stim_dict: dict[str, Any]) -> bytes:
             )
             stim_bytes += subprotocol_bytes
 
-        # TODO this should now be clusters_assigned
-        module_ids_assigned = [
-            convert_well_name_to_module_id(well_name)
-            for well_name, assigned_protocol_id in stim_dict["protocol_assignments"].items()
-            if assigned_protocol_id == protocol_dict.get("protocol_id", idx)
-        ]
-        stim_bytes += bytes([len(module_ids_assigned)] + sorted(module_ids_assigned))
+        cluster_idxs_assigned = set()
+        for well_name, assigned_protocol_id in stim_dict["protocol_assignments"].items():
+            if assigned_protocol_id != protocol_dict.get("protocol_id", idx):
+                continue
+            well_idx = GENERIC_96_WELL_DEFINITION.get_well_index_from_well_name(well_name)
+            cluster_idx = STIM_WELL_IDX_TO_CLUSTER_IDX[well_idx]
+            cluster_idxs_assigned.add(cluster_idx)
+        stim_bytes += bytes([len(cluster_idxs_assigned)] + sorted(cluster_idxs_assigned))
 
     return stim_bytes
 
@@ -448,7 +451,6 @@ def convert_stim_bytes_to_dict(stim_bytes: bytes) -> dict[str, Any]:
     stim_info_dict: dict[str, Any] = {
         "protocols": [],
         "protocol_assignments": {
-            # TODO use cluster mapping here
             GENERIC_96_WELL_DEFINITION.get_well_name_from_well_index(well_idx): None
             for well_idx in range(STIM_MAX_NUM_PROTOCOLS)
         },
@@ -479,12 +481,12 @@ def convert_stim_bytes_to_dict(stim_bytes: bytes) -> dict[str, Any]:
         num_wells_assigned = stim_bytes[curr_byte_idx]
         curr_byte_idx += 1
 
-        stim_info_dict["protocol_assignments"].update(
-            {
-                convert_module_id_to_well_name(module_id): protocol_idx
-                for module_id in stim_bytes[curr_byte_idx : curr_byte_idx + num_wells_assigned]
-            }
-        )
+        cluster_idxs = stim_bytes[curr_byte_idx : curr_byte_idx + num_wells_assigned]
+        for cluster_idx in cluster_idxs:
+            well_idxs = STIM_CLUSTER_IDX_TO_WELL_IDXS[cluster_idx]
+            for well_idx in well_idxs:
+                well_name = GENERIC_96_WELL_DEFINITION.get_well_name_from_well_index(well_idx)
+                stim_info_dict["protocol_assignments"][well_name] = protocol_idx
 
         curr_byte_idx += num_wells_assigned
 

@@ -218,11 +218,6 @@ class SerialCommPacketTypes(IntEnum):
     CHECKSUM_FAILURE = 255
 
 
-class StimLidType(IntEnum):
-    L24 = 0
-    L96 = 1
-
-
 class StimScheduleType(IntEnum):
     STANDARD = 0
     SYNC = 1
@@ -254,6 +249,7 @@ STIM_MAX_CHUNKED_SUBPROTOCOL_DUR_MICROSECONDS = (
     STIM_MAX_CHUNKED_SUBPROTOCOL_DUR_MINS * 60 * MICRO_TO_BASE_CONVERSION
 )
 
+STIM_CLUSTER_SIZE = 4
 STIM_MAX_NUM_PROTOCOLS = 24
 STIM_MAX_NUM_SUBPROTOCOLS_PER_PROTOCOL = 50
 
@@ -334,6 +330,17 @@ STIM_MODULE_ID_TO_WELL_IDX: immutabledict[int, int] = immutabledict(
 
 STIM_WELL_IDX_TO_MODULE_ID: immutabledict[int, int] = immutabledict(
     {well_idx: module_id for module_id, well_idx in STIM_MODULE_ID_TO_WELL_IDX.items()}
+)
+
+STIM_WELL_IDX_TO_CLUSTER_IDX: immutabledict[int, int] = immutabledict(
+    {well_idx: well_idx // STIM_CLUSTER_SIZE for well_idx in range(NUM_WELLS)}
+)
+
+STIM_CLUSTER_IDX_TO_WELL_IDXS: immutabledict[int, tuple[int]] = immutabledict(
+    {
+        cluster_idx: tuple([cluster_idx * STIM_CLUSTER_SIZE + i for i in range(STIM_CLUSTER_SIZE)])
+        for cluster_idx in range(STIM_MAX_NUM_PROTOCOLS)
+    }
 )
 
 
