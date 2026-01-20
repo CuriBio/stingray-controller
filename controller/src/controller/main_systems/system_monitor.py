@@ -173,7 +173,6 @@ class SystemMonitor:
                 StimulationStates.STARTING in new_stim_statuses
                 or StimulationStates.STOPPING in new_stim_statuses
             ):
-                # TODO keep track of sextant status in sync mode?
                 status_update_details["stimulation_protocols_running"] = [
                     stim_status == StimulationStates.RUNNING for stim_status in new_stim_statuses
                 ]
@@ -252,7 +251,7 @@ class SystemMonitor:
                     set_active_wells_cmd = {"command": "set_active_wells", "well_indices": well_indices}
                     await self._queues["to"]["instrument_comm"].put(set_active_wells_cmd)
                     await self._queues["to"]["instrument_comm"].put(communication)
-                    # TODO remove this
+                    # TODO remove this once the ability to set stim mode is added
                     await self._queues["to"]["instrument_comm"].put(
                         {"command": "set_stim_schedule_type", "schedule_type": StimScheduleType.SYNC}
                     )
@@ -286,7 +285,6 @@ class SystemMonitor:
                         system_state["stim_info"]["protocols"]
                     )
                 case {"command": "stop_stimulation"}:
-                    # TODO anything different to do here in sync mode?
                     pass  # Tanner (3/31/23): let the stim status updates handle setting all the running statuses back to False
                 case {"command": "stim_status_update", "protocols_completed": protocols_completed}:
                     system_state_updates["stimulation_protocol_statuses"] = list(

@@ -575,7 +575,6 @@ class InstrumentComm:
                 self._update_timepoints_of_events("stim_sextant_status_received")
                 self._current_stim_sextant = packet_payload[0]
                 logger.info(f"Stim sextant update: {self._current_stim_sextant}")
-                # TODO handle this message in the monitor
                 await self._to_monitor_queue.put(
                     {"command": "stim_sextant_status_update", "sextant": self._current_stim_sextant}
                 )
