@@ -632,6 +632,9 @@ class MantarrayMcSimulator(InfiniteProcess):
             # Tanner (3/24/22): As of right now, simulator does not need to handle this message at all, so it is the responsibility of tests to prompt simulator to go through the rest of the error handling procedure
             pass
         elif packet_type == SerialCommPacketTypes.INIT_OFFLINE_MODE:
+            if self._stim_schedule_type == StimScheduleType.SYNC:
+                # instrument doesn't return a success/failure code for this message, so raising an error instead
+                raise Exception("Cannot go offline when stim is in sync mode")
             self._connection_status = InstrumentConnectionStatuses.OFFLINE
         elif packet_type == SerialCommPacketTypes.END_OFFLINE_MODE:
             self._ready_to_send_barcode = True
