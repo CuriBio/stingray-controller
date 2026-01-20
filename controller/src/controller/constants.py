@@ -249,10 +249,14 @@ STIM_MAX_CHUNKED_SUBPROTOCOL_DUR_MICROSECONDS = (
     STIM_MAX_CHUNKED_SUBPROTOCOL_DUR_MINS * 60 * MICRO_TO_BASE_CONVERSION
 )
 
+STIM_FINAL_SEXTANT = 6
+STIM_SEXTANTS_PER_ROW = 3
 STIM_CLUSTER_SIZE = 4
+STIM_SEXTANT_DIM = 4
 STIM_MAX_NUM_PROTOCOLS = 24
 STIM_MAX_NUM_SUBPROTOCOLS_PER_PROTOCOL = 50
 
+STIM_SEXTANT_COMPLETE_SUBPROTOCOL_IDX = 254
 STIM_COMPLETE_SUBPROTOCOL_IDX = 255
 
 STIM_NO_PROTOCOL_ASSIGNED = 255
@@ -325,7 +329,7 @@ SERIAL_COMM_MODULE_ID_TO_WELL_IDX: immutabledict[int, int] = immutabledict(
 )
 
 STIM_MODULE_ID_TO_WELL_IDX: immutabledict[int, int] = immutabledict(
-    {well_idx + 1: well_idx for well_idx in range(NUM_WELLS)}
+    {well_idx: well_idx for well_idx in range(NUM_WELLS)}
 )
 
 STIM_WELL_IDX_TO_MODULE_ID: immutabledict[int, int] = immutabledict(
@@ -341,6 +345,18 @@ STIM_CLUSTER_IDX_TO_WELL_IDXS: immutabledict[int, tuple[int]] = immutabledict(
         cluster_idx: tuple([cluster_idx * STIM_CLUSTER_SIZE + i for i in range(STIM_CLUSTER_SIZE)])
         for cluster_idx in range(STIM_MAX_NUM_PROTOCOLS)
     }
+)
+
+
+def _well_idx_to_sextant_num(well_idx: int) -> int:
+    row_col: tuple[int, int] = GENERIC_96_WELL_DEFINITION.get_row_and_column_from_well_index(well_idx)
+    row, col = row_col
+    return (row // STIM_SEXTANT_DIM) * STIM_SEXTANTS_PER_ROW + col // STIM_SEXTANT_DIM + 1
+
+
+# only used for simulator
+STIM_WELL_IDX_TO_SEXTANT_NUM: immutabledict[int, tuple[int]] = immutabledict(
+    {well_idx: _well_idx_to_sextant_num(well_idx) for well_idx in range(NUM_WELLS)}
 )
 
 

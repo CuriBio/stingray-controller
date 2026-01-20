@@ -452,7 +452,8 @@ def convert_stim_bytes_to_dict(stim_bytes: bytes) -> dict[str, Any]:
         "protocols": [],
         "protocol_assignments": {
             GENERIC_96_WELL_DEFINITION.get_well_name_from_well_index(well_idx): None
-            for well_idx in range(STIM_MAX_NUM_PROTOCOLS)
+            for cluster_idx in range(STIM_MAX_NUM_PROTOCOLS)
+            for well_idx in STIM_CLUSTER_IDX_TO_WELL_IDXS[cluster_idx]
         },
     }
 

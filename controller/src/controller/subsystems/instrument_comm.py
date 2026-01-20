@@ -32,6 +32,7 @@ from ..constants import SERIAL_COMM_STATUS_BEACON_TIMEOUT_SECONDS
 from ..constants import SERIAL_COMM_STATUS_CODE_LENGTH_BYTES
 from ..constants import SerialCommPacketTypes
 from ..constants import STIM_COMPLETE_SUBPROTOCOL_IDX
+from ..constants import STIM_FINAL_SEXTANT
 from ..constants import STIM_MODULE_ID_TO_WELL_IDX
 from ..constants import STM_VID
 from ..exceptions import FirmwareGoingDormantError
@@ -83,8 +84,6 @@ TRACKED_EVENT_NAMES = (
 TimepointsOfEvents = namedtuple(  # type: ignore
     "TimepointsOfEvents", TRACKED_EVENT_NAMES, defaults=[None] * len(TRACKED_EVENT_NAMES)  # type: ignore
 )
-
-FINAL_SEXTANT = 6
 
 
 COMMAND_PACKET_TYPES = frozenset(
@@ -168,7 +167,7 @@ class InstrumentComm:
     @property
     def _is_stimulating(self) -> bool:
         any_protocols_running = len(self._protocols_running) > 0
-        return self._current_stim_sextant not in (None, FINAL_SEXTANT) or any_protocols_running
+        return self._current_stim_sextant not in (None, STIM_FINAL_SEXTANT) or any_protocols_running
 
     @_is_stimulating.setter
     def _is_stimulating(self, value: bool) -> None:
