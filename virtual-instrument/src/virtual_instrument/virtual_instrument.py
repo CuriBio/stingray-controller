@@ -241,7 +241,7 @@ class MantarrayMcSimulator(InfiniteProcess):
                 self._stim_current_sextant = STIM_FINAL_SEXTANT
                 self._timepoints_of_subprotocols_start = [start_timepoint] * len(self._stim_info["protocols"])
             else:
-                # TODO send stim sextant status packet
+                self._send_stim_sextant_status_update(sextant_num)
                 self._stim_current_sextant = sextant_num
                 self._timepoints_of_subprotocols_start = [None] * len(self._stim_info["protocols"])
                 for well_name, protocol_idx in self._stim_info["protocol_assignments"].items():
@@ -480,11 +480,18 @@ class MantarrayMcSimulator(InfiniteProcess):
                 comm_from_controller[SERIAL_COMM_PAYLOAD_INDEX:-SERIAL_COMM_CHECKSUM_LENGTH_BYTES]
             )
             print("Raw stim info:", stim_info_dict)  # allow-print
+
+            # real instrument won't check this, so raise exception instead of responding with a command failure
+            if self._stim_schedule_type == StimScheduleType.SYNC and any(
+                p["run_until_stopped"] for p in stim_info_dict["protocols"]
+            ):
+                raise Exception("Cannot use 'run_until_stopped' protocols when in sync mode")
+
             updated_assignments = {
                 GENERIC_96_WELL_DEFINITION.get_well_name_from_well_index(well_idx): None
                 for well_idx in range(STIM_MAX_NUM_PROTOCOLS)
             }
-            self._stim_protocol_final_sextant = [1] * len(stim_info_dict["protocol_assignments"])
+            self._stim_protocol_final_sextant = [1] * len(stim_info_dict["protocols"])
             for well_idx in self._stim_active_wells:
                 well_name = GENERIC_96_WELL_DEFINITION.get_well_name_from_well_index(well_idx)
                 protocol_idx = stim_info_dict["protocol_assignments"][well_name]
@@ -495,6 +502,7 @@ class MantarrayMcSimulator(InfiniteProcess):
                 )
             stim_info_dict["protocol_assignments"] = updated_assignments
             print("Protocol assignments:", updated_assignments)  # allow-print
+            print("Final sextant of protocols:", self._stim_protocol_final_sextant)  # allow-print
             # TODO handle too many subprotocols?
             command_failed = self._is_stimulating or len(stim_info_dict["protocols"]) > STIM_MAX_NUM_PROTOCOLS
             if not command_failed:
@@ -812,7 +820,7 @@ class MantarrayMcSimulator(InfiniteProcess):
                 if not protocol["run_until_stopped"] and protocol_complete:
                     if (
                         self._stim_schedule_type == StimScheduleType.STANDARD
-                        or self._stim_protocol_final_sextant[protocol_idx] >= self._stim_current_sextant
+                        or self._stim_current_sextant >= self._stim_protocol_final_sextant[protocol_idx]
                     ):
                         subprotocol_idx = STIM_COMPLETE_SUBPROTOCOL_IDX
                     else:
@@ -848,6 +856,10 @@ class MantarrayMcSimulator(InfiniteProcess):
                 self._handle_stim_state_change(True, self._stim_current_sextant + 1)
             else:
                 self._is_stimulating = False
+
+    def _send_stim_sextant_status_update(self, sextant_num: int) -> None:
+        print("STIM SEXTANT:", sextant_num)  # allow-print
+        self._send_data_packet(SerialCommPacketTypes.STIM_SEXTANT_STATUS, bytes([sextant_num]))
 
     def _drain_all_queues(self) -> dict[str, Any]:
         return {}

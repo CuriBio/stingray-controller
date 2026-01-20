@@ -15,6 +15,7 @@ from ..constants import CURRENT_SOFTWARE_VERSION
 from ..constants import FW_UPDATE_SUBDIR
 from ..constants import GENERIC_96_WELL_DEFINITION
 from ..constants import InstrumentConnectionStatuses
+from ..constants import StimScheduleType
 from ..constants import StimulationStates
 from ..constants import StimulatorCircuitStatuses
 from ..constants import SystemStatuses
@@ -251,6 +252,10 @@ class SystemMonitor:
                     set_active_wells_cmd = {"command": "set_active_wells", "well_indices": well_indices}
                     await self._queues["to"]["instrument_comm"].put(set_active_wells_cmd)
                     await self._queues["to"]["instrument_comm"].put(communication)
+                    # TODO remove this
+                    await self._queues["to"]["instrument_comm"].put(
+                        {"command": "set_stim_schedule_type", "schedule_type": StimScheduleType.SYNC}
+                    )
                 case {"command": "init_offline_mode"}:
                     system_state_updates["system_status"] = SystemStatuses.GOING_OFFLINE_STATE
                     await self._queues["to"]["instrument_comm"].put(communication)
@@ -291,7 +296,13 @@ class SystemMonitor:
                         system_state_updates["stimulation_protocol_statuses"][
                             protocol_idx
                         ] = StimulationStates.INACTIVE
+                case {"command": "stim_sextant_status_update", "sextant": current_stim_sextant}:
+                    await self._queues["to"]["server"].put(
+                        {"communication_type": "stim_sextant_status_update", "sextant": current_stim_sextant}
+                    )
                 case {"command": "set_active_wells"}:
+                    pass  # nothing to do here
+                case {"command": "set_stim_schedule_type"}:
                     pass  # nothing to do here
                 case {
                     "command": "start_stim_checks",

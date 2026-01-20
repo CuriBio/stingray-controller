@@ -726,7 +726,7 @@ class InstrumentComm:
 
         protocol_statuses: dict[int, Any] = parse_stim_data(*stim_stream_info.values())
 
-        logger.debug("Stim statuses received: %s", protocol_statuses)
+        logger.info("Stim statuses received: %s", protocol_statuses)
 
         protocols_completed = [
             protocol_idx
