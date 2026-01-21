@@ -107,6 +107,9 @@ export default {
     protocolList.push(protocol);
   },
   setStimPlayState(state, bool) {
+    if (!bool) {
+      state.currentStimSextant = null;
+    }
     state.stimPlayState = bool;
     // this contradictory state occurs when 'Stimulate until complete' was selected for a stimulation.
     // the system status pinging returns a isStimulating key that constantly updates the stimPlayState

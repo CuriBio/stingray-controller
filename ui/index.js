@@ -24,6 +24,7 @@ export {
   MIN_CHARGE_MA,
   MIN_PHASE_DURATION_US,
   MAX_CHARGE_MA,
+  STIM_SCHEDULE_MODES,
 } from "./store/modules/stimulation/enums";
 export { SYSTEM_STATUS } from "./store/modules/system/enums";
 
