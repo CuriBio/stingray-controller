@@ -16,6 +16,7 @@ from websockets.server import WebSocketServerProtocol
 from ..constants import DEFAULT_SERVER_PORT_NUMBER
 from ..constants import GENERIC_96_WELL_DEFINITION
 from ..constants import NUM_WELLS
+from ..constants import StimScheduleType
 from ..constants import StimulationStates
 from ..constants import StimulatorCircuitStatuses
 from ..constants import SystemStatuses
@@ -260,6 +261,21 @@ class Server:
             raise WebsocketCommandError(f"Invalid value for update_accepted: {update_accepted}")
 
         await self._to_monitor_queue.put(comm)
+
+    @mark_handler
+    async def _set_stim_schedule_mode(self, comm: dict[str, Any]) -> None:
+        try:
+            mode = comm["mode"]
+        except KeyError:
+            raise WebsocketCommandError("Mode not specified")
+        try:
+            schedule_type = StimScheduleType(mode)
+        except Exception:
+            raise WebsocketCommandError(f"Invalid stim schedule mode: {mode}")
+
+        await self._to_monitor_queue.put(
+            {"command": "set_stim_schedule_type", "schedule_type": schedule_type}
+        )
 
     # TODO consider changing this to "set_stim_info"
     @mark_handler

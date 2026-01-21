@@ -11,8 +11,18 @@ import {
   _convertDetailedSubprotocolsFromFW,
 } from "@/js-utils/ProtocolValidation";
 import { SYSTEM_STATUS } from "@/store/modules/system/enums";
+import { STIM_SCHEDULE_MODES } from "@/store/modules/stimulation/enums";
 
 export default {
+  setStimScheduleMode({ state }, stimScheduleMode) {
+    state.stimScheduleMode = stimScheduleMode;
+    const wsMessage = JSON.stringify({
+      command: "set_stim_schedule_mode",
+      mode: STIM_SCHEDULE_MODES[stimScheduleMode],
+    });
+    this.state.system.socket.send(wsMessage);
+  },
+
   handleSelectedWells({ commit }, wells) {
     const wellValues = [];
 

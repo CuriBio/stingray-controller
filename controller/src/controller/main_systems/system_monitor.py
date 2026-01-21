@@ -15,7 +15,6 @@ from ..constants import CURRENT_SOFTWARE_VERSION
 from ..constants import FW_UPDATE_SUBDIR
 from ..constants import GENERIC_96_WELL_DEFINITION
 from ..constants import InstrumentConnectionStatuses
-from ..constants import StimScheduleType
 from ..constants import StimulationStates
 from ..constants import StimulatorCircuitStatuses
 from ..constants import SystemStatuses
@@ -237,6 +236,9 @@ class SystemMonitor:
                         ]
                     system_state_updates["stimulation_protocol_statuses"] = stim_status_updates
                     await self._queues["to"]["instrument_comm"].put({"command": command})
+                case {"command": "set_stim_schedule_type", "schedule_type": schedule_type}:
+                    logger.info(f"Setting stim schedule mode: {repr(schedule_type)}")
+                    await self._queues["to"]["instrument_comm"].put(communication)
                 case {"command": "set_stim_protocols", "stim_info": stim_info}:
                     system_state_updates["stim_info"] = stim_info
                     chunked_stim_info, *_ = chunk_protocols_in_stim_info(stim_info)
@@ -251,10 +253,6 @@ class SystemMonitor:
                     set_active_wells_cmd = {"command": "set_active_wells", "well_indices": well_indices}
                     await self._queues["to"]["instrument_comm"].put(set_active_wells_cmd)
                     await self._queues["to"]["instrument_comm"].put(communication)
-                    # TODO remove this once the ability to set stim mode is added
-                    await self._queues["to"]["instrument_comm"].put(
-                        {"command": "set_stim_schedule_type", "schedule_type": StimScheduleType.SYNC}
-                    )
                 case {"command": "init_offline_mode"}:
                     system_state_updates["system_status"] = SystemStatuses.GOING_OFFLINE_STATE
                     await self._queues["to"]["instrument_comm"].put(communication)

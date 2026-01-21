@@ -3,7 +3,7 @@
     <div class="div__stimulation-modes-header">Stimulation Mode:</div>
     <div class="div__stimulation-modes-selection">
       <b-form-radio-group
-        v-model="selectedMode"
+        v-model="stimScheduleMode"
         :options="modes"
         name="radios-stacked"
         value-field="value"
@@ -18,24 +18,22 @@
 import Vue from "vue";
 import { BFormRadioGroup } from "bootstrap-vue";
 Vue.component("BFormRadioGroup", BFormRadioGroup);
+import { mapState, mapActions } from "vuex";
 
 import { STIM_SCHEDULE_MODES } from "@/store/modules/stimulation/enums";
 
 export default {
   name: "StimulationScheduleModes",
-  data() {
-    return {
-      selectedMode: "Standard",
-    };
-  },
   computed: {
+    ...mapState("stimulation", ["stimScheduleMode"]),
     modes() {
       return Object.keys(STIM_SCHEDULE_MODES);
     },
   },
   methods: {
+    ...mapActions("stimulation", ["setStimScheduleMode"]),
     selectMode(mode) {
-      // TODO send the selection to the controller: STIM_SCHEDULE_MODES[mode]
+      this.setStimScheduleMode(mode);
     },
   },
 };
