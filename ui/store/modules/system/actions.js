@@ -61,7 +61,10 @@ export default {
         // TODO catch all errors here and report correct error code
         switch (wsMessage.communication_type) {
           case "status_update":
-            if ("system_status" in wsMessage) commit("system/setStatusUuid", wsMessage.system_status);
+            if ("system_status" in wsMessage) {
+              // comment here to stop prettier
+              commit("system/setStatusUuid", wsMessage.system_status);
+            }
             // want to start stim if not already started if offline mode status is sent
             // stim will initially be inactive if booting up SW in offline mode
             if (
@@ -73,6 +76,8 @@ export default {
                   wsMessage.stimulation_protocols_running.includes(true)) ||
                 wsMessage.system_status === SYSTEM_STATUS.OFFLINE_STATE;
 
+              // TODO need to keep track of current stim sextant and only do these next updates if in sextant 6 when in sync mode
+
               dispatch(
                 "stimulation/setStimStatus",
                 stimPlayState ? STIM_STATUS.STIM_ACTIVE : STIM_STATUS.READY
@@ -82,6 +87,9 @@ export default {
             break;
           case "stimulator_circuit_statuses":
             dispatch("stimulation/checkStimulatorCircuitStatuses", wsMessage.stimulator_circuit_statuses);
+            break;
+          case "stim_sextant_status_update":
+            // TODO handle this wsMessage.current_stim_sextant
             break;
           case "barcode_update":
             // eslint complains without this if condition wrapper for some reason

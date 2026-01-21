@@ -5,12 +5,14 @@ from random import choice
 from random import randint
 from zlib import crc32
 
-from controller.constants import GENERIC_24_WELL_DEFINITION
-from controller.constants import NUM_WELLS
+from controller.constants import GENERIC_96_WELL_DEFINITION
 from controller.constants import SERIAL_COMM_PACKET_BASE_LENGTH_BYTES
 from controller.constants import SERIAL_COMM_STATUS_CODE_LENGTH_BYTES
+from controller.constants import STIM_CLUSTER_IDX_TO_WELL_IDXS
+from controller.constants import STIM_MAX_NUM_PROTOCOLS
 from controller.constants import STIM_OPEN_CIRCUIT_THRESHOLD_OHMS
 from controller.constants import STIM_SHORT_CIRCUIT_THRESHOLD_OHMS
+from controller.constants import STIM_WELL_IDX_TO_CLUSTER_IDX
 from controller.constants import StimProtocolStatuses
 from controller.constants import StimulationStates
 from controller.constants import StimulatorCircuitStatuses
@@ -24,7 +26,6 @@ from controller.utils.serial_comm import convert_stim_dict_to_bytes
 from controller.utils.serial_comm import convert_subprotocol_node_dict_to_bytes
 from controller.utils.serial_comm import convert_subprotocol_pulse_bytes_to_dict
 from controller.utils.serial_comm import convert_subprotocol_pulse_dict_to_bytes
-from controller.utils.serial_comm import convert_well_name_to_module_id
 from controller.utils.serial_comm import create_data_packet
 from controller.utils.serial_comm import get_serial_comm_timestamp
 from controller.utils.serial_comm import parse_end_offline_mode_bytes
@@ -626,7 +627,7 @@ def test_convert_stim_dict_to_bytes__return_expected_bytes(protocols, assignment
         {
             well_name: None
             for well_idx in range(24)
-            if (well_name := GENERIC_24_WELL_DEFINITION.get_well_name_from_well_index(well_idx))
+            if (well_name := GENERIC_96_WELL_DEFINITION.get_well_name_from_well_index(well_idx))
             not in protocol_assignments_dict
         }
     )
@@ -649,7 +650,7 @@ def test_convert_stim_dict_to_bytes__return_expected_bytes(protocols, assignment
         )[0]
         + bytes([1])  # num wells that protocol A is assigned to
         + bytes(
-            [convert_well_name_to_module_id(list(protocol_assignments_dict.keys())[0], use_stim_mapping=True)]
+            [STIM_WELL_IDX_TO_CLUSTER_IDX[GENERIC_96_WELL_DEFINITION.get_well_index_from_well_name("D1")]]
         )  # module ID(s) that protocol A is assigned to
         # bytes for protocol D
         + bytes([1])  # control method
@@ -663,7 +664,7 @@ def test_convert_stim_dict_to_bytes__return_expected_bytes(protocols, assignment
         )[0]
         + bytes([1])  # num wells that protocol D is assigned to
         + bytes(
-            [convert_well_name_to_module_id(list(protocol_assignments_dict.keys())[1], use_stim_mapping=True)]
+            [STIM_WELL_IDX_TO_CLUSTER_IDX[GENERIC_96_WELL_DEFINITION.get_well_index_from_well_name("D2")]]
         )  # module ID(s) that protocol A is assigned to
     )
 
@@ -673,12 +674,10 @@ def test_convert_stim_dict_to_bytes__return_expected_bytes(protocols, assignment
 
 def test_convert_stim_bytes_to_dict__can_correctly_recreate_stim_dict__except_for_protocol_ids():
     protocol_assignments_dict = {
-        GENERIC_24_WELL_DEFINITION.get_well_name_from_well_index(well_idx): randint(0, 1)
-        for well_idx in range(24)
+        GENERIC_96_WELL_DEFINITION.get_well_name_from_well_index(well_idx): cluster_idx % 2
+        for cluster_idx in range(STIM_MAX_NUM_PROTOCOLS)
+        for well_idx in STIM_CLUSTER_IDX_TO_WELL_IDXS[cluster_idx]
     }
-    # make sure at least one well is unassigned
-    well_to_unassign = choice(["A", "B", "C", "D"]) + str(randint(1, 6))
-    protocol_assignments_dict[well_to_unassign] = None
 
     # using numbers instead of letters here since the actual letter ID is lost and converted to a number when recreated
     original_stim_info_dict = {
@@ -734,13 +733,10 @@ def test_convert_stim_bytes_to_dict__can_correctly_recreate_stim_dict__except_fo
 
 def test_parse_end_offline_mode_bytes__correctly_recreates_stim_info(mocker):
     protocol_assignments_dict = {
-        GENERIC_24_WELL_DEFINITION.get_well_name_from_well_index(well_idx): randint(0, 1)
-        for well_idx in range(24)
+        GENERIC_96_WELL_DEFINITION.get_well_name_from_well_index(well_idx): cluster_idx % 2
+        for cluster_idx in range(STIM_MAX_NUM_PROTOCOLS)
+        for well_idx in STIM_CLUSTER_IDX_TO_WELL_IDXS[cluster_idx]
     }
-
-    # make sure at least one well is unassigned
-    well_to_unassign = choice(["A", "B", "C", "D"]) + str(randint(1, 6))
-    protocol_assignments_dict[well_to_unassign] = None
 
     original_stim_info_dict = {
         "protocols": [
@@ -788,7 +784,7 @@ def test_parse_end_offline_mode_bytes__correctly_recreates_stim_info(mocker):
 
     # only stim status is parsed out of protocol status at the moment
     test_protocol_statuses = [
-        choice([StimulationStates.RUNNING, StimulationStates.INACTIVE]) for _ in range(NUM_WELLS)
+        choice([StimulationStates.RUNNING, StimulationStates.INACTIVE]) for _ in range(STIM_MAX_NUM_PROTOCOLS)
     ]
     test_protocol_statuses_bytes = bytes([])
     for test_protocol_status in test_protocol_statuses:

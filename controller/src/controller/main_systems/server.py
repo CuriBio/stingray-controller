@@ -14,7 +14,7 @@ from websockets import serve
 from websockets.server import WebSocketServerProtocol
 
 from ..constants import DEFAULT_SERVER_PORT_NUMBER
-from ..constants import GENERIC_24_WELL_DEFINITION
+from ..constants import GENERIC_96_WELL_DEFINITION
 from ..constants import NUM_WELLS
 from ..constants import StimulationStates
 from ..constants import StimulatorCircuitStatuses
@@ -306,7 +306,7 @@ class Server:
         protocol_assignments_dict = stim_info["protocol_assignments"]
         # make sure protocol assignments are not missing any wells and do not contain any invalid wells
         all_well_names = set(
-            GENERIC_24_WELL_DEFINITION.get_well_name_from_well_index(well_idx)
+            GENERIC_96_WELL_DEFINITION.get_well_name_from_well_index(well_idx)
             for well_idx in range(NUM_WELLS)
         )
         given_well_names = set(protocol_assignments_dict.keys())

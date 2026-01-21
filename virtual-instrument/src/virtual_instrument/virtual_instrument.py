@@ -15,12 +15,12 @@ from typing import Any
 from uuid import UUID
 from zlib import crc32
 
+from controller.constants import GENERIC_96_WELL_DEFINITION
 from controller.constants import GOING_DORMANT_HANDSHAKE_TIMEOUT_CODE
 from controller.constants import InstrumentConnectionStatuses
 from controller.constants import MAX_MC_REBOOT_DURATION_SECONDS
 from controller.constants import MICRO_TO_BASE_CONVERSION
 from controller.constants import MICROS_PER_MILLI
-from controller.constants import NUM_WELLS
 from controller.constants import PROTOCOL_STATUS_BYTES_LEN
 from controller.constants import SERIAL_COMM_CHECKSUM_LENGTH_BYTES
 from controller.constants import SERIAL_COMM_HANDSHAKE_TIMEOUT_SECONDS
@@ -37,7 +37,13 @@ from controller.constants import SERIAL_COMM_TIME_INDEX_LENGTH_BYTES
 from controller.constants import SERIAL_COMM_TIME_OFFSET_LENGTH_BYTES
 from controller.constants import SerialCommPacketTypes
 from controller.constants import STIM_COMPLETE_SUBPROTOCOL_IDX
+from controller.constants import STIM_FINAL_SEXTANT
+from controller.constants import STIM_MAX_NUM_PROTOCOLS
+from controller.constants import STIM_MODULE_ID_TO_WELL_IDX
+from controller.constants import STIM_SEXTANT_COMPLETE_SUBPROTOCOL_IDX
+from controller.constants import STIM_WELL_IDX_TO_SEXTANT_NUM
 from controller.constants import StimProtocolStatuses
+from controller.constants import StimScheduleType
 from controller.utils.serial_comm import convert_adc_readings_to_circuit_status
 from controller.utils.serial_comm import convert_instrument_event_info_to_bytes
 from controller.utils.serial_comm import convert_metadata_to_bytes
@@ -147,16 +153,15 @@ class MantarrayMcSimulator(InfiniteProcess):
     default_adc_reading = 0xFF00
     global_timer_offset_secs = 2.5  # TODO Tanner (11/17/21): figure out if this should be removed
 
-    def __init__(
-        self, sock: socket.socket, logging_level: int = logging.INFO, num_wells: int = NUM_WELLS
-    ) -> None:
+    def __init__(self, sock: socket.socket, logging_level: int = logging.INFO) -> None:
         # InfiniteProcess values
         super().__init__(Queue(), logging_level=logging_level)
         # socket connections
         self.sock = sock
         self.conn = None
         # plate values
-        self._num_wells = num_wells
+        self._num_wells = 96
+        self._num_well_micros = 24
         # simulator values (not set in _handle_boot_up_config)
         self._time_of_last_status_beacon_secs: float | None = None
         self._ready_to_send_barcode = False
@@ -177,6 +182,10 @@ class MantarrayMcSimulator(InfiniteProcess):
         self._sampling_period_us: int
         self._adc_readings: list[tuple[int, int]]
         self._stim_info: dict[str, Any]
+        self._stim_schedule_type: StimScheduleType = StimScheduleType.STANDARD
+        self._stim_active_wells: set[int] = set()
+        self._stim_current_sextant: int = STIM_FINAL_SEXTANT
+        self._stim_protocol_final_sextant: list[int] = []
         # TODO move all the stim info below into StimulationProtocolManager?
         self._stim_running_statuses: list[bool] = []
         self._timepoints_of_subprotocols_start: list[int | None]
@@ -222,20 +231,35 @@ class MantarrayMcSimulator(InfiniteProcess):
     @_is_stimulating.setter
     def _is_stimulating(self, value: bool) -> None:
         # do nothing if already set to given value
-        if value is self._is_stimulating:
-            return
+        if value is not self._is_stimulating:
+            self._handle_stim_state_change(value)
 
-        if value:
+    def _handle_stim_state_change(self, is_stimulating: bool, sextant_num: int = 1) -> None:
+        if is_stimulating:
             start_timepoint = _perf_counter_us()
-            self._timepoints_of_subprotocols_start = [start_timepoint] * len(self._stim_info["protocols"])
+            if self._stim_schedule_type == StimScheduleType.STANDARD:
+                self._stim_current_sextant = STIM_FINAL_SEXTANT
+                self._timepoints_of_subprotocols_start = [start_timepoint] * len(self._stim_info["protocols"])
+            else:
+                self._send_stim_sextant_status_update(sextant_num)
+                self._stim_current_sextant = sextant_num
+                self._timepoints_of_subprotocols_start = [None] * len(self._stim_info["protocols"])
+                for well_name, protocol_idx in self._stim_info["protocol_assignments"].items():
+                    if protocol_idx is None:
+                        continue
+                    well_idx = GENERIC_96_WELL_DEFINITION.get_well_index_from_well_name(well_name)
+                    sextant_num_of_well = STIM_WELL_IDX_TO_SEXTANT_NUM[well_idx]
+                    if sextant_num_of_well == self._stim_current_sextant:
+                        self._timepoints_of_subprotocols_start[protocol_idx] = start_timepoint
+            self._stim_running_statuses = [True] * len(self._stim_info["protocols"])
             start_time_index = self._get_global_timer()
             self._stim_time_indices = [start_time_index] * len(self._stim_info["protocols"])
             self._stim_subprotocol_managers = [
                 StimulationProtocolManager(protocol["subprotocols"])
                 for protocol in self._stim_info["protocols"]
             ]
-            self._stim_running_statuses = [True] * len(self._stim_info["protocols"])
         else:
+            self._stim_current_sextant = STIM_FINAL_SEXTANT
             self._timepoints_of_subprotocols_start = list()
             self._stim_time_indices = list()
             self._stim_subprotocol_managers = list()
@@ -265,7 +289,7 @@ class MantarrayMcSimulator(InfiniteProcess):
         self._time_of_last_handshake_secs = None
         self._reset_start_time()
         self._reboot_time_secs = None
-        self._status_codes = [SERIAL_COMM_OKAY_CODE] * (self._num_wells + 2)
+        self._status_codes = [SERIAL_COMM_OKAY_CODE] * (self._num_well_micros + 2)
         self._sampling_period_us = DEFAULT_SAMPLING_PERIOD
         self._adc_readings = [(self.default_adc_reading, self.default_adc_reading)] * self._num_wells
         self._stim_info = {}
@@ -455,13 +479,37 @@ class MantarrayMcSimulator(InfiniteProcess):
             stim_info_dict = convert_stim_bytes_to_dict(
                 comm_from_controller[SERIAL_COMM_PAYLOAD_INDEX:-SERIAL_COMM_CHECKSUM_LENGTH_BYTES]
             )
+            print("Raw stim info:", stim_info_dict)  # allow-print
+
+            # real instrument won't check this, so raise exception instead of responding with a command failure
+            if self._stim_schedule_type == StimScheduleType.SYNC and any(
+                p["run_until_stopped"] for p in stim_info_dict["protocols"]
+            ):
+                raise Exception("Cannot use 'run_until_stopped' protocols when in sync mode")
+
+            updated_assignments = {
+                GENERIC_96_WELL_DEFINITION.get_well_name_from_well_index(well_idx): None
+                for well_idx in range(STIM_MAX_NUM_PROTOCOLS)
+            }
+            self._stim_protocol_final_sextant = [1] * len(stim_info_dict["protocols"])
+            for well_idx in self._stim_active_wells:
+                well_name = GENERIC_96_WELL_DEFINITION.get_well_name_from_well_index(well_idx)
+                protocol_idx = stim_info_dict["protocol_assignments"][well_name]
+                updated_assignments[well_name] = protocol_idx
+                sextant_num = STIM_WELL_IDX_TO_SEXTANT_NUM[well_idx]
+                self._stim_protocol_final_sextant[protocol_idx] = max(
+                    self._stim_protocol_final_sextant[protocol_idx], sextant_num
+                )
+            stim_info_dict["protocol_assignments"] = updated_assignments
+            print("Protocol assignments:", updated_assignments)  # allow-print
+            print("Final sextant of protocols:", self._stim_protocol_final_sextant)  # allow-print
             # TODO handle too many subprotocols?
-            command_failed = self._is_stimulating or len(stim_info_dict["protocols"]) > self._num_wells
+            command_failed = self._is_stimulating or len(stim_info_dict["protocols"]) > STIM_MAX_NUM_PROTOCOLS
             if not command_failed:
                 self._stim_info = stim_info_dict
             response_body += bytes([command_failed])
         elif packet_type == SerialCommPacketTypes.START_STIM:
-            # command fails if protocols are not set or if stimulation is already running
+            # command fails if protocols are not set, or if stimulation is already running.
             command_failed = "protocol_assignments" not in self._stim_info or self._is_stimulating
             response_body += bytes([command_failed])
             if not command_failed:
@@ -474,10 +522,41 @@ class MantarrayMcSimulator(InfiniteProcess):
                 self._handle_manual_stim_stop()
                 self._is_stimulating = False
         elif packet_type == SerialCommPacketTypes.STIM_IMPEDANCE_CHECK:
-            # Tanner (4/8/22): currently assuming that stim checks will take a negligible amount of time
-            for module_readings in self._adc_readings:
-                status = convert_adc_readings_to_circuit_status(*module_readings)
-                response_body += struct.pack("<HHB", *module_readings, status) * 2
+            raise Exception("Use STIM_IMPEDANCE_CHECK_96 instead of STIM_IMPEDANCE_CHECK")
+        elif packet_type == SerialCommPacketTypes.STIM_IMPEDANCE_CHECK_96:
+            command_failed = self._is_stimulating
+            response_body += bytes([command_failed])
+            if not command_failed:
+                for module_readings in self._adc_readings:
+                    status = convert_adc_readings_to_circuit_status(*module_readings)
+                    response_body += struct.pack("<HHB", *module_readings, status) * 2
+        elif packet_type == SerialCommPacketTypes.SET_STIM_SCHEDULE_TYPE:
+            stim_schedule_type = comm_from_controller[SERIAL_COMM_PAYLOAD_INDEX]
+            try:
+                stim_schedule_type = StimScheduleType(stim_schedule_type)
+            except ValueError:
+                command_failed = True
+            else:
+                self._stim_schedule_type = stim_schedule_type
+                command_failed = False
+            response_body += bytes([command_failed])
+        elif packet_type == SerialCommPacketTypes.SET_SUB_WELLS:
+            command_failed = self._is_stimulating
+            if not command_failed:
+                self._stim_active_wells = set()
+                enabled_flags = comm_from_controller[
+                    SERIAL_COMM_PAYLOAD_INDEX:-SERIAL_COMM_CHECKSUM_LENGTH_BYTES
+                ]
+                for module_id, enabled in enumerate(enabled_flags):
+                    if enabled:
+                        well_idx = STIM_MODULE_ID_TO_WELL_IDX[module_id]
+                        self._stim_active_wells.add(well_idx)
+                active_well_names = [
+                    GENERIC_96_WELL_DEFINITION.get_well_name_from_well_index(well_idx)
+                    for well_idx in self._stim_active_wells
+                ]
+                print("Active wells:", active_well_names)  # allow-print
+            response_body += bytes([command_failed])
         elif packet_type == SerialCommPacketTypes.SET_SAMPLING_PERIOD:
             response_body += self._update_sampling_period(comm_from_controller)
         elif packet_type == SerialCommPacketTypes.START_DATA_STREAMING:
@@ -553,6 +632,9 @@ class MantarrayMcSimulator(InfiniteProcess):
             # Tanner (3/24/22): As of right now, simulator does not need to handle this message at all, so it is the responsibility of tests to prompt simulator to go through the rest of the error handling procedure
             pass
         elif packet_type == SerialCommPacketTypes.INIT_OFFLINE_MODE:
+            if self._stim_schedule_type == StimScheduleType.SYNC:
+                # instrument doesn't return a success/failure code for this message, so raising an error instead
+                raise Exception("Cannot go offline when stim is in sync mode")
             self._connection_status = InstrumentConnectionStatuses.OFFLINE
         elif packet_type == SerialCommPacketTypes.END_OFFLINE_MODE:
             self._ready_to_send_barcode = True
@@ -585,7 +667,7 @@ class MantarrayMcSimulator(InfiniteProcess):
                 )
 
             # there is one protocol status block per possible protocol, so fill the remaining slots with arbitrary data
-            num_unused_protocols = self._num_wells - len(self._stim_running_statuses)
+            num_unused_protocols = STIM_MAX_NUM_PROTOCOLS - len(self._stim_running_statuses)
             status_update_bytes += bytes(num_unused_protocols * PROTOCOL_STATUS_BYTES_LEN)
 
             response_body += (
@@ -686,7 +768,7 @@ class MantarrayMcSimulator(InfiniteProcess):
             # increment values
             self._time_index_us += self._sampling_period_us
             self._simulated_data_index = (self._simulated_data_index + 1) % simulated_data_len
-        # TODO self._output_queue.put_nowait(data_packet_bytes)
+        # self._output_queue.put_nowait(data_packet_bytes)
         # update timepoint
         self._timepoint_of_last_data_packet_us += num_packets_to_send * self._sampling_period_us
 
@@ -739,8 +821,15 @@ class MantarrayMcSimulator(InfiniteProcess):
                 packet_bytes += self._stim_time_indices[protocol_idx].to_bytes(8, byteorder="little")
 
                 if not protocol["run_until_stopped"] and protocol_complete:
+                    if (
+                        self._stim_schedule_type == StimScheduleType.STANDARD
+                        or self._stim_current_sextant >= self._stim_protocol_final_sextant[protocol_idx]
+                    ):
+                        subprotocol_idx = STIM_COMPLETE_SUBPROTOCOL_IDX
+                    else:
+                        subprotocol_idx = STIM_SEXTANT_COMPLETE_SUBPROTOCOL_IDX
                     # protocol stopping
-                    packet_bytes += bytes([StimProtocolStatuses.FINISHED, STIM_COMPLETE_SUBPROTOCOL_IDX])
+                    packet_bytes += bytes([StimProtocolStatuses.FINISHED, subprotocol_idx])
                     self._stim_running_statuses[protocol_idx] = False
                     self._timepoints_of_subprotocols_start[protocol_idx] = None
                     break
@@ -761,8 +850,19 @@ class MantarrayMcSimulator(InfiniteProcess):
             packet_bytes = bytes([num_status_updates]) + packet_bytes
             self._send_data_packet(SerialCommPacketTypes.STIM_STATUS, packet_bytes)
 
-        # if all timepoints are None, stimulation has ended
-        self._is_stimulating = any(self._timepoints_of_subprotocols_start)
+        any_protocols_running = any(self._timepoints_of_subprotocols_start)
+        if self._stim_schedule_type == StimScheduleType.STANDARD:
+            # if all timepoints are None, stimulation has ended
+            self._is_stimulating = any_protocols_running
+        elif not any_protocols_running:
+            if self._stim_current_sextant < STIM_FINAL_SEXTANT:
+                self._handle_stim_state_change(True, self._stim_current_sextant + 1)
+            else:
+                self._is_stimulating = False
+
+    def _send_stim_sextant_status_update(self, sextant_num: int) -> None:
+        print("STIM SEXTANT:", sextant_num)  # allow-print
+        self._send_data_packet(SerialCommPacketTypes.STIM_SEXTANT_STATUS, bytes([sextant_num]))
 
     def _drain_all_queues(self) -> dict[str, Any]:
         return {}

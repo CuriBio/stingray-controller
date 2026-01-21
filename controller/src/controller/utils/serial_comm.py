@@ -24,23 +24,25 @@ from pulse3D.constants import PCB_SERIAL_NUMBER_UUID
 from pulse3D.constants import TAMPER_FLAG_UUID
 from pulse3D.constants import TOTAL_WORKING_HOURS_UUID
 
-from ..constants import GENERIC_24_WELL_DEFINITION
+from ..constants import GENERIC_96_WELL_DEFINITION
 from ..constants import MICROS_PER_MILLI
+from ..constants import NUM_INSTRUMENT_WELL_MICROCONTROLLERS
 from ..constants import NUM_WELLS
 from ..constants import PROTOCOL_STATUS_BYTES_LEN
 from ..constants import SERIAL_COMM_CHECKSUM_LENGTH_BYTES
 from ..constants import SERIAL_COMM_MAGIC_WORD_BYTES
-from ..constants import SERIAL_COMM_MODULE_ID_TO_WELL_IDX
 from ..constants import SERIAL_COMM_OKAY_CODE
 from ..constants import SERIAL_COMM_PACKET_REMAINDER_SIZE_LENGTH_BYTES
 from ..constants import SERIAL_COMM_STATUS_CODE_LENGTH_BYTES
 from ..constants import SERIAL_COMM_TIMESTAMP_EPOCH
 from ..constants import SERIAL_COMM_TIMESTAMP_LENGTH_BYTES
-from ..constants import SERIAL_COMM_WELL_IDX_TO_MODULE_ID
+from ..constants import STIM_CLUSTER_IDX_TO_WELL_IDXS
+from ..constants import STIM_MAX_NUM_PROTOCOLS
 from ..constants import STIM_MODULE_ID_TO_WELL_IDX
 from ..constants import STIM_OPEN_CIRCUIT_THRESHOLD_OHMS
 from ..constants import STIM_PULSE_BYTES_LEN
 from ..constants import STIM_SHORT_CIRCUIT_THRESHOLD_OHMS
+from ..constants import STIM_WELL_IDX_TO_CLUSTER_IDX
 from ..constants import STIM_WELL_IDX_TO_MODULE_ID
 from ..constants import StimProtocolStatuses
 from ..constants import StimulationStates
@@ -79,15 +81,17 @@ SUBPROTOCOL_BIPHASIC_ONLY_COMPONENTS = frozenset(
 )
 
 
-def convert_module_id_to_well_name(module_id: int, use_stim_mapping: bool = False) -> str:
-    mapping = STIM_MODULE_ID_TO_WELL_IDX if use_stim_mapping else SERIAL_COMM_MODULE_ID_TO_WELL_IDX
-    well_name: str = GENERIC_24_WELL_DEFINITION.get_well_name_from_well_index(mapping[module_id])
+def convert_module_id_to_well_name(module_id: int) -> str:
+    well_name: str = GENERIC_96_WELL_DEFINITION.get_well_name_from_well_index(
+        STIM_MODULE_ID_TO_WELL_IDX[module_id]
+    )
     return well_name
 
 
-def convert_well_name_to_module_id(well_name: str, use_stim_mapping: bool = False) -> int:
-    mapping = STIM_WELL_IDX_TO_MODULE_ID if use_stim_mapping else SERIAL_COMM_WELL_IDX_TO_MODULE_ID
-    module_id: int = mapping[GENERIC_24_WELL_DEFINITION.get_well_index_from_well_name(well_name)]
+def convert_well_name_to_module_id(well_name: str) -> int:
+    module_id: int = STIM_WELL_IDX_TO_MODULE_ID[
+        GENERIC_96_WELL_DEFINITION.get_well_index_from_well_name(well_name)
+    ]
     return module_id
 
 
@@ -181,7 +185,7 @@ def convert_metadata_to_bytes(metadata_dict: dict[UUID | str, Any]) -> bytes:
         + convert_semver_str_to_bytes(metadata_dict[MAIN_FIRMWARE_VERSION_UUID])
         + convert_semver_str_to_bytes(metadata_dict[CHANNEL_FIRMWARE_VERSION_UUID])
         # this function is only used in the simulator, so always send default status code
-        + bytes([SERIAL_COMM_OKAY_CODE] * (NUM_WELLS + 2))
+        + bytes([SERIAL_COMM_OKAY_CODE] * (NUM_INSTRUMENT_WELL_MICROCONTROLLERS + 2))
         + metadata_dict[INITIAL_MAGNET_FINDING_PARAMS_UUID]["X"].to_bytes(1, byteorder="little", signed=True)
         + metadata_dict[INITIAL_MAGNET_FINDING_PARAMS_UUID]["Y"].to_bytes(1, byteorder="little", signed=True)
         + metadata_dict[INITIAL_MAGNET_FINDING_PARAMS_UUID]["Z"].to_bytes(1, byteorder="little", signed=True)
@@ -222,7 +226,7 @@ def convert_status_code_bytes_to_dict(status_code_bytes: bytes) -> dict[str, int
     status_code_labels = (
         "main_status",
         "index_of_thread_with_error",
-        *[f"module_{i}_status" for i in range(NUM_WELLS)],
+        *[f"module_{i}_status" for i in range(NUM_INSTRUMENT_WELL_MICROCONTROLLERS)],
     )
     return {label: status_code_bytes[i] for i, label in enumerate(status_code_labels)}
 
@@ -423,8 +427,6 @@ def convert_stim_dict_to_bytes(stim_dict: dict[str, Any]) -> bytes:
         # data type is always 0 as of 12/23/22
         stim_bytes += bytes([is_voltage_controlled, protocol_dict["run_until_stopped"], 0])
 
-        # TODO remove this since the top level should always be a loop
-
         curr_idx = 0
         for subprotocol_dict in protocol_dict["subprotocols"]:
             subprotocol_bytes, curr_idx = convert_subprotocol_node_dict_to_bytes(
@@ -432,12 +434,14 @@ def convert_stim_dict_to_bytes(stim_dict: dict[str, Any]) -> bytes:
             )
             stim_bytes += subprotocol_bytes
 
-        module_ids_assigned = [
-            convert_well_name_to_module_id(well_name, use_stim_mapping=True)
-            for well_name, assigned_protocol_id in stim_dict["protocol_assignments"].items()
-            if assigned_protocol_id == protocol_dict.get("protocol_id", idx)
-        ]
-        stim_bytes += bytes([len(module_ids_assigned)] + sorted(module_ids_assigned))
+        cluster_idxs_assigned = set()
+        for well_name, assigned_protocol_id in stim_dict["protocol_assignments"].items():
+            if assigned_protocol_id != protocol_dict.get("protocol_id", idx):
+                continue
+            well_idx = GENERIC_96_WELL_DEFINITION.get_well_index_from_well_name(well_name)
+            cluster_idx = STIM_WELL_IDX_TO_CLUSTER_IDX[well_idx]
+            cluster_idxs_assigned.add(cluster_idx)
+        stim_bytes += bytes([len(cluster_idxs_assigned)] + sorted(cluster_idxs_assigned))
 
     return stim_bytes
 
@@ -447,8 +451,9 @@ def convert_stim_bytes_to_dict(stim_bytes: bytes) -> dict[str, Any]:
     stim_info_dict: dict[str, Any] = {
         "protocols": [],
         "protocol_assignments": {
-            GENERIC_24_WELL_DEFINITION.get_well_name_from_well_index(well_idx): None
-            for well_idx in range(NUM_WELLS)
+            GENERIC_96_WELL_DEFINITION.get_well_name_from_well_index(well_idx): None
+            for cluster_idx in range(STIM_MAX_NUM_PROTOCOLS)
+            for well_idx in STIM_CLUSTER_IDX_TO_WELL_IDXS[cluster_idx]
         },
     }
 
@@ -477,12 +482,12 @@ def convert_stim_bytes_to_dict(stim_bytes: bytes) -> dict[str, Any]:
         num_wells_assigned = stim_bytes[curr_byte_idx]
         curr_byte_idx += 1
 
-        stim_info_dict["protocol_assignments"].update(
-            {
-                convert_module_id_to_well_name(module_id, use_stim_mapping=True): protocol_idx
-                for module_id in stim_bytes[curr_byte_idx : curr_byte_idx + num_wells_assigned]
-            }
-        )
+        cluster_idxs = stim_bytes[curr_byte_idx : curr_byte_idx + num_wells_assigned]
+        for cluster_idx in cluster_idxs:
+            well_idxs = STIM_CLUSTER_IDX_TO_WELL_IDXS[cluster_idx]
+            for well_idx in well_idxs:
+                well_name = GENERIC_96_WELL_DEFINITION.get_well_name_from_well_index(well_idx)
+                stim_info_dict["protocol_assignments"][well_name] = protocol_idx
 
         curr_byte_idx += num_wells_assigned
 
@@ -492,7 +497,7 @@ def convert_stim_bytes_to_dict(stim_bytes: bytes) -> dict[str, Any]:
 def parse_end_offline_mode_bytes(response_bytes: bytes) -> dict[str, Any]:
     """Parse bytes containing stimulation info and return as dict."""
     protocol_status_start_idx = 17
-    protocol_status_stop_idx = protocol_status_start_idx + PROTOCOL_STATUS_BYTES_LEN * NUM_WELLS
+    protocol_status_stop_idx = protocol_status_start_idx + PROTOCOL_STATUS_BYTES_LEN * STIM_MAX_NUM_PROTOCOLS
 
     stim_dict = convert_stim_bytes_to_dict(response_bytes[protocol_status_stop_idx:])
     updated_stim_dict = format_stim_dict_with_ids(stim_dict)

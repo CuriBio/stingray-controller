@@ -20,8 +20,9 @@ SOFTWARE_RELEASE_CHANNEL = "REPLACETHISWITHRELEASECHANNELDURINGBUILD"
 
 DEFAULT_SERVER_PORT_NUMBER = 4565
 
-NUM_WELLS = 24
-GENERIC_24_WELL_DEFINITION = LabwareDefinition(row_count=4, column_count=6)
+NUM_INSTRUMENT_WELL_MICROCONTROLLERS = 24
+NUM_WELLS = 96
+GENERIC_96_WELL_DEFINITION = LabwareDefinition(row_count=8, column_count=12)
 
 FW_UPDATE_SUBDIR = "firmware_updates"
 
@@ -155,7 +156,8 @@ SERIAL_COMM_MAX_FULL_PACKET_LENGTH_BYTES = (
     SERIAL_COMM_PACKET_METADATA_LENGTH_BYTES + SERIAL_COMM_MAX_PAYLOAD_LENGTH_BYTES
 )
 
-SERIAL_COMM_STATUS_CODE_LENGTH_BYTES = 2 + NUM_WELLS  # main micro, idx of thread with error, 24 wells
+# main micro, idx of thread with error, 24 well micros
+SERIAL_COMM_STATUS_CODE_LENGTH_BYTES = 2 + NUM_INSTRUMENT_WELL_MICROCONTROLLERS
 # data stream components
 SERIAL_COMM_TIME_INDEX_LENGTH_BYTES = 8
 SERIAL_COMM_TIME_OFFSET_LENGTH_BYTES = 2
@@ -185,6 +187,11 @@ class SerialCommPacketTypes(IntEnum):
     STOP_STIM = 22
     STIM_STATUS = 23
     STIM_IMPEDANCE_CHECK = 27
+    # stingray v2
+    STIM_IMPEDANCE_CHECK_96 = 31
+    SET_STIM_SCHEDULE_TYPE = 32
+    SET_SUB_WELLS = 33
+    STIM_SEXTANT_STATUS = 34  # TODO set the actual packet ID
     # offline mode
     INIT_OFFLINE_MODE = 40
     END_OFFLINE_MODE = 41
@@ -209,6 +216,11 @@ class SerialCommPacketTypes(IntEnum):
     GET_ERROR_DETAILS = 253
     ERROR_ACK = 254
     CHECKSUM_FAILURE = 255
+
+
+class StimScheduleType(IntEnum):
+    STANDARD = 0
+    SYNC = 1
 
 
 # Instrument Status Codes
@@ -237,8 +249,14 @@ STIM_MAX_CHUNKED_SUBPROTOCOL_DUR_MICROSECONDS = (
     STIM_MAX_CHUNKED_SUBPROTOCOL_DUR_MINS * 60 * MICRO_TO_BASE_CONVERSION
 )
 
+STIM_FINAL_SEXTANT = 6
+STIM_SEXTANTS_PER_ROW = 3
+STIM_CLUSTER_SIZE = 4
+STIM_SEXTANT_DIM = 4
+STIM_MAX_NUM_PROTOCOLS = 24
 STIM_MAX_NUM_SUBPROTOCOLS_PER_PROTOCOL = 50
 
+STIM_SEXTANT_COMPLETE_SUBPROTOCOL_IDX = 254
 STIM_COMPLETE_SUBPROTOCOL_IDX = 255
 
 STIM_NO_PROTOCOL_ASSIGNED = 255
@@ -310,23 +328,35 @@ SERIAL_COMM_MODULE_ID_TO_WELL_IDX: immutabledict[int, int] = immutabledict(
     {module_id: well_idx for well_idx, module_id in SERIAL_COMM_WELL_IDX_TO_MODULE_ID.items()}
 )
 
-# fmt: off
 STIM_MODULE_ID_TO_WELL_IDX: immutabledict[int, int] = immutabledict(
-    {
-        module_id: well_idx
-        for module_id, well_idx in enumerate(
-            [
-                3, 7, 11, 15, 19, 23,  # D wells
-                2, 6, 10, 14, 18, 22,  # C wells
-                1, 5, 9, 13, 17, 21,   # B wells
-                0, 4, 8, 12, 16, 20    # A wells
-            ],
-        )
-    }
+    {well_idx: well_idx for well_idx in range(NUM_WELLS)}
 )
-# fmt: on
+
 STIM_WELL_IDX_TO_MODULE_ID: immutabledict[int, int] = immutabledict(
     {well_idx: module_id for module_id, well_idx in STIM_MODULE_ID_TO_WELL_IDX.items()}
+)
+
+STIM_WELL_IDX_TO_CLUSTER_IDX: immutabledict[int, int] = immutabledict(
+    {well_idx: well_idx // STIM_CLUSTER_SIZE for well_idx in range(NUM_WELLS)}
+)
+
+STIM_CLUSTER_IDX_TO_WELL_IDXS: immutabledict[int, tuple[int]] = immutabledict(
+    {
+        cluster_idx: tuple([cluster_idx * STIM_CLUSTER_SIZE + i for i in range(STIM_CLUSTER_SIZE)])
+        for cluster_idx in range(STIM_MAX_NUM_PROTOCOLS)
+    }
+)
+
+
+def _well_idx_to_sextant_num(well_idx: int) -> int:
+    row_col: tuple[int, int] = GENERIC_96_WELL_DEFINITION.get_row_and_column_from_well_index(well_idx)
+    row, col = row_col
+    return (row // STIM_SEXTANT_DIM) * STIM_SEXTANTS_PER_ROW + col // STIM_SEXTANT_DIM + 1
+
+
+# only used for simulator
+STIM_WELL_IDX_TO_SEXTANT_NUM: immutabledict[int, tuple[int]] = immutabledict(
+    {well_idx: _well_idx_to_sextant_num(well_idx) for well_idx in range(NUM_WELLS)}
 )
 
 

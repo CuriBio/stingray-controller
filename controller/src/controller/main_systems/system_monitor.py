@@ -13,8 +13,9 @@ from pulse3D.constants import MANTARRAY_SERIAL_NUMBER_UUID as INSTRUMENT_SERIAL_
 
 from ..constants import CURRENT_SOFTWARE_VERSION
 from ..constants import FW_UPDATE_SUBDIR
-from ..constants import GENERIC_24_WELL_DEFINITION
+from ..constants import GENERIC_96_WELL_DEFINITION
 from ..constants import InstrumentConnectionStatuses
+from ..constants import StimScheduleType
 from ..constants import StimulationStates
 from ..constants import StimulatorCircuitStatuses
 from ..constants import SystemStatuses
@@ -247,7 +248,13 @@ class SystemMonitor:
                         well_idx: StimulatorCircuitStatuses.CALCULATING.name.lower()
                         for well_idx in well_indices
                     }
+                    set_active_wells_cmd = {"command": "set_active_wells", "well_indices": well_indices}
+                    await self._queues["to"]["instrument_comm"].put(set_active_wells_cmd)
                     await self._queues["to"]["instrument_comm"].put(communication)
+                    # TODO remove this once the ability to set stim mode is added
+                    await self._queues["to"]["instrument_comm"].put(
+                        {"command": "set_stim_schedule_type", "schedule_type": StimScheduleType.SYNC}
+                    )
                 case {"command": "init_offline_mode"}:
                     system_state_updates["system_status"] = SystemStatuses.GOING_OFFLINE_STATE
                     await self._queues["to"]["instrument_comm"].put(communication)
@@ -287,6 +294,14 @@ class SystemMonitor:
                         system_state_updates["stimulation_protocol_statuses"][
                             protocol_idx
                         ] = StimulationStates.INACTIVE
+                case {"command": "stim_sextant_status_update", "sextant": current_stim_sextant}:
+                    await self._queues["to"]["server"].put(
+                        {"communication_type": "stim_sextant_status_update", "sextant": current_stim_sextant}
+                    )
+                case {"command": "set_active_wells"}:
+                    pass  # nothing to do here
+                case {"command": "set_stim_schedule_type"}:
+                    pass  # nothing to do here
                 case {
                     "command": "start_stim_checks",
                     "stimulator_circuit_statuses": stimulator_circuit_statuses,
@@ -300,7 +315,7 @@ class SystemMonitor:
                             ).name.lower()
                         except InvalidStimulatorCircuitStatus:
                             bad_statuses[
-                                GENERIC_24_WELL_DEFINITION.get_well_name_from_well_index(well_idx)
+                                GENERIC_96_WELL_DEFINITION.get_well_name_from_well_index(well_idx)
                             ] = statuses
                     if bad_statuses:
                         raise InvalidStimulatorCircuitStatus(
@@ -359,7 +374,7 @@ class SystemMonitor:
                     # need to also set the circuit statuses for any wells running stimulation at the time of connection.
                     # the assumption being made is that any well that is stimulating should be checked off
                     system_state_updates["stimulator_circuit_statuses"] = {
-                        GENERIC_24_WELL_DEFINITION.get_well_index_from_well_name(well_name): (
+                        GENERIC_96_WELL_DEFINITION.get_well_index_from_well_name(well_name): (
                             StimulatorCircuitStatuses.MEDIA.name.lower()
                         )
                         for well_name, protocol_id in stim_info["protocol_assignments"].items()
@@ -376,7 +391,6 @@ class SystemMonitor:
                         if status == InstrumentConnectionStatuses.OFFLINE
                         else SystemStatuses.SYSTEM_INITIALIZING_STATE
                     )
-
                 case invalid_comm:
                     raise NotImplementedError(f"Invalid communication from InstrumentComm: {invalid_comm}")
 
