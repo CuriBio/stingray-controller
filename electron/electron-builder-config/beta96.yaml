@@ -1,0 +1,27 @@
+# https://www.electron.build/configuration/configuration#configuration
+productName: "Stingray Controller"
+appId: "CuriBio.Stingray.Controller"
+asar: true
+directories:
+  buildResources: "electron-build-resources"
+  output: "dist"
+extraFiles:
+  - "dist-python/"
+files:
+  - "package.json"
+  - from: "dist/main/"
+    to: "dist/main/"
+  - from: "dist/renderer/"
+    to: "dist/renderer/"
+win:
+  target: "nsis"
+  artifactName: "StingrayController-Setup-beta96-${version}.${ext}"
+nsis:
+  oneClick: false
+  perMachine: false
+publish:
+  provider: "s3"
+  bucket: "downloads.curibio.com"
+  path: "software/stingray"
+  channel: "beta96"
+  region: "us-east-1"
