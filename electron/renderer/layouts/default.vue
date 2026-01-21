@@ -18,6 +18,9 @@
             @send-confirmation="sendConfirmation"
           />
         </div>
+        <div class="div__stimulation-modes-container">
+          <StimulationScheduleModes />
+        </div>
         <div class="div__simulation-mode-container">
           <SimulationMode />
         </div>
@@ -44,6 +47,7 @@ import {
   StatusBar,
   SimulationMode,
   StimulationStudioControls,
+  StimulationScheduleModes,
 } from "@curi-bio/ui";
 
 import { mapState } from "vuex";
@@ -62,6 +66,7 @@ export default {
     StatusBar,
     SimulationMode,
     StimulationStudioControls,
+    StimulationScheduleModes,
   },
   data: function () {
     return {
@@ -251,7 +256,13 @@ body {
   overflow: hidden;
 }
 
-/* STIMULATION/COPYRIGHT */
+.div__stimulation-modes-container {
+  position: absolute;
+  top: 220px;
+  left: 20px;
+}
+
+/* SIMULATION/COPYRIGHT */
 .div__simulation-mode-container {
   position: absolute;
   top: 875px;

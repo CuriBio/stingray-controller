@@ -61,3 +61,4 @@ export { default as StimulationStudioZoomControls } from "./components/stimulati
 export { default as StimulationStudio } from "./components/stimulation/StimulationStudio.vue";
 export { default as StimulationStudioWidget } from "./components/stimulation/StimulationStudioWidget.vue";
 export { default as StimulationStudioControls } from "./components/stimulation/StimulationStudioControls.vue";
+export { default as StimulationScheduleModes } from "./components/stimulation/StimulationScheduleModes.vue";
