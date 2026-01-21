@@ -311,6 +311,9 @@ export default {
   },
   methods: {
     setStimSpecificStatus: function (status) {
+      if (this.systemErrorCode != null) {
+        return;
+      }
       this.alertTxt = status || this.stimStatus;
 
       if (status === STIM_STATUS.CONFIG_CHECK_COMPLETE) {
@@ -321,6 +324,9 @@ export default {
       }
     },
     setSystemSpecificStatus: function (status) {
+      if (this.systemErrorCode != null) {
+        return;
+      }
       switch (status) {
         case SYSTEM_STATUS.SERVER_INITIALIZING_STATE:
           this.alertTxt = "Booting Up...";

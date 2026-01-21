@@ -216,8 +216,8 @@
       />
     </b-modal>
     <div
-      v-if="disabled"
-      v-b-popover.hover.bottom="disabledToolTip"
+      v-if="isDisabled"
+      v-b-popover.hover.bottom="isDisabledToolTip"
       class="div__stimulation-controls-overlay"
     />
   </div>
@@ -325,12 +325,22 @@ export default {
       "stimStatus",
       "stimulatorCircuitStatuses",
     ]),
-    ...mapState("system", ["barcodes"]),
+    ...mapState("system", ["barcodes", "systemErrorCode"]),
     ...mapState("settings", ["userCredInputNeeded"]),
     ...mapState("stimulation", ["invalidImportedProtocols"]),
     ...mapGetters({
       statusUuid: "system/statusId",
     }),
+    isDisabled() {
+      return this.systemErrorCode != null || this.disabled;
+    },
+    isDisabledToolTip() {
+      if (this.systemErrorCode != null) {
+        return "Controls disabled due to error.";
+      } else {
+        return this.disabledTooltip;
+      }
+    },
     isStimInWaiting: function () {
       return this.stimStatus === STIM_STATUS.WAITING;
     },
