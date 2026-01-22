@@ -331,6 +331,7 @@ export default {
     ...mapGetters({
       statusUuid: "system/statusId",
     }),
+    ...mapGetters("stimulation", ["allProtocolsInRunUntilCompleteMode"]),
     isDisabled() {
       return this.systemErrorCode != null || this.disabled;
     },
@@ -353,16 +354,20 @@ export default {
       return (this.isInOfflineMode || this.stimPlayState) && this.stimScheduleMode !== "Nautilai Sync";
     },
     isStartStopButtonEnabled: function () {
-      if (this.isStimInWaiting) return false;
-
-      if (!this.playState) {
-        // if starting stim make sure initial magnetometer calibration has been completed and
-        // no additional calibrations are running, stim checks have completed, there are no short or
-        // open circuits, and that there are no other errors with stim lid
+      if (this.isStimInWaiting) {
+        return false;
+      } else if (this.playState) {
+        // currently, stop button should always be enabled
+        return true;
+      } else {
+        // if starting stim make sure stim check is not running, there are no short or
+        // open circuits, there are no other errors with stim lid, and if in sync schedule mode that all assigned
+        // protocols are in "run until complete" mode
         return (
           this.assignedOpenCircuits.length === 0 &&
           this.barcodes.plateBarcode.valid &&
           this.barcodes.stimBarcode.valid &&
+          (this.stimScheduleMode === "Standard" || this.allProtocolsInRunUntilCompleteMode) &&
           ![
             STIM_STATUS.ERROR,
             STIM_STATUS.NO_PROTOCOLS_ASSIGNED,
@@ -373,8 +378,6 @@ export default {
           ].includes(this.stimStatus)
         );
       }
-      // currently, stop button should always be enabled
-      return true;
     },
     assignedOpenCircuits: function () {
       // filter for matching indices
@@ -398,6 +401,8 @@ export default {
         return "No protocols have been assigned.";
       } else if (this.assignedOpenCircuits.length !== 0) {
         return "Cannot start stimulation with a protocol assigned to a well with an open circuit.";
+      } else if (this.stimScheduleMode === "Nautilai Sync" && !this.allProtocolsInRunUntilCompleteMode) {
+        return "Cannot start stimulation in Nautilai Sync mode unless all assigned protocols are in Stimulate Until Complete mode.";
       } else {
         return "Start Stimulation.";
       }
@@ -512,16 +517,18 @@ export default {
   methods: {
     async handlePlayStop(e) {
       e.preventDefault();
-      if (this.isStartStopButtonEnabled) {
-        this.$store.dispatch("stimulation/setStimStatus", STIM_STATUS.WAITING);
+      if (!this.isStartStopButtonEnabled) {
+        // make sure nothing happens if button is not enabled
+        return;
+      }
+      this.$store.dispatch("stimulation/setStimStatus", STIM_STATUS.WAITING);
 
-        if (this.playState) {
-          this.$store.dispatch(`stimulation/stopStimulation`);
-          clearTimeout(this.stim24hrTimer); // clear 24 hour timer for next stimulation
-        } else {
-          await this.$store.dispatch(`stimulation/createProtocolMessage`);
-          this.start24hrTimer();
-        }
+      if (this.playState) {
+        this.$store.dispatch(`stimulation/stopStimulation`);
+        clearTimeout(this.stim24hrTimer); // clear 24 hour timer for next stimulation
+      } else {
+        await this.$store.dispatch(`stimulation/createProtocolMessage`);
+        this.start24hrTimer();
       }
     },
     async handleOfflineMode() {
