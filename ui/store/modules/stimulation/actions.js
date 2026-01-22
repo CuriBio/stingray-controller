@@ -603,7 +603,7 @@ export default {
   },
   updateStimStates({ state, dispatch, commit }) {
     let stimPlayState;
-    if (STIM_SCHEDULE_MODES[state.stimScheduleMode] === STIM_SCHEDULE_MODES["Nautilai Sync"]) {
+    if (state.stimScheduleMode === "Nautilai Sync") {
       const stimComplete =
         !state.anyProtocolsRunning && (state.currentStimSextant == null || state.currentStimSextant >= 6);
       stimPlayState = !stimComplete;

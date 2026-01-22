@@ -54,7 +54,6 @@ import { mapState } from "vuex";
 import { VBPopover, VBToggle } from "bootstrap-vue";
 import { ipcRenderer } from "electron";
 import path from "path";
-import { STIM_SCHEDULE_MODES } from "@curi-bio/ui";
 
 const log = require("electron-log");
 // Note: Vue automatically prefixes the directive name with 'v-'
@@ -85,10 +84,7 @@ export default {
     statusBannerText: function () {
       if (this.statusUuid === systemStoreModule.SYSTEM_STATUS.OFFLINE_STATE) {
         return "Stimulation in Progress - Offline Mode";
-      } else if (
-        STIM_SCHEDULE_MODES[this.stimScheduleMode] === STIM_SCHEDULE_MODES["Nautilai Sync"] &&
-        this.currentStimSextant != null
-      ) {
+      } else if (this.stimScheduleMode === "Nautilai Sync" && this.currentStimSextant != null) {
         return `Stimulation in Progress (Sextant ${this.currentStimSextant}) - Online Mode`;
       } else {
         return "Stimulation in Progress - Online Mode";
