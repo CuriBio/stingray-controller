@@ -114,12 +114,12 @@
           d="m1.16,130.74c-.06,0-.04,1.15-.04,2.48s1.07,2.48,2.4,2.48h143.54c1.33,0,2.4-1.11,2.4-2.48s.04-2.39-.04-2.48H1.16s0,0,0,0h0Z"
         />
         <path
-          v-if="isInOfflineMode"
+          v-if="isInOfflineMode && isOfflineButtonEnabled"
           class="path__red-cross"
           d="m80.13,74.53l19.53-19.53c1.33-1.33,1.33-3.5,0-4.83-1.33-1.33-3.5-1.33-4.83,0l-19.53,19.53-19.53-19.53c-1.33-1.33-3.5-1.33-4.83,0-1.33,1.33-1.33,3.5,0,4.83l19.53,19.53-19.53,19.53c-1.33,1.33-1.33,3.5,0,4.83.65.64,1.51,1,2.42,1s1.77-.36,2.42-1l19.53-19.53,19.53,19.53c.65.64,1.51,1,2.42,1s1.77-.36,2.42-1c1.33-1.33,1.33-3.5,0-4.83l-19.53-19.53Z"
         />
         <path
-          v-if="!isInOfflineMode && stimPlayState"
+          v-if="!isInOfflineMode && stimPlayState && isOfflineButtonEnabled"
           class="path__green-check"
           d="m72.9,100.52c-.73,0-1.45-.26-2.02-.74l-17.12-14.47c-1.32-1.12-1.49-3.1-.37-4.42,1.12-1.32,3.09-1.49,4.42-.37l14,11.84,19.28-40.79c.74-1.56,2.6-2.23,4.18-1.5,1.56.74,2.23,2.61,1.49,4.17l-21.02,44.48c-.42.88-1.22,1.52-2.17,1.72-.22.05-.44.07-.66.07Z"
         />
@@ -327,7 +327,7 @@ export default {
     ]),
     ...mapState("system", ["barcodes", "systemErrorCode"]),
     ...mapState("settings", ["userCredInputNeeded"]),
-    ...mapState("stimulation", ["invalidImportedProtocols"]),
+    ...mapState("stimulation", ["invalidImportedProtocols", "stimScheduleMode"]),
     ...mapGetters({
       statusUuid: "system/statusId",
     }),
@@ -350,7 +350,7 @@ export default {
     },
     isOfflineButtonEnabled: function () {
       // could only check if stim is active, but adding check for offline mode just in case
-      return this.isInOfflineMode || this.stimPlayState;
+      return (this.isInOfflineMode || this.stimPlayState) && this.stimScheduleMode !== "Nautilai Sync";
     },
     isStartStopButtonEnabled: function () {
       if (this.isStimInWaiting) return false;
@@ -384,28 +384,28 @@ export default {
     },
     startStimLabel: function () {
       if (this.stimStatus === STIM_STATUS.ERROR || this.stimStatus === STIM_STATUS.SHORT_CIRCUIT_ERROR) {
-        return "Cannot start a stimulation with error";
+        return "Cannot start a stimulation with error.";
       } else if (
         this.stimStatus === STIM_STATUS.CONFIG_CHECK_NEEDED ||
         this.stimStatus === STIM_STATUS.CONFIG_CHECK_IN_PROGRESS
       ) {
-        return "Configuration check needed";
+        return "Configuration check needed.";
       } else if (!this.barcodes.stimBarcode.valid) {
-        return "Must have a valid Stimulation Lid Barcode";
+        return "Must have a valid Stimulation Lid Barcode.";
       } else if (!this.barcodes.plateBarcode.valid) {
-        return "Must have a valid Plate Barcode";
+        return "Must have a valid Plate Barcode.";
       } else if (this.stimStatus === STIM_STATUS.NO_PROTOCOLS_ASSIGNED) {
-        return "No protocols have been assigned";
+        return "No protocols have been assigned.";
       } else if (this.assignedOpenCircuits.length !== 0) {
         return "Cannot start stimulation with a protocol assigned to a well with an open circuit.";
       } else {
-        return "Start Stimulation";
+        return "Start Stimulation.";
       }
     },
 
     stopStimLabel: function () {
       // Tanner (7/27/22): there used to be multiple values, so leaving this as a function in case more values get added in future
-      return "Stop Stimulation";
+      return "Stop Stimulation.";
     },
     svg__StimulationStudioControlsPlayStopButton__dynamicClass: function () {
       // Tanner (2/1/22): This is only necessary so that the this button is shaded the same as the rest of
@@ -436,25 +436,25 @@ export default {
         : "svg__stimulation-controls-config-check-button--disabled";
     },
     offlineModeTooltipLabels: function () {
-      let message = "Disabled. Stimulation must be running.";
+      let message = "Cannot enter offline mode unless stimulation is running in Standard mode.";
 
-      if (this.stimPlayState) {
-        message = this.isInOfflineMode ? "Go back online" : "Go offline";
+      if (this.stimScheduleMode === "Standard" && this.stimPlayState) {
+        message = this.isInOfflineMode ? "Go back online." : "Go offline.";
       }
 
       return { title: "Offline Mode", message };
     },
     configurationMessage: function () {
       if (!this.barcodes.stimBarcode.valid) {
-        return "Must have a valid Stimulation Lid Barcode";
+        return "Must have a valid Stimulation Lid Barcode.";
       } else if (!this.barcodes.plateBarcode.valid) {
-        return "Must have a valid Plate Barcode";
+        return "Must have a valid Plate Barcode.";
       } else if (this.stimStatus == STIM_STATUS.ERROR || this.stimStatus == STIM_STATUS.SHORT_CIRCUIT_ERROR) {
-        return "Cannot run a configuration on this stim lid as a short has been detected on it";
+        return "Cannot run a configuration on this stim lid as a short has been detected on it.";
       } else if (this.stimStatus === STIM_STATUS.NO_PROTOCOLS_ASSIGNED) {
         return "Cannot run configuration check until protocols have been assigned.";
       } else if (this.stimStatus == STIM_STATUS.CONFIG_CHECK_NEEDED) {
-        return "Start configuration check";
+        return "Start configuration check.";
       } else if (this.stimStatus == STIM_STATUS.CONFIG_CHECK_IN_PROGRESS) {
         return "Configuration check in progress...";
       } else if (this.stimStatus == STIM_STATUS.STIM_ACTIVE) {
@@ -525,6 +525,10 @@ export default {
       }
     },
     async handleOfflineMode() {
+      if (!this.isOfflineButtonEnabled) {
+        // make sure nothing happens if button is not enabled
+        return;
+      }
       // Can only enter or end offline mode if stim is already active
       if (this.playState) {
         // if already in offline mode, just turn off
