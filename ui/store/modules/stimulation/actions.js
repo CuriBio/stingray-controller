@@ -1,5 +1,6 @@
 import { WellTitle as LabwareDefinition } from "@/js-utils/LabwareCalculations.js";
-const twentyFourWellPlateDefinition = new LabwareDefinition(4, 6);
+const NUM_WELLS = 96;
+const PLATE_96W = new LabwareDefinition(8, 12);
 import { STIM_STATUS, TIME_CONVERSION_TO_MILLIS, COLOR_PALETTE } from "./enums";
 import {
   areValidPulses,
@@ -215,11 +216,11 @@ export default {
 
     const message = { protocols: protocolCopy.slice(1), protocolAssignments: {} };
 
-    for (const wellIdx of Array(24).keys()) {
+    for (const wellIdx of Array(NUM_WELLS).keys()) {
       const letter = protocolAssignments[wellIdx] ? protocolAssignments[wellIdx].letter : null;
 
       // asign letter to well number
-      const wellNumber = twentyFourWellPlateDefinition.getWellNameFromWellIndex(wellIdx, false);
+      const wellNumber = PLATE_96W.getWellNameFromWellIndex(wellIdx, false);
       message.protocolAssignments[wellNumber] = letter;
     }
 
@@ -324,8 +325,8 @@ export default {
 
     const { protocolAssignments, stimulatorCircuitStatuses } = state;
 
-    for (let wellIdx = 0; wellIdx < 24; wellIdx++) {
-      const wellName = twentyFourWellPlateDefinition.getWellNameFromWellIndex(wellIdx, false);
+    for (let wellIdx = 0; wellIdx < NUM_WELLS; wellIdx++) {
+      const wellName = PLATE_96W.getWellNameFromWellIndex(wellIdx, false);
       message.protocol_assignments[wellName] = null;
     }
 
@@ -354,7 +355,7 @@ export default {
         }
 
         // assign letter to well name
-        const wellName = twentyFourWellPlateDefinition.getWellNameFromWellIndex(well, false);
+        const wellName = PLATE_96W.getWellNameFromWellIndex(well, false);
         message.protocol_assignments[wellName] = letter;
       }
     }
@@ -570,7 +571,7 @@ export default {
     Object.keys(protocol_assignments)
       .filter((well) => protocol_assignments[well])
       .map((well) => {
-        const wellIdx = twentyFourWellPlateDefinition.getWellIndexFromWellName(well);
+        const wellIdx = PLATE_96W.getWellIndexFromWellName(well);
         protocolAssignments[wellIdx] = protocolList.find(
           (protocol) => protocol.letter == protocol_assignments[well]
         );
