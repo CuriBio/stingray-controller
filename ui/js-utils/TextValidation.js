@@ -203,7 +203,7 @@ export class TextValidation {
       return " "; // for plates, T can only be 0
     }
     if (barcode[1] === "S" && !["0", "1", "2", "3"].includes(barcode[7])) {
-       return " "; // for stim lids, T can only be 0-3
+      return " "; // for stim lids, T can only be 0-3
     }
     // XX is guaranteed to be 00-99 due to it being two digits
     if (barcode[11] !== "2") {
