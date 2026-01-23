@@ -112,14 +112,16 @@ export default {
   left: 113px;
   top: 28.5px;
   text-align: center;
-  line-height: 16px;
+  line-height: 18px;
   font-size: 16px;
+  font-weight: 600;
   border-radius: 50%;
   z-index: 6;
 }
 
 .div__std-mode-help-btn:hover {
   background-color: #fff;
+  cursor: pointer;
 }
 
 .div__sync-mode-help-btn {
@@ -130,14 +132,16 @@ export default {
   left: 140px;
   top: 53px;
   text-align: center;
-  line-height: 16px;
+  line-height: 18px;
   font-size: 16px;
+  font-weight: 600;
   border-radius: 50%;
   z-index: 6;
 }
 
 .div__sync-mode-help-btn:hover {
   background-color: #fff;
+  cursor: pointer;
 }
 
 .div__stimulation-modes-blocker {
