@@ -487,9 +487,12 @@ class MantarrayMcSimulator(InfiniteProcess):
             ):
                 raise Exception("Cannot use 'run_until_stopped' protocols when in sync mode")
 
+            # raw stim info has protocols assigned to clusters, so every well in a cluster will get that assignment
+            # even if it is not active. Need to recreate the assignments make sure that only active wells are
+            # assigned a protocol
             updated_assignments = {
                 GENERIC_96_WELL_DEFINITION.get_well_name_from_well_index(well_idx): None
-                for well_idx in range(STIM_MAX_NUM_PROTOCOLS)
+                for well_idx in range(self._num_wells)
             }
             self._stim_protocol_final_sextant = [1] * len(stim_info_dict["protocols"])
             for well_idx in self._stim_active_wells:
@@ -497,9 +500,11 @@ class MantarrayMcSimulator(InfiniteProcess):
                 protocol_idx = stim_info_dict["protocol_assignments"][well_name]
                 updated_assignments[well_name] = protocol_idx
                 sextant_num = STIM_WELL_IDX_TO_SEXTANT_NUM[well_idx]
-                self._stim_protocol_final_sextant[protocol_idx] = max(
-                    self._stim_protocol_final_sextant[protocol_idx], sextant_num
-                )
+                if protocol_idx is not None:
+                    self._stim_protocol_final_sextant[protocol_idx] = max(
+                        self._stim_protocol_final_sextant[protocol_idx], sextant_num
+                    )
+
             stim_info_dict["protocol_assignments"] = updated_assignments
             print("Protocol assignments:", updated_assignments)  # allow-print
             print("Final sextant of protocols:", self._stim_protocol_final_sextant)  # allow-print
