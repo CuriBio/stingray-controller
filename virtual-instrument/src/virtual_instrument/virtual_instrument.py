@@ -488,7 +488,7 @@ class MantarrayMcSimulator(InfiniteProcess):
                 raise Exception("Cannot use 'run_until_stopped' protocols when in sync mode")
 
             # raw stim info has protocols assigned to clusters, so every well in a cluster will get that assignment
-            # even if it is not active. Need to recreate the assignments make sure that only active wells are
+            # even if it is not active. Need to recreate the assignments and make sure that only active wells are
             # assigned a protocol
             updated_assignments = {
                 GENERIC_96_WELL_DEFINITION.get_well_name_from_well_index(well_idx): None
