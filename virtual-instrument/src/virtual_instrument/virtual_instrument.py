@@ -479,7 +479,7 @@ class MantarrayMcSimulator(InfiniteProcess):
             stim_info_dict = convert_stim_bytes_to_dict(
                 comm_from_controller[SERIAL_COMM_PAYLOAD_INDEX:-SERIAL_COMM_CHECKSUM_LENGTH_BYTES]
             )
-            print("Raw stim info:", stim_info_dict)  # allow-print
+            print("Raw stim info:\n", stim_info_dict)  # allow-print
 
             # real instrument won't check this, so raise exception instead of responding with a command failure
             if self._stim_schedule_type == StimScheduleType.SYNC and any(
@@ -506,7 +506,7 @@ class MantarrayMcSimulator(InfiniteProcess):
                     )
 
             stim_info_dict["protocol_assignments"] = updated_assignments
-            print("Protocol assignments:", updated_assignments)  # allow-print
+            print("Protocol assignments:\n", updated_assignments)  # allow-print
             print("Final sextant of protocols:", self._stim_protocol_final_sextant)  # allow-print
             # TODO handle too many subprotocols?
             command_failed = self._is_stimulating or len(stim_info_dict["protocols"]) > STIM_MAX_NUM_PROTOCOLS

@@ -111,7 +111,7 @@ export class WellTitle {
    */
   getRowColumnFromWellName(wellName) {
     const rowChar = wellName[0];
-    const column = +wellName[1] - 1;
+    const column = +wellName.slice(1) - 1;
     const row = rowChar.charCodeAt(0) - 65;
     return { row, column };
   }
