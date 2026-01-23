@@ -44,7 +44,7 @@ module.exports = {
       .tap((options) => {
         options = {
           ...options,
-          limit: 100000,
+          limit: 200000, // TODO change this back to 100KB if needed
         };
         return options;
       })

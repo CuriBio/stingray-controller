@@ -18,19 +18,31 @@
       v-b-popover.hover.bottom="radioGroupInfo.tooltip"
       class="div__stimulation-modes-blocker"
     />
+    <div class="div__std-mode-help-btn" @click="$bvModal.show('std-mode-help')">?</div>
+    <b-modal id="std-mode-help" size="sm" hide-footer hide-header hide-header-close :static="true">
+      <!-- TODO use Standard mode diagram here -->
+      <StimScheduleNautilaiSyncModeHelp />
+    </b-modal>
+    <div class="div__sync-mode-help-btn" @click="$bvModal.show('sync-mode-help')">?</div>
+    <b-modal id="sync-mode-help" size="sm" hide-footer hide-header hide-header-close :static="true">
+      <StimScheduleNautilaiSyncModeHelp />
+    </b-modal>
   </div>
 </template>
 <script>
 import Vue from "vue";
-import { BFormRadioGroup } from "bootstrap-vue";
+import { BFormRadioGroup, BModal } from "bootstrap-vue";
 Vue.component("BFormRadioGroup", BFormRadioGroup);
+Vue.component("BModal", BModal);
 import { mapState, mapActions } from "vuex";
 
+import StimScheduleNautilaiSyncModeHelp from "@/components/stimulation/StimScheduleNautilaiSyncModeHelp.vue";
 import { SYSTEM_STATUS } from "@/store/modules/system/enums";
 import { STIM_STATUS, STIM_SCHEDULE_MODES } from "@/store/modules/stimulation/enums";
 
 export default {
   name: "StimulationScheduleModes",
+  components: { StimScheduleNautilaiSyncModeHelp },
   computed: {
     ...mapState("stimulation", ["stimScheduleMode", "stimStatus"]),
     ...mapState("system", ["statusUuid", "systemErrorCode"]),
@@ -92,11 +104,47 @@ export default {
   font-size: 15px;
 }
 
+.div__std-mode-help-btn {
+  position: absolute;
+  background-color: #ccc;
+  width: 18px;
+  height: 18px;
+  left: 113px;
+  top: 28.5px;
+  text-align: center;
+  line-height: 16px;
+  font-size: 16px;
+  border-radius: 50%;
+  z-index: 6;
+}
+
+.div__std-mode-help-btn:hover {
+  background-color: #fff;
+}
+
+.div__sync-mode-help-btn {
+  position: absolute;
+  background-color: #ccc;
+  width: 18px;
+  height: 18px;
+  left: 140px;
+  top: 53px;
+  text-align: center;
+  line-height: 16px;
+  font-size: 16px;
+  border-radius: 50%;
+  z-index: 6;
+}
+
+.div__sync-mode-help-btn:hover {
+  background-color: #fff;
+}
+
 .div__stimulation-modes-blocker {
   position: absolute;
   left: -10px;
   top: 23px;
-  width: 200px;
+  width: 145px;
   height: 53px;
   z-index: 5;
 }

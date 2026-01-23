@@ -61,7 +61,7 @@ repos:
       - id: check-added-large-files
         name: forbid large files in most places
         args: ["--maxkb=123"]
-        exclude: "(src/xem_scripts/)|(electron-build-resources)|(package-lock.json)"
+        exclude: "(src/xem_scripts/)|(electron-build-resources)|(package-lock.json)|(ui/assets)"
       - id: check-added-large-files
         name: forbid very large files inside src/xem_scripts
         args: ["--maxkb=450"]

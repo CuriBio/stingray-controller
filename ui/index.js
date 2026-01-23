@@ -51,6 +51,7 @@ export { default as StimQCSummary } from "./components/status/StimQCSummary.vue"
 export { default as BarcodeViewer } from "./components/status/BarcodeViewer.vue";
 
 // Stimulation Studio
+export { default as StimScheduleNautilaiSyncModeHelp } from "./components/stimulation/StimScheduleNautilaiSyncModeHelp.vue";
 export { default as StimulationStudioCreateAndEdit } from "./components/stimulation/StimulationStudioCreateAndEdit.vue";
 export { default as StimulationStudioDragAndDropPanel } from "./components/stimulation/StimulationStudioDragAndDropPanel.vue";
 export { default as StimulationStudioBlockViewEditor } from "./components/stimulation/StimulationStudioBlockViewEditor.vue";
