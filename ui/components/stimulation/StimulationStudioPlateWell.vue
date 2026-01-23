@@ -10,11 +10,11 @@
     >
       <PlateWell
         class="well"
-        :svgHeight="70"
-        :svgWidth="70"
-        :circleX="38"
-        :circleY="35"
-        :radius="26"
+        :svgHeight="40"
+        :svgWidth="40"
+        :circleX="18"
+        :circleY="18"
+        :radius="15"
         :strk="stroke"
         :plateFill="protocolFill"
         :strokeWdth="strokeWdth"
@@ -68,6 +68,8 @@ import Vue from "vue";
 import { VBPopover } from "bootstrap-vue";
 Vue.directive("b-popover", VBPopover);
 
+const NUM_ROWS = 8;
+
 export default {
   name: "StimulationStudioPlateWell",
   components: {
@@ -83,7 +85,7 @@ export default {
       type: Number,
       default: 0,
       validator: (value) => {
-        return value >= 0 && value < 24;
+        return value >= 0 && value < 96;
       },
     },
     errorMessage: { type: String, default: "Open circuit found" },
@@ -91,13 +93,13 @@ export default {
   },
   computed: {
     computedTop: function () {
-      return 26 + (this.index % 4) * 60;
+      return 28 + (this.index % NUM_ROWS) * 34;
     },
     computedLeft: function () {
-      return 29 + Math.floor(this.index / 4) * 62;
+      return 35 + Math.floor(this.index / NUM_ROWS) * 34;
     },
     computedLabelLeft: function () {
-      return this.display ? "left: 29px;" : "left: 32px;";
+      return this.display ? "left: 12px;" : "left: 12px;";
     },
     computedStyle: function () {
       return "top:" + this.computedTop + "px;" + "left:" + this.computedLeft + "px;";
@@ -132,16 +134,16 @@ export default {
   pointer-events: all;
   transform: rotate(0deg);
   position: absolute;
-  width: 66px;
-  height: 66px;
+  width: 33px;
+  height: 33px;
   visibility: visible;
 }
 .span__simulationstudio-plate-well-protocol-location {
   line-height: 100%;
-  width: 20px;
+  width: 13px;
   height: 20px;
   position: fixed;
-  bottom: 19px;
+  bottom: 4px;
   font-weight: bold;
   visibility: visible;
   font-family: Muli;

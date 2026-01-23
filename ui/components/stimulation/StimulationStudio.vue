@@ -152,7 +152,7 @@ body {
   font-size: 23px;
   width: 658px;
   height: 24px;
-  top: 20px;
+  top: 15px;
   left: 200px;
   color: rgb(255, 255, 255);
   text-align: center;
@@ -212,8 +212,8 @@ body {
 }
 
 .stimulationstudio_widget-container {
-  top: 77px;
-  left: 132px;
+  top: 49px;
+  left: 67px;
 }
 
 .stimulationstudio_createandedit-container {
