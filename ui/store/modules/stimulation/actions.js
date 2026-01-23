@@ -11,8 +11,18 @@ import {
   _convertDetailedSubprotocolsFromFW,
 } from "@/js-utils/ProtocolValidation";
 import { SYSTEM_STATUS } from "@/store/modules/system/enums";
+import { STIM_SCHEDULE_MODES } from "@/store/modules/stimulation/enums";
 
 export default {
+  setStimScheduleMode({ state }, stimScheduleMode) {
+    state.stimScheduleMode = stimScheduleMode;
+    const wsMessage = JSON.stringify({
+      command: "set_stim_schedule_mode",
+      mode: STIM_SCHEDULE_MODES[stimScheduleMode],
+    });
+    this.state.system.socket.send(wsMessage);
+  },
+
   handleSelectedWells({ commit }, wells) {
     const wellValues = [];
 
@@ -430,7 +440,8 @@ export default {
     this.state.system.socket.send(wsMessage);
   },
 
-  async stopStimulation() {
+  async stopStimulation({ state }) {
+    state.currentStimSextant = null;
     const wsMessage = JSON.stringify({ command: "set_stim_status", running: false });
     // TODO make an action for sending WS messages
     this.state.system.socket.send(wsMessage);
@@ -581,6 +592,27 @@ export default {
     } else {
       state.stimStatus = status;
     }
+  },
+  setAnyProtocolsRunning({ state, dispatch }, anyProtocolsRunning) {
+    state.anyProtocolsRunning = anyProtocolsRunning;
+    dispatch("updateStimStates");
+  },
+  setCurrentStimSextant({ state, dispatch }, sextant) {
+    state.currentStimSextant = sextant;
+    dispatch("updateStimStates");
+  },
+  updateStimStates({ state, dispatch, commit }) {
+    let stimPlayState;
+    if (state.stimScheduleMode === "Nautilai Sync") {
+      const stimComplete =
+        !state.anyProtocolsRunning && (state.currentStimSextant == null || state.currentStimSextant >= 6);
+      stimPlayState = !stimComplete;
+    } else {
+      stimPlayState = state.anyProtocolsRunning;
+    }
+
+    dispatch("setStimStatus", stimPlayState ? STIM_STATUS.STIM_ACTIVE : STIM_STATUS.READY);
+    commit("setStimPlayState", stimPlayState);
   },
 
   async populateStimAfterOffline({ commit, state }, { stim_info }) {

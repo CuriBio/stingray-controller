@@ -33,6 +33,19 @@ export default {
   getRestDuration({ protocolEditor }) {
     return protocolEditor.restDuration;
   },
+  allProtocolsInRunUntilCompleteMode({ protocolList, protocolAssignments }) {
+    const assignedProtocolLetters = new Set();
+    Object.values(protocolAssignments).map(({ letter }) => {
+      if (letter != null && letter !== "") {
+        assignedProtocolLetters.add(letter);
+      }
+    });
+    return protocolList
+      .filter((p) => {
+        return assignedProtocolLetters.has(p.letter);
+      })
+      .every((p) => !p.protocol.runUntilStopped);
+  },
 };
 
 export const getProtocolEditorLetter = (list) => {

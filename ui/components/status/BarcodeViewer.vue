@@ -105,11 +105,11 @@ export default {
     },
     tooltipText: function () {
       if (this.isInOfflineMode) {
-        return "Cannot edit barcodes while in offline mode...";
+        return "Cannot edit barcodes while in offline mode.";
       } else if (this.activeProcesses) {
-        return "Cannot edit barcodes while stimulating...";
+        return "Cannot edit barcodes while stimulating.";
       } else {
-        return "Click to edit";
+        return "Click to edit.";
       }
     },
     isInOfflineMode: function () {

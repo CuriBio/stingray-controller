@@ -18,6 +18,9 @@
             @send-confirmation="sendConfirmation"
           />
         </div>
+        <div class="div__stimulation-modes-container">
+          <StimulationScheduleModes />
+        </div>
         <div class="div__simulation-mode-container">
           <SimulationMode />
         </div>
@@ -28,7 +31,7 @@
       </div>
     </div>
     <div class="div__top-header-bar">
-      <div v-if="stimPlayState" class="div__offline-status-banner-container">{{ offlineStatusText }}</div>
+      <div v-if="stimPlayState" class="div__offline-status-banner-container">{{ statusBannerText }}</div>
     </div>
     <div class="div__nuxt-page">
       <nuxt />
@@ -44,6 +47,7 @@ import {
   StatusBar,
   SimulationMode,
   StimulationStudioControls,
+  StimulationScheduleModes,
 } from "@curi-bio/ui";
 
 import { mapState } from "vuex";
@@ -62,6 +66,7 @@ export default {
     StatusBar,
     SimulationMode,
     StimulationStudioControls,
+    StimulationScheduleModes,
   },
   data: function () {
     return {
@@ -69,17 +74,21 @@ export default {
       latestSwVersionAvailable: null,
       logDirName: null,
       requestStoredAccounts: true,
-      currentYear: "2025", // TODO look into better ways of handling this. Not sure if just using the system's current year is the best approach
+      currentYear: "2026", // TODO look into better ways of handling this. Not sure if just using the system's current year is the best approach
     };
   },
   computed: {
-    ...mapState("stimulation", ["stimPlayState"]),
+    ...mapState("stimulation", ["stimPlayState", "stimScheduleMode", "currentStimSextant"]),
     ...mapState("system", ["statusUuid", "allowSwUpdateInstall", "isConnectedToController"]),
     ...mapState("settings", ["userAccount"]),
-    offlineStatusText: function () {
-      return this.statusUuid === systemStoreModule.SYSTEM_STATUS.OFFLINE_STATE
-        ? "Stimulation in Progress - Offline Mode"
-        : "Stimulation in Progress - Online Mode";
+    statusBannerText: function () {
+      if (this.statusUuid === systemStoreModule.SYSTEM_STATUS.OFFLINE_STATE) {
+        return "Stimulation in Progress - Offline Mode";
+      } else if (this.stimScheduleMode === "Nautilai Sync" && this.currentStimSextant != null) {
+        return `Stimulation in Progress (Sextant ${this.currentStimSextant}) - Online Mode`;
+      } else {
+        return "Stimulation in Progress - Online Mode";
+      }
     },
   },
   watch: {
@@ -251,7 +260,13 @@ body {
   overflow: hidden;
 }
 
-/* STIMULATION/COPYRIGHT */
+.div__stimulation-modes-container {
+  position: absolute;
+  top: 220px;
+  left: 20px;
+}
+
+/* SIMULATION/COPYRIGHT */
 .div__simulation-mode-container {
   position: absolute;
   top: 875px;

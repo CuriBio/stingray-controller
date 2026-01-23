@@ -67,29 +67,21 @@ export default {
             }
             // want to start stim if not already started if offline mode status is sent
             // stim will initially be inactive if booting up SW in offline mode
-            if (
-              "stimulation_protocols_running" in wsMessage ||
-              wsMessage.system_status === SYSTEM_STATUS.OFFLINE_STATE
-            ) {
-              const stimPlayState =
-                ("stimulation_protocols_running" in wsMessage &&
-                  wsMessage.stimulation_protocols_running.includes(true)) ||
-                wsMessage.system_status === SYSTEM_STATUS.OFFLINE_STATE;
-
-              // TODO need to keep track of current stim sextant and only do these next updates if in sextant 6 when in sync mode
-
+            if (wsMessage.system_status === SYSTEM_STATUS.OFFLINE_STATE) {
+              dispatch("stimulation/setStimStatus", STIM_STATUS.STIM_ACTIVE);
+              commit("stimulation/setStimPlayState", true);
+            } else if ("stimulation_protocols_running" in wsMessage) {
               dispatch(
-                "stimulation/setStimStatus",
-                stimPlayState ? STIM_STATUS.STIM_ACTIVE : STIM_STATUS.READY
+                "stimulation/setAnyProtocolsRunning",
+                wsMessage.stimulation_protocols_running.includes(true)
               );
-              commit("stimulation/setStimPlayState", stimPlayState);
             }
             break;
           case "stimulator_circuit_statuses":
             dispatch("stimulation/checkStimulatorCircuitStatuses", wsMessage.stimulator_circuit_statuses);
             break;
           case "stim_sextant_status_update":
-            // TODO handle this wsMessage.current_stim_sextant
+            dispatch("stimulation/setCurrentStimSextant", wsMessage.sextant);
             break;
           case "barcode_update":
             // eslint complains without this if condition wrapper for some reason

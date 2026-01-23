@@ -1,11 +1,11 @@
 // adapted from https://stackoverflow.com/questions/53446792/nuxt-vuex-how-do-i-break-down-a-vuex-module-into-separate-files
-import { SYSTEM_STATUS, ERROR_MESSAGES } from "./enums";
+import { ERROR_MESSAGES } from "./enums";
 
 const SW_INSTALLER_URL_PREFIX = "https://downloads.curibio.com/software/stingray";
 
 export default {
   setStatusUuid(state, newId) {
-    if (state.statusUuid !== SYSTEM_STATUS.ERROR_STATE) {
+    if (state.systemErrorCode == null) {
       state.statusUuid = newId;
     }
   },
