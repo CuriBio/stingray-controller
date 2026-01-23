@@ -157,6 +157,7 @@ export class TextValidation {
   }
   /**
    * Returns the feedback text for the plate barcode validation
+   * Barcode format: PPYYDDDTXX-S (12 chars including the dash)
    *
    * @param  {string}  barcode The barcode string to validate
    * @param {string} type The barcode type "stimBarcode" or "plateBarcode"
@@ -175,25 +176,14 @@ export class TextValidation {
     // check barcode header
     const barcodeHeader = barcode.slice(0, 2);
     if (
-      (type === "plateBarcode" && barcodeHeader !== "ML") ||
-      (type === "stimBarcode" && barcodeHeader !== "MS") ||
-      (barcodeHeader !== "ML" && barcodeHeader !== "MS")
+      (type === "plateBarcode" && barcodeHeader !== "NL") ||
+      (type === "stimBarcode" && barcodeHeader !== "NS") ||
+      (barcodeHeader !== "NL" && barcodeHeader !== "NS")
     ) {
       return " ";
     }
 
-    return barcode.includes("-") ? this.checkNewBarcode(barcode) : this.checkOldBarcode(barcode);
-  }
-
-  /**
-   * Returns the feedback text for the new plate barcode validation
-   *
-   * @param  {string}  barcode The barcode string to validate
-   * @return {string} "" if barcode is valid, " " otherwise
-   *
-   */
-  checkNewBarcode(barcode) {
-    // check that barcode is numeric exept for header and dash
+    // check that barcode is numeric except for header and dash
     const numericBarcode = barcode.slice(2, 10) + barcode[11];
     if (isNaN(numericBarcode)) {
       return " ";
@@ -202,56 +192,22 @@ export class TextValidation {
     if (barcode[10] !== "-") {
       return " ";
     }
-    // check if the year is 2022 or later
-    if (parseInt(barcode.slice(2, 4)) < 22) {
+    // YY is guaranteed to be 00-99 due to it being two digits
+    const year = parseInt(barcode.slice(2, 4));
+    const leapDay = year % 4 === 0 ? 1 : 0;
+    // check if the day is between 1 and 365 inclusive (366 for leap years)
+    if (parseInt(barcode.slice(4, 7)) < 1 || parseInt(barcode.slice(4, 7)) > 365 + leapDay) {
       return " ";
     }
-    // check if the day is between 1 and 365 inclusive
-    if (parseInt(barcode.slice(4, 7)) < 1 || parseInt(barcode.slice(4, 7)) > 365) {
-      return " ";
+    if (barcode[1] === "L" && barcode[7] !== "0") {
+      return " "; // for plates, T can only be 0
     }
-    // check that experiment code is between 0 and 499 inclusive
-    if (parseInt(barcode.slice(7, 10)) < 0 || parseInt(barcode.slice(7, 10)) > 499) {
-      return " ";
+    if (barcode[1] === "S" && !["0", "1", "2", "3"].includes(barcode[7])) {
+      return " "; // for stim lids, T can only be 0-3
     }
-    if (barcode[1] === "L") {
-      // allow any magnet type for plate barcodes
-      if (["1", "3", "4"].includes(barcode[11])) {
-        return " ";
-      }
-    } else if (barcode[11] !== "2") {
-      // stim barcodes must end with 2
-      return " ";
-    }
-    return "";
-  }
-  /**
-   * Returns the feedback text for the old plate barcode validation
-   *
-   * @param  {string}  barcode The barcode string to validate
-   * @return {string} "" if barcode is valid, " " otherwise
-   *
-   */
-  checkOldBarcode(barcode) {
-    const plateBarcodeLen = barcode.length;
-    for (let i = 2; i < plateBarcodeLen; i++) {
-      const scanAscii = barcode.charCodeAt(i);
-      // check that remaining characters are numeric
-      if (scanAscii < 47 || scanAscii > 58) {
-        return " ";
-      }
-    }
-    // check year is at least 2021 [4 characters]
-    const yearCode = barcode.slice(2, 6);
-    const year = parseInt(yearCode);
-    if (year < 2021) {
-      return " ";
-    }
-    // check julian data is in range 001 to 366 [3 characters]
-    const dayCode = barcode.slice(6, 9);
-    const day = parseInt(dayCode);
-    if (day < 1 || day > 366) {
-      return " ";
+    // XX is guaranteed to be 00-99 due to it being two digits
+    if (barcode[11] !== "2") {
+      return " "; // for both plates and stim lids, S can only be 2
     }
     return "";
   }

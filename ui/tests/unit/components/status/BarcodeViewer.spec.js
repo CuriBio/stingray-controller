@@ -37,7 +37,7 @@ describe("BarcodeViewer.vue", () => {
   });
 
   test("Given a valid barcode has been into the Vuex, When the component is mounted, Then the text of the Barcode Input field should be valid barcode string and Red Box is visible", async () => {
-    store.dispatch("system/validateBarcode", { type: "plateBarcode", newValue: "ML2022053000" });
+    store.dispatch("system/validateBarcode", { type: "plateBarcode", newValue: "NL20220030-2" });
     const propsData = {};
     const wrapper = mount(BarcodeViewer, {
       propsData,
@@ -47,7 +47,7 @@ describe("BarcodeViewer.vue", () => {
     });
 
     await wrapper.vm.$nextTick(); // wait for update
-    expect(wrapper.find("input").element.value).toBe("ML2022053000");
+    expect(wrapper.find("input").element.value).toBe("NL20220030-2");
     expect(wrapper.find(".input__plate-barcode-entry-valid").isVisible()).toBe(true);
   });
 
@@ -98,11 +98,11 @@ describe("BarcodeViewer.vue", () => {
 
     await wrapper.vm.handleManualModeChoice(true);
 
-    wrapper.find("input").setValue("ML2022053000"); // test case will fail on delating if (barcodeLen >= 10 && barcodeLen < 12) in API validateBarcodeViewer()
+    wrapper.find("input").setValue("NL20220030-2"); // test case will fail on delating if (barcodeLen >= 10 && barcodeLen < 12) in API validateBarcodeViewer()
     await wrapper.vm.$nextTick(); // wait for update
     // confirm pre-condition
     expect(store.state.system.barcodes.plateBarcode.valid).toBe(true);
-    await wrapper.find("input").setValue("ML20220530003");
+    await wrapper.find("input").setValue("NL20220030-23");
     expect(store.state.system.barcodes.plateBarcode.valid).toBe(false);
   });
   test("Set a proper plate barcode and validate that no the red squiggle line is not present", async () => {

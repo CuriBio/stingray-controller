@@ -43,46 +43,6 @@ describe("TextValidation", () => {
   });
 });
 
-describe("TextValidation.validateBarcode with new barcodes", () => {
-  test.each([
-    ["", "empty"],
-    [null, "null"],
-    [undefined, "undefined"],
-    ["ML34567890123", "length over 12"],
-    ["ML345678901", "length under 12"],
-    ["MA2021072144", "invalid header 'MA'"],
-    ["MB2021072144", "invalid header 'MB'"],
-    ["ME2021$72144", "invalid header 'ME'"],
-    ["ML2021$72144", "invalid character '$'"],
-    ["ML20210721*4", "invalid character '*'"],
-    ["ML2020172144", "invalid year '2020'"],
-    ["ML2021000144", "invalid Julian date '000'"],
-    ["ML2021367144", "invalid Julian date '367'"],
-  ])(
-    "When barcode %s with %s is passed to validate function, Then ' ' is returned",
-    (plateBarcode, error) => {
-      const TestBarcodeViewer = TextValidation_BarcodeViewer;
-      expect(TestBarcodeViewer.validate(plateBarcode)).toStrictEqual(" ");
-    }
-  );
-  test.each([
-    ["MS2021172000", "header 'MS'"],
-    ["ML2021172001", "kit ID '001'"],
-    ["ML2021172002", "kit ID '002'"],
-    ["ML2021172003", "kit ID '003'"],
-    ["ML2021172004", "kit ID '004'"],
-    ["ML9999172001", "year '9999'"],
-    ["ML2021001144", "julian date '001'"],
-    ["ML2021366144", "julian date '366'"],
-  ])(
-    "When valid barcode %s with %s is passed to validate function, Then '' is returned",
-    (plateBarcode, diff) => {
-      const TestBarcodeViewer = TextValidation_BarcodeViewer;
-      expect(TestBarcodeViewer.validate(plateBarcode)).toStrictEqual("");
-    }
-  );
-});
-
 describe("TextValidation.validateUuidBaseFiftysevenEncode", () => {
   test.each([
     ["0VSckkBYH2An3dqHEyfRRE", "0", "The entered ID has an invalid character 0,"],
@@ -142,20 +102,23 @@ describe("TextValidation.validateUserAccountInput", () => {
   );
 });
 describe("Test new scheme for barcode", () => {
+  // Barcode format: PPYYDDDTXX-S (12 chars including the dash)
   test.each([
     ["", "empty"],
     [null, "null"],
     [undefined, "undefined"],
     ["ML22123099-1hh", "length over 12"],
     ["ML34-", "length under 12"],
-    ["MA22123099-1", "invalid header 'MA'"],
-    ["MB22123099-1", "invalid header 'MB'"],
-    ["ME22123099-1", "invalid header 'ME'"],
-    ["ML20123099-1", "invalid year '2020'"],
-    ["ML22444099-1", "day is not between 1 and 365"],
-    ["ML22123311-1", "invalid ###"],
-    ["MLh2123099-1", "none numeric values"],
-    ["ML221230991-", "dash in wrong place"],
+    ["MA22123030-2", "invalid header 'MA'"],
+    ["MS22123030-2", "invalid header 'MS'"],
+    ["ML22123030-2", "invalid header 'ML'"],
+    ["NL22366030-2", "day 366 for non-leap year"],
+    ["NL20367030-2", "day 367 for leap year"],
+    ["NL22123030-1", "number after dash != 2"],
+    ["NL22123830-2", "NL and T != 0"],
+    ["NS22123830-2", "NS and T not in 0-3"],
+    ["NL2212303h-2", "non-numeric values"],
+    ["NL221230302-", "dash in wrong place"],
   ])(
     "When invalid barcode %s with %s is passed to validate function, Then ' ' is returned",
     (plateBarcode, diff) => {
@@ -166,7 +129,8 @@ describe("Test new scheme for barcode", () => {
   test("Test valid barcodes", async () => {
     const TestBarcodeViewer = TextValidation_BarcodeViewer;
 
-    expect(TestBarcodeViewer.validate("ML22123099-2", "")).toStrictEqual("");
-    expect(TestBarcodeViewer.validate("ML22123099-1", "")).toStrictEqual(" ");
+    expect(TestBarcodeViewer.validate("NL20120020-2", "")).toStrictEqual(""); // NL T must be 0
+    expect(TestBarcodeViewer.validate("NS20120320-2", "")).toStrictEqual(""); // NS T can be 3
+    expect(TestBarcodeViewer.validate("NL20366020-2", "")).toStrictEqual(""); // day 366 OK for leap year 2020
   });
 });
