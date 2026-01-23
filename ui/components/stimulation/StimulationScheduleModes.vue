@@ -20,8 +20,7 @@
     />
     <div class="div__std-mode-help-btn" @click="$bvModal.show('std-mode-help')">?</div>
     <b-modal id="std-mode-help" size="sm" hide-footer hide-header hide-header-close :static="true">
-      <!-- TODO use Standard mode diagram here -->
-      <StimScheduleNautilaiSyncModeHelp />
+      <StimScheduleNautilaiStandardModeHelp />
     </b-modal>
     <div class="div__sync-mode-help-btn" @click="$bvModal.show('sync-mode-help')">?</div>
     <b-modal id="sync-mode-help" size="sm" hide-footer hide-header hide-header-close :static="true">
@@ -37,12 +36,13 @@ Vue.component("BModal", BModal);
 import { mapState, mapActions } from "vuex";
 
 import StimScheduleNautilaiSyncModeHelp from "@/components/stimulation/StimScheduleNautilaiSyncModeHelp.vue";
+import StimScheduleNautilaiStandardModeHelp from "@/components/stimulation/StimScheduleNautilaiStandardModeHelp.vue";
 import { SYSTEM_STATUS } from "@/store/modules/system/enums";
 import { STIM_STATUS, STIM_SCHEDULE_MODES } from "@/store/modules/stimulation/enums";
 
 export default {
   name: "StimulationScheduleModes",
-  components: { StimScheduleNautilaiSyncModeHelp },
+  components: { StimScheduleNautilaiSyncModeHelp, StimScheduleNautilaiStandardModeHelp },
   computed: {
     ...mapState("stimulation", ["stimScheduleMode", "stimStatus"]),
     ...mapState("system", ["statusUuid", "systemErrorCode"]),
