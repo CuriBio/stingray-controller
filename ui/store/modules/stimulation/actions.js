@@ -1,5 +1,6 @@
 import { WellTitle as LabwareDefinition } from "@/js-utils/LabwareCalculations.js";
-const twentyFourWellPlateDefinition = new LabwareDefinition(4, 6);
+const NUM_WELLS = 96;
+const PLATE_96W = new LabwareDefinition(8, 12);
 import { STIM_STATUS, TIME_CONVERSION_TO_MILLIS, COLOR_PALETTE } from "./enums";
 import {
   areValidPulses,
@@ -215,11 +216,11 @@ export default {
 
     const message = { protocols: protocolCopy.slice(1), protocolAssignments: {} };
 
-    for (const wellIdx of Array(24).keys()) {
+    for (const wellIdx of Array(NUM_WELLS).keys()) {
       const letter = protocolAssignments[wellIdx] ? protocolAssignments[wellIdx].letter : null;
 
       // asign letter to well number
-      const wellNumber = twentyFourWellPlateDefinition.getWellNameFromWellIndex(wellIdx, false);
+      const wellNumber = PLATE_96W.getWellNameFromWellIndex(wellIdx, false);
       message.protocolAssignments[wellNumber] = letter;
     }
 
@@ -324,8 +325,8 @@ export default {
 
     const { protocolAssignments, stimulatorCircuitStatuses } = state;
 
-    for (let wellIdx = 0; wellIdx < 24; wellIdx++) {
-      const wellName = twentyFourWellPlateDefinition.getWellNameFromWellIndex(wellIdx, false);
+    for (let wellIdx = 0; wellIdx < NUM_WELLS; wellIdx++) {
+      const wellName = PLATE_96W.getWellNameFromWellIndex(wellIdx, false);
       message.protocol_assignments[wellName] = null;
     }
 
@@ -354,84 +355,10 @@ export default {
         }
 
         // assign letter to well name
-        const wellName = twentyFourWellPlateDefinition.getWellNameFromWellIndex(well, false);
+        const wellName = PLATE_96W.getWellNameFromWellIndex(well, false);
         message.protocol_assignments[wellName] = letter;
       }
     }
-
-    // TODO remove this once 96w platemap is added
-    message.protocol_assignments["E1"] = message.protocol_assignments["A2"];
-    message.protocol_assignments["F1"] = message.protocol_assignments["B2"];
-    message.protocol_assignments["G1"] = message.protocol_assignments["C2"];
-    message.protocol_assignments["H1"] = message.protocol_assignments["D2"];
-    message.protocol_assignments["E12"] = null;
-    message.protocol_assignments["G11"] = null;
-    message.protocol_assignments["D12"] = null;
-    message.protocol_assignments["E10"] = null;
-    message.protocol_assignments["G8"] = null;
-    message.protocol_assignments["E4"] = null;
-    message.protocol_assignments["F2"] = null;
-    message.protocol_assignments["E11"] = null;
-    message.protocol_assignments["G7"] = null;
-    message.protocol_assignments["C11"] = null;
-    message.protocol_assignments["D7"] = null;
-    message.protocol_assignments["G4"] = null;
-    message.protocol_assignments["F4"] = null;
-    message.protocol_assignments["A9"] = null;
-    message.protocol_assignments["B11"] = null;
-    message.protocol_assignments["E2"] = null;
-    message.protocol_assignments["H8"] = null;
-    message.protocol_assignments["H3"] = null;
-    message.protocol_assignments["D8"] = null;
-    message.protocol_assignments["C9"] = null;
-    message.protocol_assignments["G6"] = null;
-    message.protocol_assignments["F6"] = null;
-    message.protocol_assignments["E3"] = null;
-    message.protocol_assignments["B8"] = null;
-    message.protocol_assignments["H5"] = null;
-    message.protocol_assignments["G9"] = null;
-    message.protocol_assignments["G5"] = null;
-    message.protocol_assignments["B9"] = null;
-    message.protocol_assignments["A11"] = null;
-    message.protocol_assignments["E9"] = null;
-    message.protocol_assignments["H4"] = null;
-    message.protocol_assignments["D11"] = null;
-    message.protocol_assignments["F9"] = null;
-    message.protocol_assignments["F7"] = null;
-    message.protocol_assignments["C12"] = null;
-    message.protocol_assignments["F3"] = null;
-    message.protocol_assignments["H12"] = null;
-    message.protocol_assignments["D10"] = null;
-    message.protocol_assignments["C8"] = null;
-    message.protocol_assignments["A7"] = null;
-    message.protocol_assignments["H11"] = null;
-    message.protocol_assignments["F12"] = null;
-    message.protocol_assignments["B12"] = null;
-    message.protocol_assignments["G2"] = null;
-    message.protocol_assignments["G3"] = null;
-    message.protocol_assignments["B10"] = null;
-    message.protocol_assignments["H10"] = null;
-    message.protocol_assignments["G10"] = null;
-    message.protocol_assignments["A10"] = null;
-    message.protocol_assignments["E6"] = null;
-    message.protocol_assignments["A12"] = null;
-    message.protocol_assignments["F10"] = null;
-    message.protocol_assignments["H2"] = null;
-    message.protocol_assignments["E5"] = null;
-    message.protocol_assignments["H7"] = null;
-    message.protocol_assignments["B7"] = null;
-    message.protocol_assignments["F8"] = null;
-    message.protocol_assignments["H9"] = null;
-    message.protocol_assignments["C7"] = null;
-    message.protocol_assignments["E7"] = null;
-    message.protocol_assignments["G12"] = null;
-    message.protocol_assignments["F11"] = null;
-    message.protocol_assignments["D9"] = null;
-    message.protocol_assignments["C10"] = null;
-    message.protocol_assignments["E8"] = null;
-    message.protocol_assignments["F5"] = null;
-    message.protocol_assignments["H6"] = null;
-    message.protocol_assignments["A8"] = null;
 
     const wsProtocolMessage = JSON.stringify({ command: "set_stim_protocols", stim_info: message });
     this.state.system.socket.send(wsProtocolMessage);
@@ -644,7 +571,7 @@ export default {
     Object.keys(protocol_assignments)
       .filter((well) => protocol_assignments[well])
       .map((well) => {
-        const wellIdx = twentyFourWellPlateDefinition.getWellIndexFromWellName(well);
+        const wellIdx = PLATE_96W.getWellIndexFromWellName(well);
         protocolAssignments[wellIdx] = protocolList.find(
           (protocol) => protocol.letter == protocol_assignments[well]
         );

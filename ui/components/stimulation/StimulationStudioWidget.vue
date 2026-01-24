@@ -1,9 +1,9 @@
 <template>
   <div class="div__simulationstudio-backdrop">
     <span
-      v-for="columnIndex in 6"
+      v-for="columnIndex in numCols"
       :key="'column_' + columnIndex"
-      :style="columnComputedOffsets[columnIndex - 1]"
+      :style="columnOffset(columnIndex - 1)"
       class="span__stimulationstudio-column-index"
     >
       <label
@@ -12,13 +12,13 @@
         @click.shift.exact="onShiftClick(columnIndex, columnValues)"
         @mouseenter="onEnterHover(columnIndex, columnValues)"
         @mouseleave="onLeaveHover(columnIndex, columnValues)"
-        >0{{ columnIndex }}</label
+        >{{ columnIndex }}</label
       >
     </span>
     <span
       v-for="(v, i) in Object.keys(rowValues)"
       :key="'row_' + v"
-      :style="rowComputedOffsets[i]"
+      :style="rowOffset(i)"
       class="span__stimulationstudio-row-index"
     >
       <label
@@ -69,7 +69,6 @@
     </div>
   </div>
 </template>
-
 <script>
 import StimulationStudioPlateWell from "@/components/stimulation/StimulationStudioPlateWell.vue";
 import { STIM_STATUS } from "@/store/modules/stimulation/enums";
@@ -85,40 +84,55 @@ Vue.directive("b-popover", VBPopover);
 library.add(faMinusCircle);
 library.add(faPlusCircle);
 
-const noStrokeWidth = 0;
-const hoverStrokeWidth = 2;
-const selectedStrokeWidth = 4;
-const hoverColor = "#ececed";
-const selectedColor = "#FFFFFF";
+const NUM_ROWS = 8;
+const NUM_COLS = 12;
+
+const NO_STROKE_WIDTH = 0;
+const HOVER_STROKE_WIDTH = 2;
+const SELECTED_STROKE_WIDTH = 4;
+const HOVER_COLOR = "#ECECED";
+const SELECTED_COLOR = "#FFFFFF";
 
 export default {
   name: "StimulationStudioWidget",
   components: { FontAwesomeIcon, StimulationStudioPlateWell },
   props: {
-    numberOfWells: { type: Number, default: 24 },
+    numberOfWells: { type: Number, default: NUM_COLS * NUM_ROWS },
     disable: { type: Boolean, default: false },
   },
   data() {
     return {
+      numRows: NUM_ROWS,
+      numCols: NUM_COLS,
       rowValues: {
-        A: [0, 4, 8, 12, 16, 20],
-        B: [1, 5, 9, 13, 17, 21],
-        C: [2, 6, 10, 14, 18, 22],
-        D: [3, 7, 11, 15, 19, 23],
+        A: Array.from({ length: NUM_COLS }, (_, i) => 0 + i * NUM_ROWS),
+        B: Array.from({ length: NUM_COLS }, (_, i) => 1 + i * NUM_ROWS),
+        C: Array.from({ length: NUM_COLS }, (_, i) => 2 + i * NUM_ROWS),
+        D: Array.from({ length: NUM_COLS }, (_, i) => 3 + i * NUM_ROWS),
+        E: Array.from({ length: NUM_COLS }, (_, i) => 4 + i * NUM_ROWS),
+        F: Array.from({ length: NUM_COLS }, (_, i) => 5 + i * NUM_ROWS),
+        G: Array.from({ length: NUM_COLS }, (_, i) => 6 + i * NUM_ROWS),
+        H: Array.from({ length: NUM_COLS }, (_, i) => 7 + i * NUM_ROWS),
       },
       columnValues: {
-        1: [0, 1, 2, 3],
-        2: [4, 5, 6, 7],
-        3: [8, 9, 10, 11],
-        4: [12, 13, 14, 15],
-        5: [16, 17, 18, 19],
-        6: [20, 21, 22, 23],
+        1: Array.from({ length: NUM_ROWS }, (_, i) => 0 + i),
+        2: Array.from({ length: NUM_ROWS }, (_, i) => 8 + i),
+        3: Array.from({ length: NUM_ROWS }, (_, i) => 16 + i),
+        4: Array.from({ length: NUM_ROWS }, (_, i) => 24 + i),
+        5: Array.from({ length: NUM_ROWS }, (_, i) => 32 + i),
+        6: Array.from({ length: NUM_ROWS }, (_, i) => 40 + i),
+        7: Array.from({ length: NUM_ROWS }, (_, i) => 48 + i),
+        8: Array.from({ length: NUM_ROWS }, (_, i) => 56 + i),
+        9: Array.from({ length: NUM_ROWS }, (_, i) => 64 + i),
+        10: Array.from({ length: NUM_ROWS }, (_, i) => 72 + i),
+        11: Array.from({ length: NUM_ROWS }, (_, i) => 80 + i),
+        12: Array.from({ length: NUM_ROWS }, (_, i) => 88 + i),
       },
       allSelectOrCancel: false,
       hover: new Array(this.numberOfWells).fill(false),
       allSelect: new Array(this.numberOfWells).fill(false),
-      hoverColor: new Array(this.numberOfWells).fill(hoverColor),
-      strokeWidth: new Array(this.numberOfWells).fill(noStrokeWidth),
+      hoverColor: new Array(this.numberOfWells).fill(HOVER_COLOR),
+      strokeWidth: new Array(this.numberOfWells).fill(NO_STROKE_WIDTH),
     };
   },
   computed: {
@@ -137,12 +151,6 @@ export default {
         Object.keys(this.protocolAssignments).includes(well.toString())
       );
     },
-    rowComputedOffsets: function () {
-      return ["41", "103", "165", "224"].map((v) => "top:" + v + "px;");
-    },
-    columnComputedOffsets: function () {
-      return ["39", "101", "164", "225", "287", "349"].map((v) => "left:" + v + "px;");
-    },
   },
   watch: {
     allSelect: function () {
@@ -152,7 +160,7 @@ export default {
       // second conditional prevents infinite looping of constantly reassigning to 0
       if (newWells.length === 0 && previousWells.length !== 0) {
         this.allSelect = new Array(this.numberOfWells).fill(false);
-        this.strokeWidth = new Array(this.numberOfWells).fill(noStrokeWidth);
+        this.strokeWidth = new Array(this.numberOfWells).fill(NO_STROKE_WIDTH);
         if (!this.allSelectOrCancel) this.allSelectOrCancel = true;
       }
     },
@@ -164,6 +172,14 @@ export default {
     this.allSelectOrCancel = allEqual(this.allSelect) ? false : true; // if pre-select has all wells is true, then toggle from (+) to (-) icon.
   },
   methods: {
+    rowOffset: function (idx) {
+      const top = 31 + 34 * idx;
+      return `top: ${top}px;`;
+    },
+    columnOffset: function (idx) {
+      const left = 26 + 34 * idx;
+      return `left: ${left}px;`;
+    },
     onSelectCancelAll(state) {
       this.allSelectOrCancel = !state;
       this.allSelect = new Array(this.numberOfWells).fill(state);
@@ -175,7 +191,7 @@ export default {
     onPlusMinusEnterHover() {
       this.strokeWidth.splice(0, this.strokeWidth.length);
       for (let j = 0; j < this.allSelect.length; j++) {
-        this.strokeWidth[j] = !this.allSelect[j] ? hoverStrokeWidth : selectedStrokeWidth;
+        this.strokeWidth[j] = !this.allSelect[j] ? HOVER_STROKE_WIDTH : SELECTED_STROKE_WIDTH;
       }
     },
 
@@ -187,7 +203,7 @@ export default {
     basicSelect(value) {
       this.allSelect = new Array(this.numberOfWells).fill(false);
       this.allSelect[value] = true;
-      this.strokeWidth[value] = selectedStrokeWidth;
+      this.strokeWidth[value] = SELECTED_STROKE_WIDTH;
       if (!this.allSelectOrCancel) this.allSelectOrCancel = true;
       this.onWellEnter(value);
     },
@@ -195,7 +211,7 @@ export default {
     basicShiftSelect(value) {
       const allEqual = (arr) => arr.every((v) => v === true);
       this.allSelect[value] = !this.allSelect[value];
-      this.strokeWidth[value] = selectedStrokeWidth;
+      this.strokeWidth[value] = SELECTED_STROKE_WIDTH;
       if (allEqual(this.allSelect)) this.allSelectOrCancel = false;
       else this.allSelectOrCancel = true;
       this.$store.dispatch("stimulation/handleSelectedWells", this.allSelect);
@@ -207,12 +223,12 @@ export default {
       this.hoverColor[value] = "#ececed";
       this.strokeWidth.splice(0, this.strokeWidth.length);
       this.checkStrokeWidth();
-      this.strokeWidth[value] = this.allSelect[value] ? selectedStrokeWidth : hoverStrokeWidth;
+      this.strokeWidth[value] = this.allSelect[value] ? SELECTED_STROKE_WIDTH : HOVER_STROKE_WIDTH;
     },
 
     onWellLeave(value) {
       this.hover[value] = false;
-      this.hoverColor[value] = selectedColor;
+      this.hoverColor[value] = SELECTED_COLOR;
       this.strokeWidth.splice(0, this.strokeWidth.length);
       this.checkStrokeWidth();
     },
@@ -230,7 +246,7 @@ export default {
       this.strokeWidth.splice(0, this.strokeWidth.length);
 
       valuesToChange[val].map(
-        (well) => (newList[well] = newList[well] == noStrokeWidth ? hoverStrokeWidth : newList[well])
+        (well) => (newList[well] = newList[well] == NO_STROKE_WIDTH ? HOVER_STROKE_WIDTH : newList[well])
       );
       this.strokeWidth = newList;
     },
@@ -255,8 +271,8 @@ export default {
     },
     checkStrokeWidth() {
       for (let i = 0; i < this.allSelect.length; i++) {
-        this.strokeWidth[i] = !this.allSelect[i] ? noStrokeWidth : selectedStrokeWidth;
-        this.hoverColor[i] = !this.allSelect[i] ? hoverColor : selectedColor;
+        this.strokeWidth[i] = !this.allSelect[i] ? NO_STROKE_WIDTH : SELECTED_STROKE_WIDTH;
+        this.hoverColor[i] = !this.allSelect[i] ? HOVER_COLOR : SELECTED_COLOR;
       }
     },
     getProtocolColor(index) {
@@ -276,8 +292,8 @@ export default {
   margin: 0px;
   background: rgb(28, 28, 28);
   position: absolute;
-  width: 415px;
-  height: 280px;
+  width: 452px;
+  height: 308px;
   visibility: visible;
   border-radius: 10px;
   box-shadow: rgba(0, 0, 0, 0.7) 0px 0px 10px 0px;
