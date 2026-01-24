@@ -122,8 +122,8 @@ class MantarrayMcSimulator(InfiniteProcess):
     default_mantarray_serial_number = "MA2023102001"
     default_main_firmware_version = "0.0.1"
     default_channel_firmware_version = "0.0.1"
-    default_plate_barcode = "ML22001000-2"
-    default_stim_barcode = "MS22001000-2"
+    default_plate_barcode = "NL22001000-2"
+    default_stim_barcode = "NS22001000-2"
     default_event_info = immutabledict(
         {
             "prev_main_status_update_timestamp": 1,
@@ -532,7 +532,7 @@ class MantarrayMcSimulator(InfiniteProcess):
             command_failed = self._is_stimulating
             response_body += bytes([command_failed])
             if not command_failed:
-                for module_readings in self._adc_readings:
+                for _module_id, module_readings in enumerate(self._adc_readings):
                     status = convert_adc_readings_to_circuit_status(*module_readings)
                     response_body += struct.pack("<HHB", *module_readings, status) * 2
         elif packet_type == SerialCommPacketTypes.SET_STIM_SCHEDULE_TYPE:
