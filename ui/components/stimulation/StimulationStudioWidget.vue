@@ -97,7 +97,7 @@ const SELECTED_STROKE_WIDTH = 4;
 const HOVER_COLOR = "#ECECED";
 const SELECTED_COLOR = "#FFFFFF";
 
-const allEqual = (arr) => arr.every((v) => v === true);
+const allTrue = (arr) => arr.every((v) => v === true);
 
 // return all well idxs in the same cluster as the given well idx
 const wellsInCluster = (wellIdx) => {
@@ -181,7 +181,7 @@ export default {
   created() {
     this.strokeWidth.splice(0, this.strokeWidth.length);
     this.checkStrokeWidth();
-    this.allSelectOrCancel = allEqual(this.allSelect) ? false : true; // if pre-select has all wells is true, then toggle from (+) to (-) icon.
+    this.allSelectOrCancel = allTrue(this.allSelect) ? false : true; // if pre-select has all wells is true, then toggle from (+) to (-) icon.
   },
   mounted() {
     if (!this.disable) {
@@ -262,17 +262,33 @@ export default {
     basicShiftSelect(value) {
       this.allSelect[value] = !this.allSelect[value];
       this.strokeWidth[value] = SELECTED_STROKE_WIDTH;
-      if (allEqual(this.allSelect)) this.allSelectOrCancel = false;
+      if (allTrue(this.allSelect)) this.allSelectOrCancel = false;
       else this.allSelectOrCancel = true;
       this.$store.dispatch("stimulation/handleSelectedWells", this.allSelect);
       this.onWellEnter(value);
     },
 
     ctrlSelect(value) {
-      // TODO
+      this.allSelect = new Array(this.numberOfWells).fill(false);
+      const wellsToSelect = wellsInCluster(value);
+      wellsToSelect.map((idx) => {
+        this.allSelect[idx] = true;
+        this.strokeWidth[idx] = SELECTED_STROKE_WIDTH;
+      });
+      this.allSelectOrCancel = !allTrue(this.allSelect);
+      this.onWellEnter(value);
     },
     ctrlShiftSelect(value) {
-      // TODO
+      const wellsToToggle = wellsInCluster(value);
+      const clusterPartiallySelected = wellsToToggle.some((idx) => {
+        return !this.allSelect[idx];
+      });
+      wellsToToggle.map((idx) => {
+        this.allSelect[idx] = clusterPartiallySelected;
+      });
+      this.allSelect = [...this.allSelect]; // vue won't notice the update unless this is done
+      this.allSelectOrCancel = !allTrue(this.allSelect);
+      this.onWellEnter(value);
     },
 
     onWellEnter(value) {
@@ -334,7 +350,7 @@ export default {
       });
 
       this.allSelect = newList;
-      this.allSelectOrCancel = allEqual(this.allSelect) ? false : true; // if pre-select has all wells is true, then toggle from (+) to (-) icon.
+      this.allSelectOrCancel = allTrue(this.allSelect) ? false : true; // if pre-select has all wells is true, then toggle from (+) to (-) icon.
       this.checkStrokeWidth();
     },
     checkStrokeWidth() {
