@@ -55,6 +55,7 @@
         @leave-well="onWellLeave(wellIndex)"
         @click-exact="basicSelect(wellIndex)"
         @click-shift-exact="basicShiftSelect(wellIndex)"
+        @click-ctrl-shift-exact="ctrlShiftSelect(wellIndex)"
       />
     </div>
     <div v-if="disable" class="div__simulationstudio-disable-overlay" :style="'opacity: 0;'" />
@@ -133,6 +134,7 @@ export default {
       allSelect: new Array(this.numberOfWells).fill(false),
       hoverColor: new Array(this.numberOfWells).fill(HOVER_COLOR),
       strokeWidth: new Array(this.numberOfWells).fill(NO_STROKE_WIDTH),
+      isCtrlPressed: false,
     };
   },
   computed: {
@@ -171,7 +173,30 @@ export default {
     const allEqual = (arr) => arr.every((v) => v === true); // verify in the pre-select all via a const allEqual function.
     this.allSelectOrCancel = allEqual(this.allSelect) ? false : true; // if pre-select has all wells is true, then toggle from (+) to (-) icon.
   },
+  mounted() {
+    if (!this.disable) {
+      window.addEventListener("keydown", this.handleKeyDown);
+      window.addEventListener("keyup", this.handleKeyUp);
+    }
+  },
+  beforeDestroy() {
+    if (!this.disable) {
+      window.removeEventListener("keydown", this.handleKeyDown);
+      window.removeEventListener("keyup", this.handleKeyUp);
+    }
+  },
   methods: {
+    handleKeyDown(event) {
+      if (event.ctrlKey || event.metaKey) {
+        this.isCtrlPressed = true;
+      }
+    },
+    handleKeyUp(event) {
+      if (!event.ctrlKey && !event.metaKey) {
+        this.isCtrlPressed = false;
+      }
+    },
+
     rowOffset: function (idx) {
       const top = 31 + 34 * idx;
       return `top: ${top}px;`;
@@ -216,6 +241,10 @@ export default {
       else this.allSelectOrCancel = true;
       this.$store.dispatch("stimulation/handleSelectedWells", this.allSelect);
       this.onWellEnter(value);
+    },
+
+    ctrlShiftSelect(value) {
+      // TODO
     },
 
     onWellEnter(value) {
