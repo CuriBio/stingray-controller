@@ -26,7 +26,7 @@
         v-b-popover.hover.top="errorMessage"
         :title="'Disabled'"
         class="svg__open-circuit-container"
-        viewBox="0 0 77 77"
+        viewBox="0 0 69 69"
       >
         <path
           :style="svg_OpenCircuitOuter_DynamicClass"
@@ -134,16 +134,17 @@ export default {
   pointer-events: all;
   transform: rotate(0deg);
   position: absolute;
-  width: 33px;
-  height: 33px;
+  width: 36px;
+  height: 36px;
   visibility: visible;
+  overflow: hidden;
 }
 .span__simulationstudio-plate-well-protocol-location {
   line-height: 100%;
   width: 13px;
   height: 20px;
   position: fixed;
-  bottom: 4px;
+  bottom: 7px;
   font-weight: bold;
   visibility: visible;
   font-family: Muli;
@@ -164,7 +165,7 @@ export default {
 }
 .svg__open-circuit-container {
   position: relative;
-  bottom: 62px;
-  left: 12px;
+  bottom: 38px;
+  left: 2px;
 }
 </style>

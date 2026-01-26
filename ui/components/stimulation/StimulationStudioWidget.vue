@@ -379,8 +379,8 @@ export default {
   cursor: pointer;
 }
 .div__simulationstudio-disable-overlay {
-  height: 280px;
-  width: 415px;
+  height: 308px;
+  width: 452px;
   z-index: 3;
   border-radius: 10px;
   background-color: black;

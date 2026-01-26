@@ -327,7 +327,7 @@ class SystemMonitor:
                 case {"command": "get_board_connection_status", "in_simulation_mode": in_simulation_mode}:
                     system_state_updates["in_simulation_mode"] = in_simulation_mode
                 case {"command": "get_barcode", "barcode": barcode}:
-                    barcode_type = "stim_barcode" if barcode.startswith("MS") else "plate_barcode"
+                    barcode_type = "stim_barcode" if barcode.startswith("NS") else "plate_barcode"
                     # if barcode didn't change, then no need to create an update
                     if system_state[barcode_type] != barcode:
                         system_state_updates[barcode_type] = barcode
