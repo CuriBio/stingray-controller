@@ -7,6 +7,8 @@
       @mouseleave="onLeaveWell(index)"
       @click.exact="onClickExact(index)"
       @click.shift.exact="onClickShiftExact(index)"
+      @click.ctrl.exact="onClickCtrlExact(index)"
+      @click.meta.exact="onClickCtrlExact(index)"
       @click.ctrl.shift.exact="onClickCtrlShiftExact(index)"
       @click.meta.shift.exact="onClickCtrlShiftExact(index)"
     >
@@ -127,6 +129,9 @@ export default {
     },
     onClickShiftExact(index) {
       this.$emit("click-shift-exact", index);
+    },
+    onClickCtrlExact(index) {
+      this.$emit("click-ctrl-exact", index);
     },
     onClickCtrlShiftExact(index) {
       this.$emit("click-ctrl-shift-exact", index);

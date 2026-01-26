@@ -55,6 +55,7 @@
         @leave-well="onWellLeave(wellIndex)"
         @click-exact="basicSelect(wellIndex)"
         @click-shift-exact="basicShiftSelect(wellIndex)"
+        @click-ctrl-exact="ctrlSelect(wellIndex)"
         @click-ctrl-shift-exact="ctrlShiftSelect(wellIndex)"
       />
     </div>
@@ -88,11 +89,21 @@ library.add(faPlusCircle);
 const NUM_ROWS = 8;
 const NUM_COLS = 12;
 
+const NUM_WELLS_IN_CLUSTER = 4;
+
 const NO_STROKE_WIDTH = 0;
 const HOVER_STROKE_WIDTH = 2;
 const SELECTED_STROKE_WIDTH = 4;
 const HOVER_COLOR = "#ECECED";
 const SELECTED_COLOR = "#FFFFFF";
+
+const allEqual = (arr) => arr.every((v) => v === true);
+
+// return all well idxs in the same cluster as the given well idx
+const wellsInCluster = (wellIdx) => {
+  const lowerWellBoundOfCluster = Math.floor(wellIdx / NUM_WELLS_IN_CLUSTER) * NUM_WELLS_IN_CLUSTER;
+  return Array.from({ length: NUM_WELLS_IN_CLUSTER }, (_, i) => lowerWellBoundOfCluster + i);
+};
 
 export default {
   name: "StimulationStudioWidget",
@@ -129,9 +140,9 @@ export default {
         11: Array.from({ length: NUM_ROWS }, (_, i) => 80 + i),
         12: Array.from({ length: NUM_ROWS }, (_, i) => 88 + i),
       },
-      allSelectOrCancel: false,
-      hover: new Array(this.numberOfWells).fill(false),
-      allSelect: new Array(this.numberOfWells).fill(false),
+      allSelectOrCancel: false, // show plus icon when true, minus icon when false
+      hoverIdx: null, // which well if any is currently hovered
+      allSelect: new Array(this.numberOfWells).fill(false), // selected flag for each well
       hoverColor: new Array(this.numberOfWells).fill(HOVER_COLOR),
       strokeWidth: new Array(this.numberOfWells).fill(NO_STROKE_WIDTH),
       isCtrlPressed: false,
@@ -170,7 +181,6 @@ export default {
   created() {
     this.strokeWidth.splice(0, this.strokeWidth.length);
     this.checkStrokeWidth();
-    const allEqual = (arr) => arr.every((v) => v === true); // verify in the pre-select all via a const allEqual function.
     this.allSelectOrCancel = allEqual(this.allSelect) ? false : true; // if pre-select has all wells is true, then toggle from (+) to (-) icon.
   },
   mounted() {
@@ -189,11 +199,27 @@ export default {
     handleKeyDown(event) {
       if (event.ctrlKey || event.metaKey) {
         this.isCtrlPressed = true;
+        if (this.hoverIdx !== null) {
+          wellsInCluster(this.hoverIdx).map((idx) => {
+            if (!this.allSelect[idx]) {
+              this.strokeWidth[idx] = HOVER_STROKE_WIDTH;
+            }
+          });
+          this.strokeWidth = [...this.strokeWidth]; // vue won't notice the update unless this is done
+        }
       }
     },
     handleKeyUp(event) {
       if (!event.ctrlKey && !event.metaKey) {
         this.isCtrlPressed = false;
+        if (this.hoverIdx !== null) {
+          wellsInCluster(this.hoverIdx).map((idx) => {
+            if (!this.allSelect[idx]) {
+              this.strokeWidth[idx] = idx === this.hoverIdx ? HOVER_STROKE_WIDTH : NO_STROKE_WIDTH;
+            }
+          });
+          this.strokeWidth = [...this.strokeWidth]; // vue won't notice the update unless this is done
+        }
       }
     },
 
@@ -234,7 +260,6 @@ export default {
     },
 
     basicShiftSelect(value) {
-      const allEqual = (arr) => arr.every((v) => v === true);
       this.allSelect[value] = !this.allSelect[value];
       this.strokeWidth[value] = SELECTED_STROKE_WIDTH;
       if (allEqual(this.allSelect)) this.allSelectOrCancel = false;
@@ -243,21 +268,36 @@ export default {
       this.onWellEnter(value);
     },
 
+    ctrlSelect(value) {
+      // TODO
+    },
     ctrlShiftSelect(value) {
       // TODO
     },
 
     onWellEnter(value) {
-      this.hover[value] = true;
-      this.hoverColor[value] = "#ececed";
+      this.hoverIdx = value;
       this.strokeWidth.splice(0, this.strokeWidth.length);
       this.checkStrokeWidth();
-      this.strokeWidth[value] = this.allSelect[value] ? SELECTED_STROKE_WIDTH : HOVER_STROKE_WIDTH;
+      let wellsToHover = [value];
+      if (this.isCtrlPressed) {
+        wellsToHover = wellsInCluster(value);
+      }
+      wellsToHover.map((idx) => {
+        this.hoverColor[idx] = this.allSelect[idx] ? SELECTED_COLOR : HOVER_COLOR;
+        this.strokeWidth[idx] = this.allSelect[idx] ? SELECTED_STROKE_WIDTH : HOVER_STROKE_WIDTH;
+      });
     },
 
     onWellLeave(value) {
-      this.hover[value] = false;
-      this.hoverColor[value] = SELECTED_COLOR;
+      this.hoverIdx = null;
+      let wellsToHover = [value];
+      if (this.isCtrlPressed) {
+        wellsToHover = wellsInCluster(value);
+      }
+      wellsToHover.map((idx) => {
+        this.hoverColor[idx] = SELECTED_COLOR;
+      });
       this.strokeWidth.splice(0, this.strokeWidth.length);
       this.checkStrokeWidth();
     },
@@ -294,7 +334,6 @@ export default {
       });
 
       this.allSelect = newList;
-      const allEqual = (arr) => arr.every((v) => v === true); // verify in the pre-select all via a const allEqual function.
       this.allSelectOrCancel = allEqual(this.allSelect) ? false : true; // if pre-select has all wells is true, then toggle from (+) to (-) icon.
       this.checkStrokeWidth();
     },
