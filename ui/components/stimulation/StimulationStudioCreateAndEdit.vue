@@ -18,6 +18,7 @@
       v-for="(key, value, idx) in btnLabels"
       :id="value"
       :key="value"
+      v-b-popover.hover.bottom="selectionBtnDetails(idx).tooltip || ''"
       :class="getClass(idx)"
       :style="key"
       @click.exact="handleClick(idx)"
@@ -56,6 +57,9 @@ import { mapActions, mapMutations, mapState } from "vuex";
  * @vue-event {Event} handleExport - Dispatches request to store to write current protocol
  */
 
+const NUM_CLUSTERS = 24;
+const CLUSTER_SIZE = 4;
+
 export default {
   name: "StimulationStudioCreateAndEdit",
   components: {
@@ -80,12 +84,49 @@ export default {
     };
   },
   computed: {
-    ...mapState("stimulation", ["protocolList", "editMode", "selectedWells"]),
+    ...mapState("stimulation", ["protocolList", "editMode", "protocolAssignments", "selectedWells"]),
     editModeStatus: function () {
       return this.editMode.status;
     },
     noWellsSelected: function () {
       return this.selectedWells.length === 0;
+    },
+    oneProtocolPerClusterAfterApply: function () {
+      const selectedProtocolLetter = (this.protocolList[this.selectedProtocolIdx] || {}).letter;
+      if (selectedProtocolLetter == null || selectedProtocolLetter === "") {
+        // if no protocol selected, then applying shouldn't be possible, just return true
+        return true;
+      }
+      const selectedWellsSet = new Set(this.selectedWells);
+      // check that rule is not violated in any cluster
+      for (let clusterIdx = 0; clusterIdx < NUM_CLUSTERS; clusterIdx++) {
+        let protocolOfCluster = null;
+        for (let baseWellIdx = 0; baseWellIdx < CLUSTER_SIZE; baseWellIdx++) {
+          const wellIdx = clusterIdx * CLUSTER_SIZE + baseWellIdx;
+          // get protocol (if any) that would be assigned to the well after applying the current protocol to the selection
+          let protocolOfWell;
+          if (selectedWellsSet.has(wellIdx)) {
+            // if well is selected, use the selected protocol
+            protocolOfWell = selectedProtocolLetter;
+          } else {
+            // otherwise use the protocol currently assigned to the well, if any
+            protocolOfWell = (this.protocolAssignments[wellIdx] || {}).letter;
+          }
+          // if no protocol assigned to this well after applying, then no need to check further
+          if (protocolOfWell == null) {
+            continue;
+          }
+          if (protocolOfCluster === null) {
+            // if this is the first well encountered in the cluster that is assigned a protocol, then use
+            // it to compare subsequent well assignments against
+            protocolOfCluster = protocolOfWell;
+          } else if (protocolOfWell !== protocolOfCluster) {
+            // applying would cause this well to have a different protocol assigned than another well in the cluster
+            return false;
+          }
+        }
+      }
+      return true;
     },
   },
   watch: {
@@ -115,15 +156,31 @@ export default {
 
       this.$emit("handle-selection-change", selectedProtocol);
     },
-    disableSelectionBtn(idx) {
-      return (
-        this.disableEdits ||
-        (this.selectedProtocolIdx === 0 && idx === 0) ||
-        (this.noWellsSelected && idx === 0)
-      );
+    selectionBtnDetails(idx) {
+      if (this.disableEdits) {
+        return { disabled: true };
+      } else if (this.noWellsSelected) {
+        return { disabled: true, tooltip: "No wells selected." };
+      } else if (idx === 0) {
+        // Apply btn
+        if (this.selectedProtocolIdx === 0) {
+          return { disabled: true, tooltip: "Cannot apply this protocol until it is saved." };
+        } else if (!this.oneProtocolPerClusterAfterApply) {
+          return {
+            disabled: true,
+            tooltip:
+              "Applying this protocol to the selected wells would violate the one-protocol-per-cluster requirement.",
+          };
+        } else {
+          return { disabled: false };
+        }
+      } else {
+        // Clear btn
+        return { disabled: false };
+      }
     },
     handleClick(idx) {
-      if (this.disableSelectionBtn(idx)) {
+      if (this.selectionBtnDetails(idx).disabled) {
         return;
       }
 
@@ -135,12 +192,12 @@ export default {
       }
     },
     getClass(idx) {
-      return this.disableSelectionBtn(idx)
+      return this.selectionBtnDetails(idx).disabled
         ? "div__stimulationstudio-btn-container-disable"
         : "div__stimulationstudio-btn-container";
     },
     getLabelClass(idx) {
-      return this.disableSelectionBtn(idx)
+      return this.selectionBtnDetails(idx).disabled
         ? "span__stimulationstudio-btn-label-disable"
         : "span__stimulationstudio-btn-label";
     },
