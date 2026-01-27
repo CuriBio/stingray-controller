@@ -13,6 +13,9 @@
       @click.exact="onClickExact(index)"
       @click.shift.exact="onClickShiftExact(index)"
       @click.ctrl.exact="onClickCtrlExact(index)"
+      @click.meta.exact="onClickCtrlExact(index)"
+      @click.ctrl.shift.exact="onClickCtrlShiftExact(index)"
+      @click.meta.shift.exact="onClickCtrlShiftExact(index)"
     />
   </svg>
 </template>
@@ -46,6 +49,9 @@ export default {
     },
     onClickCtrlExact(index) {
       this.$emit("click-ctrl-exact", index);
+    },
+    onClickCtrlShiftExact(index) {
+      this.$emit("click-ctrl-shift-exact", index);
     },
   },
 };
