@@ -262,7 +262,7 @@ body {
 
 .div__stimulation-modes-container {
   position: absolute;
-  top: 220px;
+  top: 268px;
   left: 20px;
 }
 

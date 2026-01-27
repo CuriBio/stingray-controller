@@ -29,6 +29,12 @@
         </div>
       </span>
     </div>
+    <span
+      class="span__plate-barcode-title"
+      :class="[barcodeInfo.valid ? `` : `span__plate-barcode-title-invalid`]"
+    >
+      {{ barcodeInfo.valid ? title : "Invalid" }}
+    </span>
     <b-modal
       id="edit-plate-barcode-modal"
       size="sm"
@@ -103,6 +109,9 @@ export default {
     dynamicLabelStyle: function () {
       return this.barcodeType == "plateBarcode" ? "left: 17px;" : "left: 0px;";
     },
+    title: function () {
+      return this.barcodeType == "plateBarcode" ? "96-Well 12x" : "96-Well Electrical";
+    },
     tooltipText: function () {
       if (this.isInOfflineMode) {
         return "Cannot edit barcodes while in offline mode.";
@@ -170,7 +179,7 @@ export default {
   top: 0px;
   left: 0px;
   width: 287px;
-  height: 34px;
+  height: 58px;
   background: #1c1c1c;
   -webkit-box-sizing: content-box;
   box-sizing: content-box;
@@ -193,6 +202,26 @@ export default {
   font-size: 16px;
   color: rgb(255, 255, 255);
   text-align: left;
+}
+
+.span__plate-barcode-title {
+  pointer-events: all;
+  line-height: 100%;
+  overflow: hidden;
+  position: absolute;
+  width: 278px;
+  height: 23px;
+  top: 34px;
+  right: 27px;
+  padding: 4px 0;
+  user-select: none;
+  font-family: "Muli";
+  font-weight: normal;
+  font-style: italic;
+  text-decoration: none;
+  font-size: 13px;
+  color: rgb(255, 255, 255);
+  text-align: right;
 }
 
 .input__plate-barcode-entry *,
@@ -243,6 +272,10 @@ export default {
 }
 input:focus {
   outline: none;
+}
+
+.span__plate-barcode-title-invalid {
+  color: red;
 }
 
 .input__plate-barcode-manual-entry-enable {
