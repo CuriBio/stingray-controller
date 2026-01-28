@@ -658,7 +658,7 @@ body {
 .span__stimulation-controls-play-stop-button--disabled {
   position: relative;
   color: #2f2f2f;
-  font-size: 23px;
+  font-size: 22px;
   grid-column: 4;
 }
 
