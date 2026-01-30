@@ -218,9 +218,12 @@ const setUpAutoUpdater = () => {
 app.on("ready", () => {
   if (!process.env.SPECTRON) {
     // disable on e2e test environment
+    // for the beta96 controller, we want to disable software auto-updating.  we set features.autoupdate to false,
+    // hit the else, and setLatestSwVersion to currentVersion, effectively disabling updates
     if (features.autoupdate) {
       setUpAutoUpdater();
     } else {
+      autoUpdater.autoInstallOnAppQuit = false;
       console.log("Autoupdate feature disabled"); // allow-log
       const currentVersion = getCurrentAppVersion();
       setLatestSwVersion(currentVersion);

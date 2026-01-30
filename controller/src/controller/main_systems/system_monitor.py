@@ -9,7 +9,6 @@ from typing import Any
 
 from pulse3D.constants import CHANNEL_FIRMWARE_VERSION_UUID
 from pulse3D.constants import MAIN_FIRMWARE_VERSION_UUID
-from pulse3D.constants import MANTARRAY_SERIAL_NUMBER_UUID as INSTRUMENT_SERIAL_NUMBER_UUID
 
 from ..constants import CURRENT_SOFTWARE_VERSION
 from ..constants import FW_UPDATE_SUBDIR
@@ -100,17 +99,10 @@ class SystemMonitor:
                 system_state["instrument_metadata"]
                 and system_state["latest_software_version"]
             ):
-                new_system_status = SystemStatuses.CHECKING_FOR_UPDATES_STATE
-                instrument_metadata = system_state["instrument_metadata"]
-                # send command to cloud comm process to check for latest firmware versions
-                await self._queues["to"]["cloud_comm"].put(
-                    {
-                        "command": "check_versions",
-                        "fw_update_dir_path": os.path.join(system_state["base_directory"], FW_UPDATE_SUBDIR),
-                        "serial_number": instrument_metadata[INSTRUMENT_SERIAL_NUMBER_UUID],
-                        "main_fw_version": instrument_metadata[MAIN_FIRMWARE_VERSION_UUID],
-                    }
-                )
+                # for the beta96 controller, we want to disable software and firmware auto-updating.
+                # instead of transitioning to SystemStatuses.CHECKING_FOR_UPDATES_STATE and calling check_versions here,
+                # we skip check_versions, go directly to SystemStatuses.IDLE_READY_STATE, and never hit the cases below.
+                new_system_status = SystemStatuses.IDLE_READY_STATE
             case SystemStatuses.UPDATES_NEEDED_STATE if system_state["firmware_updates_accepted"]:
                 if not system_state["firmware_updates_require_download"] or system_state["is_user_logged_in"]:
                     new_system_status = SystemStatuses.DOWNLOADING_UPDATES_STATE
@@ -204,6 +196,9 @@ class SystemMonitor:
                 case {"command": "set_latest_software_version", "version": version}:
                     system_state_updates["latest_software_version"] = version
                     # send message to FE if indicating if an update is available
+                    # for the beta96 controller, we want to disable software auto-updating.  we set features.autoupdate
+                    # to false, so the version param here will always equal CURRENT_SOFTWARE_VERSION, meaning
+                    # we tell the UI that software_update_available = False
                     try:
                         software_update_available = semver_gt(version, CURRENT_SOFTWARE_VERSION)
                     except ValueError:
