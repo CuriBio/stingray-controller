@@ -40,10 +40,9 @@
       </span>
     </div>
     <div
-      v-b-popover.hover.bottomright="'Edit account settings'"
+      v-b-popover.hover.bottomright="'Not available'"
       :title="'Settings'"
       class="div__settings-button-container"
-      @click="$bvModal.show('settings-form')"
     >
       <SettingsButton />
     </div>
@@ -611,7 +610,8 @@ body {
 .div__settings-button-container {
   top: 33px;
   left: 0px;
-  width: 0px;
+  width: 41px;
+  height: 41px;
   position: relative;
   background-color: #000000;
   font-family: Muli;
