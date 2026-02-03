@@ -26,12 +26,8 @@ export default {
   line-height: 30px;
   top: 0px;
   left: 0px;
-  color: #b7b7b7;
+  color: #2f2f2f;
   font-size: 41px;
-}
-.span__stim-controls-settings-button:hover {
-  color: #ffffff;
-  cursor: pointer;
 }
 
 #settings-form {
