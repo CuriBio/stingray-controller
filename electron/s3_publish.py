@@ -84,4 +84,4 @@ if __name__ == "__main__":
     parsed_args = parser.parse_args(sys.argv[1:])
 
     upload("downloads.curibio.com", parsed_args)
-    update_cloud(parsed_args.channel)
+    # update_cloud(parsed_args.channel)  # not needed for the beta96 controller
