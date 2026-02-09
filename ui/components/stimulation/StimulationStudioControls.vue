@@ -366,6 +366,7 @@ export default {
           this.assignedOpenCircuits.length === 0 &&
           this.barcodes.plateBarcode.valid &&
           this.barcodes.stimBarcode.valid &&
+          !this.isEmptyProtocolAssigned &&
           (this.stimScheduleMode === "Standard" || this.allProtocolsInRunUntilCompleteMode) &&
           ![
             STIM_STATUS.ERROR,
@@ -386,7 +387,7 @@ export default {
     },
     startStimLabel: function () {
       if (this.stimStatus === STIM_STATUS.ERROR || this.stimStatus === STIM_STATUS.SHORT_CIRCUIT_ERROR) {
-        return "Cannot start a stimulation with error.";
+        return "Cannot start stimulation when there is an error.";
       } else if (
         this.stimStatus === STIM_STATUS.CONFIG_CHECK_NEEDED ||
         this.stimStatus === STIM_STATUS.CONFIG_CHECK_IN_PROGRESS
@@ -400,13 +401,22 @@ export default {
         return "No protocols have been assigned.";
       } else if (this.assignedOpenCircuits.length !== 0) {
         return "Cannot start stimulation with a protocol assigned to a well with an open circuit.";
+      } else if (this.isEmptyProtocolAssigned) {
+        return "Cannot start stimulation with an empty protocol assigned.";
       } else if (this.stimScheduleMode === "Nautilai Sync" && !this.allProtocolsInRunUntilCompleteMode) {
         return "Cannot start stimulation in Nautilai Sync mode unless all assigned protocols are in Stimulate Until Complete mode.";
       } else {
         return "Start Stimulation.";
       }
     },
-
+    isEmptyProtocolAssigned: function () {
+      return Object.values(this.protocolAssignments).some((info) => {
+        const infoSafe = info || {};
+        const protocol = infoSafe.protocol || {};
+        const subprotocols = protocol.subprotocols || [];
+        return subprotocols.length === 0;
+      });
+    },
     stopStimLabel: function () {
       // Tanner (7/27/22): there used to be multiple values, so leaving this as a function in case more values get added in future
       return "Stop Stimulation.";
