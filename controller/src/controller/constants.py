@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Constants for the Stingray Controller."""
+"""Constants for the Stingray 96 Controller."""
 from collections import namedtuple
 import datetime
 from enum import auto

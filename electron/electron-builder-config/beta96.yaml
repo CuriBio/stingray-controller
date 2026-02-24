@@ -1,5 +1,5 @@
 # https://www.electron.build/configuration/configuration#configuration
-productName: "Stingray Controller"
+productName: "Stingray 96 Controller"
 appId: "CuriBio.Stingray.Controller"
 asar: true
 directories:
@@ -15,7 +15,7 @@ files:
     to: "dist/renderer/"
 win:
   target: "nsis"
-  artifactName: "StingrayController-Setup-beta96-${version}.${ext}"
+  artifactName: "Stingray96Controller-Setup-beta96-${version}.${ext}"
 nsis:
   oneClick: false
   perMachine: false

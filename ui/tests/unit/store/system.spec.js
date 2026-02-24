@@ -337,7 +337,7 @@ describe("store/system", () => {
 
   //       const additionalText = latestCompatibleSwVersion
   //         ? ". Please download the installer for the correct version here:"
-  //         : ". Stingray Controller is about to shutdown.";
+  //         : ". Stingray 96 Controller is about to shutdown.";
 
   //       expect(store.state.system.systemErrorCode).toBe(ERRORS[errorType] + additionalText);
   //     }

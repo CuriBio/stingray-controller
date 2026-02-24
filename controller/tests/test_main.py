@@ -85,7 +85,7 @@ async def test_main__initial_bootup_logging(mocker):
     await main.main([])
 
     for bootup_msg in (
-        f"Stingray Controller v{CURRENT_SOFTWARE_VERSION} started",
+        f"Stingray 96 Controller v{CURRENT_SOFTWARE_VERSION} started",
         f"Build timestamp/version: {COMPILED_EXE_BUILD_TIMESTAMP}",
         f"Release Channel: {SOFTWARE_RELEASE_CHANNEL}",
         f"Log ID: {spied_uuid4.spy_return}",
@@ -186,10 +186,7 @@ async def test_main__handles_errors_correctly(mocker):
 @pytest.mark.parametrize("log_directory", [None, "logs_in_here"])
 @pytest.mark.parametrize("expected_software_version", [None, "1.2.3"])
 async def test_main__initializes_system_state_correctly(
-    base_directory,
-    log_directory,
-    expected_software_version,
-    mocker,
+    base_directory, log_directory, expected_software_version, mocker
 ):
     spied_uuid4 = mocker.spy(main.uuid, "uuid4")
     mocked_getcwd = mocker.patch.object(main.os, "getcwd", autospec=True)

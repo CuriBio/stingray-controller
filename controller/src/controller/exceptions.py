@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Exceptions for the Stingray Controller."""
+"""Exceptions for the Stingray 96 Controller."""
 
 
 # Server

@@ -48,11 +48,11 @@ describe("ErrorCatchWidget.vue", () => {
       store,
       localVue,
     });
-    await store.commit("system/setSystemErrorMessage", "Stingray Controller is about to shut down.");
+    await store.commit("system/setSystemErrorMessage", "Stingray 96 Controller is about to shut down.");
     const targetTitleDiv = wrapper.find(".div__status-error-catch-title-label");
     expect(targetTitleDiv.text()).toStrictEqual("An error occurred.");
     const targetAlertP = wrapper.findAll(".p__status-error-catch-alert-txt");
-    expect(targetAlertP.at(0).text()).toStrictEqual("Stingray Controller is about to shut down.");
+    expect(targetAlertP.at(0).text()).toStrictEqual("Stingray 96 Controller is about to shut down.");
 
     expect(targetAlertP.at(2)).toMatchInlineSnapshot(`
       <p class="p__status-error-catch-alert-txt">
