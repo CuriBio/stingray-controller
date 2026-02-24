@@ -14,7 +14,7 @@
       3. (Optional) Select "Wait for Trigger" in the Advanced Settings of the Nautilai Controller so the
       recording starts when stimulation starts. Then click "Start Recording".
     </div>
-    <div class="div__schedule-mode-step">4. Click "Start Stimulation" in the Stingray controller.</div>
+    <div class="div__schedule-mode-step">4. Click "Start Stimulation" in the Stingray 96 controller.</div>
     <div class="div__schedule-mode-step">
       5. Feel free to stop the stimulation at will - it will not affect Nautilai's recording.
     </div>

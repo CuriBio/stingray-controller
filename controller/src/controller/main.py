@@ -53,7 +53,7 @@ async def main(command_line_args: list[str]) -> None:
             path_to_log_folder=path_to_log_folder, log_file_prefix="stingray_log", log_level=log_level
         )
 
-        logger.info(f"Stingray Controller v{CURRENT_SOFTWARE_VERSION} started")
+        logger.info(f"Stingray 96 Controller v{CURRENT_SOFTWARE_VERSION} started")
         logger.info(f"Build timestamp/version: {COMPILED_EXE_BUILD_TIMESTAMP}")
         logger.info(f"Release Channel: {SOFTWARE_RELEASE_CHANNEL}")
 

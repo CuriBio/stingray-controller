@@ -3,7 +3,7 @@ import getters from "./getters";
 import mutations from "./mutations";
 
 const defaultState = {
-  logPath: "C:\\Users\\username\\AppData\\Roaming\\StingrayController\\stingray_logs",
+  logPath: "C:\\Users\\username\\AppData\\Roaming\\Stingray96Controller\\stingray_logs",
   rootDownloadsPath: "C:\\Users\\username\\Downloads",
   userCredInputNeeded: false,
   userAccount: { customerId: "", username: "", password: "" },

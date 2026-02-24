@@ -36,15 +36,15 @@ export default {
 
     if (msg.latest_compatible_sw_version) {
       state.systemErrorMessage =
-        "The instrument's firmware is not compatible with this version of the Stingray Controller. Please download the installer for the correct version here:";
-      state.installerLink = `${SW_INSTALLER_URL_PREFIX}/StingrayController-Setup-prod-${msg.latest_compatible_sw_version}.exe`;
+        "The instrument's firmware is not compatible with this version of the Stingray 96 Controller. Please download the installer for the correct version here:";
+      state.installerLink = `${SW_INSTALLER_URL_PREFIX}/Stingray96Controller-Setup-prod-${msg.latest_compatible_sw_version}.exe`;
     } else if (msg.expected_software_version) {
       state.systemErrorMessage =
         "Error during install. Please restart this PC then reinstall the software using the installer linked here:";
-      state.installerLink = `${SW_INSTALLER_URL_PREFIX}/StingrayController-Setup-prod-${msg.expected_software_version}.exe`;
+      state.installerLink = `${SW_INSTALLER_URL_PREFIX}/Stingray96Controller-Setup-prod-${msg.expected_software_version}.exe`;
     } else {
       state.systemErrorMessage =
-        ERROR_MESSAGES[msg.error_code] || "Stingray Controller is about to shutdown.";
+        ERROR_MESSAGES[msg.error_code] || "Stingray 96 Controller is about to shutdown.";
     }
   },
   setSystemErrorMessage(state, msg) {
