@@ -34,6 +34,7 @@ from ..constants import SerialCommPacketTypes
 from ..constants import STIM_COMPLETE_SUBPROTOCOL_IDX
 from ..constants import STIM_FINAL_SEXTANT
 from ..constants import STIM_MODULE_ID_TO_WELL_IDX
+from ..constants import StimScheduleType
 from ..constants import STM_VID
 from ..exceptions import FirmwareGoingDormantError
 from ..exceptions import IncorrectInstrumentConnectedError
@@ -208,7 +209,8 @@ class InstrumentComm:
         await self._send_data_packet(SerialCommPacketTypes.HANDSHAKE)
         # register magic word to sync with data stream before starting other tasks
         await self._register_magic_word()
-        # now that the magic word is registered, get metadata
+        # now that the magic word is registered, set the stim schedule mode to standard and get metadata
+        await self._set_to_standard_stim_schedule_mode()
         await self._prompt_instrument_for_metadata()
 
         logger.info("Instrument ready")
@@ -304,6 +306,15 @@ class InstrumentComm:
 
         # put the magic word bytes into the cache so the next data packet can be read properly
         self._serial_packet_cache = SERIAL_COMM_MAGIC_WORD_BYTES
+
+    async def _set_to_standard_stim_schedule_mode(self) -> None:
+        logger.info("Setting stim schedule mode to standard")
+        schedule_type = StimScheduleType.STANDARD
+        await self._send_data_packet(SerialCommPacketTypes.SET_STIM_SCHEDULE_TYPE, bytes([schedule_type]))
+        await self._command_tracker.add(
+            SerialCommPacketTypes.SET_STIM_SCHEDULE_TYPE,
+            {"command": "set_stim_schedule_type", "schedule_type": schedule_type},
+        )
 
     async def _prompt_instrument_for_metadata(self) -> None:
         logger.info("Prompting instrument for metadata")
