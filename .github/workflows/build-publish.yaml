@@ -35,8 +35,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
+      - name: Get Version
+        id: software-version-pre-check
+        uses: notiz-dev/github-action-json-property@v0.2.0
+        with:
+          path: "electron/package.json"
+          prop_path: "version"
+
       - name: Confirming tag not already present on remote
-        run: if [$(git ls-remote --tags origin | grep ${{ steps.extract_version.outputs.package-version }}) = '']; then echo Tag does not exist on remote; else echo Tag already exists on remote && exit 1; fi
+        run: if [$(git ls-remote --tags origin | grep ${{ steps.software-version-pre-check.outputs.prop }}) = '']; then echo Tag does not exist on remote; else echo Tag already exists on remote && exit 1; fi
 
       - name: Extract branch name # Adapted from: https://stackoverflow.com/questions/58033366/how-to-get-current-branch-within-github-actions
         run: |

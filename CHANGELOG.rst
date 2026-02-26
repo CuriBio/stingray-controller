@@ -1,6 +1,6 @@
 Changelog for Stingray 96 Controller
 ====================================
 
-0.5.0 (unreleased)
+0.5.1 (unreleased)
 ------------------
 Initial 96 well beta release
