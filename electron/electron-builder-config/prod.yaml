@@ -1,6 +1,6 @@
 # https://www.electron.build/configuration/configuration#configuration
 productName: "Stingray 96 Controller"
-appId: "CuriBio.Stingray.Controller"
+appId: "CuriBio.Stingray96.Controller"
 asar: true
 directories:
   buildResources: "electron-build-resources"
@@ -23,5 +23,5 @@ publish:
   provider: "s3"
   bucket: "downloads.curibio.com"
   path: "software/stingray"
-  channel: "prod"
+  channel: "prod96"
   region: "us-east-1"

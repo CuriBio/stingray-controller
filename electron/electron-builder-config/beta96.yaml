@@ -1,6 +1,6 @@
 # https://www.electron.build/configuration/configuration#configuration
 productName: "Stingray 96 Controller"
-appId: "CuriBio.Stingray.Controller"
+appId: "CuriBio.Stingray96.Controller"
 asar: true
 directories:
   buildResources: "electron-build-resources"
