@@ -84,8 +84,12 @@ export default {
     statusBannerText: function () {
       if (this.statusUuid === systemStoreModule.SYSTEM_STATUS.OFFLINE_STATE) {
         return "Stimulation in Progress - Offline Mode";
-      } else if (this.stimScheduleMode === "Nautilai Sync" && this.currentStimSextant != null) {
-        return `Stimulation in Progress (Sextant ${this.currentStimSextant}) - Online Mode`;
+      } else if (this.stimScheduleMode === "Nautilai Sync") {
+        if (this.currentStimSextant != null) {
+          return `Stimulation in Progress (Segment ${this.currentStimSextant}) - Nautilai Sync Mode`;
+        } else {
+          return `Stimulation in Progress - Nautilai Sync Mode`;
+        }
       } else {
         return "Stimulation in Progress - Online Mode";
       }
