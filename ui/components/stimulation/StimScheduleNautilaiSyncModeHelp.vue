@@ -9,20 +9,19 @@
       1. Ensure the "Stimulate until Complete" option is selected for all assigned protocols.
     </div>
     <div class="div__schedule-mode-step">
-      2. Select the "Nautilai Sync" option in the Stingray 96 Controller.
+      2. Select the "Nautilai Sync" option as the Stimulation Mode in the Stingray 96 Controller.
     </div>
     <div class="div__schedule-mode-step">
-      3. Select "Wait for trigger" in the Advanced Settings of the Nautilai controller.
+      3. Select "Wait for trigger" in the Advanced Settings of the Nautilai Controller.
     </div>
+    <div class="div__schedule-mode-step">4. Click "Start Acquisition" in the Nautilai Controller.</div>
     <div class="div__schedule-mode-step">
-      4. Click "Start Recording" in the Nautilai controller. Perform this step first!
-    </div>
-    <div class="div__schedule-mode-step">
-      5. Click "Start Stimulation" in the Stingray 96 Controller. Perform this step second!
+      5. Click "Start Stimulation" in the Stingray 96 Controller. Step 5 can be executed before step 4 - the
+      specific order doesn't matter.
     </div>
     <div class="div__schedule-mode-step">
       6. The system will automatically cycle through all segments, ensuring stimulation and recording start
-      together at each sextant.
+      together at each segment.
     </div>
     <div class="div__schedule-mode-header">How it works:</div>
     <img
