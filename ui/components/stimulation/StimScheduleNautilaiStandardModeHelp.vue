@@ -3,18 +3,24 @@
     <div class="div__schedule-mode-title">Standard Mode</div>
     <div class="div__schedule-mode-subtitle">
       This mode allows you to stimulate your entire plate all at once. If connected to a Nautilai, the
-      stimulation will begin ignoring any Nautilai recording and scheduling settings.
+      stimulation will begin independently, ignoring any Nautilai recording and scheduling settings.
     </div>
     <div class="div__schedule-mode-header">How to use:</div>
     <div class="div__schedule-mode-step">
       1. Define the protocols however you please - they will be executed exactly as you define them.
     </div>
-    <div class="div__schedule-mode-step">2. Select the "Standard" mode from the settings.</div>
     <div class="div__schedule-mode-step">
-      3. (Optional) Select "Wait for Trigger" in the Advanced Settings of the Nautilai Controller so the
-      recording starts when stimulation starts. Then click "Start Recording".
+      2. Select the "Standard" option as the Stimulation Mode in the Stingray 96 Controller.
     </div>
-    <div class="div__schedule-mode-step">4. Click "Start Stimulation" in the Stingray 96 controller.</div>
+    <div class="div__schedule-mode-step">
+      3. If you are planning to take a recording on Nautilai, ensure you select "Wait for Trigger" in the
+      Advanced Settings<br />of the Nautilai Controller. You may click "Start Acquisition" before or after
+      step 4.
+    </div>
+    <div class="div__schedule-mode-step">
+      4. Click "Start Stimulation" in the Stingray 96 controller. 4. Click "Start Stimulation" in the Stingray
+      96 Controller.
+    </div>
     <div class="div__schedule-mode-step">
       5. Feel free to stop the stimulation at will - it will not affect Nautilai's recording.
     </div>
