@@ -430,11 +430,7 @@ export default {
         : "span__stimulation-controls-play-stop-button--disabled";
     },
     isConfigCheckButtonEnabled: function () {
-      return (
-        [STIM_STATUS.CONFIG_CHECK_NEEDED, STIM_STATUS.READY].includes(this.stimStatus) &&
-        this.barcodes.stimBarcode.valid &&
-        this.barcodes.plateBarcode.valid
-      );
+      return [STIM_STATUS.CONFIG_CHECK_NEEDED, STIM_STATUS.READY].includes(this.stimStatus);
     },
     offlineButtonDynamicStyle: function () {
       return this.isOfflineButtonEnabled ? "cursor: pointer; z-index: 3" : "cursor: default; z-index: 0";
@@ -459,11 +455,7 @@ export default {
       return { title: "Offline Mode", message };
     },
     configurationMessage: function () {
-      if (!this.barcodes.stimBarcode.valid) {
-        return "Must have a valid Stimulation Lid Barcode.";
-      } else if (!this.barcodes.plateBarcode.valid) {
-        return "Must have a valid Plate Barcode.";
-      } else if (this.stimStatus == STIM_STATUS.ERROR || this.stimStatus == STIM_STATUS.SHORT_CIRCUIT_ERROR) {
+      if (this.stimStatus == STIM_STATUS.ERROR || this.stimStatus == STIM_STATUS.SHORT_CIRCUIT_ERROR) {
         return "Cannot run a configuration on this stim lid as a short has been detected on it.";
       } else if (this.stimStatus === STIM_STATUS.NO_PROTOCOLS_ASSIGNED) {
         return "Cannot run configuration check until protocols have been assigned.";
@@ -577,8 +569,9 @@ export default {
       }
     },
     async startStimConfiguration() {
-      if (this.isConfigCheckButtonEnabled && !this.configCheckInProgress)
+      if (this.isConfigCheckButtonEnabled && !this.configCheckInProgress) {
         this.$store.dispatch(`stimulation/startStimConfiguration`);
+      }
     },
 
     async closeTimerModal(idx) {
