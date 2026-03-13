@@ -17,7 +17,10 @@ def get_version():
 
 
 def upload(bucket, parsed_args):
-    for file_name in [parsed_args.file, f"{parsed_args.file}.blockmap", f"{parsed_args.channel}.yml"]:
+    channel = parsed_args.channel
+    if not channel.endswith("96"):
+        channel += "96"
+    for file_name in [parsed_args.file, f"{parsed_args.file}.blockmap", f"{channel}.yml"]:
         _upload_file_to_s3(
             bucket, f"software/stingray/{file_name}", os.path.join(parsed_args.build_dir, file_name)
         )

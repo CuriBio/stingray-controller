@@ -6,7 +6,7 @@ on:
       release_channel:
         description: "Release channel"
         required: true
-        default: "beta96"
+        default: "unstable"
         type: choice
         options:
           - unstable
