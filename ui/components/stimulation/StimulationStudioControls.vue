@@ -364,8 +364,6 @@ export default {
         // protocols are in "run until complete" mode
         return (
           this.assignedOpenCircuits.length === 0 &&
-          this.barcodes.plateBarcode.valid &&
-          this.barcodes.stimBarcode.valid &&
           !this.isEmptyProtocolAssigned &&
           (this.stimScheduleMode === "Standard" || this.allProtocolsInRunUntilCompleteMode) &&
           ![
@@ -393,10 +391,6 @@ export default {
         this.stimStatus === STIM_STATUS.CONFIG_CHECK_IN_PROGRESS
       ) {
         return "Configuration check needed.";
-      } else if (!this.barcodes.stimBarcode.valid) {
-        return "Must have a valid Stimulation Lid Barcode.";
-      } else if (!this.barcodes.plateBarcode.valid) {
-        return "Must have a valid Plate Barcode.";
       } else if (this.stimStatus === STIM_STATUS.NO_PROTOCOLS_ASSIGNED) {
         return "No protocols have been assigned.";
       } else if (this.assignedOpenCircuits.length !== 0) {
