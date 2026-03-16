@@ -17,10 +17,7 @@
       Advanced Settings<br />of the Nautilai Controller. You may click "Start Acquisition" before or after
       step 4.
     </div>
-    <div class="div__schedule-mode-step">
-      4. Click "Start Stimulation" in the Stingray 96 controller. 4. Click "Start Stimulation" in the Stingray
-      96 Controller.
-    </div>
+    <div class="div__schedule-mode-step">4. Click "Start Stimulation" in the Stingray 96 controller.</div>
     <div class="div__schedule-mode-step">
       5. Feel free to stop the stimulation at will - it will not affect Nautilai's recording.
     </div>
