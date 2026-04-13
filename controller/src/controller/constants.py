@@ -191,6 +191,7 @@ class SerialCommPacketTypes(IntEnum):
     STIM_IMPEDANCE_CHECK_96 = 31
     SET_STIM_SCHEDULE_TYPE = 32
     SET_SUB_WELLS = 33
+    GET_SUB_WELLS = 35
     STIM_SEXTANT_STATUS = 34
     # offline mode
     INIT_OFFLINE_MODE = 40

@@ -21,6 +21,7 @@ from controller.constants import InstrumentConnectionStatuses
 from controller.constants import MAX_MC_REBOOT_DURATION_SECONDS
 from controller.constants import MICRO_TO_BASE_CONVERSION
 from controller.constants import MICROS_PER_MILLI
+from controller.constants import NUM_WELLS
 from controller.constants import PROTOCOL_STATUS_BYTES_LEN
 from controller.constants import SERIAL_COMM_CHECKSUM_LENGTH_BYTES
 from controller.constants import SERIAL_COMM_HANDSHAKE_TIMEOUT_SECONDS
@@ -562,6 +563,12 @@ class MantarrayMcSimulator(InfiniteProcess):
                 ]
                 print("Active wells:", active_well_names)  # allow-print
             response_body += bytes([command_failed])
+        elif packet_type == SerialCommPacketTypes.GET_SUB_WELLS:
+            active_module_ids = [
+                STIM_MODULE_ID_TO_WELL_IDX[module_id] in self._stim_active_wells
+                for module_id in range(NUM_WELLS)
+            ]
+            response_body += bytes(active_module_ids)
         elif packet_type == SerialCommPacketTypes.SET_SAMPLING_PERIOD:
             response_body += self._update_sampling_period(comm_from_controller)
         elif packet_type == SerialCommPacketTypes.START_DATA_STREAMING:
