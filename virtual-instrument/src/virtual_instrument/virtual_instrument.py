@@ -80,6 +80,8 @@ from .stimulation import StimulationProtocolManager
 MAGIC_WORD_LEN = len(SERIAL_COMM_MAGIC_WORD_BYTES)
 AVERAGE_MC_REBOOT_DURATION_SECONDS = MAX_MC_REBOOT_DURATION_SECONDS / 2
 
+ERROR_STATS_LEN = 64
+
 
 def _perf_counter_us() -> int:
     """Return perf_counter value as microseconds."""
@@ -640,7 +642,7 @@ class MantarrayMcSimulator(InfiniteProcess):
                 self._reboot_time_secs = perf_counter()
                 self._reboot_again = True
         elif packet_type == SerialCommPacketTypes.GET_ERROR_DETAILS:  # pragma: no cover
-            response_body += convert_instrument_event_info_to_bytes(self.default_event_info)
+            response_body += convert_instrument_event_info_to_bytes(self.default_event_info)[:ERROR_STATS_LEN]
         elif packet_type == SerialCommPacketTypes.CHECK_CONNECTION_STATUS:
             response_body += bytes([self._connection_status])
         elif packet_type == SerialCommPacketTypes.ERROR_ACK:  # pragma: no cover

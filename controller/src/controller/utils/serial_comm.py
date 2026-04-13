@@ -120,8 +120,8 @@ def validate_checksum(comm_from_pc: bytes) -> bool:
     return actual_checksum == expected_checksum
 
 
-def parse_instrument_event_info(event_info: bytes) -> dict[str, Any]:
-    return {
+def parse_instrument_event_info(event_info: bytes, include_hwids: bool = True) -> dict[str, Any]:
+    event_info_dict = {
         "prev_main_status_update_timestamp": int.from_bytes(event_info[:8], byteorder="little"),
         "prev_channel_status_update_timestamp": int.from_bytes(event_info[8:16], byteorder="little"),
         "start_of_prev_mag_data_stream_timestamp": int.from_bytes(event_info[16:24], byteorder="little"),
@@ -133,9 +133,13 @@ def parse_instrument_event_info(event_info: bytes) -> dict[str, Any]:
         "pc_connection_status": event_info[50],
         "prev_barcode_scanned": _parse_prev_barcode_scanned(event_info[51:63]),
         "bor_detected_on_boot_cycle": bool(event_info[63]),
-        "bb_hwid": f"{event_info[64]}.{event_info[65]}.{event_info[66]}",
-        "mb_hwid": f"{event_info[67]}.{event_info[68]}.{event_info[69]}",
     }
+    if include_hwids:
+        event_info_dict |= {
+            "bb_hwid": f"{event_info[64]}.{event_info[65]}.{event_info[66]}",
+            "mb_hwid": f"{event_info[67]}.{event_info[68]}.{event_info[69]}",
+        }
+    return event_info_dict
 
 
 def _parse_prev_barcode_scanned(barcode_bytes: bytes) -> str:

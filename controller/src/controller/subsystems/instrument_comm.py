@@ -600,7 +600,7 @@ class InstrumentComm:
                 barcode_comm = {"command": "get_barcode", "barcode": barcode}
                 await self._to_monitor_queue.put(barcode_comm)
             case SerialCommPacketTypes.GET_ERROR_DETAILS:
-                error_details = parse_instrument_event_info(packet_payload)
+                error_details = parse_instrument_event_info(packet_payload, include_hwids=False)
                 await self._report_instrument_fw_error(error_details)
             case _:
                 raise NotImplementedError(f"Packet Type: {packet_type} is not defined")
