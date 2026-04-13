@@ -132,6 +132,9 @@ def parse_instrument_event_info(event_info: bytes) -> dict[str, Any]:
         "stim_active": bool(event_info[49]),
         "pc_connection_status": event_info[50],
         "prev_barcode_scanned": _parse_prev_barcode_scanned(event_info[51:63]),
+        "bor_detected_on_boot_cycle": bool(event_info[63]),
+        "bb_hwid": f"{event_info[64]}.{event_info[65]}.{event_info[66]}",
+        "mb_hwid": f"{event_info[67]}.{event_info[68]}.{event_info[69]}",
     }
 
 
@@ -154,6 +157,9 @@ def convert_instrument_event_info_to_bytes(event_info: dict[str, Any]) -> bytes:
             [event_info[key] for key in ("mag_data_stream_active", "stim_active", "pc_connection_status")]
         )
         + bytes(event_info["prev_barcode_scanned"], encoding="ascii")
+        + bytes([event_info["bor_detected_on_boot_cycle"]])
+        + bytes(event_info["bb_hwid"])
+        + bytes(event_info["mb_hwid"])
     )
 
 

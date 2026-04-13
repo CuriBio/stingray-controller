@@ -137,6 +137,9 @@ class MantarrayMcSimulator(InfiniteProcess):
             "stim_active": False,
             "pc_connection_status": InstrumentConnectionStatuses.DISCONNECTED,
             "prev_barcode_scanned": default_plate_barcode,
+            "bor_detected_on_boot_cycle": False,
+            "bb_hwid": [10, 20, 30],
+            "mb_hwid": [40, 50, 60],
         }
     )
     default_metadata_values: immutabledict[UUID, Any] = immutabledict(
