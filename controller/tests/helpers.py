@@ -35,6 +35,9 @@ TEST_EVENT_INFO = immutabledict(
         "stim_active": False,
         "pc_connection_status": 1,
         "prev_barcode_scanned": TEST_PLATE_BARCODE,
+        "bor_detected_on_boot_cycle": False,
+        "bb_hwid": [10, 20, 30],
+        "mb_hwid": [40, 50, 60],
     }
 )
 TEST_INITIAL_MAGNET_FINDING_PARAMS = immutabledict({"X": 0, "Y": 2, "Z": -5, "REMN": 1200})

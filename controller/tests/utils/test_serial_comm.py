@@ -119,7 +119,7 @@ def test_parse_metadata_bytes__returns_expected_value():
 
     # TODO make sure the bytes are the correct length?
 
-    assert parse_metadata_bytes(metadata_bytes) == {
+    expected_metadata = {
         BOOT_FLAGS_UUID: 0b10101010,
         MANTARRAY_SERIAL_NUMBER_UUID: TEST_SERIAL_NUMBER,
         MANTARRAY_NICKNAME_UUID: "マンタレ1",
@@ -129,13 +129,16 @@ def test_parse_metadata_bytes__returns_expected_value():
         INITIAL_MAGNET_FINDING_PARAMS_UUID: TEST_INITIAL_MAGNET_FINDING_PARAMS,
         "is_stingray": is_stingray,
         **TEST_EVENT_INFO,
+        "bb_hwid": ".".join(str(n) for n in TEST_EVENT_INFO["bb_hwid"]),
+        "mb_hwid": ".".join(str(n) for n in TEST_EVENT_INFO["mb_hwid"]),
     }
+    assert parse_metadata_bytes(metadata_bytes) == expected_metadata
 
 
 def test_parse_instrument_event_info__parses_default_metadata_values_without_error():
     event_info_len = 64
     test_bytes = bytes([0xFF] * event_info_len)
-    actual = parse_instrument_event_info(test_bytes)
+    actual = parse_instrument_event_info(test_bytes, include_hwids=False)
     assert actual["prev_barcode_scanned"] == "N/A"
 
 
