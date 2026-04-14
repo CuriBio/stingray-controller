@@ -240,6 +240,16 @@ class SystemMonitor:
                     await self._queues["to"]["instrument_comm"].put(
                         {**communication, "stim_info": chunked_stim_info}
                     )
+
+                    # active wells could have been removed since running stim checks,
+                    # so update them here now that the stim protocols have been set
+                    well_indices = [
+                        GENERIC_96_WELL_DEFINITION.get_well_index_from_well_name(well_name)
+                        for well_name, pid in stim_info["protocol_assignments"].items()
+                        if pid is not None
+                    ]
+                    set_active_wells_cmd = {"command": "set_active_wells", "well_indices": well_indices}
+                    await self._queues["to"]["instrument_comm"].put(set_active_wells_cmd)
                 case {"command": "start_stim_checks", "well_indices": well_indices}:
                     system_state_updates["stimulator_circuit_statuses"] = {
                         well_idx: StimulatorCircuitStatuses.CALCULATING.name.lower()

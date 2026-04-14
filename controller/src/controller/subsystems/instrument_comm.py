@@ -97,6 +97,7 @@ COMMAND_PACKET_TYPES = frozenset(
         SerialCommPacketTypes.STIM_IMPEDANCE_CHECK_96,
         SerialCommPacketTypes.SET_STIM_SCHEDULE_TYPE,
         SerialCommPacketTypes.SET_SUB_WELLS,
+        SerialCommPacketTypes.GET_SUB_WELLS,
         SerialCommPacketTypes.SET_SAMPLING_PERIOD,
         SerialCommPacketTypes.START_DATA_STREAMING,
         SerialCommPacketTypes.STOP_DATA_STREAMING,
@@ -599,7 +600,7 @@ class InstrumentComm:
                 barcode_comm = {"command": "get_barcode", "barcode": barcode}
                 await self._to_monitor_queue.put(barcode_comm)
             case SerialCommPacketTypes.GET_ERROR_DETAILS:
-                error_details = parse_instrument_event_info(packet_payload)
+                error_details = parse_instrument_event_info(packet_payload, include_hwids=False)
                 await self._report_instrument_fw_error(error_details)
             case _:
                 raise NotImplementedError(f"Packet Type: {packet_type} is not defined")
@@ -620,6 +621,7 @@ class InstrumentComm:
                 f"Packet Type ID: {packet_type}, Packet Body: {list(response_data)}"
             )
 
+        send_response = True
         match prev_command_info["command"]:
             # TODO make an enum for all these commands?
             case "get_metadata":
@@ -691,6 +693,14 @@ class InstrumentComm:
             case "set_active_wells":
                 if response_data[0]:
                     raise InstrumentCommandResponseError("set_active_wells")
+            case "get_active_wells":
+                prev_command_info = prev_command_info["end_offline_mode_info"]
+                for module_id in range(NUM_WELLS):
+                    if response_data[module_id]:
+                        continue
+                    well_idx = STIM_MODULE_ID_TO_WELL_IDX[module_id]
+                    well_name = GENERIC_96_WELL_DEFINITION.get_well_name_from_well_index(well_idx)
+                    prev_command_info["stim_info"]["protocol_assignments"][well_name] = None
             case "start_stimulation":
                 # Tanner (10/25/21): if needed, can save _base_global_time_of_data_stream here
                 if response_data[0]:
@@ -720,10 +730,17 @@ class InstrumentComm:
                 )
             case "end_offline_mode":
                 prev_command_info |= parse_end_offline_mode_bytes(response_data)
+                # need to get sub wells before sending response
+                send_response = False
+                await self._send_data_packet(SerialCommPacketTypes.GET_SUB_WELLS)
+                await self._command_tracker.add(
+                    SerialCommPacketTypes.GET_SUB_WELLS,
+                    {"command": "get_active_wells", "end_offline_mode_info": prev_command_info},
+                )
             case "init_offline_mode":
                 self._offline_state_change.set()
 
-        if prev_command_info["command"] not in INTERMEDIATE_FIRMWARE_UPDATE_COMMANDS:
+        if prev_command_info["command"] not in INTERMEDIATE_FIRMWARE_UPDATE_COMMANDS and send_response:
             await self._to_monitor_queue.put(prev_command_info)
 
     async def _process_stim_packets(self, stim_stream_info: dict[str, bytes | int]) -> None:

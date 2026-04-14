@@ -21,6 +21,7 @@ from controller.constants import InstrumentConnectionStatuses
 from controller.constants import MAX_MC_REBOOT_DURATION_SECONDS
 from controller.constants import MICRO_TO_BASE_CONVERSION
 from controller.constants import MICROS_PER_MILLI
+from controller.constants import NUM_WELLS
 from controller.constants import PROTOCOL_STATUS_BYTES_LEN
 from controller.constants import SERIAL_COMM_CHECKSUM_LENGTH_BYTES
 from controller.constants import SERIAL_COMM_HANDSHAKE_TIMEOUT_SECONDS
@@ -79,6 +80,8 @@ from .stimulation import StimulationProtocolManager
 MAGIC_WORD_LEN = len(SERIAL_COMM_MAGIC_WORD_BYTES)
 AVERAGE_MC_REBOOT_DURATION_SECONDS = MAX_MC_REBOOT_DURATION_SECONDS / 2
 
+ERROR_STATS_LEN = 64
+
 
 def _perf_counter_us() -> int:
     """Return perf_counter value as microseconds."""
@@ -136,6 +139,9 @@ class MantarrayMcSimulator(InfiniteProcess):
             "stim_active": False,
             "pc_connection_status": InstrumentConnectionStatuses.DISCONNECTED,
             "prev_barcode_scanned": default_plate_barcode,
+            "bor_detected_on_boot_cycle": False,
+            "bb_hwid": [10, 20, 30],
+            "mb_hwid": [40, 50, 60],
         }
     )
     default_metadata_values: immutabledict[UUID, Any] = immutabledict(
@@ -562,6 +568,12 @@ class MantarrayMcSimulator(InfiniteProcess):
                 ]
                 print("Active wells:", active_well_names)  # allow-print
             response_body += bytes([command_failed])
+        elif packet_type == SerialCommPacketTypes.GET_SUB_WELLS:
+            active_module_ids = [
+                STIM_MODULE_ID_TO_WELL_IDX[module_id] in self._stim_active_wells
+                for module_id in range(NUM_WELLS)
+            ]
+            response_body += bytes(active_module_ids)
         elif packet_type == SerialCommPacketTypes.SET_SAMPLING_PERIOD:
             response_body += self._update_sampling_period(comm_from_controller)
         elif packet_type == SerialCommPacketTypes.START_DATA_STREAMING:
@@ -630,7 +642,7 @@ class MantarrayMcSimulator(InfiniteProcess):
                 self._reboot_time_secs = perf_counter()
                 self._reboot_again = True
         elif packet_type == SerialCommPacketTypes.GET_ERROR_DETAILS:  # pragma: no cover
-            response_body += convert_instrument_event_info_to_bytes(self.default_event_info)
+            response_body += convert_instrument_event_info_to_bytes(self.default_event_info)[:ERROR_STATS_LEN]
         elif packet_type == SerialCommPacketTypes.CHECK_CONNECTION_STATUS:
             response_body += bytes([self._connection_status])
         elif packet_type == SerialCommPacketTypes.ERROR_ACK:  # pragma: no cover
