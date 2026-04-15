@@ -210,8 +210,7 @@ class InstrumentComm:
         await self._send_data_packet(SerialCommPacketTypes.HANDSHAKE)
         # register magic word to sync with data stream before starting other tasks
         await self._register_magic_word()
-        # now that the magic word is registered, set the stim schedule mode to standard and get metadata
-        await self._set_to_standard_stim_schedule_mode()
+        # now that the magic word is registered get metadata
         await self._prompt_instrument_for_metadata()
 
         logger.info("Instrument ready")
@@ -722,12 +721,17 @@ class InstrumentComm:
             case "check_connection_status":
                 prev_command_info["status"] = response_data[0]
                 self._system_in_offline_mode = response_data[0] == InstrumentConnectionStatuses.OFFLINE
-                if self._system_in_offline_mode:
-                    self._offline_state_change.set()
-
                 logger.info(
                     f"Instrument running in {'offline' if self._system_in_offline_mode else 'online'} mode at time of connection"
                 )
+
+                if self._system_in_offline_mode:
+                    self._offline_state_change.set()
+                    # stim can only be run in standard schedule mode while offline, so if the instrument is
+                    # in offline mode then the state should be known
+                else:
+                    # otherwise need to set stim schedule mode to a known state
+                    await self._set_to_standard_stim_schedule_mode()
             case "end_offline_mode":
                 prev_command_info |= parse_end_offline_mode_bytes(response_data)
                 # need to get sub wells before sending response
