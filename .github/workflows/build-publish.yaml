@@ -21,9 +21,6 @@ on:
           - test
           - modl
           - prod
-  push:
-    branches:
-      - main
 jobs:
   check_inputs:
     strategy:
@@ -48,19 +45,19 @@ jobs:
       - name: Extract branch name # Adapted from: https://stackoverflow.com/questions/58033366/how-to-get-current-branch-within-github-actions
         run: |
           git branch -av
-          echo "SHA_OF_MAIN_BRANCH=$(echo $(git branch -av | grep remotes/origin/main | grep -oP 'main\s+\K\w+'))" >> $GITHUB_ENV
+          echo "SHA_OF_BETA96_BRANCH=$(echo $(git branch -av | grep remotes/origin/beta96 | grep -oP 'beta96\s+\K\w+'))" >> $GITHUB_ENV
           echo "SHA_OF_CURRENT_BRANCH=$(echo $(git branch -av | grep '*' | grep -oP ' \s+\K\w+'))" >> $GITHUB_ENV
 
       - name: Display extracted branch information
         run: |
           echo "SHA of current branch: ${{ env.SHA_OF_CURRENT_BRANCH }}"
-          echo "SHA of main branch: ${{ env.SHA_OF_MAIN_BRANCH }}"
+          echo "SHA of beta96 branch: ${{ env.SHA_OF_BETA96_BRANCH }}"
 
       - name: Fail if attempting to publish to prod release channel incorrectly
         if: github.event.inputs.release_channel == 'prod'
         run: |
           if [ "${{github.event.inputs.api_endpoint}}" = "prod" ] ; then echo "Using prod API endpoint, can proceed to publish"; else exit 1; fi
-          if [ "${{ env.SHA_OF_CURRENT_BRANCH }}" = "${{ env.SHA_OF_MAIN_BRANCH }}" ] ; then echo "Running on main branch, can proceed to publish"; else exit 1; fi
+          if [ "${{ env.SHA_OF_CURRENT_BRANCH }}" = "${{ env.SHA_OF_BETA96_BRANCH }}" ] ; then echo "Running on beta96 branch, can proceed to publish"; else exit 1; fi
 
   publish:
     needs: [check_inputs]
