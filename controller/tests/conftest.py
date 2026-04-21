@@ -19,13 +19,7 @@ def pytest_addoption(parser) -> None:
         "--only-exe",
         action="store_true",
         default=False,
-        help="onlyrun tests that are marked for the compiled exe",
-    )
-    parser.addoption(
-        "--live-test",
-        action="store_true",
-        default=False,
-        help="only run tests that are marked for the real (live) instrument",
+        help="only run tests that are marked for the compiled exe",
     )
 
 
@@ -43,12 +37,6 @@ def pytest_collection_modifyitems(config, items) -> None:
     for item in items:
         if "only_exe" in item.keywords:
             item.add_marker(skip_exe)
-
-    if not config.getoption("--live-test"):
-        skip_live = pytest.mark.skip(reason="these tests are skipped unless --live-test option is set")
-        for item in items:
-            if "live_test" in item.keywords:
-                item.add_marker(skip_live)
 
     if not config.getoption("--full-ci"):
         skip_ci_only = pytest.mark.skip(reason="these tests are skipped unless --full-ci option is set")
