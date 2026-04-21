@@ -701,6 +701,7 @@ class InstrumentComm:
                     well_idx = STIM_MODULE_ID_TO_WELL_IDX[module_id]
                     well_name = GENERIC_96_WELL_DEFINITION.get_well_name_from_well_index(well_idx)
                     prev_command_info["stim_info"]["protocol_assignments"][well_name] = None
+                # TODO
             case "start_stimulation":
                 # Tanner (10/25/21): if needed, can save _base_global_time_of_data_stream here
                 if response_data[0]:
@@ -729,7 +730,9 @@ class InstrumentComm:
                     f"Instrument running in {'offline' if self._system_in_offline_mode else 'online'} mode at time of connection"
                 )
             case "end_offline_mode":
-                prev_command_info |= parse_end_offline_mode_bytes(response_data)
+                end_offline_mode_info = parse_end_offline_mode_bytes(response_data)
+                logger.info(f"Offline mode info: {end_offline_mode_info}")
+                prev_command_info |= end_offline_mode_info
                 # need to get sub wells before sending response
                 send_response = False
                 await self._send_data_packet(SerialCommPacketTypes.GET_SUB_WELLS)
