@@ -76,6 +76,11 @@ from .exceptions import SerialCommInvalidSamplingPeriodError
 from .exceptions import UnrecognizedSerialCommPacketTypeError
 from .stimulation import StimulationProtocolManager
 
+logging.basicConfig(format="%(asctime)s.%(msecs)03d -- %(message)s", datefmt="%H:%M:%S", level=logging.INFO)
+
+
+logger = logging.getLogger(__name__)
+
 
 MAGIC_WORD_LEN = len(SERIAL_COMM_MAGIC_WORD_BYTES)
 AVERAGE_MC_REBOOT_DURATION_SECONDS = MAX_MC_REBOOT_DURATION_SECONDS / 2
@@ -357,7 +362,7 @@ class MantarrayMcSimulator(InfiniteProcess):
                 0, len(data_packet) - 1
             )
             data_packet = data_packet[trunc_index:]
-        print("SEND:", packet_type)  # allow-print
+        logger.info(f"SEND: {packet_type}")
 
         if self.conn:
             self.conn.sendall(data_packet)
@@ -406,7 +411,7 @@ class MantarrayMcSimulator(InfiniteProcess):
         except BlockingIOError:
             return
 
-        print(f"CONNECTION MADE: {addr}")  # allow-print
+        logger.info(f"CONNECTION MADE: {addr}")
         self.conn.setblocking(False)
 
     def _handle_comm_from_controller(self) -> None:
@@ -420,6 +425,8 @@ class MantarrayMcSimulator(InfiniteProcess):
         except ConnectionResetError:
             if self._connection_status != InstrumentConnectionStatuses.OFFLINE:
                 raise
+
+            logger.info("DISCONNECT")
 
             self.conn.close()
             self.conn = None
@@ -472,7 +479,7 @@ class MantarrayMcSimulator(InfiniteProcess):
         response_body = bytes(0)
 
         packet_type = comm_from_controller[SERIAL_COMM_PACKET_TYPE_INDEX]
-        print("RECV:", packet_type)  # allow-print
+        logger.info(f"RECV: {packet_type}")
         if packet_type == SerialCommPacketTypes.REBOOT:
             self._reboot_time_secs = perf_counter()
         elif packet_type == SerialCommPacketTypes.HANDSHAKE:
@@ -883,7 +890,7 @@ class MantarrayMcSimulator(InfiniteProcess):
                 self._is_stimulating = False
 
     def _send_stim_sextant_status_update(self, sextant_num: int) -> None:
-        print("STIM SEXTANT:", sextant_num)  # allow-print
+        logger.info(f"STIM SEXTANT: {sextant_num}")
         self._send_data_packet(SerialCommPacketTypes.STIM_SEXTANT_STATUS, bytes([sextant_num]))
 
     def _drain_all_queues(self) -> dict[str, Any]:
