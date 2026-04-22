@@ -348,7 +348,7 @@ class MantarrayMcSimulator(InfiniteProcess):
         return self._get_absolute_timer()
 
     def _send_data_packet(
-        self, packet_type: int, data_to_send: bytes = bytes(0), truncate: bool = False
+        self, packet_type: SerialCommPacketTypes, data_to_send: bytes = bytes(0), truncate: bool = False
     ) -> None:
         timestamp = self._get_timestamp()
         data_packet = create_data_packet(timestamp, packet_type, data_to_send)
@@ -718,6 +718,9 @@ class MantarrayMcSimulator(InfiniteProcess):
         return update_status_byte
 
     def _handle_status_beacon(self) -> None:
+        if self._connection_status == InstrumentConnectionStatuses.OFFLINE:
+            return
+
         if self._time_of_last_status_beacon_secs is None:
             self._send_status_beacon(truncate=self._time_of_last_handshake_secs is None)
             return
@@ -730,7 +733,7 @@ class MantarrayMcSimulator(InfiniteProcess):
         self._send_data_packet(SerialCommPacketTypes.STATUS_BEACON, bytes(self._status_codes), truncate)
 
     def _handle_barcode(self) -> None:
-        if self._ready_to_send_barcode:
+        if self._ready_to_send_barcode and self._connection_status != InstrumentConnectionStatuses.OFFLINE:
             self._send_data_packet(
                 SerialCommPacketTypes.BARCODE_FOUND, bytes(self.default_plate_barcode, encoding="ascii")
             )
@@ -766,6 +769,7 @@ class MantarrayMcSimulator(InfiniteProcess):
         Since this process iterates once per 10 ms, it is possible that
         more than one data packet must be sent.
         """
+
         if self._timepoint_of_last_data_packet_us is None:  # making mypy happy
             raise NotImplementedError("_timepoint_of_last_data_packet_us should never be None here")
         us_since_last_data_packet = _get_us_since_last_data_packet(self._timepoint_of_last_data_packet_us)
@@ -785,7 +789,8 @@ class MantarrayMcSimulator(InfiniteProcess):
             # increment values
             self._time_index_us += self._sampling_period_us
             self._simulated_data_index = (self._simulated_data_index + 1) % simulated_data_len
-        # self._output_queue.put_nowait(data_packet_bytes)
+        # if self._connection_status != InstrumentConnectionStatuses.OFFLINE:
+        #     self._output_queue.put_nowait(data_packet_bytes)
         # update timepoint
         self._timepoint_of_last_data_packet_us += num_packets_to_send * self._sampling_period_us
 
@@ -863,7 +868,7 @@ class MantarrayMcSimulator(InfiniteProcess):
                     dur_since_subprotocol_start -= curr_subprotocol_duration_us
                     curr_subprotocol_duration_us = get_subprotocol_dur_us(curr_subprotocol)
 
-        if num_status_updates > 0:
+        if num_status_updates > 0 and self._connection_status != InstrumentConnectionStatuses.OFFLINE:
             packet_bytes = bytes([num_status_updates]) + packet_bytes
             self._send_data_packet(SerialCommPacketTypes.STIM_STATUS, packet_bytes)
 
