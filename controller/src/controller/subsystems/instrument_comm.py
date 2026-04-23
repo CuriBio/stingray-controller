@@ -35,6 +35,7 @@ from ..constants import STIM_COMPLETE_SUBPROTOCOL_IDX
 from ..constants import STIM_FINAL_SEXTANT
 from ..constants import STIM_MODULE_ID_TO_WELL_IDX
 from ..constants import StimScheduleType
+from ..constants import StimulationStates
 from ..constants import STM_VID
 from ..exceptions import FirmwareGoingDormantError
 from ..exceptions import IncorrectInstrumentConnectedError
@@ -733,7 +734,15 @@ class InstrumentComm:
                     # otherwise need to set stim schedule mode to a known state
                     await self._set_to_standard_stim_schedule_mode()
             case "end_offline_mode":
-                prev_command_info |= parse_end_offline_mode_bytes(response_data)
+                end_offline_mode_info = parse_end_offline_mode_bytes(response_data)
+                logger.info(f"Offline mode info: {end_offline_mode_info}")
+                prev_command_info |= end_offline_mode_info
+                # update which protocols are running since they may have stopped while in offline mode
+                self._protocols_running = {
+                    protocol_idx
+                    for protocol_idx, state in enumerate(prev_command_info["stimulation_protocol_statuses"])
+                    if state == StimulationStates.RUNNING
+                }
                 # need to get sub wells before sending response
                 send_response = False
                 await self._send_data_packet(SerialCommPacketTypes.GET_SUB_WELLS)
