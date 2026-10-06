@@ -160,9 +160,11 @@ ipcMain.handle("saveAccountInfoRequest", (_, { customerId, username }) => {
 ipcMain.on("setSwUpdateAutoInstall", (e, enableAutoInstall) => {
   e.reply("setSwUpdateAutoInstall", 200);
 
-  const action = enableAutoInstall ? "Enabling" : "Disabling";
-  console.log(action + " automatic installation of SW updates after shutdown"); // allow-log
-  autoUpdater.autoInstallOnAppQuit = enableAutoInstall;
+  // the beta96 controller never downloads SW updates, so never allow automatic installation on quit
+  // regardless of what the controller requests. Users must manually uninstall and install a new version.
+  const action = enableAutoInstall ? "enable" : "disable";
+  console.log(`Ignoring request to ${action} automatic installation of SW updates`); // allow-log
+  autoUpdater.autoInstallOnAppQuit = false;
 });
 
 ipcMain.once("swVersionRequest", (event) => {

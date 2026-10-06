@@ -13,7 +13,6 @@ import zipfile
 from controller.utils.logging import get_redacted_string
 import httpx
 from httpx import Response
-from semver import VersionInfo
 
 from ..constants import AuthCreds
 from ..constants import AuthTokens
@@ -21,8 +20,6 @@ from ..constants import CLOUD_API_ENDPOINT
 from ..constants import CLOUD_PULSE3D_ENDPOINT
 from ..constants import ConfigSettings
 from ..constants import CURRENT_SOFTWARE_VERSION
-from ..constants import SOFTWARE_RELEASE_CHANNEL
-from ..exceptions import FirmwareAndSoftwareNotCompatibleError
 from ..exceptions import FirmwareDownloadError
 from ..exceptions import LoginFailedError
 from ..exceptions import RefreshFailedError
@@ -31,14 +28,13 @@ from ..utils.aio import clean_up_tasks
 from ..utils.aio import wait_tasks_clean
 from ..utils.files import check_for_local_firmware_versions
 from ..utils.files import get_file_md5
+from ..utils.files import NO_UPDATE_FW_VERSION
 from ..utils.generic import handle_system_error
 
 
 logger = logging.getLogger(__name__)
 
 ERROR_MSG = "IN CLOUD COMM"
-
-IS_PROD = SOFTWARE_RELEASE_CHANNEL == "prod"
 
 
 def _get_tokens(response_json: dict[str, Any]) -> AuthTokens:
@@ -194,75 +190,38 @@ class CloudComm:
 
     # TODO make sure entire FW update process (including InstrumentComm portion) has sufficient logging
     async def _check_versions(self, command: dict[str, str]) -> dict[str, Any]:
+        """Check for firmware update files in the local firmware update directory.
+
+        The beta96 controller does not retrieve firmware or software updates from the cloud, so the local
+        firmware update directory is the only source of firmware updates.
+        """
+        fw_update_dir_path = command["fw_update_dir_path"]
+
         try:
-            if local_firmware_versions := check_for_local_firmware_versions(command["fw_update_dir_path"]):
+            if local_firmware_versions := check_for_local_firmware_versions(fw_update_dir_path):
                 return local_firmware_versions
-        except Exception:  # nosec B110
-            # catch all errors here to avoid user error preventing the next checks
-            pass
+        except Exception:
+            # catch all errors here so that a problem with the local directory does not prevent boot up
+            logger.exception(f"Error checking for local firmware files in '{fw_update_dir_path}'")
 
-        check_sw_response = await self._request(
-            "get",
-            f"https://{CLOUD_API_ENDPOINT}/mantarray/software-range/{command['main_fw_version']}/{IS_PROD}",
-            auth_required=False,
-            error_message="Error checking software/firmware compatibility",
-        )
-        range = check_sw_response.json()
-
-        current_version_no_pre = CURRENT_SOFTWARE_VERSION.split("-pre")[0]
-
-        try:
-            sw_version_semver = VersionInfo.parse(current_version_no_pre)
-        except ValueError:
-            pass  # CURRENT_SOFTWARE_VERSION will not be a valid semver in dev mode
-        else:
-            if not (range["min_sting_sw"] <= sw_version_semver <= range["max_sting_sw"]):
-                raise FirmwareAndSoftwareNotCompatibleError(range["max_sting_sw"])
-
-        get_versions_response = await self._request(
-            "get",
-            f"https://{CLOUD_API_ENDPOINT}/mantarray/versions/{command['serial_number']}/{IS_PROD}",
-            auth_required=False,
-            error_message="Error getting latest firmware versions",
-        )
-        return {"latest_versions": get_versions_response.json(), "download": True}
+        logger.info(f"No local firmware files found in '{fw_update_dir_path}'")
+        # return versions that will never be considered an update
+        return {
+            "latest_versions": {"main_fw": NO_UPDATE_FW_VERSION, "channel_fw": NO_UPDATE_FW_VERSION},
+            "download": False,
+        }
 
     async def _download_firmware_updates(self, command: dict[str, str]) -> dict[str, bytes]:
+        """Load firmware update files from the local firmware update directory."""
+        if not command["fw_update_dir_path"]:
+            raise NotImplementedError(
+                "fw_update_dir_path must be given, firmware updates can only be loaded from local files"
+            )
+
         try:
-            if command["fw_update_dir_path"]:
-                return _load_fw_files(command)
-
-            presigned_urls = {}
-
-            # get presigned download URL(s)
-            for fw_type in ("main", "channel"):
-                if version := command[fw_type]:
-                    download_details = await self._request(
-                        "get",
-                        f"https://{CLOUD_API_ENDPOINT}/mantarray/firmware/{fw_type}/{version}",
-                        auth_required=True,
-                        error_message=f"Error getting presigned URL for {fw_type} firmware download",
-                    )
-                    presigned_urls[fw_type] = download_details.json()["presigned_url"]
-
-            if not presigned_urls:
-                raise NotImplementedError("No firmware types specified")
-
-            subtask_res = {}
-
-            # download firmware file(s)
-            for fw_type, presigned_url in presigned_urls.items():
-                download_response = await self._request(
-                    "get",
-                    presigned_url,
-                    auth_required=False,
-                    error_message=f"Error during download of {fw_type} firmware",
-                )
-                subtask_res[f"{fw_type}_firmware_contents"] = download_response.content
+            return _load_fw_files(command)
         except Exception as e:
             raise FirmwareDownloadError() from e
-
-        return subtask_res
 
     # HELPERS
 
