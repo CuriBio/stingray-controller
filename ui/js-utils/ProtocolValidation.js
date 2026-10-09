@@ -269,26 +269,24 @@ export const _isValidDelayPulse = (protocol) => {
   return checkDelayPulseValidity(duration, unit) === "";
 };
 
+// Recursively converts the casing of every key in a protocol.
+// Returns a new structure and never mutates the input, since the input may be a protocol
+// that is still in use in the store (e.g. when exporting the current protocol list).
 export const convertProtocolCasing = (input, conversionFn) => {
-  if (_isObject(input)) {
-    if (!Array.isArray(input)) {
-      input = conversionFn(input);
-      for (const key in input) {
-        if (_isObject(input[key])) {
-          input[key] = convertProtocolCasing(input[key], conversionFn);
-        }
-      }
-    } else {
-      for (const [idx, obj] of Object.entries(input)) {
-        const newObj = convertProtocolCasing(obj, conversionFn);
-        input[idx] = newObj;
-      }
-    }
+  if (!_isObject(input)) return input;
+
+  if (Array.isArray(input)) {
+    return input.map((obj) => convertProtocolCasing(obj, conversionFn));
   }
-  return input;
+
+  const converted = conversionFn(input);
+  for (const key of Object.keys(converted)) {
+    converted[key] = convertProtocolCasing(converted[key], conversionFn);
+  }
+  return converted;
 };
 
-const _isObject = (input) => typeof input === "object";
+const _isObject = (input) => typeof input === "object" && input !== null;
 
 export const _convertObjToCamelCase = (obj) => {
   const convertedObj = {};
