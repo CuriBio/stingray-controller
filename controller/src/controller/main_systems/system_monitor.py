@@ -99,10 +99,15 @@ class SystemMonitor:
                 system_state["instrument_metadata"]
                 and system_state["latest_software_version"]
             ):
-                # for the beta96 controller, we want to disable software and firmware auto-updating.
-                # instead of transitioning to SystemStatuses.CHECKING_FOR_UPDATES_STATE and calling check_versions here,
-                # we skip check_versions, go directly to SystemStatuses.IDLE_READY_STATE, and never hit the cases below.
-                new_system_status = SystemStatuses.IDLE_READY_STATE
+                new_system_status = SystemStatuses.CHECKING_FOR_UPDATES_STATE
+                # the beta96 controller only installs firmware updates from local files, so send command to
+                # cloud comm to check the local firmware update directory
+                await self._queues["to"]["cloud_comm"].put(
+                    {
+                        "command": "check_versions",
+                        "fw_update_dir_path": os.path.join(system_state["base_directory"], FW_UPDATE_SUBDIR),
+                    }
+                )
             case SystemStatuses.UPDATES_NEEDED_STATE if system_state["firmware_updates_accepted"]:
                 if not system_state["firmware_updates_require_download"] or system_state["is_user_logged_in"]:
                     new_system_status = SystemStatuses.DOWNLOADING_UPDATES_STATE
@@ -423,13 +428,9 @@ class SystemMonitor:
                 case {"command": "check_versions"}:
                     system_state_updates["firmware_updates_require_download"] = communication["download"]
 
-                    required_sw_for_fw = communication["latest_versions"]["sting_sw"]
                     latest_main_fw = communication["latest_versions"]["main_fw"]
                     latest_channel_fw = communication["latest_versions"]["channel_fw"]
 
-                    latest_version_no_pre = system_state["latest_software_version"].split("-pre")[0]
-
-                    min_sw_version_available = not semver_gt(required_sw_for_fw, latest_version_no_pre)
                     main_fw_update_needed = semver_gt(
                         latest_main_fw, system_state["instrument_metadata"][MAIN_FIRMWARE_VERSION_UUID]
                     )
@@ -437,8 +438,7 @@ class SystemMonitor:
                         latest_channel_fw, system_state["instrument_metadata"][CHANNEL_FIRMWARE_VERSION_UUID]
                     )
 
-                    # FW updates are only available if the required SW can be downloaded
-                    if (main_fw_update_needed or channel_fw_update_needed) and min_sw_version_available:
+                    if main_fw_update_needed or channel_fw_update_needed:
                         logger.info("Firmware update(s) found")
 
                         system_state_updates["system_status"] = SystemStatuses.UPDATES_NEEDED_STATE

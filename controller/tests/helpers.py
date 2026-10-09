@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import math
+import os
 from random import choice
 from random import randint
 
@@ -402,3 +403,17 @@ def assert_subprotocol_node_bytes_are_expected(actual, expected):
     else:
         assert actual[1] == expected[1], "Invalid subprotocol idx"
         assert_subprotocol_pulse_bytes_are_expected(actual[2:], expected[2:])
+
+
+def create_fw_files(dir_path, file_names_to_contents):
+    """Create firmware files in the given directory.
+
+    file_names_to_contents can either be a dict mapping file names to their contents, or an iterable of
+    file names. If no contents are given for a file, a single placeholder byte is written.
+    """
+    if not isinstance(file_names_to_contents, dict):
+        file_names_to_contents = {file_name: None for file_name in file_names_to_contents}
+
+    for file_name, contents in file_names_to_contents.items():
+        with open(os.path.join(dir_path, file_name), "wb") as f:
+            f.write(contents if contents is not None else b"\x00")
