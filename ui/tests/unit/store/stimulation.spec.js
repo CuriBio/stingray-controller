@@ -234,6 +234,96 @@ describe("store/stimulation", () => {
       expect(mockCreateElement).toHaveBeenCalledTimes(2);
     });
 
+    test("When a user exports protocols, Then the exported file is in snake case and the protocols in state are left unmodified", async () => {
+      const testProtocol = {
+        letter: "B",
+        color: "#000000",
+        label: "export_test",
+        protocol: {
+          name: "export_test",
+          stimulationType: "C",
+          runUntilStopped: false,
+          restDuration: 0,
+          timeUnit: "milliseconds",
+          subprotocols: [
+            { type: "Delay", duration: 1000, unit: "milliseconds" },
+            {
+              type: "Biphasic",
+              frequency: 1,
+              totalActiveDuration: { duration: 14000, unit: "milliseconds" },
+              numCycles: 14,
+              postphaseInterval: 990,
+              phaseOneDuration: 5,
+              phaseOneCharge: 40,
+              interphaseInterval: 0,
+              phaseTwoCharge: -40,
+              phaseTwoDuration: 5,
+            },
+          ],
+          detailedSubprotocols: [
+            {
+              type: "Delay",
+              color: "hsla(99, 60%, 40%, 1)",
+              pulseSettings: { duration: 1000, unit: "milliseconds" },
+              subprotocols: [],
+            },
+            {
+              type: "Biphasic",
+              color: "hsla(45, 90%, 40%, 1)",
+              pulseSettings: {
+                frequency: 1,
+                totalActiveDuration: { duration: 14000, unit: "milliseconds" },
+                numCycles: 14,
+                postphaseInterval: 990,
+                phaseOneDuration: 5,
+                phaseOneCharge: 40,
+                interphaseInterval: 0,
+                phaseTwoCharge: -40,
+                phaseTwoDuration: 5,
+              },
+              subprotocols: [],
+            },
+          ],
+        },
+      };
+      store.state.stimulation.protocolList = [
+        { letter: "", color: "", label: "Create New" },
+        JSON.parse(JSON.stringify(testProtocol)),
+      ];
+      store.state.stimulation.protocolAssignments = { 0: store.state.stimulation.protocolList[1] };
+
+      const blobContents = [];
+      const blobSpy = jest.spyOn(global, "Blob").mockImplementation((parts) => {
+        blobContents.push(parts.join(""));
+        return {};
+      });
+      window.webkitURL = { createObjectURL: function () {} };
+      const createElementSpy = jest
+        .spyOn(document, "createElement")
+        .mockImplementation(() => ({ click: jest.fn(), remove: jest.fn(), style: {} }));
+
+      await store.dispatch("stimulation/handleExportProtocol");
+      blobSpy.mockRestore();
+      createElementSpy.mockRestore();
+
+      // the exported file should be in snake case
+      const exported = JSON.parse(blobContents[0]);
+      expect(exported.protocolAssignments.A1).toBe("B");
+      expect(exported.protocols).toHaveLength(1);
+      expect(exported.protocols[0].protocol.subprotocols[1].phase_one_duration).toBe(5);
+      expect(exported.protocols[0].protocol.detailed_subprotocols[1].pulse_settings.phase_one_duration).toBe(
+        5
+      );
+
+      // the protocols in state must not be touched by exporting, otherwise the stim studio
+      // can no longer edit them and the controller will receive null pulse settings
+      expect(store.state.stimulation.protocolList[1]).toStrictEqual(testProtocol);
+      expect(store.state.stimulation.protocolAssignments[0]).toStrictEqual(testProtocol);
+      expect(
+        store.state.stimulation.protocolList[1].protocol.detailedSubprotocols[1].pulseSettings
+      ).toBeDefined();
+    });
+
     test("When protocol file has been read, Then it will be given a new color/letter assignment and added to protocol list in state", async () => {
       const parsedStimData = JSON.parse(VALID_STIM_JSON);
       await store.dispatch("stimulation/addImportedProtocol", parsedStimData);
