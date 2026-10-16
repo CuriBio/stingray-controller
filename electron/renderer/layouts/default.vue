@@ -3,12 +3,6 @@
     <div class="div__sidebar">
       <div class="div__sidebar-page-divider" />
       <div class="div__component-container">
-        <div class="div__plate-barcode-container">
-          <BarcodeViewer />
-        </div>
-        <div class="div__stim-barcode-container">
-          <BarcodeViewer :barcodeType="'stimBarcode'" />
-        </div>
         <div class="div__stim-status-container">
           <StatusBar :stimSpecific="true" @send-confirmation="sendConfirmation" />
         </div>
@@ -43,7 +37,6 @@ import Vue from "vue";
 
 import {
   systemStoreModule,
-  BarcodeViewer,
   StatusBar,
   SimulationMode,
   StimulationStudioControls,
@@ -62,7 +55,6 @@ Vue.directive("b-toggle", VBToggle);
 
 export default {
   components: {
-    BarcodeViewer,
     StatusBar,
     SimulationMode,
     StimulationStudioControls,
@@ -239,22 +231,10 @@ body {
   background-color: #0e0e0e;
 }
 
-/* DATA-ACQUISITION */
-.div__plate-barcode-container {
-  position: relative;
-  left: 0px;
-}
-
 /* STIM STUDIO */
 .div__stim-status-container {
   position: relative;
   margin-top: 8px;
-}
-
-.div__stim-barcode-container {
-  position: relative;
-  left: 0px;
-  margin-top: 10px;
 }
 
 .div__stimulation-controls-icon-container {
@@ -266,7 +246,7 @@ body {
 
 .div__stimulation-modes-container {
   position: absolute;
-  top: 268px;
+  top: 142px;
   left: 20px;
 }
 
