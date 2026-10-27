@@ -310,6 +310,23 @@ export default {
     }
   },
 
+  async duplicateSelectedProtocol({ commit, getters, state }) {
+    const { editMode, protocolList } = state;
+    if (!editMode.status) return;
+
+    const originalProtocol = protocolList.find(({ letter }) => letter === editMode.letter);
+    if (!originalProtocol) return;
+
+    // edit mode needs to be off to get a new letter and color instead of the original's
+    await commit("setEditModeOff");
+    const { color, letter } = getters["getNextProtocol"];
+    const label = `${originalProtocol.label} (copy)`;
+    const protocol = { ...JSON.parse(JSON.stringify(originalProtocol.protocol)), name: label };
+
+    commit("setNewProtocol", { color, letter, label, protocol });
+    commit("resetProtocolEditor");
+  },
+
   updateProtocolAssignments({ state }, updatedProtocol) {
     const { protocolAssignments } = state;
 

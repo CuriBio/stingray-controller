@@ -48,6 +48,7 @@ import { mapState } from "vuex";
  * @vue-computed {Boolean} stimulationType - Conditionally expand type of stimulation based on state
  * @vue-event {Event} handleClick - Handles what gets executed when any of the base buttons are selected
  * @vue-event {Event} setNewRestDuration - Set validity of new rest duration in stim studio
+ * @vue-event {Event} isBtnDisabled - Check if a base button is disabled; Duplicate requires a saved protocol to be selected
  * @vue-event {Event} getBtnClass - Get dynamic button class based on disabled state
  * @vue-event {Event} getBtnLabelClass - Get dynamic button label class based on disabled state
  * @vue-event {Event} handleSelectionChanged - Gets emitted when a user selected a protocol for edit so it can be used if new changes need to be discarded
@@ -64,13 +65,13 @@ export default {
   },
   data() {
     return {
-      btnLabels: ["Save Changes", "Clear/Reset All", "Discard Changes"],
+      btnLabels: ["Save Changes", "Clear/Reset All", "Duplicate", "Discard Changes"],
       selectedProtocol: { label: "Create New", color: "", letter: "" },
       restDurIsValid: true,
     };
   },
   computed: {
-    ...mapState("stimulation", ["stimStatus", "protocolEditor"]),
+    ...mapState("stimulation", ["stimStatus", "protocolEditor", "editMode"]),
     ...mapState("system", ["statusUuid"]),
     disableEdits: function () {
       return this.stimStatus === STIM_STATUS.STIM_ACTIVE;
@@ -99,6 +100,10 @@ export default {
       } else if (idx === 1) {
         this.$store.commit("stimulation/resetState");
       } else if (idx === 2) {
+        if (!this.editMode.status) return;
+        await this.$store.dispatch("stimulation/duplicateSelectedProtocol");
+        this.selectedProtocol = { label: "Create New", color: "", letter: "" };
+      } else if (idx === 3) {
         if (this.selectedProtocol.label === "Create New") {
           this.$store.commit("stimulation/resetProtocolEditor");
         } else {
@@ -113,13 +118,16 @@ export default {
     handleSelectionChange(protocol) {
       this.selectedProtocol = protocol;
     },
+    isBtnDisabled(idx) {
+      return (
+        this.disableEdits || (idx === 0 && !this.restDurIsValid) || (idx === 2 && !this.editMode.status)
+      );
+    },
     getBtnClass(idx) {
-      return this.disableEdits || (idx === 0 && !this.restDurIsValid)
-        ? "btn-container-disable"
-        : "btn-container";
+      return this.isBtnDisabled(idx) ? "btn-container-disable" : "btn-container";
     },
     getBtnLabelClass(idx) {
-      return this.disableEdits || (idx === 0 && !this.restDurIsValid) ? "btn-label-disable" : "btn-label";
+      return this.isBtnDisabled(idx) ? "btn-label-disable" : "btn-label";
     },
   },
 };
