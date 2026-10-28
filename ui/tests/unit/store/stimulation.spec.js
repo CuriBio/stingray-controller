@@ -455,6 +455,38 @@ describe("store/stimulation", () => {
       expect(previousStatus).toBe(store.state.stimulation.stimStatus); // shouldn't change if only editing existing assignment
     });
 
+    test("When a user wants to duplicate an existing protocol by clicking on Duplicate button, Then a copy will be added to the protocol list with a new letter and color and the original will be unchanged", async () => {
+      const { protocolList } = store.state.stimulation;
+      const selectedProtocol = protocolList[1];
+      const originalProtocol = JSON.parse(JSON.stringify(selectedProtocol));
+
+      await store.dispatch("stimulation/editSelectedProtocol", selectedProtocol);
+      await store.dispatch("stimulation/duplicateSelectedProtocol");
+
+      const updatedList = store.state.stimulation.protocolList;
+      expect(updatedList).toHaveLength(3);
+      expect(updatedList[1]).toStrictEqual(originalProtocol);
+
+      const duplicate = updatedList[2];
+      expect(duplicate.label).toBe(`${originalProtocol.label} (copy)`);
+      expect(duplicate.letter).toBe(ALPHABET[1]);
+      expect(duplicate.color).toBe(COLOR_PALETTE[2]);
+      expect(duplicate.protocol).toStrictEqual({
+        ...originalProtocol.protocol,
+        name: `${originalProtocol.label} (copy)`,
+      });
+      expect(duplicate.protocol.detailedSubprotocols).not.toBe(
+        selectedProtocol.protocol.detailedSubprotocols
+      );
+
+      expect(store.state.stimulation.editMode.status).toBe(false);
+    });
+
+    test("When no saved protocol is selected and a user clicks on Duplicate button, Then nothing will be added to the protocol list", async () => {
+      await store.dispatch("stimulation/duplicateSelectedProtocol");
+      expect(store.state.stimulation.protocolList).toHaveLength(2);
+    });
+
     test("When a user wants to delete an existing protocol by clicking on trash icon, Then the selected protocol will be removed from the list of available protocols, removed from any assigned wells, and the editor will be reset", async () => {
       const protocolList = store.state.stimulation.protocolList;
       const selectedProtocol = protocolList[1];

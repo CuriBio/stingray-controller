@@ -1,7 +1,7 @@
 Changelog for Stingray 96 Controller
 ====================================
 
-0.7.0 (unreleased)
+0.8.0 (unreleased)
 ------------------
 Initial 96 well beta release
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -9,6 +9,7 @@ Initial 96 well beta release
 Added:
 ^^^^^^
 - Firmware updates can now be installed from local files (see the README)
+- Existing stimulation protocols can be duplicated
 
 Changed:
 ^^^^^^^^
