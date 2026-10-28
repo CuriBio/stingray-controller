@@ -6,12 +6,12 @@ Active development happens on the `beta96` branch. Base new branches and pull re
 
 ## Project layout
 
-| Directory             | What it is                                                                                                   |
-| --------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `controller/`         | Python backend that talks to the instrument. Managed with Poetry and includes a Cython extension.            |
-| `ui/`                 | Vue/Nuxt component library. Built as a package and consumed by Electron as `@curi-bio/ui`.                   |
-| `electron/`           | Desktop app shell. In development it launches the controller from source.                                    |
-| `virtual-instrument/` | Simulated instrument for running the app without hardware.                                                   |
+| Directory             | What it is                                                                                        |
+| --------------------- | ------------------------------------------------------------------------------------------------- |
+| `controller/`         | Python backend that talks to the instrument. Managed with Poetry and includes a Cython extension. |
+| `ui/`                 | Vue/Nuxt component library. Built as a package and consumed by Electron as `@curi-bio/ui`.        |
+| `electron/`           | Desktop app shell. In development it launches the controller from source.                         |
+| `virtual-instrument/` | Simulated instrument for running the app without hardware.                                        |
 
 When the app starts, Electron launches the controller. The controller first looks for a real instrument over serial. If none is found, it connects to the virtual instrument on port `56575`.
 
@@ -85,8 +85,7 @@ cd electron
 npm ci
 ```
 
-> [!IMPORTANT]
-> `@curi-bio/ui` is installed as a link to the local `ui/` folder. After changing > anything in `ui/`, rerun `npm run build` there so Electron picks up the changes.
+> **Important:** `@curi-bio/ui` is installed as a link to the local `ui/` folder. After changing anything in `ui/`, rerun `npm run build` there so Electron picks up the changes.
 
 ## 4. Run the app
 
@@ -131,7 +130,8 @@ poetry run pre-commit run -a                     # run all hooks manually
 
 ### Testing the UI
 
-You can run tests individually by running jest. For example: 
+You can run tests individually by running jest. For example:
+
 ```bash
 npx jest -c jest.config.js tests/unit/store/stimulation.spec.js -t "Duplicate"
 ```

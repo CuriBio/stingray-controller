@@ -119,9 +119,7 @@ export default {
       this.selectedProtocol = protocol;
     },
     isBtnDisabled(idx) {
-      return (
-        this.disableEdits || (idx === 0 && !this.restDurIsValid) || (idx === 2 && !this.editMode.status)
-      );
+      return this.disableEdits || (idx === 0 && !this.restDurIsValid) || (idx === 2 && !this.editMode.status);
     },
     getBtnClass(idx) {
       return this.isBtnDisabled(idx) ? "btn-container-disable" : "btn-container";

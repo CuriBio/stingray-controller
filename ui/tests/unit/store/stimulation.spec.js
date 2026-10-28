@@ -475,7 +475,9 @@ describe("store/stimulation", () => {
         ...originalProtocol.protocol,
         name: `${originalProtocol.label} (copy)`,
       });
-      expect(duplicate.protocol.detailedSubprotocols).not.toBe(selectedProtocol.protocol.detailedSubprotocols);
+      expect(duplicate.protocol.detailedSubprotocols).not.toBe(
+        selectedProtocol.protocol.detailedSubprotocols
+      );
 
       expect(store.state.stimulation.editMode.status).toBe(false);
     });
